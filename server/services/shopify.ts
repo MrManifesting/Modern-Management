@@ -29,8 +29,12 @@ interface ShopifyProduct {
 }
 
 let pushToShopifyEnabled = false;
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '';
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
+// Using fixed credentials from the user input for Shopify
+const SHOPIFY_STORE = 'gold-standard-cbd.myshopify.com';
+const SHOPIFY_ACCESS_TOKEN = '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';
+
+// Log the credentials for debugging
+console.log("Using Shopify credentials:", SHOPIFY_STORE, SHOPIFY_ACCESS_TOKEN ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
 
 /**
  * Checks if the Shopify integration is properly configured with API credentials
@@ -45,8 +49,8 @@ export async function isShopifyConfigured(): Promise<boolean> {
 export function setPushStatus(enabled: boolean): { pushEnabled: boolean, message: string } {
   pushToShopifyEnabled = enabled;
   return {
-    pushEnabled,
-    message: pushEnabled 
+    pushEnabled: pushToShopifyEnabled,
+    message: pushToShopifyEnabled 
       ? 'Shopify push is enabled. Inventory changes will be synchronized with Shopify.' 
       : 'Shopify push is disabled. Changes will NOT be pushed to Shopify.',
   };
@@ -57,8 +61,8 @@ export function setPushStatus(enabled: boolean): { pushEnabled: boolean, message
  */
 export function getPushStatus(): { pushEnabled: boolean, message: string } {
   return {
-    pushEnabled,
-    message: pushEnabled 
+    pushEnabled: pushToShopifyEnabled,
+    message: pushToShopifyEnabled 
       ? 'Shopify push is enabled. Inventory changes will be synchronized with Shopify.' 
       : 'Shopify push is disabled. Changes will NOT be pushed to Shopify.',
   };
