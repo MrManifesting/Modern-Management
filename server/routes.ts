@@ -28,6 +28,12 @@ import {
   isShopifyConfigured,
   syncProductsFromShopify
 } from "./services/shopify";
+import {
+  initializeTelegramBot,
+  getMediaFiles,
+  getMediaUrl,
+  getTelegramBot
+} from "./services/telegram";
 import fs from "fs";
 import { promisify } from "util";
 
@@ -1714,6 +1720,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to record employee action:", error);
       res.status(500).json({ error: "Failed to record employee action" });
+    }
+  });
+
+  // Telegram Bot Integration Routes
+  app.post("/api/telegram/initialize", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Telegram bot token is required" 
+        });
+      }
+      
+      const bot = initializeTelegramBot(token);
+      
+      if (!bot) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to initialize Telegram bot" 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Telegram bot initialized successfully",
+        botInfo: {
+          username: bot.options.username,
+          polling: bot.isPolling()
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize Telegram bot:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to initialize Telegram bot: ${error instanceof Error ? error.message : "Unknown error"}` 
+      });
+    }
+  });
+  
+  // Get status of Telegram bot
+  app.get("/api/telegram/status", async (_req: Request, res: Response) => {
+    try {
+      const bot = getTelegramBot();
+      
+      if (!bot) {
+        return res.json({ 
+          initialized: false, 
+          message: "Telegram bot is not initialized" 
+        });
+      }
+      
+      res.json({ 
+        initialized: true, 
+        polling: bot.isPolling(),
+        botInfo: {
+          username: bot.options.username
+        }
+      });
+    } catch (error) {
+      console.error("Failed to get Telegram bot status:", error);
+      res.status(500).json({ 
+        error: "Failed to get Telegram bot status", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Get media files list
+  app.get("/api/media/files", (_req: Request, res: Response) => {
+    try {
+      const files = getMediaFiles();
+      
+      res.json({
+        files: files.map(file => ({
+          name: file,
+          url: getMediaUrl(file),
+          type: file.startsWith('photo_') ? 'image' : 
+                file.startsWith('video_') ? 'video' : 
+                file.startsWith('doc_') ? 'document' : 
+                'unknown'
+        }))
+      });
+    } catch (error) {
+      console.error("Failed to get media files:", error);
+      res.status(500).json({ error: "Failed to get media files" });
+    }
+  });
+  
+  // Serve static media files
+  app.use('/media', (req, res, next) => {
+    const fileName = req.path.substring(1); // Remove leading slash
+    const filePath = path.join(process.cwd(), 'public', 'media', fileName);
+    
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      next();
     }
   });
 
