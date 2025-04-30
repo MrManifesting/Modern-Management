@@ -128,18 +128,29 @@ export default function ItemFormComponent({
     setIsAnalyzing(true);
 
     try {
+      // Log file details for debugging
+      console.log("Analyzing file:", files[0].name, "Size:", files[0].size, "Type:", files[0].type);
+      
       // Create form data with the first image
       const formData = new FormData();
       formData.append("image", files[0]);
-
+      
+      // Log FormData for debugging
+      console.log("FormData created with image field");
+      
       // Send request to analyze image
+      console.log("Sending API request to /api/analyze-image");
       const response = await apiRequest("POST", "/api/analyze-image", formData);
       
       if (!response.ok) {
-        throw new Error(`Analysis failed with status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Server returned error:", response.status, errorText);
+        throw new Error(`Analysis failed with status: ${response.status}. ${errorText}`);
       }
       
+      console.log("Received successful response from server");
       const analysisResult: AIAnalysis = await response.json();
+      console.log("Analysis result:", analysisResult);
 
       // Update form with AI analysis
       if (analysisResult) {
@@ -167,7 +178,9 @@ export default function ItemFormComponent({
       console.error("Error analyzing image:", error);
       toast({
         title: "Analysis failed",
-        description: "Could not analyze the image. Please try again.",
+        description: typeof error === 'object' && error !== null && 'message' in error 
+          ? `Error: ${(error as any).message}` 
+          : "Could not analyze the image. Please try again.",
         variant: "destructive",
       });
     } finally {
