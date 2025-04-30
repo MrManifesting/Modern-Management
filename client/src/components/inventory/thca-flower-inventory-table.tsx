@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -222,6 +222,82 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
     return "bg-gray-500 text-white";
   };
 
+  // Determine if we're on mobile view
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Listen for window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Render mobile card view for products
+  const renderMobileProductCard = (product: THCaFlowerProduct) => (
+    <Card key={product.id} className="mb-4 border-gold/20">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{product.strain}</CardTitle>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <Badge className={getTierBadgeClass(product.tier)}>{product.tier}</Badge>
+              <Badge className={getStrainTypeBadgeClass(product.strainType)}>{product.strainType}</Badge>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => onView && onView(product)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit && onEdit(product)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Product
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600"
+                onClick={() => onDelete && product.id && onDelete(product.id)}
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">THC:</span> {product.percentage}
+          </div>
+          <div>
+            <span className="text-muted-foreground">SKU:</span> <span className="font-mono">{product.sku}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Price:</span> {formatPrice(product.bulkPrice)}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Stock:</span>{' '}
+            <Badge variant={product.amount > 10 ? "default" : "destructive"} className="text-xs">
+              {product.amount} lbs
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Card className="shadow-md">
       <CardHeader>
@@ -229,7 +305,7 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
         <CardDescription>
           Manage your THCa flower inventory, pricing tiers, and stock levels
         </CardDescription>
-        <div className="flex flex-col md:flex-row gap-4 mt-4">
+        <div className="flex flex-col gap-4 mt-4">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -239,116 +315,132 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Select value={selectedTier} onValueChange={setSelectedTier}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Filter by Tier" />
-            </SelectTrigger>
-            <SelectContent>
-              {tiers.map((tier) => (
-                <SelectItem key={tier} value={tier}>{tier}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedStrainType} onValueChange={setSelectedStrainType}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <SelectValue placeholder="Filter by Strain Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {strainTypes.map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select value={selectedTier} onValueChange={setSelectedTier}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Tier" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiers.map((tier) => (
+                  <SelectItem key={tier} value={tier}>{tier}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedStrainType} onValueChange={setSelectedStrainType}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Strain Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {strainTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table className="inventory-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Strain</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead className="text-center">THC %</TableHead>
-                <TableHead className="text-center">Type</TableHead>
-                <TableHead className="text-center">SKU</TableHead>
-                <TableHead className="text-right">Bulk Price</TableHead>
-                <TableHead className="text-center">Stock</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length === 0 ? (
+        {isMobile ? (
+          // Mobile view - Card layout
+          <div className="space-y-2">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No products found. Try adjusting your search or filters.
+              </div>
+            ) : (
+              filteredProducts.map(renderMobileProductCard)
+            )}
+          </div>
+        ) : (
+          // Desktop view - Table layout
+          <div className="overflow-x-auto">
+            <Table className="inventory-table">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    No products found. Try adjusting your search or filters.
-                  </TableCell>
+                  <TableHead>Strain</TableHead>
+                  <TableHead>Tier</TableHead>
+                  <TableHead className="text-center">THC %</TableHead>
+                  <TableHead className="text-center">Type</TableHead>
+                  <TableHead className="text-center">SKU</TableHead>
+                  <TableHead className="text-right">Bulk Price</TableHead>
+                  <TableHead className="text-center">Stock</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.strain}</TableCell>
-                    <TableCell>
-                      <Badge className={getTierBadgeClass(product.tier)}>
-                        {product.tier}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">{product.percentage}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge className={getStrainTypeBadgeClass(product.strainType)}>
-                        {product.strainType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">{product.sku}</TableCell>
-                    <TableCell className="text-right font-medium">{formatPrice(product.bulkPrice)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={product.amount > 10 ? "default" : "destructive"}>
-                        {product.amount} lbs
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => onView && onView(product)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onEdit && onEdit(product)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Product
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Create Sale
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <BarChart2 className="mr-2 h-4 w-4" />
-                            View Analytics
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={() => onDelete && product.id && onDelete(product.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Product
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      No products found. Try adjusting your search or filters.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.strain}</TableCell>
+                      <TableCell>
+                        <Badge className={getTierBadgeClass(product.tier)}>
+                          {product.tier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{product.percentage}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge className={getStrainTypeBadgeClass(product.strainType)}>
+                          {product.strainType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-mono">{product.sku}</TableCell>
+                      <TableCell className="text-right font-medium">{formatPrice(product.bulkPrice)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={product.amount > 10 ? "default" : "destructive"}>
+                          {product.amount} lbs
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onView && onView(product)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit && onEdit(product)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Product
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              Create Sale
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <BarChart2 className="mr-2 h-4 w-4" />
+                              View Analytics
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => onDelete && product.id && onDelete(product.id)}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete Product
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
