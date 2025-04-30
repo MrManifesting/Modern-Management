@@ -425,6 +425,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image optimization route
+  app.post("/api/optimize-image", upload.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image provided" });
+      }
+
+      // Import image optimization service
+      const { optimizeImage, generateAltText } = await import('./services/image-optimization');
+
+      // Parse optimization options from request
+      const quality = req.body.quality ? parseInt(req.body.quality) : 80;
+      const format = req.body.format as 'jpeg' | 'png' | 'webp' | 'avif' || 'webp';
+      const width = req.body.width ? parseInt(req.body.width) : undefined;
+      const height = req.body.height ? parseInt(req.body.height) : undefined;
+      const generateAltTextParam = req.body.generateAltText === 'true';
+      const maintainAspectRatio = req.body.maintainAspectRatio !== 'false';
+
+      // Optimize the image
+      const result = await optimizeImage(req.file.buffer, {
+        quality,
+        format,
+        width,
+        height,
+        fit: maintainAspectRatio ? 'contain' : 'fill',
+        generateAltText: generateAltTextParam,
+      });
+
+      // For demo purposes, we're returning a Base64 data URL
+      // In production, you would save to cloud storage and return a URL
+      const base64Image = result.buffer.toString('base64');
+      const dataUrl = `data:image/${result.format};base64,${base64Image}`;
+
+      res.json({
+        url: dataUrl,
+        size: result.size,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        altText: result.altText,
+        originalSize: result.originalSize,
+        compressionRatio: result.compressionRatio,
+      });
+    } catch (error) {
+      console.error('Error optimizing image:', error);
+      res.status(500).json({ error: "Failed to optimize image" });
+    }
+  });
+
+  // Bulk image optimization route
+  app.post("/api/optimize-images/bulk", upload.array("images", 20), async (req: Request, res: Response) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No images provided" });
+      }
+
+      // Import image optimization service
+      const { optimizeImage } = await import('./services/image-optimization');
+
+      // Parse optimization options from request
+      const quality = req.body.quality ? parseInt(req.body.quality) : 80;
+      const format = req.body.format as 'jpeg' | 'png' | 'webp' | 'avif' || 'webp';
+      const width = req.body.width ? parseInt(req.body.width) : undefined;
+      const height = req.body.height ? parseInt(req.body.height) : undefined;
+      const generateAltTextParam = req.body.generateAltText === 'true';
+
+      // Process each image
+      const results = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const result = await optimizeImage(file.buffer, {
+              quality,
+              format,
+              width,
+              height,
+              generateAltText: generateAltTextParam,
+            });
+
+            // For demo purposes, return as base64
+            // In production, save to cloud storage
+            const base64Image = result.buffer.toString('base64');
+            const dataUrl = `data:image/${result.format};base64,${base64Image}`;
+
+            return {
+              originalName: file.originalname,
+              url: dataUrl,
+              size: result.size,
+              width: result.width,
+              height: result.height,
+              format: result.format,
+              altText: result.altText,
+              originalSize: result.originalSize,
+              compressionRatio: result.compressionRatio,
+              status: 'success',
+            };
+          } catch (error) {
+            console.error(`Error optimizing image ${file.originalname}:`, error);
+            return {
+              originalName: file.originalname,
+              status: 'failed',
+              error: error instanceof Error ? error.message : 'Unknown error',
+            };
+          }
+        })
+      );
+
+      // Calculate overall stats
+      const successful = results.filter(r => r.status === 'success');
+      const originalTotalSize = successful.reduce((sum, img) => sum + (img.originalSize || 0), 0);
+      const optimizedTotalSize = successful.reduce((sum, img) => sum + (img.size || 0), 0);
+      const totalSavings = originalTotalSize - optimizedTotalSize;
+      const savingsPercent = originalTotalSize > 0 ? Math.round((totalSavings / originalTotalSize) * 100) : 0;
+
+      res.json({
+        results,
+        stats: {
+          totalProcessed: files.length,
+          successful: successful.length,
+          failed: results.length - successful.length,
+          originalTotalSize,
+          optimizedTotalSize,
+          totalSavings,
+          savingsPercent,
+        },
+      });
+    } catch (error) {
+      console.error('Error in bulk image optimization:', error);
+      res.status(500).json({ error: "Failed to optimize images" });
+    }
+  });
+
+  // Analyze image optimization potential
+  app.post("/api/analyze-image-seo", upload.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image provided" });
+      }
+
+      // Import image analysis function
+      const { analyzeSEOPotential, generateAltText } = await import('./services/image-optimization');
+
+      // Analyze SEO potential
+      const analysis = await analyzeSEOPotential(req.file.buffer);
+      
+      // Generate alt text if requested
+      if (req.body.generateAltText === 'true') {
+        analysis.suggestedAltText = await generateAltText(req.file.buffer);
+      }
+
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing image SEO:', error);
+      res.status(500).json({ error: "Failed to analyze image SEO potential" });
+    }
+  });
+
   // CSV Import route with Shopify synchronization
   app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
     try {
