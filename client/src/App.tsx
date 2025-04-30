@@ -16,6 +16,7 @@ import ImageOptimization from "@/pages/image-optimization";
 import Employees from "@/pages/employees";
 import Settings from "@/pages/settings";
 import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
+import ShopifySyncPage from "@/pages/shopify-sync";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
 import MediaManagerPage from "@/pages/media-manager";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/employees" component={Employees} />
       <Route path="/settings" component={Settings} />
       <Route path="/shopify-settings" component={ShopifySettingsPage} />
+      <Route path="/shopify-sync" component={ShopifySyncPage} />
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
       <Route path="/media-manager" component={MediaManagerPage} />
       <Route component={NotFound} />
