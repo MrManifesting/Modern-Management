@@ -1,7 +1,7 @@
 import { AIAnalysis, aiAnalysisSchema } from "@shared/schema";
 import OpenAI from "openai";
 
-// Use cost-optimized models as specified
+// Using cost-optimized models as specified
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -14,53 +14,49 @@ export async function analyzeImageWithOpenAI(imageBuffer: Buffer): Promise<AIAna
     // Convert buffer to base64
     const base64Image = imageBuffer.toString("base64");
     
-    // Using gpt-4.1-mini model with gpt-4o-mini-search-preview for web search
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      tools: [{ 
-        type: "web_search_preview",
-        search_context_size: "low" // Use low context size to reduce costs while still getting accurate pricing
-      }],
-      tool_choice: { type: "web_search_preview" }, // Force using web search to ensure more accurate pricing data
-      input: [
+    // First, use vision capabilities to identify the product
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Most cost-effective model with vision capabilities
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert e-commerce product analyst. Identify products with extreme precision."
+        },
         {
           role: "user",
           content: [
             {
-              type: "input_text",
-              text: `You are an expert e-commerce product analyst. Analyze this product image with extreme detail and use web search to find CURRENT market pricing data.
-
-I need accurate pricing information based on REAL market data, specifically:
-1. Precise item identification with brand and model
-2. Current market price ranges from actual, RECENT completed sales
-3. Specific marketplace recommendations where this item sells best
-4. Detailed price comparisons across different platforms
+              type: "text",
+              text: `Analyze this product image with extreme detail. 
 
 Provide the following in JSON format:
 - name: Precise product name with brand and model
 - description: Comprehensive description including features, specifications, and material
 - category: Specific e-commerce category (use standard marketplace categories)
 - condition: Assessment of condition (New, Like New, Good, Fair, etc.) with explanation
-- suggestedPrice: The OPTIMAL listing price based on real market data (number only, no currency symbol)
-- priceRange: The actual price range this item sells for online (e.g. "$45-65")
-- marketComparison: Brief notes on similar items' actual selling prices on marketplaces
+- suggestedPrice: Your best estimate of a fair listing price (number only, no currency symbol)
+- priceRange: The estimated price range this item typically sells for (e.g. "$45-65")
+- marketComparison: Brief notes comparing similar items' prices
 - bestMarketplaces: Array of 2-3 platforms where this item would sell best
 - tags: Array of relevant search keywords (8-12 terms)
 - seoTitle: Optimized listing title (max 80 chars)
 - seoDescription: SEO-friendly description (max 250 chars)`
             },
             {
-              type: "input_image",
-              image_url: `data:image/jpeg;base64,${base64Image}`
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`
+              }
             }
           ]
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 1200
     });
 
-    // Parse the result from the new response structure
-    const rawResult = JSON.parse(response.output_text || "{}");
+    // Parse the result from the vision analysis
+    const rawResult = JSON.parse(response.choices[0].message.content || "{}");
     
     // Extract price range text but ensure numeric suggestedPrice for database
     const priceRange = rawResult.priceRange || "";
