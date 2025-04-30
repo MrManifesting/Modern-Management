@@ -404,8 +404,14 @@ export default function CSVImport() {
             {syncToShopify ? 
               isStampImport 
                 ? "Stamps will be imported and synchronized" 
-                : "Inventory will be imported and synchronized with Shopify" 
-              : "Inventory will be imported locally only"}
+                : isCannabisImport
+                  ? "Cannabis products will be imported and synchronized with Shopify"
+                  : "Inventory will be imported and synchronized with Shopify" 
+              : isStampImport
+                ? "Stamps will be imported locally only"
+                : isCannabisImport
+                  ? "Cannabis products will be imported locally only"
+                  : "Inventory will be imported locally only"}
           </div>
           <Button 
             onClick={handleImport} 
@@ -414,9 +420,15 @@ export default function CSVImport() {
           >
             {syncToShopify 
               ? isStampImport 
-                ? "Import & Sync Stamp Collection" 
-                : "Import & Sync Inventory" 
-              : "Import Inventory Only"}
+                ? "Import & Sync Stamp Collection"
+                : isCannabisImport
+                  ? "Import & Sync Cannabis Products"
+                  : "Import & Sync Inventory" 
+              : isStampImport
+                ? "Import Stamp Collection Only"
+                : isCannabisImport
+                  ? "Import Cannabis Products Only"
+                  : "Import Inventory Only"}
           </Button>
         </CardFooter>
       )}
