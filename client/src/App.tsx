@@ -39,7 +39,7 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark">
+    <ThemeProvider defaultTheme="dark" storageKey="gold-standard-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <MainLayout>
