@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useTheme } from '@/components/ui/theme-provider';
 import {
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, Keyboard } from 'lucide-react';
+import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, Keyboard, Sparkles } from 'lucide-react';
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();

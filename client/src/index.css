@@ -3,56 +3,62 @@
 @tailwind utilities;
 
 :root {
+  /* Light mode - Black, Gold, and Green theme */
   --background: 0 0% 100%;
-  --foreground: 20 14.3% 4.1%;
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
+  --foreground: 0 0% 0%;
+  --muted: 45 54% 90%;
+  --muted-foreground: 0 0% 30%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
-  --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
-  --primary: 160 84% 39%;
-  --primary-foreground: 211 100% 99%;
-  --secondary: 60 4.8% 95.9%;
-  --secondary-foreground: 24 9.8% 10%;
-  --accent: 60 4.8% 95.9%;
-  --accent-foreground: 24 9.8% 10%;
+  --popover-foreground: 0 0% 0%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 0%;
+  --border: 45 54% 80%;
+  --input: 45 54% 85%;
+  --primary: 45 80% 50%;       /* Gold */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 145 50% 35%;    /* Green */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 45 100% 60%;       /* Brighter Gold */
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 20 14.3% 4.1%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 45 80% 50%;          /* Gold */
   --radius: 0.5rem;
   
-  /* MrLister specific colors */
-  --wood: 33 53% 36%;
-  --wood-foreground: 0 0% 100%;
+  /* Gold Standard Colors */
+  --gold: 45 80% 50%;
+  --gold-light: 45 80% 80%;
+  --gold-dark: 45 60% 35%;
+  --gold-foreground: 0 0% 0%;
 }
 
 .dark {
-  --background: 240 10% 3.9%;
+  /* Dark mode - Black, Gold, and Green theme */
+  --background: 0 0% 7%;        /* Near black */
   --foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --popover: 240 10% 3.9%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 70%;
+  --popover: 0 0% 10%;
   --popover-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  --card: 0 0% 12%;
   --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --primary: 160 84% 39%;
-  --primary-foreground: 211 100% 99%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --border: 45 40% 25%;
+  --input: 0 0% 20%;
+  --primary: 45 80% 50%;        /* Gold */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 145 50% 35%;     /* Green */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 45 100% 60%;        /* Brighter Gold */
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 240 4.9% 83.9%;
+  --ring: 45 70% 45%;
   
-  /* MrLister specific colors */
-  --wood: 33 43% 26%;
-  --wood-foreground: 0 0% 100%;
+  /* Gold Standard Colors */
+  --gold: 45 80% 50%;
+  --gold-light: 45 60% 40%;
+  --gold-dark: 45 70% 30%;
+  --gold-foreground: 0 0% 0%;
 }
 
 @layer base {
@@ -63,21 +69,80 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  
+  /* Applying gold theme elements */
+  h1, h2, h3 {
+    @apply tracking-tight;
+  }
+  
+  /* Gold accent for focused elements */
+  :focus-visible {
+    outline: 2px solid hsl(var(--gold));
+    outline-offset: 2px;
+  }
+  
+  /* Custom selection color */
+  ::selection {
+    background-color: hsl(var(--gold));
+    color: hsl(0, 0%, 0%);
+  }
 }
 
-/* Custom scrollbar */
+/* Gold and Green theme utility classes */
+.text-gold {
+  color: hsl(var(--gold)) !important;
+}
+
+.bg-gold {
+  background-color: hsl(var(--gold)) !important;
+}
+
+.border-gold {
+  border-color: hsl(var(--gold)) !important;
+}
+
+.text-green-theme {
+  color: hsl(var(--secondary)) !important;
+}
+
+.bg-green-theme {
+  background-color: hsl(var(--secondary)) !important;
+}
+
+/* Gold gradient text */
+.gold-gradient-text {
+  background: linear-gradient(to right, hsl(45, 80%, 50%), hsl(45, 90%, 65%), hsl(45, 80%, 50%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* Gold accent border */
+.gold-border {
+  border: 1px solid hsl(var(--gold));
+  transition: border-color 0.2s ease;
+}
+
+.gold-border:hover {
+  border-color: hsl(var(--gold-light));
+  box-shadow: 0 0 0 1px hsl(var(--gold-light));
+}
+
+/* Custom scrollbar - Gold theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  background-color: hsl(var(--muted));
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-md;
+  background-color: hsl(var(--primary));
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  background-color: hsl(var(--gold-dark));
 }
 
 .hover-card-image {
@@ -91,35 +156,48 @@
   transform: scale(1.05);
 }
 
+/* Marketplace badges - Gold/Black/Green theme */
 .marketplace-badge-ebay {
-  @apply bg-blue-500;
+  background-color: hsl(var(--gold));
+  color: hsl(var(--gold-foreground));
 }
 
 .marketplace-badge-etsy {
-  @apply bg-purple-500;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
 }
 
 .marketplace-badge-amazon {
-  @apply bg-red-500;
+  background-color: hsl(0, 0%, 10%);
+  color: hsl(var(--gold));
 }
 
 .marketplace-badge-shopify {
-  @apply bg-green-500;
+  background-color: hsl(145, 50%, 35%);
+  color: hsl(0, 0%, 100%);
 }
 
-/* Status badges */
+/* Status badges - Gold/Black/Green theme */
 .status-badge-listed {
-  @apply bg-green-500;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
 }
 
 .status-badge-draft {
-  @apply bg-orange-500;
+  background-color: hsl(var(--gold));
+  color: hsl(var(--gold-foreground));
 }
 
 .status-badge-sold {
-  @apply bg-blue-500;
+  background-color: hsl(215, 70%, 40%);
+  color: hsl(0, 0%, 100%);
 }
 
 .ai-badge {
-  @apply bg-purple-100 text-purple-700 text-xs font-medium rounded-md px-2 py-1;
+  background-color: hsl(var(--gold-light));
+  color: hsl(0, 0%, 10%);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.5rem;
 }
