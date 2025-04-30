@@ -11,6 +11,7 @@ import {
   DollarSign,
   FileBarChart,
   Image,
+  Users,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -50,6 +51,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Sales",
       icon: <DollarSign className="h-5 w-5" />,
       path: "/sales",
+    },
+    {
+      title: "Employees",
+      icon: <Users className="h-5 w-5" />,
+      path: "/employees",
     },
     {
       title: "Reports",
