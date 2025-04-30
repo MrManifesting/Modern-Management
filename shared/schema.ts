@@ -10,6 +10,10 @@ export const items = pgTable("items", {
   price: doublePrecision("price").notNull(),
   category: text("category").notNull(),
   condition: text("condition").notNull(),
+  sku: text("sku").notNull(), // Unique Stock Keeping Unit
+  quantity: integer("quantity").notNull().default(1), // Current inventory quantity
+  barcode: text("barcode"), // Store barcode data (can be UPC, EAN, etc.)
+  qrCode: text("qr_code"), // Store QR code data
   status: text("status").notNull().default("draft"), // draft, listed, sold
   images: json("images").notNull().default([]), // Array of image URLs
   tags: json("tags").notNull().default([]), // Array of tags
@@ -31,6 +35,9 @@ export const insertItemSchema = createInsertSchema(items).omit({
 
 export const itemFormSchema = insertItemSchema.extend({
   files: z.array(z.any()).optional(),
+  sku: z.string().optional(), // SKU becomes optional in the form (will be auto-generated)
+  barcode: z.string().optional(), // Will be auto-generated
+  qrCode: z.string().optional(), // Will be auto-generated
 });
 
 // Export types
