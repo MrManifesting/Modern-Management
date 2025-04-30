@@ -253,13 +253,26 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
                   className={`p-2 rounded mb-2 cursor-pointer ${activeGroup === groupId ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
                   onClick={() => setActiveGroup(groupId)}
                 >
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium truncate">
-                      {analysisResults[groupId]?.name || `Item ${groupId.split('-')[1]}`}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {groupedImages[groupId]?.length || 0} photos
-                    </span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium truncate">
+                        {analysisResults[groupId]?.name || `Item ${groupId.split('-')[1]}`}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {groupedImages[groupId]?.length || 0} photos
+                      </span>
+                    </div>
+                    
+                    {analysisResults[groupId]?.suggestedPrice && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-700">
+                          {analysisResults[groupId].category || "Uncategorized"}
+                        </span>
+                        <span className="text-green-600 font-medium">
+                          ${analysisResults[groupId].suggestedPrice}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -271,6 +284,27 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
                   <h3 className="text-sm font-medium mb-2">
                     {analysisResults[activeGroup]?.name || `Item ${activeGroup.split('-')[1]}`}
                   </h3>
+                  
+                  {analysisResults[activeGroup] && (
+                    <div className="mb-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-gray-700">
+                        <span>Category: <span className="font-medium">{analysisResults[activeGroup].category || "Unknown"}</span></span>
+                        <span>Condition: <span className="font-medium">{analysisResults[activeGroup].condition || "Unspecified"}</span></span>
+                      </div>
+                      
+                      {analysisResults[activeGroup].suggestedPrice && (
+                        <div className="flex items-center space-x-2 bg-green-50 p-2 rounded text-xs border border-green-100">
+                          <div className="font-medium text-green-700">Suggested Price: ${analysisResults[activeGroup].suggestedPrice}</div>
+                          
+                          {analysisResults[activeGroup].description?.includes("Price Range:") && (
+                            <div className="text-gray-600">
+                              {(analysisResults[activeGroup].description.match(/Price Range:\s*([$\d\-\.]+)/i) || [])[1]}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-3 gap-2">
                     {getGroupPreviews(activeGroup).map((url, index) => (
