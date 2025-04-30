@@ -9,6 +9,8 @@ import Inventory from "@/pages/inventory";
 import AITools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
 import Scanner from "@/pages/scanner";
+import Sales from "@/pages/sales";
+import Reports from "@/pages/reports";
 import NotFound from "@/pages/not-found";
 
 function Router() {

@@ -550,6 +550,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales API Routes
+  app.get("/api/sales", async (_req: Request, res: Response) => {
+    try {
+      const sales = await storage.getSales();
+      res.json(sales);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sales data" });
+    }
+  });
+
+  app.get("/api/sales/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const sale = await storage.getSale(id);
+      
+      if (!sale) {
+        return res.status(404).json({ error: "Sale not found" });
+      }
+      
+      res.json(sale);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sale data" });
+    }
+  });
+
+  app.post("/api/sales", async (req: Request, res: Response) => {
+    try {
+      // Validate using the sale schema
+      const parsedData = insertSaleSchema.parse(req.body);
+      
+      // If itemSku is provided instead of itemId, look up the item
+      if (req.body.itemSku && !parsedData.itemId) {
+        const items = await storage.getItems();
+        const item = items.find(item => item.sku === req.body.itemSku);
+        
+        if (!item) {
+          return res.status(404).json({ error: "Item not found with provided SKU" });
+        }
+        
+        parsedData.itemId = item.id;
+      }
+      
+      const sale = await storage.createSale(parsedData);
+      res.status(201).json(sale);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to create sale:", error);
+      res.status(500).json({ error: "Failed to record sale" });
+    }
+  });
+
+  app.patch("/api/sales/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      // Check if sale exists
+      const existingSale = await storage.getSale(id);
+      if (!existingSale) {
+        return res.status(404).json({ error: "Sale not found" });
+      }
+      
+      const updatedSale = await storage.updateSale(id, updateData);
+      res.json(updatedSale);
+    } catch (error) {
+      console.error("Failed to update sale:", error);
+      res.status(500).json({ error: "Failed to update sale" });
+    }
+  });
+
+  app.delete("/api/sales/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSale(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Sale not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete sale" });
+    }
+  });
+
+  // Analytics API Routes
+  app.post("/api/analytics/report", async (req: Request, res: Response) => {
+    try {
+      const params = reportSchema.parse(req.body);
+      const report = await storage.getSalesReport(params);
+      res.json(report);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to generate report:", error);
+      res.status(500).json({ error: "Failed to generate sales report" });
+    }
+  });
+
+  app.post("/api/analytics/time-series", async (req: Request, res: Response) => {
+    try {
+      const params = reportSchema.parse(req.body);
+      const timeSeries = await storage.getSalesTimeSeries(params);
+      res.json(timeSeries);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to generate time series:", error);
+      res.status(500).json({ error: "Failed to generate time series data" });
+    }
+  });
+
+  app.get("/api/analytics/top-items", async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const topItems = await storage.getTopSellingItems(limit);
+      res.json(topItems);
+    } catch (error) {
+      console.error("Failed to fetch top items:", error);
+      res.status(500).json({ error: "Failed to fetch top selling items" });
+    }
+  });
+
+  app.get("/api/analytics/sales-by-marketplace", async (_req: Request, res: Response) => {
+    try {
+      const salesByMarketplace = await storage.getSalesByMarketplace();
+      res.json(salesByMarketplace);
+    } catch (error) {
+      console.error("Failed to fetch marketplace sales:", error);
+      res.status(500).json({ error: "Failed to fetch sales by marketplace" });
+    }
+  });
+
+  app.get("/api/analytics/sales-by-category", async (_req: Request, res: Response) => {
+    try {
+      const salesByCategory = await storage.getSalesByCategory();
+      res.json(salesByCategory);
+    } catch (error) {
+      console.error("Failed to fetch category sales:", error);
+      res.status(500).json({ error: "Failed to fetch sales by category" });
+    }
+  });
+
+  // Stats API route update to include sales data
+  app.get("/api/stats", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const marketplaces = await storage.getMarketplaces();
+      const sales = await storage.getSales();
+      
+      // Calculate revenue
+      const revenue = sales.reduce((total, sale) => 
+        total + (sale.salePrice * sale.quantity), 0);
+      
+      // Count listed items
+      const listedItems = items.filter(item => item.status === "listed").length;
+      
+      // Count AI-enhanced items
+      const aiEnhancedItems = items.filter(item => item.aiEnhanced).length;
+      
+      // Count connected marketplaces
+      const connectedMarketplaces = marketplaces.filter(m => m.isConnected).length;
+      
+      res.json({
+        inventory: {
+          total: items.length,
+          listed: listedItems,
+          aiEnhanced: aiEnhancedItems,
+          revenue: revenue
+        },
+        marketplaces: {
+          total: marketplaces.length,
+          connected: connectedMarketplaces
+        },
+        sales: {
+          total: sales.length,
+          revenue: revenue,
+          lastWeek: sales.filter(sale => {
+            const saleDate = new Date(sale.saleDate);
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            return saleDate >= lastWeek;
+          }).length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
