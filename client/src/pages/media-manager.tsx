@@ -1,502 +1,737 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { queryClient } from '@/lib/queryClient';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, RefreshCw, AlertCircle, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
-import { 
-  Badge 
-} from '@/components/ui/badge';
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { Loader2, ImageIcon, FileIcon, Film, Trash2, Edit, Link2, RefreshCw } from 'lucide-react';
 
-// Define schema for Telegram token
-const telegramTokenSchema = z.object({
-  token: z.string().min(20, "Bot token is too short").refine(
-    (val) => val.includes(':'), 
-    "Bot token should be in the format 'BOT_ID:BOT_TOKEN'"
-  )
-});
-
-// Media file type
+// Define types for our media files
 interface MediaFile {
   name: string;
   url: string;
-  type: 'image' | 'video' | 'document' | 'unknown';
+  type: 'image' | 'video' | 'document';
+  size: number;
+  createdAt: Date;
+  dimensions?: { width: number; height: number };
+  thumbnail?: string;
+  isOptimized?: boolean;
 }
 
-const MediaManagerPage: React.FC = () => {
+// Define types for Telegram bot status
+interface TelegramStatus {
+  initialized: boolean;
+  username?: string;
+  botName?: string;
+}
+
+const MediaManager: React.FC = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('connect');
-  
-  // Form for Telegram bot connection
-  const form = useForm<z.infer<typeof telegramTokenSchema>>({
-    resolver: zodResolver(telegramTokenSchema),
-    defaultValues: {
-      token: '',
-    },
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const [telegramToken, setTelegramToken] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+  const [showRenameDialog, setShowRenameDialog] = useState<boolean>(false);
+  const [newFileName, setNewFileName] = useState<string>('');
+  const [linkToItemId, setLinkToItemId] = useState<string>('');
+  const [showLinkDialog, setShowLinkDialog] = useState<boolean>(false);
+
+  // Fetch media files
+  const { data: mediaFiles = [], isLoading: isLoadingMedia, refetch: refetchMedia } = useQuery({
+    queryKey: ['/api/media/files', activeTab],
+    queryFn: async () => {
+      const response = await fetch(`/api/media/files?type=${activeTab}`);
+      if (!response.ok) throw new Error('Failed to fetch media files');
+      return response.json();
+    }
   });
-  
-  // Query to check Telegram bot status
-  const botStatusQuery = useQuery({
+
+  // Fetch Telegram status
+  const { data: telegramStatus, isLoading: isLoadingStatus, refetch: refetchStatus } = useQuery({
     queryKey: ['/api/telegram/status'],
-    refetchInterval: 60000, // Refetch every minute
+    queryFn: async () => {
+      const response = await fetch('/api/telegram/status');
+      if (!response.ok) throw new Error('Failed to fetch Telegram status');
+      return response.json();
+    }
   });
-  
-  // Query to get media files
-  const mediaFilesQuery = useQuery({
-    queryKey: ['/api/media/files'],
-    enabled: botStatusQuery.data?.initialized === true,
-  });
-  
-  // Mutation to initialize Telegram bot
-  const initBotMutation = useMutation({
-    mutationFn: (data: z.infer<typeof telegramTokenSchema>) => {
-      return apiRequest('/api/telegram/initialize', {
+
+  // Initialize Telegram bot
+  const initializeTelegramMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/telegram/initialize', {
         method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify({ token: telegramToken }),
+        headers: { 'Content-Type': 'application/json' }
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to initialize Telegram bot');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Bot Connected Successfully",
-        description: "Your Telegram bot is now ready to receive media",
+        title: 'Telegram bot initialized',
+        description: 'You can now send media files to the bot',
+        variant: 'success'
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
-      setActiveTab('media');
+      refetchStatus();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Connection Failed",
-        description: `Failed to connect Telegram bot: ${error}`,
-        variant: "destructive",
+        title: 'Failed to initialize Telegram bot',
+        description: error.message,
+        variant: 'destructive'
       });
-    },
+    }
   });
-  
-  // Handle form submission
-  const onSubmit = (data: z.infer<typeof telegramTokenSchema>) => {
-    initBotMutation.mutate(data);
-  };
-  
-  // Copy file URL to clipboard
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(window.location.origin + url)
-      .then(() => {
-        toast({
-          title: "URL Copied",
-          description: "Media URL copied to clipboard",
-        });
-      })
-      .catch((err) => {
-        toast({
-          title: "Copy Failed",
-          description: `Failed to copy URL: ${err}`,
-          variant: "destructive",
-        });
+
+  // Delete media file
+  const deleteMediaMutation = useMutation({
+    mutationFn: async (fileName: string) => {
+      const response = await apiRequest('/api/media/delete', {
+        method: 'POST',
+        body: JSON.stringify({ fileName }),
+        headers: { 'Content-Type': 'application/json' }
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete media file');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Media file deleted',
+        variant: 'success'
+      });
+      setShowDeleteDialog(false);
+      refetchMedia();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to delete media file',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Rename media file
+  const renameMediaMutation = useMutation({
+    mutationFn: async ({ oldFileName, newFileName }: { oldFileName: string, newFileName: string }) => {
+      const response = await apiRequest('/api/media/rename', {
+        method: 'POST',
+        body: JSON.stringify({ oldFileName, newFileName }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to rename media file');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Media file renamed',
+        variant: 'success'
+      });
+      setShowRenameDialog(false);
+      refetchMedia();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to rename media file',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Link media to item
+  const linkMediaMutation = useMutation({
+    mutationFn: async ({ itemId, fileName }: { itemId: number, fileName: string }) => {
+      const response = await apiRequest('/api/media/link-to-item', {
+        method: 'POST',
+        body: JSON.stringify({ itemId, fileName }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to link media to item');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Media linked to item',
+        variant: 'success'
+      });
+      setShowLinkDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to link media to item',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Filter media files based on search query
+  const filteredMediaFiles = mediaFiles.filter((file: MediaFile) => 
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
   };
-  
-  // Render media gallery
-  const renderMediaGallery = () => {
-    if (mediaFilesQuery.isLoading) {
-      return (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      );
+
+  // Format file size for display
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
+  };
+
+  // Handle Telegram bot initialization
+  const handleInitializeBot = () => {
+    if (!telegramToken.trim()) {
+      toast({
+        title: 'Token required',
+        description: 'Please enter a valid Telegram bot token',
+        variant: 'destructive'
+      });
+      return;
     }
-    
-    if (mediaFilesQuery.isError) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-          <h3 className="text-lg font-semibold">Failed to load media files</h3>
-          <p className="text-muted-foreground mt-2">
-            There was a problem retrieving your media. Please try again.
+    initializeTelegramMutation.mutate();
+  };
+
+  // Handle file selection
+  const handleSelectFile = (file: MediaFile) => {
+    setSelectedFile(file);
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = () => {
+    if (selectedFile) {
+      deleteMediaMutation.mutate(selectedFile.name);
+    }
+  };
+
+  // Handle file rename
+  const handleRenameFile = () => {
+    if (selectedFile && newFileName) {
+      renameMediaMutation.mutate({
+        oldFileName: selectedFile.name,
+        newFileName: newFileName
+      });
+    }
+  };
+
+  // Handle link to item
+  const handleLinkToItem = () => {
+    if (selectedFile && linkToItemId) {
+      const itemId = parseInt(linkToItemId);
+      if (isNaN(itemId)) {
+        toast({
+          title: 'Invalid item ID',
+          description: 'Please enter a valid numeric item ID',
+          variant: 'destructive'
+        });
+        return;
+      }
+      linkMediaMutation.mutate({
+        itemId,
+        fileName: selectedFile.name
+      });
+    }
+  };
+
+  // Render file icon based on type
+  const renderFileIcon = (type: string) => {
+    switch (type) {
+      case 'image':
+        return <ImageIcon className="h-5 w-5 text-gold" />;
+      case 'video':
+        return <Film className="h-5 w-5 text-green-500" />;
+      default:
+        return <FileIcon className="h-5 w-5 text-blue-500" />;
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <h1 className="text-3xl font-bold text-gold mb-6">Media Manager</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Telegram Bot Status */}
+        <Card className="md:col-span-1 border-gold/30 bg-black/60">
+          <CardHeader>
+            <CardTitle className="text-gold">Telegram Integration</CardTitle>
+            <CardDescription>Connect your Telegram bot to upload media</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStatus ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin text-gold" />
+              </div>
+            ) : telegramStatus?.initialized ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-green-950 text-green-400 border-green-500">
+                    Connected
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-300">Bot: {telegramStatus.botName || 'Unknown'}</p>
+                <p className="text-sm text-gray-300">Username: {telegramStatus.username || 'Unknown'}</p>
+                <div className="mt-4 p-3 bg-black/40 rounded-md border border-gold/20">
+                  <p className="text-xs text-gray-300">
+                    Send photos, videos, or documents to your Telegram bot to upload them to your media library.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-red-950 text-red-400 border-red-500">
+                    Not Connected
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="token" className="text-gold">Bot Token</Label>
+                  <Input
+                    id="token"
+                    type="password"
+                    placeholder="Enter your Telegram bot token"
+                    value={telegramToken}
+                    onChange={(e) => setTelegramToken(e.target.value)}
+                    className="bg-black/40 border-gold/30"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-gold underline">@BotFather</a> and get a token.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleInitializeBot} 
+                  disabled={initializeTelegramMutation.isPending} 
+                  className="w-full bg-gold hover:bg-gold/80 text-black"
+                >
+                  {initializeTelegramMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect Telegram Bot'
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Media Library */}
+        <Card className="md:col-span-2 border-gold/30 bg-black/60">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-gold">Media Library</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetchMedia()}
+                className="border-gold/50 text-gold hover:bg-gold/20"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
+            </div>
+            <CardDescription>Manage your uploaded media files</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <Input
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-black/40 border-gold/30"
+                />
+              </div>
+              
+              <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
+                <TabsList className="bg-black/60 border border-gold/20">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-gold data-[state=active]:text-black">All Files</TabsTrigger>
+                  <TabsTrigger value="image" className="data-[state=active]:bg-gold data-[state=active]:text-black">Images</TabsTrigger>
+                  <TabsTrigger value="video" className="data-[state=active]:bg-gold data-[state=active]:text-black">Videos</TabsTrigger>
+                  <TabsTrigger value="document" className="data-[state=active]:bg-gold data-[state=active]:text-black">Documents</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all" className="mt-4">
+                  {renderMediaFiles()}
+                </TabsContent>
+                <TabsContent value="image" className="mt-4">
+                  {renderMediaFiles()}
+                </TabsContent>
+                <TabsContent value="video" className="mt-4">
+                  {renderMediaFiles()}
+                </TabsContent>
+                <TabsContent value="document" className="mt-4">
+                  {renderMediaFiles()}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* File Preview */}
+      {selectedFile && (
+        <Card className="mt-6 border-gold/30 bg-black/60">
+          <CardHeader>
+            <CardTitle className="text-gold">File Preview</CardTitle>
+            <CardDescription>{selectedFile.name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col items-center justify-center">
+                {selectedFile.type === 'image' ? (
+                  <div className="border border-gold/30 rounded-lg overflow-hidden">
+                    <img 
+                      src={selectedFile.url} 
+                      alt={selectedFile.name} 
+                      className="max-h-64 object-contain"
+                    />
+                  </div>
+                ) : selectedFile.type === 'video' ? (
+                  <div className="border border-gold/30 rounded-lg overflow-hidden">
+                    <video 
+                      src={selectedFile.url} 
+                      controls 
+                      className="max-h-64"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 border border-gold/30 rounded-lg">
+                    <FileIcon className="h-16 w-16 text-gold mb-2" />
+                    <span className="text-sm text-gray-300">Document Preview Not Available</span>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium text-gold mb-4">File Information</h3>
+                <dl className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <dt className="text-gray-400">Name:</dt>
+                    <dd className="text-white col-span-2">{selectedFile.name}</dd>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <dt className="text-gray-400">Type:</dt>
+                    <dd className="text-white col-span-2 capitalize">{selectedFile.type}</dd>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <dt className="text-gray-400">Size:</dt>
+                    <dd className="text-white col-span-2">{formatFileSize(selectedFile.size)}</dd>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <dt className="text-gray-400">Uploaded:</dt>
+                    <dd className="text-white col-span-2">
+                      {new Date(selectedFile.createdAt).toLocaleString()}
+                    </dd>
+                  </div>
+                  {selectedFile.dimensions && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <dt className="text-gray-400">Dimensions:</dt>
+                      <dd className="text-white col-span-2">
+                        {selectedFile.dimensions.width} × {selectedFile.dimensions.height}
+                      </dd>
+                    </div>
+                  )}
+                  {selectedFile.isOptimized !== undefined && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <dt className="text-gray-400">Optimized:</dt>
+                      <dd className="text-white col-span-2">
+                        {selectedFile.isOptimized ? 'Yes' : 'No'}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                
+                <Separator className="my-4 bg-gold/30" />
+                
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setNewFileName(selectedFile.name);
+                      setShowRenameDialog(true);
+                    }}
+                    className="border-gold/50 text-gold hover:bg-gold/20"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Rename
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowLinkDialog(true)}
+                    className="border-gold/50 text-gold hover:bg-gold/20"
+                  >
+                    <Link2 className="h-4 w-4 mr-1" />
+                    Link to Item
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="border-red-500/50 text-red-500 hover:bg-red-950/20"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Delete Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-black border-gold/30">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p className="text-white">
+            Are you sure you want to delete <span className="font-semibold text-gold">{selectedFile?.name}</span>?
+            This action cannot be undone.
           </p>
-          <Button 
-            variant="outline" 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/media/files'] })}
-            className="mt-4"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      );
-    }
-    
-    const files = mediaFilesQuery.data?.files || [];
-    
-    if (files.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="rounded-full bg-muted p-3 mb-4">
-            <AlertCircle className="h-6 w-6 text-muted-foreground" />
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="border-gold/50 text-white"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteFile}
+              disabled={deleteMediaMutation.isPending}
+            >
+              {deleteMediaMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Rename Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent className="bg-black border-gold/30">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Rename File</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newFileName" className="text-white">New File Name</Label>
+              <Input
+                id="newFileName"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                className="bg-black/60 border-gold/30"
+              />
+            </div>
           </div>
-          <h3 className="text-lg font-semibold">No media files yet</h3>
-          <p className="text-muted-foreground mt-2 max-w-md">
-            Send photos, videos, or documents to your Telegram bot to see them here.
-            They'll automatically appear in this gallery.
-          </p>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowRenameDialog(false)}
+              className="border-gold/50 text-white"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRenameFile}
+              disabled={renameMediaMutation.isPending || !newFileName}
+              className="bg-gold hover:bg-gold/80 text-black"
+            >
+              {renameMediaMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Renaming...
+                </>
+              ) : (
+                'Rename'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Link to Item Dialog */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent className="bg-black border-gold/30">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Link to Inventory Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="itemId" className="text-white">Item ID</Label>
+              <Input
+                id="itemId"
+                type="number"
+                value={linkToItemId}
+                onChange={(e) => setLinkToItemId(e.target.value)}
+                className="bg-black/60 border-gold/30"
+                placeholder="Enter item ID number"
+              />
+              <p className="text-xs text-gray-400">
+                Enter the numeric ID of the inventory item you want to link this media to.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowLinkDialog(false)}
+              className="border-gold/50 text-white"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleLinkToItem}
+              disabled={linkMediaMutation.isPending || !linkToItemId}
+              className="bg-gold hover:bg-gold/80 text-black"
+            >
+              {linkMediaMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Linking...
+                </>
+              ) : (
+                'Link Media'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+
+  // Helper function to render media files
+  function renderMediaFiles() {
+    if (isLoadingMedia) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
         </div>
       );
     }
-    
+
+    if (filteredMediaFiles.length === 0) {
+      return (
+        <div className="text-center p-8 border border-dashed border-gold/30 rounded-lg">
+          <p className="text-gray-400">
+            {searchQuery ? 'No files match your search' : 'No files found'}
+          </p>
+          {activeTab !== 'all' && (
+            <p className="text-sm text-gray-500 mt-1">
+              Try switching to "All Files" or uploading new content via Telegram
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {files.map((file: MediaFile) => (
-          <Card key={file.name} className="overflow-hidden">
-            <div className="relative">
-              {file.type === 'image' && (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredMediaFiles.map((file: MediaFile) => (
+          <div
+            key={file.name}
+            className={`
+              border rounded-lg overflow-hidden bg-black/40 cursor-pointer transition-all
+              ${selectedFile?.name === file.name 
+                ? 'border-gold shadow-[0_0_10px_rgba(218,165,32,0.3)]' 
+                : 'border-gray-700 hover:border-gold/50'}
+            `}
+            onClick={() => handleSelectFile(file)}
+          >
+            <div className="aspect-square relative">
+              {file.type === 'image' ? (
                 <img 
                   src={file.url} 
                   alt={file.name} 
-                  className="aspect-video w-full object-cover" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjEgMTlWNUMyMSAzLjg5NTQzIDIwLjEwNDYgMyAxOSAzSDVDMy44OTU0MyAzIDMgMy44OTU0MyAzIDVWMTlDMyAyMC4xMDQ2IDMuODk1NDMgMjEgNSAyMUgxOUMyMC4xMDQ2IDIxIDIxIDIwLjEwNDYgMjEgMTlaIiBzdHJva2U9IiM4ODgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTMgMTYuNTg1OUw4LjI4OTMyIDEyLjA0MzFDOC42NzY1MiAxMS43MTE2IDkuMjQ2ODggMTEuNzM0NyA5LjYwNjQ1IDEyLjA5NDNMMTMgMTUuNVYxNS41QzEzLjM3NDkgMTUuODc0OSAxMy45ODUyIDE1Ljg3OTYgMTQuMzY1MiAxNS41MTA3TDE1LjIyMjMgMTQuNjc5N0MxNS42MTU2IDE0LjMwMiAxNi4yNDc2IDE0LjMxNjIgMTYuNjI0IDE0LjcxM0wyMSAxOS41IiBzdHJva2U9IiM4ODgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTguNSA5QzkuMzI4NDMgOSAxMCA4LjMyODQzIDEwIDcuNUMxMCA2LjY3MTU3IDkuMzI4NDMgNiA4LjUgNkM3LjY3MTU3IDYgNyA2LjY3MTU3IDcgNy41QzcgOC4zMjg0MyA3LjY3MTU3IDkgOC41IDlaIiBmaWxsPSIjODg4Ii8+PC9zdmc+'
+                  }}
                 />
-              )}
-              {file.type === 'video' && (
-                <video 
-                  src={file.url} 
-                  controls 
-                  className="aspect-video w-full" 
-                />
-              )}
-              {(file.type === 'document' || file.type === 'unknown') && (
-                <div className="aspect-video w-full bg-muted flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="rounded-full bg-background/90 p-2 inline-block">
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className="h-8 w-8 text-muted-foreground" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={1.5} 
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" 
-                        />
-                      </svg>
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {file.name}
-                    </p>
-                  </div>
+              ) : file.type === 'video' ? (
+                <div className="w-full h-full flex items-center justify-center bg-black">
+                  <Film className="h-12 w-12 text-green-500 opacity-70" />
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-black">
+                  <FileIcon className="h-12 w-12 text-blue-500 opacity-70" />
                 </div>
               )}
-              <Badge 
-                className={cn(
-                  "absolute top-2 right-2", 
-                  file.type === 'image' ? "bg-green-500" : 
-                  file.type === 'video' ? "bg-blue-500" : 
-                  "bg-yellow-500"
-                )}
-              >
-                {file.type.toUpperCase()}
-              </Badge>
+              
+              {file.isOptimized && (
+                <Badge 
+                  className="absolute top-2 right-2 bg-green-950 text-green-400 border-green-500"
+                  variant="outline"
+                >
+                  Optimized
+                </Badge>
+              )}
             </div>
-            <CardContent className="p-3">
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium truncate" title={file.name}>
-                  {file.name}
-                </p>
-                <div className="flex space-x-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => copyToClipboard(file.url)}
-                        >
-                          <Copy className="h-4 w-4" />
-                          <span className="sr-only">Copy URL</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Copy URL</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          size="icon" 
-                          variant="ghost"
-                          onClick={() => window.open(file.url, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">Open file</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Open in new tab</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+            
+            <div className="p-2">
+              <div className="flex items-center gap-1">
+                {renderFileIcon(file.type)}
+                <span className="text-xs text-gray-300 truncate">
+                  {file.name.length > 18 ? `${file.name.substring(0, 15)}...` : file.name}
+                </span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-xs text-gray-500 mt-1">
+                {formatFileSize(file.size)}
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     );
-  };
-  
-  // Render bot status section
-  const renderBotStatus = () => {
-    if (botStatusQuery.isLoading) {
-      return (
-        <div className="flex items-center space-x-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Checking bot status...</span>
-        </div>
-      );
-    }
-    
-    const isInitialized = botStatusQuery.data?.initialized === true;
-    
-    return (
-      <div className="flex items-center space-x-2">
-        {isInitialized ? (
-          <>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span className="font-medium">
-              Bot Connected: @{botStatusQuery.data?.botInfo?.username}
-            </span>
-          </>
-        ) : (
-          <>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-            <span className="text-muted-foreground">
-              No Telegram bot connected
-            </span>
-          </>
-        )}
-      </div>
-    );
-  };
-  
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight gold-gradient-text">Media Manager</h1>
-        <p className="text-muted-foreground">
-          Connect a Telegram bot to easily upload and manage media for your products
-        </p>
-      </div>
-      
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-center">
-            <CardTitle>Telegram Media Integration</CardTitle>
-            {renderBotStatus()}
-          </div>
-          <CardDescription>
-            Upload product photos and videos through Telegram for easy media management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="connect">Connect Bot</TabsTrigger>
-              <TabsTrigger 
-                value="media" 
-                disabled={botStatusQuery.data?.initialized !== true}
-              >
-                Media Gallery
-              </TabsTrigger>
-              <TabsTrigger value="help">Usage Guide</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="connect">
-              <div className="space-y-4">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="token"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telegram Bot Token</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ" 
-                              {...field} 
-                              type="password"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Get this token from BotFather on Telegram
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full sm:w-auto"
-                      disabled={initBotMutation.isPending}
-                    >
-                      {initBotMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      Connect Telegram Bot
-                    </Button>
-                  </form>
-                </Form>
-                
-                <div className="rounded-md bg-muted p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <AlertCircle className="h-5 w-5 text-amber-400" aria-hidden="true" />
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium">Instructions</h3>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        <ol className="list-decimal pl-5 space-y-1">
-                          <li>Visit <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram</li>
-                          <li>Create a new bot with the command /newbot</li>
-                          <li>Follow the instructions to get your bot token</li>
-                          <li>Copy and paste the token above to connect your bot</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="media" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Media Files</h3>
-                <Button 
-                  variant="outline" 
-                  onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/media/files'] })}
-                  disabled={mediaFilesQuery.isLoading}
-                >
-                  {mediaFilesQuery.isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Refresh
-                </Button>
-              </div>
-              
-              {renderMediaGallery()}
-            </TabsContent>
-            
-            <TabsContent value="help">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">How to Use Your Media Bot</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Once your bot is connected, you can easily upload product images and videos directly from Telegram.
-                  </p>
-                  
-                  <div className="bg-muted rounded-lg p-4 space-y-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Step 1: Open your bot</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Find your bot on Telegram using the username @your_bot_name
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Step 2: Send media files</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Send photos, videos, or documents to your bot. They will be automatically saved.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Step 3: Use in your products</h4>
-                      <p className="text-sm text-muted-foreground">
-                        All media files will appear in the Media Gallery tab. You can copy the URL to use in product listings.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Supported File Types</h3>
-                  <ul className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <li className="bg-muted rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge className="bg-green-500">Images</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        JPEG, PNG images for product photos
-                      </p>
-                    </li>
-                    <li className="bg-muted rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge className="bg-blue-500">Videos</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        MP4 videos for product demonstrations
-                      </p>
-                    </li>
-                    <li className="bg-muted rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge className="bg-yellow-500">Documents</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        PDF files for certificates of analysis (COAs)
-                      </p>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  }
 };
 
-export default MediaManagerPage;
+export default MediaManager;

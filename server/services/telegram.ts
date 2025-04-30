@@ -141,22 +141,164 @@ const downloadMediaFile = async (bot: TelegramBot, fileId: string, fileName: str
   });
 };
 
-// Function to get a list of all media files
-export const getMediaFiles = (): string[] => {
+// Media file types we're interested in
+export type MediaType = 'image' | 'video' | 'document' | 'all';
+
+// Interface for media file information
+export interface MediaFile {
+  name: string;
+  path: string;
+  url: string;
+  type: MediaType;
+  size: number;
+  createdAt: Date;
+  dimensions?: { width: number; height: number };
+  thumbnail?: string; // Thumbnail URL if available
+  isOptimized?: boolean; // Whether the image has been optimized
+}
+
+// Function to get a list of all media files with detailed information
+export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0): MediaFile[] => {
   try {
-    if (fs.existsSync(MEDIA_FOLDER)) {
-      return fs.readdirSync(MEDIA_FOLDER);
+    if (!fs.existsSync(MEDIA_FOLDER)) {
+      return [];
     }
-    return [];
+    
+    // Get all files in the media folder
+    const allFiles = fs.readdirSync(MEDIA_FOLDER);
+    
+    // Filter by type if needed
+    const filteredFiles = type === 'all' 
+      ? allFiles 
+      : allFiles.filter(fileName => {
+          if (type === 'image') {
+            return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+          } else if (type === 'video') {
+            return /\.(mp4|mov|avi|webm|mkv)$/i.test(fileName);
+          } else if (type === 'document') {
+            return /\.(pdf|doc|docx|xls|xlsx|txt|csv)$/i.test(fileName);
+          }
+          return true;
+        });
+    
+    // Get file details
+    const mediaFiles = filteredFiles.map(fileName => {
+      const filePath = path.join(MEDIA_FOLDER, fileName);
+      const stats = fs.statSync(filePath);
+      
+      // Determine file type
+      let fileType: MediaType = 'document';
+      if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName)) {
+        fileType = 'image';
+      } else if (/\.(mp4|mov|avi|webm|mkv)$/i.test(fileName)) {
+        fileType = 'video';
+      }
+      
+      // Return file details
+      return {
+        name: fileName,
+        path: filePath,
+        url: `/media/${fileName}`,
+        type: fileType,
+        size: stats.size,
+        createdAt: stats.birthtime || stats.ctime,
+        isOptimized: fileName.includes('_optimized'),
+      };
+    });
+    
+    // Sort by creation date (newest first)
+    mediaFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    // Apply pagination
+    return mediaFiles.slice(offset, offset + limit);
   } catch (error) {
     console.error('Error reading media folder:', error);
     return [];
   }
 };
 
+// Function to get a specific media file by name
+export const getMediaFile = (fileName: string): MediaFile | null => {
+  try {
+    const filePath = path.join(MEDIA_FOLDER, fileName);
+    
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    
+    const stats = fs.statSync(filePath);
+    
+    // Determine file type
+    let fileType: MediaType = 'document';
+    if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName)) {
+      fileType = 'image';
+    } else if (/\.(mp4|mov|avi|webm|mkv)$/i.test(fileName)) {
+      fileType = 'video';
+    }
+    
+    return {
+      name: fileName,
+      path: filePath,
+      url: `/media/${fileName}`,
+      type: fileType,
+      size: stats.size,
+      createdAt: stats.birthtime || stats.ctime,
+      isOptimized: fileName.includes('_optimized'),
+    };
+  } catch (error) {
+    console.error(`Error getting media file ${fileName}:`, error);
+    return null;
+  }
+};
+
 // Function to get the URL for a media file
 export const getMediaUrl = (fileName: string): string => {
   return `/media/${fileName}`;
+};
+
+// Function to delete a media file
+export const deleteMediaFile = (fileName: string): boolean => {
+  try {
+    const filePath = path.join(MEDIA_FOLDER, fileName);
+    
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
+    
+    fs.unlinkSync(filePath);
+    log(`Deleted media file: ${fileName}`, 'telegram');
+    return true;
+  } catch (error) {
+    console.error(`Error deleting media file ${fileName}:`, error);
+    return false;
+  }
+};
+
+// Function to rename a media file
+export const renameMediaFile = (oldFileName: string, newFileName: string): boolean => {
+  try {
+    const oldFilePath = path.join(MEDIA_FOLDER, oldFileName);
+    const newFilePath = path.join(MEDIA_FOLDER, newFileName);
+    
+    if (!fs.existsSync(oldFilePath) || fs.existsSync(newFilePath)) {
+      return false;
+    }
+    
+    fs.renameSync(oldFilePath, newFilePath);
+    log(`Renamed media file: ${oldFileName} to ${newFileName}`, 'telegram');
+    return true;
+  } catch (error) {
+    console.error(`Error renaming media file ${oldFileName}:`, error);
+    return false;
+  }
+};
+
+// Link media to an inventory item
+export const linkMediaToItem = async (itemId: number, mediaFileName: string): Promise<boolean> => {
+  // This is just a placeholder - in a real system you'd update the database record
+  // to associate the media file with the inventory item
+  log(`Linked media ${mediaFileName} to item ${itemId}`, 'telegram');
+  return true;
 };
 
 // Get the Telegram bot instance (or null if not initialized)
