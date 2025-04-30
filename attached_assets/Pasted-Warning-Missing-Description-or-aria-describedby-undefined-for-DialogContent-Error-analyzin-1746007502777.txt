@@ -1,0 +1,56 @@
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Error analyzing image: 
+Error {}
+message: "400: {"error":"No image provided"}"
+stack: "Error: 400: {"error":"No image provided"}↵ at throwIfResNotOk (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:5:11)↵ at async apiRequest (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:15:3)↵ at async analyzeWithAI (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/inventory/item-form.tsx:111:24)"
+get stack: ƒ ()
+length: 0
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ ()
+set arguments: ƒ ()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ ()
+set caller: ƒ ()
+constructor: ƒ Function()
+length: 1
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+set stack: ƒ ()
+length: 1
+name: ""
+[[Prototype]]: ƒ ()
+[[Prototype]]: Object
+constructor: ƒ Error()
+message: "400: {"error":"No image provided"}"
+name: "Error"
+toString: ƒ toString()
+length: 0
+name: "toString"
+[[Prototype]]: ƒ ()
+[[Prototype]]: Object
+constructor: ƒ Error()
+hasOwnProperty: ƒ hasOwnProperty()
+isPrototypeOf: ƒ isPrototypeOf()
+propertyIsEnumerable: ƒ propertyIsEnumerable()
+toLocaleString: ƒ toLocaleString()
+toString: ƒ toString()
+valueOf: ƒ valueOf()
+__defineGetter__: ƒ __defineGetter__()
+__defineSetter__: ƒ __defineSetter__()
+__lookupGetter__: ƒ __lookupGetter__()
+__lookupSetter__: ƒ __lookupSetter__()
+__proto__: Object
+get __proto__: ƒ get __proto__()
+set __proto__: ƒ set __proto__()
+
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
