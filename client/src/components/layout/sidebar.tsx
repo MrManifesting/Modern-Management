@@ -56,6 +56,13 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Inventory",
       icon: <Package className="h-5 w-5" />,
       path: "/inventory",
+      subItems: [
+        {
+          title: "THCa Flower",
+          path: "/inventory/thca-flower",
+          className: "inventory-link",
+        }
+      ]
     },
     {
       title: "AI Tools",
@@ -152,19 +159,42 @@ export default function Sidebar({ expanded }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex flex-col space-y-1 px-3 py-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
         {navigationItems.map((item) => (
-          <Link
-            key={item.path}
-            href={item.path}
-            className={cn(
-              "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
-              location === item.path
-                ? "bg-gold/20 text-gold border-l-2 border-gold"
-                : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
+          <div key={item.path} className="space-y-1">
+            <Link
+              href={item.path}
+              className={cn(
+                "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
+                location === item.path || (item.subItems && item.subItems.some(subItem => location === subItem.path))
+                  ? "bg-gold/20 text-gold border-l-2 border-gold"
+                  : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
+              )}
+            >
+              {item.icon}
+              {expanded && <span className="text-sm">{item.title}</span>}
+            </Link>
+            
+            {/* Sub-items, if any */}
+            {expanded && item.subItems && (
+              <div className="ml-6 space-y-1">
+                {item.subItems.map((subItem) => (
+                  <Link
+                    key={subItem.path}
+                    href={subItem.path}
+                    className={cn(
+                      "flex items-center space-x-2 rounded-lg px-2 py-1 text-sm transition-all",
+                      subItem.className,
+                      location === subItem.path
+                        ? "bg-gold/10 text-gold border-l border-gold"
+                        : "text-gray-400 hover:bg-black/30 hover:text-gold hover:border-l hover:border-gold/50"
+                    )}
+                  >
+                    <span>•</span>
+                    <span>{subItem.title}</span>
+                  </Link>
+                ))}
+              </div>
             )}
-          >
-            {item.icon}
-            {expanded && <span className="text-sm">{item.title}</span>}
-          </Link>
+          </div>
         ))}
       </nav>
 

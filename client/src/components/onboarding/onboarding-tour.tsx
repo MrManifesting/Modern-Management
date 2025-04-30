@@ -34,7 +34,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     handleJoyrideCallback(data);
     
     // When tour is finished or skipped, call the onComplete callback
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(data.status) && onComplete) {
+    if ((data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED) && onComplete) {
       onComplete();
     }
   };
