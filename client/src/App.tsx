@@ -11,6 +11,7 @@ import Marketplace from "@/pages/marketplace";
 import Scanner from "@/pages/scanner";
 import Sales from "@/pages/sales";
 import Reports from "@/pages/reports";
+import ImageOptimization from "@/pages/image-optimization";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/scanner" component={Scanner} />
       <Route path="/sales" component={Sales} />
       <Route path="/reports" component={Reports} />
+      <Route path="/image-optimization" component={ImageOptimization} />
       <Route component={NotFound} />
     </Switch>
   );
