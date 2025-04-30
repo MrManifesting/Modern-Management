@@ -1796,23 +1796,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get media files list
-  app.get("/api/media/files", (_req: Request, res: Response) => {
+  app.get("/api/media/files", (req: Request, res: Response) => {
     try {
-      const files = getMediaFiles();
+      const type = req.query.type as MediaType || 'all';
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
       
-      res.json({
-        files: files.map(file => ({
-          name: file,
-          url: getMediaUrl(file),
-          type: file.startsWith('photo_') ? 'image' : 
-                file.startsWith('video_') ? 'video' : 
-                file.startsWith('doc_') ? 'document' : 
-                'unknown'
-        }))
-      });
+      const files = getMediaFiles(type, limit, offset);
+      res.json(files);
     } catch (error) {
       console.error("Failed to get media files:", error);
       res.status(500).json({ error: "Failed to get media files" });
+    }
+  });
+  
+  // Delete a media file
+  app.post("/api/media/delete", async (req: Request, res: Response) => {
+    try {
+      const { fileName } = req.body;
+      
+      if (!fileName) {
+        return res.status(400).json({ error: 'File name is required' });
+      }
+      
+      const result = deleteMediaFile(fileName);
+      
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'File not found or could not be deleted' });
+      }
+    } catch (error) {
+      console.error('Error deleting media file:', error);
+      res.status(500).json({ error: 'Failed to delete media file' });
+    }
+  });
+  
+  // Rename a media file
+  app.post("/api/media/rename", async (req: Request, res: Response) => {
+    try {
+      const { oldFileName, newFileName } = req.body;
+      
+      if (!oldFileName || !newFileName) {
+        return res.status(400).json({ error: 'Both old and new file names are required' });
+      }
+      
+      const result = renameMediaFile(oldFileName, newFileName);
+      
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'File not found or could not be renamed' });
+      }
+    } catch (error) {
+      console.error('Error renaming media file:', error);
+      res.status(500).json({ error: 'Failed to rename media file' });
+    }
+  });
+  
+  // Link media to inventory item
+  app.post("/api/media/link-to-item", async (req: Request, res: Response) => {
+    try {
+      const { itemId, fileName } = req.body;
+      
+      if (!itemId || !fileName) {
+        return res.status(400).json({ error: 'Both item ID and file name are required' });
+      }
+      
+      const result = await linkMediaToItem(itemId, fileName);
+      
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'File or item not found, or could not be linked' });
+      }
+    } catch (error) {
+      console.error('Error linking media to item:', error);
+      res.status(500).json({ error: 'Failed to link media to item' });
     }
   });
   

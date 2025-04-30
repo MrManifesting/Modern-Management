@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { UseFormReturn } from 'react-hook-form';
 import { Card, CardContent } from '@/components/ui/card';
-import { Grid, Cell } from '@/components/ui/grid';
+// We're using a standard grid instead of importing the Grid component
 
 interface CannabisProductAttributesProps {
   form?: UseFormReturn<any>;

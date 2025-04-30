@@ -73,15 +73,15 @@ const StrainSelector: React.FC<StrainSelectorProps> = ({
   className,
   formField = false
 }) => {
-  // Combine default strains with any custom strains
-  const allStrains = [
-    ...new Set([
+  // Combine default strains with any custom strains and remove duplicates
+  const allStrains = Array.from(
+    new Set([
       ...CANNABIS_STRAINS.indica,
       ...CANNABIS_STRAINS.sativa,
       ...CANNABIS_STRAINS.hybrid,
       ...customStrains
     ])
-  ].sort();
+  ).sort();
 
   // Handler for the select change event
   const handleChange = (newValue: string) => {
