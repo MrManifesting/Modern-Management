@@ -10,6 +10,7 @@ import {
   ScanLine,
   DollarSign,
   FileBarChart,
+  Image,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -54,6 +55,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Reports",
       icon: <FileBarChart className="h-5 w-5" />,
       path: "/reports",
+    },
+    {
+      title: "Image Optimization",
+      icon: <Image className="h-5 w-5" />,
+      path: "/image-optimization",
     },
     {
       title: "Settings",
