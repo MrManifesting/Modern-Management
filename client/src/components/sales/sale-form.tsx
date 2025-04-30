@@ -64,7 +64,7 @@ interface SaleFormProps {
   onSuccess?: () => void;
 }
 
-export function SaleForm({ onSuccess }: SaleFormProps) {
+export default function SaleForm({ onSuccess }: SaleFormProps) {
   const { toast } = useToast();
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
