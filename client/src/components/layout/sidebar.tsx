@@ -12,7 +12,8 @@ import {
   FileBarChart,
   Image,
   Users,
-  X
+  X,
+  Camera
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -113,6 +114,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Image Optimization",
       icon: <Image className="h-5 w-5" />,
       path: "/image-optimization",
+    },
+    {
+      title: "Media Manager",
+      icon: <Camera className="h-5 w-5" />,
+      path: "/media-manager",
     },
     {
       title: "Settings",

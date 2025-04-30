@@ -34,6 +34,7 @@ import {
   getMediaUrl,
   getTelegramBot
 } from "./services/telegram";
+import path from "path";
 import fs from "fs";
 import { promisify } from "util";
 

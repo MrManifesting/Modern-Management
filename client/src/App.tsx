@@ -18,6 +18,7 @@ import Settings from "@/pages/settings";
 import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
+import MediaManagerPage from "@/pages/media-manager";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/shopify-settings" component={ShopifySettingsPage} />
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
+      <Route path="/media-manager" component={MediaManagerPage} />
       <Route component={NotFound} />
     </Switch>
   );
