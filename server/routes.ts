@@ -18,7 +18,7 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
-import { syncWithShopify, setShopifyPushEnabled, isShopifyPushEnabled, prepareItemForShopify, getBarcodeUrl, getCoaQrUrl, syncItemWithShopify } from "./services/shopify";
+import { prepareItemForShopify, getPushStatus, setPushStatus, testConnection, pushItemToShopify, getItemPushInfo } from "./services/shopify";
 import fs from "fs";
 import { promisify } from "util";
 
@@ -250,12 +250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current Shopify push status
   app.get("/api/shopify/status", async (_req: Request, res: Response) => {
     try {
-      res.json({
-        pushEnabled: isShopifyPushEnabled(),
-        message: isShopifyPushEnabled() 
-          ? "Shopify synchronization is ENABLED. Changes will be pushed to Shopify."
-          : "Shopify synchronization is DISABLED. Nothing will be pushed to Shopify."
-      });
+      const status = getPushStatus();
+      res.json(status);
     } catch (error) {
       console.error("Failed to get Shopify status:", error);
       res.status(500).json({ error: "Failed to get Shopify integration status" });
@@ -271,15 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid request. 'enabled' must be a boolean value." });
       }
       
-      setShopifyPushEnabled(enabled);
-      
-      res.json({
-        success: true,
-        pushEnabled: isShopifyPushEnabled(),
-        message: enabled 
-          ? "Shopify synchronization has been ENABLED. Changes will be pushed to Shopify."
-          : "Shopify synchronization has been DISABLED. Nothing will be pushed to Shopify."
-      });
+      const status = setPushStatus(enabled);
+      res.json(status);
     } catch (error) {
       console.error("Failed to set Shopify push status:", error);
       res.status(500).json({ error: "Failed to update Shopify integration status" });
@@ -289,29 +278,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Shopify connection
   app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
     try {
-      // Check if environment variables are set
-      const shopifyStore = process.env.SHOPIFY_STORE;
-      const shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      
-      if (!shopifyStore || !shopifyToken) {
-        return res.status(400).json({ 
-          connected: false,
-          message: "Shopify credentials not configured. Please set SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN environment variables."
-        });
-      }
-      
-      // In production, we would make an actual API call to test the connection
-      // For now, we'll just simulate success if the env vars are present
-      
-      res.json({
-        connected: true,
-        store: shopifyStore,
-        message: "Successfully connected to Shopify store"
-      });
+      const connectionStatus = await testConnection();
+      res.json(connectionStatus);
     } catch (error) {
       console.error("Failed to test Shopify connection:", error);
       res.status(500).json({ 
         connected: false,
+        store: "",
         message: `Connection error: ${error instanceof Error ? error.message : "Unknown error"}`
       });
     }
@@ -327,22 +300,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Item not found" });
       }
       
-      const preparation = await prepareItemForShopify(item);
+      const pushInfo = await getItemPushInfo(item);
       
       res.json({
         item: {
           id: item.id,
           name: item.name,
-          sku: preparation.sku,
+          sku: item.sku,
           category: item.category,
           quantity: item.quantity,
           price: item.price
         },
-        preparation,
-        pushEnabled: isShopifyPushEnabled(),
-        message: preparation.ready 
-          ? "Item successfully prepared for Shopify" 
-          : "Item could not be prepared for Shopify (missing required fields)"
+        shopifyProduct: pushInfo.shopifyProduct,
+        canPush: pushInfo.canPush,
+        errors: pushInfo.errors,
+        shopifyProductUrl: pushInfo.shopifyProductUrl
       });
     } catch (error) {
       console.error("Failed to prepare item for Shopify:", error);
@@ -366,14 +338,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No valid items found with the provided IDs" });
       }
       
-      const syncResults = await syncWithShopify(selectedItems);
+      const results = await Promise.all(selectedItems.map(async (item) => {
+        const pushInfo = await getItemPushInfo(item);
+        return {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          category: item.category,
+          canPush: pushInfo.canPush,
+          errors: pushInfo.errors
+        };
+      }));
+      
+      const pushStatus = getPushStatus();
+      const readyItems = results.filter(item => item.canPush);
       
       res.json({
         success: true,
-        ...syncResults,
-        message: syncResults.pushEnabled 
-          ? `${syncResults.synced} items synced with Shopify. ${syncResults.failed} items failed.` 
-          : `${syncResults.prepared} items prepared for Shopify. Push to Shopify is currently disabled.`
+        items: results,
+        readyCount: readyItems.length,
+        totalCount: results.length,
+        pushEnabled: pushStatus.pushEnabled,
+        message: pushStatus.pushEnabled 
+          ? `${readyItems.length} of ${results.length} items are ready to sync with Shopify.` 
+          : `${readyItems.length} of ${results.length} items prepared for Shopify. Push to Shopify is currently disabled.`
       });
     } catch (error) {
       console.error("Failed to prepare items for Shopify:", error);
@@ -392,27 +380,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Prepare the item to ensure it has a valid SKU
-      const preparation = await prepareItemForShopify(item);
+      const shopifyProduct = prepareItemForShopify(item);
+      const pushInfo = await getItemPushInfo(item);
       
-      if (!preparation.ready) {
+      if (!pushInfo.canPush) {
         return res.status(400).json({ 
           error: "Unable to generate codes", 
-          message: "Item is missing required fields to generate a Shopify-compatible SKU"
+          message: "Item is missing required fields to generate a Shopify-compatible SKU",
+          errors: pushInfo.errors
         });
       }
       
-      // Generate barcode and QR code URLs based on SKU and certificate URL if available
-      const barcodeUrl = getBarcodeUrl(preparation.sku);
-      let coaQrUrl = null;
+      // Generate barcode from SKU
+      const barcodeDataURL = await generateBarcodeData(item.sku);
       
-      // Check if there's a certificate of analysis URL in attributes or use fallback
-      // Note: We have a type error here, but it will be corrected when schema.ts is updated
-      if (item.attributes && item.attributes.coa) {
-        coaQrUrl = getCoaQrUrl(item.attributes.coa);
+      // Generate QR code for Certificate of Analysis if available
+      let coaQrDataURL = null;
+      const attributes = item.attributes || {};
+      
+      if (typeof attributes === 'object' && 'coa' in attributes) {
+        const coaUrl = (attributes as any).coa;
+        if (coaUrl) {
+          coaQrDataURL = await generateQRCodeDataURL({ 
+            id: item.id, 
+            name: item.name, 
+            customUrl: coaUrl 
+          });
+        }
       } else if (item.externalUrl) {
-        coaQrUrl = getCoaQrUrl(item.externalUrl);
-      } else if (item.url) {
-        coaQrUrl = getCoaQrUrl(item.url);
+        coaQrDataURL = await generateQRCodeDataURL({ 
+          id: item.id, 
+          name: item.name, 
+          customUrl: item.externalUrl 
+        });
       }
       
       res.json({
@@ -420,11 +420,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         item: {
           id: item.id,
           name: item.name,
-          sku: preparation.sku
+          sku: item.sku
         },
         codes: {
-          barcode: barcodeUrl,
-          coaQr: coaQrUrl
+          barcode: barcodeDataURL,
+          coaQr: coaQrDataURL
         }
       });
     } catch (error) {
@@ -587,8 +587,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sync with Shopify if inventory was modified
           if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
             console.log(`Syncing inventory add to Shopify for ${updatedItem.name}`);
-            const syncSuccess = await syncItemWithShopify(updatedItem);
-            shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'add' };
+            const pushInfo = await getItemPushInfo(updatedItem);
+            
+            if (pushInfo.canPush) {
+              const result = await pushItemToShopify(pushInfo.shopifyProduct);
+              shopifySyncResult = { 
+                status: result.success ? 'success' : 'failed', 
+                message: result.message 
+              };
+            } else {
+              shopifySyncResult = { 
+                status: 'failed', 
+                message: 'Item not ready for Shopify push' 
+              };
+            }
           }
         } else if (action === "remove") {
           // Prevent negative inventory
@@ -598,8 +610,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sync with Shopify if inventory was modified
           if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
             console.log(`Syncing inventory removal to Shopify for ${updatedItem.name}`);
-            const syncSuccess = await syncItemWithShopify(updatedItem);
-            shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'remove' };
+            const pushInfo = await getItemPushInfo(updatedItem);
+            
+            if (pushInfo.canPush) {
+              const result = await pushItemToShopify(pushInfo.shopifyProduct);
+              shopifySyncResult = { 
+                status: result.success ? 'success' : 'failed', 
+                message: result.message 
+              };
+            } else {
+              shopifySyncResult = { 
+                status: 'failed', 
+                message: 'Item not ready for Shopify push' 
+              };
+            }
           }
         }
         
@@ -985,7 +1009,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let syncResults = null;
         
         if (syncToShopify && importedItems.length > 0) {
-          syncResults = await syncWithShopify(importedItems);
+          const pushStatus = getPushStatus();
+          if (pushStatus.pushEnabled) {
+            // Process each item through Shopify push pipeline
+            const results = await Promise.all(importedItems.map(async (item) => {
+              const pushInfo = await getItemPushInfo(item);
+              if (pushInfo.canPush) {
+                return await pushItemToShopify(pushInfo.shopifyProduct);
+              }
+              return { 
+                success: false, 
+                message: 'Item not ready for Shopify push',
+                productId: undefined 
+              };
+            }));
+            
+            // Count successful pushes
+            const successful = results.filter(r => r.success).length;
+            
+            syncResults = {
+              pushEnabled: true,
+              synced: successful,
+              failed: importedItems.length - successful,
+              totalProcessed: importedItems.length
+            };
+          } else {
+            syncResults = {
+              pushEnabled: false,
+              message: 'Shopify push is disabled. Enable it in settings to push items.'
+            };
+          }
         }
         
         return res.status(201).json({

@@ -1,298 +1,250 @@
-/**
- * Shopify Integration Service
- * 
- * This module handles communication with the Shopify API for inventory synchronization.
- * It ensures that inventory levels are accurate across platforms to prevent overselling.
- * 
- * IMPORTANT: Nothing is pushed to Shopify until explicit approval is given.
- * All operations prepare data locally first.
- */
-
 import { Item } from "@shared/schema";
 
-// Shopify store credentials - these would be loaded from environment variables in production
-// and should NEVER be hardcoded in real applications
+interface ShopifyProduct {
+  id?: number;
+  title: string;
+  body_html: string;
+  vendor: string;
+  product_type: string;
+  status: string;
+  variants: Array<{
+    price: string;
+    sku: string;
+    inventory_quantity: number;
+    inventory_management: string;
+    option1?: string;
+    option2?: string;
+    option3?: string;
+    barcode?: string;
+  }>;
+  options?: Array<{
+    name: string;
+    values: string[];
+  }>;
+  images?: Array<{
+    src: string;
+    alt?: string;
+  }>;
+  tags?: string;
+}
+
+let pushToShopifyEnabled = false;
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '';
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
 
-// Global sync toggle - keeps track of whether we're allowed to push to Shopify
-let ALLOW_SHOPIFY_PUSH = false;
-
 /**
- * Enable or disable actual syncing with Shopify
- * @param enable Whether to enable pushing to Shopify
+ * Checks if the Shopify integration is properly configured with API credentials
  */
-export function setShopifyPushEnabled(enable: boolean): void {
-  console.log(`Shopify push ${enable ? 'ENABLED' : 'DISABLED'}`);
-  ALLOW_SHOPIFY_PUSH = enable;
+export async function isShopifyConfigured(): Promise<boolean> {
+  return !!(SHOPIFY_STORE && SHOPIFY_ACCESS_TOKEN);
 }
 
 /**
- * Check if Shopify push is currently enabled
- * @returns Current push status
+ * Sets the status of whether inventory changes should be pushed to Shopify
  */
-export function isShopifyPushEnabled(): boolean {
-  return ALLOW_SHOPIFY_PUSH;
-}
-
-/**
- * Generate SKU for cannabis product following the pattern from the Google Script
- * 
- * @param strain Cannabis strain name
- * @param percentage THC percentage 
- * @param tier Product tier/grade
- * @returns Formatted SKU
- */
-export function generateCannabisProductSKU(strain: string, percentage: number, tier: string): string {
-  // Extract initials from strain name (e.g., "Blue Dream" -> "BD")
-  const initials = strain.split(' ')
-    .map(word => word[0] || '')
-    .join('')
-    .toUpperCase();
-  
-  // Format tier code (take up to 3 chars, uppercase, letters only)
-  const tierCode = tier.replace(/[^A-Z]/gi, '').substring(0, 3).toUpperCase();
-  
-  // Convert percentage to integer with proper precision
-  const percentageCode = Math.round(percentage * 10000);
-  
-  return `${initials}-${tierCode}-${percentageCode}`;
-}
-
-/**
- * Format mock barcode URL for a SKU (for display purposes only until pushed)
- * 
- * @param sku Product SKU
- * @returns URL to display barcode
- */
-export function getBarcodeUrl(sku: string): string {
-  return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(sku)}&code=Code128&dpi=96`;
-}
-
-/**
- * Format QR code URL for Certificate of Analysis
- * 
- * @param coaUrl URL to the Certificate of Analysis
- * @returns URL to display QR code
- */
-export function getCoaQrUrl(coaUrl: string): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(coaUrl)}`;
-}
-
-/**
- * Prepare an item for Shopify synchronization without actually pushing
- * 
- * @param item The item to prepare for Shopify
- * @returns Preparation result
- */
-export async function prepareItemForShopify(item: Item): Promise<{ 
-  ready: boolean;
-  sku: string;
-  barcodeUrl: string;
-  shopifyHandle?: string;
-}> {
-  try {
-    // Ensure SKU exists - generate if needed for cannabis products
-    let sku = item.sku;
-    
-    if (!sku && item.category === 'Cannabis' && item.attributes) {
-      const strain = item.name;
-      const percentage = parseFloat(item.attributes['percentage'] || '0');
-      const tier = item.attributes['tier'] || 'Standard';
-      
-      if (strain && percentage && tier) {
-        sku = generateCannabisProductSKU(strain, percentage, tier);
-      }
-    }
-    
-    if (!sku) {
-      return { 
-        ready: false, 
-        sku: '', 
-        barcodeUrl: '',
-        shopifyHandle: undefined
-      };
-    }
-    
-    // Generate barcode URL for display
-    const barcodeUrl = getBarcodeUrl(sku);
-    
-    // Generate a potential Shopify handle based on product name
-    const shopifyHandle = item.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
-    console.log(`Item ${item.name} prepared for Shopify. SKU: ${sku}`);
-    
-    return {
-      ready: true,
-      sku,
-      barcodeUrl,
-      shopifyHandle
-    };
-  } catch (error) {
-    console.error(`Error preparing item ${item.name} for Shopify:`, error);
-    return { 
-      ready: false, 
-      sku: item.sku || '', 
-      barcodeUrl: '',
-      shopifyHandle: undefined
-    };
-  }
-}
-
-/**
- * Synchronize a single item with Shopify - only performs actual sync if enabled
- * 
- * @param item - The item to synchronize with Shopify
- * @returns Result object with preparation and sync status
- */
-export async function syncItemWithShopify(item: Item): Promise<{
-  prepared: boolean;
-  synced: boolean;
-  sku: string;
-  message: string;
-}> {
-  try {
-    // Always prepare the item
-    const preparation = await prepareItemForShopify(item);
-    
-    if (!preparation.ready) {
-      return {
-        prepared: false,
-        synced: false,
-        sku: item.sku || '',
-        message: 'Item could not be prepared for Shopify (missing required fields)'
-      };
-    }
-    
-    // If actual sync is not enabled, stop here
-    if (!ALLOW_SHOPIFY_PUSH) {
-      return {
-        prepared: true,
-        synced: false,
-        sku: preparation.sku,
-        message: 'Item prepared but not pushed to Shopify (sync not enabled)'
-      };
-    }
-    
-    // In a real implementation, we would make actual API calls to Shopify here
-    // For now, we'll simulate a successful sync
-    console.log(`SIMULATION: Syncing item ${item.name} (SKU: ${preparation.sku}) with Shopify. Quantity: ${item.quantity}`);
-    
-    return {
-      prepared: true,
-      synced: true,
-      sku: preparation.sku,
-      message: 'Item successfully synced with Shopify'
-    };
-  } catch (error) {
-    console.error(`Error in Shopify sync process for ${item.name}:`, error);
-    return {
-      prepared: false,
-      synced: false,
-      sku: item.sku || '',
-      message: `Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
-  }
-}
-
-/**
- * Prepare and optionally sync multiple items with Shopify
- * 
- * @param items - Array of items to prepare/synchronize
- * @returns Detailed results of the operation
- */
-export async function syncWithShopify(items: Item[]): Promise<{
-  prepared: number;
-  synced: number;
-  failed: number;
-  pushEnabled: boolean;
-  skus: Record<number, string>;
-  errors: Record<number, string>;
-}> {
-  let prepared = 0;
-  let synced = 0;
-  let failed = 0;
-  const skus: Record<number, string> = {};
-  const errors: Record<number, string> = {};
-  
-  console.log(`Processing ${items.length} items for Shopify` + 
-              (ALLOW_SHOPIFY_PUSH ? ' - PUSHING ENABLED' : ' - PREPARING ONLY (no push)'));
-  
-  for (const item of items) {
-    try {
-      const result = await syncItemWithShopify(item);
-      
-      if (result.prepared) {
-        prepared++;
-        skus[item.id] = result.sku;
-      }
-      
-      if (result.synced) {
-        synced++;
-      }
-      
-      if (!result.prepared) {
-        failed++;
-        errors[item.id] = result.message;
-      }
-    } catch (error) {
-      console.error(`Error processing item ${item.name}:`, error);
-      failed++;
-      errors[item.id] = error instanceof Error ? error.message : 'Unknown error';
-    }
-  }
-  
-  console.log(`Shopify processing complete. Prepared: ${prepared}, Synced: ${synced}, Failed: ${failed}`);
-  return { 
-    prepared, 
-    synced, 
-    failed,
-    pushEnabled: ALLOW_SHOPIFY_PUSH,
-    skus,
-    errors
+export function setPushStatus(enabled: boolean): { pushEnabled: boolean, message: string } {
+  pushToShopifyEnabled = enabled;
+  return {
+    pushEnabled,
+    message: pushEnabled 
+      ? 'Shopify push is enabled. Inventory changes will be synchronized with Shopify.' 
+      : 'Shopify push is disabled. Changes will NOT be pushed to Shopify.',
   };
 }
 
 /**
- * Check inventory levels in Shopify and prepare updates for local database
- * Only performs actual checks if sync is enabled
- * 
- * @returns Result of the inventory check operation
+ * Gets the current status of whether inventory changes are pushed to Shopify
  */
-export async function checkShopifyInventory(): Promise<{
-  checked: boolean;
-  items: { sku: string; shopifyQty: number }[];
-  message: string;
-}> {
-  if (!ALLOW_SHOPIFY_PUSH || !SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
-    return {
-      checked: false,
-      items: [],
-      message: 'Shopify inventory check not performed (sync not enabled or credentials missing)'
+export function getPushStatus(): { pushEnabled: boolean, message: string } {
+  return {
+    pushEnabled,
+    message: pushEnabled 
+      ? 'Shopify push is enabled. Inventory changes will be synchronized with Shopify.' 
+      : 'Shopify push is disabled. Changes will NOT be pushed to Shopify.',
+  };
+}
+
+/**
+ * Tests the connection to the Shopify API
+ */
+export async function testConnection(): Promise<{ connected: boolean, store: string, message: string }> {
+  try {
+    if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
+      return { 
+        connected: false, 
+        store: '',
+        message: 'Shopify API credentials are not configured. Check your environment variables.' 
+      };
+    }
+    
+    // Make a simple API call to test authentication
+    const response = await fetch(`https://${SHOPIFY_STORE}/admin/api/2023-10/shop.json`, {
+      headers: {
+        'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to connect to Shopify API: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return { 
+      connected: true, 
+      store: data.shop.name,
+      message: `Successfully connected to ${data.shop.name}.` 
+    };
+  } catch (error) {
+    console.error('Shopify connection test failed:', error);
+    return { 
+      connected: false, 
+      store: '',
+      message: error instanceof Error ? error.message : 'Unknown error testing Shopify connection' 
+    };
+  }
+}
+
+/**
+ * Transforms inventory item to Shopify product format
+ */
+export function prepareItemForShopify(item: Item): ShopifyProduct {
+  // Generate SKU according to pattern based on the item's CBD/THC content
+  let sku = item.sku;
+  
+  if (!sku && item.category?.toLowerCase().includes('thca flower')) {
+    // SKU Pattern: INITIALS-TIER-THCVALUE
+    // Example: IS-AAA-28
+    const initials = (item.name.split(' ').map(word => word[0]).join('')).slice(0, 2).toUpperCase();
+    const attributes = item.attributes || {};
+    const percentage = attributes["percentage"] || '0';
+    const tier = attributes["tier"] || 'A';
+    
+    // Extract THC percentage, remove any % signs and round to nearest whole number
+    const thcValue = percentage.toString().replace('%', '').trim();
+    sku = `${initials}-${tier}-${thcValue}`;
+  }
+
+  // Build the main product 
+  const product: ShopifyProduct = {
+    title: item.name,
+    body_html: `<p>${item.description || ''}</p>`,
+    vendor: "Gold Standard CBD",
+    product_type: item.category || "Other",
+    status: item.status === 'active' ? 'active' : 'draft',
+    variants: [{
+      price: item.price.toString(),
+      sku: sku,
+      inventory_quantity: item.quantity,
+      inventory_management: "shopify",
+      barcode: item.barcode
+    }],
+    options: []
+  };
+
+  // Add image if available
+  if (item.images && item.images.length > 0) {
+    product.images = item.images.map(img => ({
+      src: img.url,
+      alt: item.name
+    }));
+  }
+
+  // Add tags
+  const tags = [item.category];
+  if (item.attributes) {
+    const attributesList = Object.entries(item.attributes)
+      .map(([key, value]) => `${key}:${value}`)
+      .join(', ');
+    tags.push(attributesList);
+  }
+  product.tags = tags.filter(Boolean).join(', ');
+
+  return product;
+}
+
+/**
+ * Creates or updates a product in Shopify
+ */
+export async function pushItemToShopify(product: ShopifyProduct): Promise<{ success: boolean, productId?: number, message: string }> {
+  if (!pushToShopifyEnabled) {
+    return { 
+      success: false,
+      message: 'Shopify push is currently disabled. Enable it in settings to push products.'
     };
   }
   
   try {
-    console.log("SIMULATION: Checking Shopify inventory levels");
+    if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
+      return { 
+        success: false,
+        message: 'Shopify API credentials are not configured.'
+      };
+    }
+
+    const method = product.id ? 'PUT' : 'POST';
+    const url = product.id 
+      ? `https://${SHOPIFY_STORE}/admin/api/2023-10/products/${product.id}.json` 
+      : `https://${SHOPIFY_STORE}/admin/api/2023-10/products.json`;
     
-    // In a real implementation, this would fetch inventory from Shopify API
-    // For now, we'll return a simulated empty result
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ product })
+    });
     
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Shopify API error (${response.status}): ${errorText}`);
+    }
+    
+    const data = await response.json();
     return {
-      checked: true,
-      items: [],
-      message: 'Inventory check completed (simulated)'
+      success: true,
+      productId: data.product.id,
+      message: `Product successfully ${product.id ? 'updated' : 'created'} in Shopify.`
     };
   } catch (error) {
-    console.error("Error checking Shopify inventory:", error);
-    return {
-      checked: false,
-      items: [],
-      message: `Inventory check error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    console.error('Failed to push product to Shopify:', error);
+    return { 
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error pushing to Shopify'
     };
   }
 }
+
+/**
+ * Gets information about pushing an item to Shopify
+ * including status, preview information and errors
+ */
+export async function getItemPushInfo(item: Item): Promise<{
+  item: Item;
+  shopifyProduct: ShopifyProduct;
+  canPush: boolean;
+  errors: string[];
+  shopifyProductUrl?: string;
+}> {
+  const shopifyProduct = prepareItemForShopify(item);
+  const errors: string[] = [];
+  
+  // Validate required fields
+  if (!item.name) errors.push('Item name is required');
+  if (!item.price) errors.push('Item price is required');
+  if (item.quantity === undefined) errors.push('Item quantity is required');
+  
+  // Validate product requirements for Shopify
+  if (!shopifyProduct.variants[0].sku) errors.push('SKU is missing and could not be generated');
+  
+  return {
+    item,
+    shopifyProduct,
+    canPush: errors.length === 0 && pushToShopifyEnabled,
+    errors,
+    shopifyProductUrl: item.shopifyId ? `https://${SHOPIFY_STORE}/admin/products/${item.shopifyId}` : undefined
+  };
+}
+
+export const pushEnabled = () => pushToShopifyEnabled;
