@@ -55,6 +55,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch item" });
     }
   });
+  
+  // Get item by barcode
+  app.get("/api/items/barcode/:barcode", async (req: Request, res: Response) => {
+    try {
+      const barcode = req.params.barcode;
+      const items = await storage.getItems();
+      const item = items.find(item => item.barcode === barcode);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found with the provided barcode" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Error getting item by barcode:", error);
+      res.status(500).json({ error: "Failed to get item by barcode" });
+    }
+  });
+  
+  // Get item by SKU
+  app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
+    try {
+      const sku = req.params.sku;
+      const items = await storage.getItems();
+      const item = items.find(item => item.sku === sku);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found with the provided SKU" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Error getting item by SKU:", error);
+      res.status(500).json({ error: "Failed to get item by SKU" });
+    }
+  });
 
   app.post("/api/items", upload.array("files", 5), async (req: Request, res: Response) => {
     try {
