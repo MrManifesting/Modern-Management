@@ -113,7 +113,7 @@ export default function CSVImport() {
     
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("syncToShopify", "true");
+    formData.append("syncToShopify", syncToShopify.toString());
     
     // Start an interval to simulate progress while waiting for the import
     const progressInterval = setInterval(() => {
@@ -231,9 +231,25 @@ export default function CSVImport() {
               )}
             </div>
             
-            <div className="p-3 bg-blue-50 rounded-md text-sm text-blue-800">
-              <p>
-                <strong>Important:</strong> All imported items will be automatically synchronized with your connected marketplaces, including Shopify.
+            <div className="p-4 border rounded-md">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <ShoppingBag className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-medium">Marketplace Synchronization</h3>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="sync-shopify" 
+                    checked={syncToShopify}
+                    onCheckedChange={setSyncToShopify}
+                  />
+                  <Label htmlFor="sync-shopify">Sync with Shopify</Label>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                {syncToShopify 
+                  ? "All imported items will be automatically synchronized with Shopify to prevent overselling." 
+                  : "Items will only be imported locally. You can sync them later manually."}
               </p>
             </div>
           </div>
@@ -244,7 +260,10 @@ export default function CSVImport() {
             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
             <h3 className="text-lg font-medium text-gray-900">Import Completed</h3>
             <p className="text-gray-500 mt-1">
-              Your inventory has been successfully imported and synced with your marketplaces.
+              {syncToShopify 
+                ? "Your inventory has been successfully imported and synchronized with Shopify to prevent overselling."
+                : "Your inventory has been successfully imported. You can sync with marketplaces later if needed."
+              }
             </p>
             <Button onClick={resetForm} className="mt-4">Import Another File</Button>
           </div>
@@ -253,9 +272,14 @@ export default function CSVImport() {
       
       {importStatus === "validated" && (
         <CardFooter className="border-t bg-gray-50 px-6 py-4">
-          <div className="flex justify-end w-full">
+          <div className="flex justify-between w-full">
+            <div className="text-sm text-gray-500">
+              {syncToShopify ? 
+                "Inventory will be imported and synchronized with Shopify" : 
+                "Inventory will be imported locally only"}
+            </div>
             <Button onClick={handleImport} disabled={importStatus === "importing"}>
-              Import and Sync Inventory
+              {syncToShopify ? "Import and Sync Inventory" : "Import Inventory"}
             </Button>
           </div>
         </CardFooter>
