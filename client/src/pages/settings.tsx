@@ -18,25 +18,63 @@ import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, K
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Simulate loading state for demonstration
+  useEffect(() => {
+    // Set the loaded state after a short delay
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="container max-w-6xl mx-auto py-6 space-y-8 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-muted rounded"></div>
+          <div className="h-4 w-96 bg-muted rounded"></div>
+        </div>
+        <div className="h-8 w-64 bg-muted rounded"></div>
+        <div className="space-y-4">
+          <div className="h-48 w-full bg-muted rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl mx-auto py-6 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold mb-2 gold-gradient-text">Settings</h1>
         <p className="text-muted-foreground">Manage your application preferences and accessibility options</p>
       </div>
 
       <Tabs defaultValue="appearance">
-        <TabsList className="mb-4">
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="accessibility">Accessibility</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
+        <TabsList className="mb-4 bg-black/20 dark:bg-black/40 border border-gold/20">
+          <TabsTrigger 
+            value="appearance" 
+            className="border-b-2 border-transparent data-[state=active]:border-gold data-[state=active]:bg-gold/10 data-[state=active]:text-gold">
+            Appearance
+          </TabsTrigger>
+          <TabsTrigger 
+            value="accessibility" 
+            className="border-b-2 border-transparent data-[state=active]:border-gold data-[state=active]:bg-gold/10 data-[state=active]:text-gold">
+            Accessibility
+          </TabsTrigger>
+          <TabsTrigger 
+            value="account" 
+            className="border-b-2 border-transparent data-[state=active]:border-gold data-[state=active]:bg-gold/10 data-[state=active]:text-gold">
+            Account
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Theme Settings</CardTitle>
+          <Card className="border-gold/30">
+            <CardHeader className="bg-gold/5 border-b border-gold/20">
+              <CardTitle className="text-gold">Theme Settings</CardTitle>
               <CardDescription>
                 Customize how Gold-Standard-Inventory looks and feels
               </CardDescription>
@@ -111,15 +149,32 @@ const SettingsPage = () => {
                   </div>
                   <Switch defaultChecked />
                 </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 rounded-md bg-gold/20">
+                      <Sparkles className="h-5 w-5 text-gold" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Gold Standard Theme</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Enable the premium Black & Gold theme
+                      </p>
+                    </div>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="accessibility" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Accessibility Settings</CardTitle>
+          <Card className="border-gold/30">
+            <CardHeader className="bg-gold/5 border-b border-gold/20">
+              <CardTitle className="text-gold">Accessibility Settings</CardTitle>
               <CardDescription>
                 Make Gold-Standard-Inventory more accessible for your needs
               </CardDescription>
@@ -221,9 +276,9 @@ const SettingsPage = () => {
         </TabsContent>
 
         <TabsContent value="account" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
+          <Card className="border-gold/30">
+            <CardHeader className="bg-gold/5 border-b border-gold/20">
+              <CardTitle className="text-gold">Account Settings</CardTitle>
               <CardDescription>
                 Manage your account details and preferences
               </CardDescription>
@@ -252,8 +307,8 @@ const SettingsPage = () => {
               </div>
 
               <div className="flex justify-end space-x-2 mt-4">
-                <Button variant="outline">Edit Profile</Button>
-                <Button>Change Password</Button>
+                <Button variant="outline" className="border-gold hover:bg-gold/10">Edit Profile</Button>
+                <Button className="bg-gold hover:bg-gold-dark text-black">Change Password</Button>
               </div>
             </CardContent>
           </Card>
