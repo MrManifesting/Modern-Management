@@ -1017,6 +1017,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee Routes
+  app.get("/api/employees", async (_req: Request, res: Response) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error("Failed to fetch employees:", error);
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
+  app.get("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const employee = await storage.getEmployee(id);
+      
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      console.error("Failed to fetch employee:", error);
+      res.status(500).json({ error: "Failed to fetch employee" });
+    }
+  });
+
+  app.get("/api/employees/by-employee-id/:employeeId", async (req: Request, res: Response) => {
+    try {
+      const employeeId = req.params.employeeId;
+      const employee = await storage.getEmployeeByEmployeeId(employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      console.error("Failed to fetch employee:", error);
+      res.status(500).json({ error: "Failed to fetch employee" });
+    }
+  });
+
+  app.post("/api/employees", async (req: Request, res: Response) => {
+    try {
+      const parsedData = insertEmployeeSchema.parse(req.body);
+      const employee = await storage.createEmployee(parsedData);
+      res.status(201).json(employee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to create employee:", error);
+      res.status(500).json({ error: "Failed to create employee" });
+    }
+  });
+
+  app.patch("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existingEmployee = await storage.getEmployee(id);
+      
+      if (!existingEmployee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      // Direct update without schema validation for flexibility
+      const updatedEmployee = await storage.updateEmployee(id, req.body);
+      res.json(updatedEmployee);
+    } catch (error) {
+      console.error("Failed to update employee:", error);
+      res.status(500).json({ error: "Failed to update employee" });
+    }
+  });
+
+  app.delete("/api/employees/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployee(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Failed to delete employee:", error);
+      res.status(500).json({ error: "Failed to delete employee" });
+    }
+  });
+  
+  // Inventory Action Routes
+  app.get("/api/inventory-actions", async (req: Request, res: Response) => {
+    try {
+      const filters = {
+        itemId: req.query.itemId ? parseInt(req.query.itemId as string) : undefined,
+        employeeId: req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined,
+        actionType: req.query.actionType as string | undefined
+      };
+      
+      const actions = await storage.getInventoryActions(
+        Object.values(filters).some(v => v !== undefined) ? filters : undefined
+      );
+      
+      res.json(actions);
+    } catch (error) {
+      console.error("Failed to fetch inventory actions:", error);
+      res.status(500).json({ error: "Failed to fetch inventory actions" });
+    }
+  });
+
+  app.get("/api/inventory-actions/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const action = await storage.getInventoryAction(id);
+      
+      if (!action) {
+        return res.status(404).json({ error: "Inventory action not found" });
+      }
+      
+      res.json(action);
+    } catch (error) {
+      console.error("Failed to fetch inventory action:", error);
+      res.status(500).json({ error: "Failed to fetch inventory action" });
+    }
+  });
+
+  app.post("/api/inventory-actions", async (req: Request, res: Response) => {
+    try {
+      const parsedData = insertInventoryActionSchema.parse(req.body);
+      const action = await storage.createInventoryAction(parsedData);
+      
+      // If this is a quantity change action, update the item quantity
+      if (parsedData.actionType === 'add' || parsedData.actionType === 'remove') {
+        const item = await storage.getItem(parsedData.itemId);
+        if (item && parsedData.quantity !== null && parsedData.quantity !== undefined) {
+          const newQuantity = parsedData.actionType === 'add'
+            ? item.quantity + parsedData.quantity
+            : Math.max(0, item.quantity - parsedData.quantity);
+            
+          await storage.updateItem(item.id, { quantity: newQuantity });
+        }
+      }
+      
+      res.status(201).json(action);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to create inventory action:", error);
+      res.status(500).json({ error: "Failed to create inventory action" });
+    }
+  });
+
+  app.get("/api/items/:itemId/inventory-actions", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const actions = await storage.getInventoryActionsByItem(itemId);
+      res.json(actions);
+    } catch (error) {
+      console.error("Failed to fetch item inventory actions:", error);
+      res.status(500).json({ error: "Failed to fetch item inventory actions" });
+    }
+  });
+
+  app.get("/api/employees/:employeeId/inventory-actions", async (req: Request, res: Response) => {
+    try {
+      const employeeId = parseInt(req.params.employeeId);
+      const employee = await storage.getEmployee(employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      const actions = await storage.getInventoryActionsByEmployee(employeeId);
+      res.json(actions);
+    } catch (error) {
+      console.error("Failed to fetch employee inventory actions:", error);
+      res.status(500).json({ error: "Failed to fetch employee inventory actions" });
+    }
+  });
+
+  // Update item handling endpoint to include employee tracking
+  app.post("/api/items/:id/employee-action", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { employeeId, actionType, quantity, notes } = req.body;
+      
+      if (!employeeId || !actionType || (actionType !== 'check' && !quantity)) {
+        return res.status(400).json({ 
+          error: "Missing required fields. employeeId, actionType, and quantity (for non-check actions) are required."
+        });
+      }
+      
+      // Validate item exists
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Validate employee exists
+      const employee = await storage.getEmployee(parseInt(employeeId));
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      
+      // Create inventory action
+      const action = await storage.createInventoryAction({
+        itemId,
+        employeeId: parseInt(employeeId),
+        actionType,
+        quantity: actionType === 'check' ? null : parseInt(quantity),
+        notes: notes || null,
+        actionDetails: {}
+      });
+      
+      // Update item quantity if needed
+      if (actionType !== 'check') {
+        const parsedQuantity = parseInt(quantity);
+        const newQuantity = actionType === 'add'
+          ? item.quantity + parsedQuantity
+          : Math.max(0, item.quantity - parsedQuantity);
+          
+        await storage.updateItem(itemId, { quantity: newQuantity });
+      }
+      
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Failed to record employee action:", error);
+      res.status(500).json({ error: "Failed to record employee action" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
