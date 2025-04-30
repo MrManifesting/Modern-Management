@@ -77,12 +77,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 bg-white border-r border-gray-200 shadow-sm",
+        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm",
         expanded ? "w-64" : "w-20"
       )}
     >
       {/* Logo and Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-200 px-4">
+      <div className="flex h-16 items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
         <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
           <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-primary-400 to-primary-600 p-1.5 text-white">
             <svg
@@ -101,7 +101,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold text-gray-800">MrManifestlister</span>
+            <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Gold-Standard-Inventory</span>
           )}
         </div>
       </div>
@@ -115,8 +115,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
             className={cn(
               "flex items-center space-x-2 rounded-lg px-3 py-2",
               location === item.path
-                ? "bg-primary-50 text-primary-600"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
+                : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
             )}
           >
             {item.icon}
@@ -126,15 +126,15 @@ export default function Sidebar({ expanded }: SidebarProps) {
       </nav>
 
       {/* User Menu */}
-      <div className="mt-auto border-t border-gray-200 p-4">
+      <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center">
           <div className="h-8 w-8 rounded-full bg-[hsl(var(--wood))] text-[hsl(var(--wood-foreground))] flex items-center justify-center">
             <span className="text-sm font-medium">JS</span>
           </div>
           {expanded && (
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-800">John Smith</p>
-              <p className="text-xs text-gray-500">john@example.com</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">John Smith</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">john@example.com</p>
             </div>
           )}
         </div>
