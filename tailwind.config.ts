@@ -44,6 +44,13 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        // Gold theme colors
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          light: "hsl(var(--gold-light))",
+          dark: "hsl(var(--gold-dark))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",
@@ -79,10 +86,25 @@ export default {
             height: "0",
           },
         },
+        "gold-shimmer": {
+          "0%": {
+            backgroundPosition: "0% 50%",
+          },
+          "50%": {
+            backgroundPosition: "100% 50%",
+          },
+          "100%": {
+            backgroundPosition: "0% 50%",
+          },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "gold-shimmer": "gold-shimmer 3s ease infinite",
+      },
+      backgroundImage: {
+        "gold-gradient": "linear-gradient(to right, hsl(45, 80%, 50%), hsl(45, 90%, 65%), hsl(45, 80%, 50%))",
       },
     },
   },
