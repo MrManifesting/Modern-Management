@@ -29,6 +29,11 @@ import {
   syncProductsFromShopify
 } from "./services/shopify";
 import {
+  getShopifyProducts,
+  updateShopifyProduct,
+  createShopifyProduct
+} from "./services/shopify-sync";
+import {
   initializeTelegramBot,
   getMediaFiles,
   getMediaUrl,
@@ -1820,6 +1825,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendFile(filePath);
     } else {
       next();
+    }
+  });
+  
+  // Enhanced Shopify Sync API Routes
+  
+  // Get all products from Shopify for sync preview
+  app.get("/api/shopify/products", async (_req: Request, res: Response) => {
+    try {
+      const result = await getShopifyProducts();
+      
+      if (!result.success) {
+        return res.status(400).json({
+          message: result.message || "Failed to fetch Shopify products",
+          success: false
+        });
+      }
+      
+      res.json(result.shopifyProducts);
+    } catch (error) {
+      console.error("Failed to fetch Shopify products:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch Shopify products",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Update a product in Shopify
+  app.post("/api/shopify/update-product", async (req: Request, res: Response) => {
+    try {
+      const { shopifyId, inventoryId, updateStock, updatePrice, updateImages } = req.body;
+      
+      if (!shopifyId || !inventoryId) {
+        return res.status(400).json({ 
+          error: "Invalid request. Both shopifyId and inventoryId are required." 
+        });
+      }
+      
+      // Get the inventory item
+      const inventoryItem = await storage.getItem(inventoryId);
+      
+      if (!inventoryItem) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      // Update the product
+      const result = await updateShopifyProduct(
+        shopifyId,
+        inventoryItem,
+        {
+          updateStock: updateStock === true,
+          updatePrice: updatePrice === true,
+          updateImages: updateImages === true
+        }
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to update Shopify product:", error);
+      res.status(500).json({
+        success: false,
+        message: `Failed to update Shopify product: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
+    }
+  });
+  
+  // Create a new product in Shopify
+  app.post("/api/shopify/create-product", async (req: Request, res: Response) => {
+    try {
+      const { inventoryId, sku } = req.body;
+      
+      if (!inventoryId) {
+        return res.status(400).json({ 
+          error: "Invalid request. inventoryId is required." 
+        });
+      }
+      
+      // Get the inventory item
+      const inventoryItem = await storage.getItem(inventoryId);
+      
+      if (!inventoryItem) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      // Create the product
+      const result = await createShopifyProduct(inventoryItem, sku);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to create Shopify product:", error);
+      res.status(500).json({
+        success: false,
+        message: `Failed to create Shopify product: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
     }
   });
 
