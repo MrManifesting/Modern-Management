@@ -202,7 +202,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Analysis Route
   app.post("/api/analyze-image", upload.single("image"), async (req: Request, res: Response) => {
     try {
+      console.log("Analyze image request received");
+      console.log("Request headers:", req.headers);
+      console.log("Request file:", req.file ? "File exists" : "No file");
+      console.log("File details:", req.file);
+      
       if (!req.file) {
+        console.log("No file found in request");
         return res.status(400).json({ error: "No image provided" });
       }
 
@@ -210,7 +216,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { analyzeImageWithOpenAI } = await import("./services/vision-openai");
       
       const imageBuffer = req.file.buffer;
+      console.log("Image buffer size:", imageBuffer.length);
+      
       const analysisResult = await analyzeImageWithOpenAI(imageBuffer);
+      console.log("Analysis completed successfully");
       
       res.json(analysisResult);
     } catch (error) {
