@@ -37,7 +37,11 @@ import {
   initializeTelegramBot,
   getMediaFiles,
   getMediaUrl,
-  getTelegramBot
+  getTelegramBot,
+  deleteMediaFile,
+  renameMediaFile,
+  linkMediaToItem,
+  MediaType
 } from "./services/telegram";
 import path from "path";
 import fs from "fs";
