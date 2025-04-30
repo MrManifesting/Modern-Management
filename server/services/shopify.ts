@@ -80,7 +80,16 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
     // Make a simple API call to test authentication
     // Ensure the store URL doesn't include the protocol
     const storeUrl = SHOPIFY_STORE.replace(/^https?:\/\//, '');
-    const response = await fetch(`https://${storeUrl}/admin/api/2023-10/shop.json`, {
+    
+    // Debug output
+    console.log("Connecting to Shopify with:");
+    console.log(`Store URL: ${storeUrl}`);
+    console.log(`Access Token: ${SHOPIFY_ACCESS_TOKEN.substring(0, 4)}...`);
+    
+    const apiUrl = `https://${storeUrl}/admin/api/2023-10/shop.json`;
+    console.log(`API URL: ${apiUrl}`);
+    
+    const response = await fetch(apiUrl, {
       headers: {
         'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
         'Content-Type': 'application/json'
