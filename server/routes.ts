@@ -1198,7 +1198,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let syncResults = null;
       
       if (syncToShopify && importedItems.length > 0) {
-        syncResults = await syncWithShopify(importedItems);
+        const pushStatus = getPushStatus();
+        if (pushStatus.pushEnabled) {
+          // Process each item through Shopify push pipeline
+          const results = await Promise.all(importedItems.map(async (item) => {
+            const pushInfo = await getItemPushInfo(item);
+            if (pushInfo.canPush) {
+              return await pushItemToShopify(pushInfo.shopifyProduct);
+            }
+            return { 
+              success: false, 
+              message: 'Item not ready for Shopify push',
+              productId: undefined 
+            };
+          }));
+          
+          // Count successful pushes
+          const successful = results.filter(r => r.success).length;
+          
+          syncResults = {
+            pushEnabled: true,
+            synced: successful,
+            failed: importedItems.length - successful,
+            totalProcessed: importedItems.length
+          };
+        } else {
+          syncResults = {
+            pushEnabled: false,
+            message: 'Shopify push is disabled. Enable it in settings to push items.'
+          };
+        }
       }
       
       res.status(201).json({

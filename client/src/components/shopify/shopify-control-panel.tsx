@@ -38,10 +38,10 @@ export default function ShopifyControlPanel() {
   const fetchShopifyStatus = async () => {
     setLoading(true);
     try {
-      const statusResult = await apiRequest('/api/shopify/status');
+      const statusResult = await apiRequest<{pushEnabled: boolean; message: string}>('/api/shopify/status');
       setStatus(statusResult);
       
-      const connectionResult = await apiRequest('/api/shopify/test-connection');
+      const connectionResult = await apiRequest<{connected: boolean; store: string; message: string}>('/api/shopify/test-connection');
       setConnectionStatus(connectionResult);
     } catch (error) {
       console.error("Failed to fetch Shopify status:", error);
@@ -58,7 +58,7 @@ export default function ShopifyControlPanel() {
   const togglePushStatus = async () => {
     setUpdating(true);
     try {
-      const result = await apiRequest('/api/shopify/set-push-status', {
+      const result = await apiRequest<{pushEnabled: boolean; message: string}>('/api/shopify/set-push-status', {
         method: 'POST',
         body: JSON.stringify({ enabled: !status.pushEnabled }),
         headers: {
@@ -71,7 +71,7 @@ export default function ShopifyControlPanel() {
       toast({
         title: result.pushEnabled ? "Shopify Push Enabled" : "Shopify Push Disabled",
         description: result.message,
-        variant: result.pushEnabled ? "default" : "secondary",
+        variant: result.pushEnabled ? "default" : "destructive",
       });
     } catch (error) {
       console.error("Failed to toggle Shopify push status:", error);
