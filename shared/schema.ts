@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, doublePrecision, timestamp, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, doublePrecision, timestamp, json, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -85,3 +85,96 @@ export const csvExportSchema = z.object({
 });
 
 export type CSVExport = z.infer<typeof csvExportSchema>;
+
+// Sales schema
+export const sales = pgTable("sales", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").notNull(), // Foreign key to items table
+  quantity: integer("quantity").notNull().default(1),
+  salePrice: doublePrecision("sale_price").notNull(), // Actual selling price (may differ from item price)
+  marketplace: text("marketplace").notNull(), // Which marketplace it was sold on
+  orderNumber: text("order_number"), // External order number/reference
+  trackingNumber: text("tracking_number"), // Shipping tracking number
+  buyerInfo: json("buyer_info").notNull().default({}), // Buyer details (JSON)
+  saleDate: date("sale_date").notNull().defaultNow(), // When the sale occurred
+  shippingCost: doublePrecision("shipping_cost").default(0), // Cost of shipping
+  fees: doublePrecision("fees").default(0), // Platform fees
+  status: text("status").notNull().default("completed"), // completed, refunded, cancelled
+  notes: text("notes"), // Any additional notes about the sale
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSaleSchema = createInsertSchema(sales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const saleFormSchema = insertSaleSchema.extend({
+  itemSku: z.string().optional(), // Allow looking up by SKU instead of ID
+});
+
+export type Sale = typeof sales.$inferSelect;
+export type InsertSale = z.infer<typeof insertSaleSchema>;
+export type SaleForm = z.infer<typeof saleFormSchema>;
+
+// Analytics Report Schema
+export const reportSchema = z.object({
+  startDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  }),
+  endDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  }),
+  marketplaces: z.array(z.string()).optional(),
+  categories: z.array(z.string()).optional(),
+  groupBy: z.enum(["day", "week", "month", "marketplace", "category"]).default("day"),
+});
+
+export type ReportParams = z.infer<typeof reportSchema>;
+
+// Report types
+export interface ReportSummary {
+  totalSales: number;
+  totalRevenue: number;
+  totalProfit: number;
+  averageOrderValue: number;
+  bestSellingItem: {
+    id: number;
+    name: string;
+    quantity: number;
+    revenue: number;
+  } | null;
+  bestMarketplace: {
+    name: string;
+    sales: number;
+    revenue: number;
+  } | null;
+  topCategory: {
+    name: string;
+    sales: number;
+    revenue: number;
+  } | null;
+}
+
+export interface TimeSeriesData {
+  label: string; // Date string or category name
+  sales: number;
+  revenue: number;
+  profit: number;
+}
+
+export interface SalesReport {
+  summary: ReportSummary;
+  timeSeries: TimeSeriesData[];
+  categoryBreakdown: { name: string; value: number; percentage: number }[];
+  marketplaceBreakdown: { name: string; value: number; percentage: number }[];
+  topProducts: {
+    id: number;
+    name: string;
+    quantity: number;
+    revenue: number;
+    profit: number;
+  }[];
+}

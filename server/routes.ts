@@ -1,9 +1,16 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
-import { insertItemSchema, insertMarketplaceSchema, csvExportSchema, aiAnalysisSchema } from "@shared/schema";
+import { 
+  insertItemSchema, 
+  insertMarketplaceSchema, 
+  insertSaleSchema,
+  csvExportSchema, 
+  aiAnalysisSchema,
+  reportSchema
+} from "@shared/schema";
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
