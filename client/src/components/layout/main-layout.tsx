@@ -32,8 +32,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Sales Analytics";
       case "/settings":
         return "Settings";
+      case "/image-optimization":
+        return "Image Optimization";
+      case "/employees":
+        return "Employee Management";
       default:
-        return "MrManifestlister";
+        return "Gold-Standard-Inventory";
     }
   };
 
@@ -56,7 +60,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar toggleSidebar={toggleSidebar} pageTitle={getPageTitle()} />
 
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 dark:text-white p-6">
           {children}
         </main>
       </div>
