@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 
 // For barcode scanning
 declare global {
@@ -184,20 +184,20 @@ const QuickScanner: React.FC<QuickScannerProps> = ({
     
     try {
       // First try to find by barcode
-      let itemResult = await apiRequest(`/api/items/barcode/${barcodeToSearch}`, {
+      let itemResult = await apiRequestSimple(`/api/items/barcode/${barcodeToSearch}`, {
         method: 'GET',
       }).catch(() => null);
       
       // If not found by barcode, try by SKU
       if (!itemResult) {
-        itemResult = await apiRequest(`/api/items/sku/${barcodeToSearch}`, {
+        itemResult = await apiRequestSimple(`/api/items/sku/${barcodeToSearch}`, {
           method: 'GET',
         }).catch(() => null);
       }
       
       // If still not found, try external lookup
       if (!itemResult) {
-        itemResult = await apiRequest('/api/scan', {
+        itemResult = await apiRequestSimple('/api/scan', {
           method: 'POST',
           body: JSON.stringify({ barcode: barcodeToSearch }),
           headers: {
@@ -247,7 +247,7 @@ const QuickScanner: React.FC<QuickScannerProps> = ({
     setIsProcessing(true);
     
     try {
-      const response = await apiRequest('/api/scan', {
+      const response = await apiRequestSimple('/api/scan', {
         method: 'POST',
         body: JSON.stringify({
           sku: scannedItem.sku,

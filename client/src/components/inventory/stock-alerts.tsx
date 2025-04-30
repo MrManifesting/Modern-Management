@@ -106,7 +106,7 @@ const StockAlerts: React.FC<StockAlertsProps> = ({
   // Handle restock action
   const handleRestock = async (alert: StockAlert) => {
     try {
-      const response = await apiRequest(`/api/items/${alert.itemId}/restock`, {
+      const response = await apiRequestSimple(`/api/items/${alert.itemId}/restock`, {
         method: 'POST',
         body: JSON.stringify({ quantity: alert.reorderQuantity }),
         headers: {
