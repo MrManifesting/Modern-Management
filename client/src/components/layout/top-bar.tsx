@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { Bell, Search, PlusCircle, Menu } from "lucide-react";
+import { Bell, Search, PlusCircle, Menu, Sparkles, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddItemModal from "@/components/modals/add-item-modal";
 import { useLocation } from "wouter";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type TopBarProps = {
   toggleSidebar: () => void;
   pageTitle: string;
+  isGoldTheme?: boolean;
+  toggleTheme?: () => void;
 };
 
-export default function TopBar({ toggleSidebar, pageTitle }: TopBarProps) {
+export default function TopBar({ 
+  toggleSidebar, 
+  pageTitle,
+  isGoldTheme = true,
+  toggleTheme = () => {}
+}: TopBarProps) {
   const [location] = useLocation();
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
 
   // Get page description based on current location
   const getPageDescription = () => {
@@ -26,6 +35,18 @@ export default function TopBar({ toggleSidebar, pageTitle }: TopBarProps) {
         return "Use AI to improve your listings and content";
       case "/marketplace":
         return "Connect and manage marketplace integrations";
+      case "/scanner":
+        return "Scan and update inventory quickly";
+      case "/sales":
+        return "Track and manage your sales";
+      case "/reports":
+        return "View analytics and sales reports";
+      case "/settings":
+        return "Customize your application settings";
+      case "/image-optimization":
+        return "Optimize images for marketplace listings";
+      case "/employees":
+        return "Manage employee accounts and permissions";
       default:
         return "Welcome to Gold-Standard-Inventory";
     }
@@ -33,51 +54,108 @@ export default function TopBar({ toggleSidebar, pageTitle }: TopBarProps) {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 px-6">
+      <header className={`flex h-16 items-center justify-between border-b px-4 md:px-6 ${
+        isGoldTheme 
+          ? 'bg-black border-gold/30 text-gold' 
+          : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+      }`}>
         <div className="flex items-center">
           <button
             onClick={toggleSidebar}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
+            className={`rounded-md p-2 ${
+              isGoldTheme 
+                ? 'text-gold hover:bg-gold/10' 
+                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+            }`}
+            aria-label="Toggle sidebar"
           >
             <Menu className="h-6 w-6" />
           </button>
           <div className="ml-4">
-            <h1 className="text-xl font-semibold text-gray-800">{pageTitle}</h1>
-            <p className="text-sm text-gray-600">{getPageDescription()}</p>
+            <h1 className={`text-xl font-semibold ${
+              isGoldTheme 
+                ? 'gold-gradient-text' 
+                : 'text-gray-800 dark:text-gray-100'
+            }`}>
+              {pageTitle}
+            </h1>
+            <p className={`text-sm ${
+              isGoldTheme 
+                ? 'text-gray-300' 
+                : 'text-gray-600 dark:text-gray-400'
+            }`}>
+              {getPageDescription()}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <ThemeToggle />
+        <div className="flex items-center space-x-2 md:space-x-3">
+          {/* Gold theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`rounded-full p-2 hidden sm:flex ${
+              isGoldTheme 
+                ? 'bg-gold/20 text-gold hover:bg-gold/30' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+            }`}
+            aria-label="Toggle gold theme"
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
           
+          {/* Dark mode toggle */}
+          {!isGoldTheme && <ThemeToggle />}
+          
+          {/* Notifications */}
           <div className="relative">
-            <button className="rounded-full bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+            <button 
+              className={`rounded-full p-2 ${
+                isGoldTheme 
+                  ? 'bg-gold/20 text-gold hover:bg-gold/30' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+              aria-label="Notifications"
+            >
               <Bell className="h-5 w-5" />
             </button>
-            <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary-500 text-xs text-white flex items-center justify-center">
+            <div className={`absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center ${
+              isGoldTheme 
+                ? 'bg-gold text-black' 
+                : 'bg-primary-500 text-white'
+            }`}>
               3
             </div>
           </div>
 
-          <div className="relative hidden md:block">
+          {/* Search - not shown on very small screens */}
+          <div className="relative hidden sm:block">
             <input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 rounded-md border border-gray-300 py-2 pl-10 pr-4 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className={`w-40 lg:w-64 rounded-md py-2 pl-10 pr-4 focus:outline-none ${
+                isGoldTheme 
+                  ? 'bg-black border border-gold/50 text-gray-100 focus:border-gold focus:ring-1 focus:ring-gold placeholder-gray-500'
+                  : 'border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white'
+              }`}
             />
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+              <Search className={`h-4 w-4 ${isGoldTheme ? 'text-gold/50' : 'text-gray-400'}`} />
             </div>
           </div>
 
+          {/* Add Item button */}
           <Button
             onClick={() => setShowAddItemModal(true)}
-            className="flex items-center"
+            className={`flex items-center ${
+              isGoldTheme
+                ? 'bg-gold hover:bg-gold-dark text-black'
+                : ''
+            }`}
           >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Item
+            <PlusCircle className="mr-1 h-4 w-4" />
+            <span className={`${isMobile ? 'hidden' : 'inline'}`}>Add Item</span>
           </Button>
         </div>
       </header>
