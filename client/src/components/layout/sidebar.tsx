@@ -58,6 +58,21 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/inventory",
       subItems: [
         {
+          title: "Gold Standard CBD",
+          path: "/inventory/gold-standard",
+          className: "inventory-link gold-brand",
+        },
+        {
+          title: "Tree Mason",
+          path: "/inventory/tree-mason",
+          className: "inventory-link tree-mason-brand",
+        },
+        {
+          title: "Package Inventory",
+          path: "/inventory/package",
+          className: "inventory-link package-brand",
+        },
+        {
           title: "THCa Flower",
           path: "/inventory/thca-flower",
           className: "inventory-link",
