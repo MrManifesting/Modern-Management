@@ -18,7 +18,16 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
-import { prepareItemForShopify, getPushStatus, setPushStatus, testConnection, pushItemToShopify, getItemPushInfo } from "./services/shopify";
+import { 
+  prepareItemForShopify, 
+  getPushStatus, 
+  setPushStatus, 
+  testConnection, 
+  pushItemToShopify, 
+  getItemPushInfo,
+  isShopifyConfigured,
+  syncProductsFromShopify
+} from "./services/shopify";
 import fs from "fs";
 import { promisify } from "util";
 

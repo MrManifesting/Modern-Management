@@ -95,6 +95,55 @@ export default function ShopifyControlPanel() {
     }
   };
   
+  // Sync inventory from Shopify
+  const syncFromShopify = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    
+    try {
+      const result = await apiRequest<{
+        success: boolean;
+        imported: number;
+        updated: number;
+        total: number;
+        message: string;
+        errors?: string[];
+      }>('/api/shopify/sync-inventory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      setSyncResult(result);
+      
+      toast({
+        title: result.success ? "Sync Successful" : "Sync Failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      });
+      
+      // Refresh items if any were imported or updated
+      if (result.imported > 0 || result.updated > 0) {
+        // You could invalidate your items query cache here if using react-query
+      }
+    } catch (error) {
+      console.error("Failed to sync from Shopify:", error);
+      setSyncResult({
+        success: false,
+        message: "Failed to sync inventory from Shopify. Please check your connection and try again."
+      });
+      
+      toast({
+        title: "Sync Failed",
+        description: "Could not synchronize inventory from Shopify.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+  
   return (
     <Card className="border-gold/30 bg-black text-white">
       <CardHeader className="border-b border-gold/20 bg-gradient-to-r from-black to-black/70">
@@ -186,6 +235,75 @@ export default function ShopifyControlPanel() {
         {/* Status Message */}
         <div className="px-4 py-3 bg-black/40 border border-gold/10 rounded-md text-sm text-gray-300">
           Status: {status.message || "Loading status..."}
+        </div>
+        
+        {/* Sync from Shopify Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-lg font-medium text-gold">Shopify Inventory Sync</h3>
+            <p className="text-sm text-gray-400">
+              Synchronize your inventory from Shopify to update local stock levels.
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 rounded border border-gold/20 bg-black/50">
+            <div>
+              <h4 className="font-medium text-white">Import Products from Shopify</h4>
+              <p className="text-sm text-gray-400 mt-1">
+                This will update your local inventory with the latest stock information from Shopify.
+              </p>
+            </div>
+            
+            <Button 
+              className="gold-btn bg-gradient-to-r from-gold/80 to-gold hover:from-gold hover:to-gold/80"
+              disabled={!connectionStatus.connected || syncing}
+              onClick={syncFromShopify}
+            >
+              <Download className={`h-4 w-4 mr-2 ${syncing ? 'animate-bounce' : ''}`} />
+              {syncing ? "Syncing..." : "Sync from Shopify"}
+            </Button>
+          </div>
+          
+          {/* Sync Results */}
+          {syncResult && (
+            <Alert className={syncResult.success ? "border-green-700 bg-green-800/20" : "border-red-700 bg-red-800/20"}>
+              <AlertCircle className={`h-4 w-4 ${syncResult.success ? "text-green-500" : "text-red-500"}`} />
+              <AlertTitle className={syncResult.success ? "text-green-400" : "text-red-400"}>
+                {syncResult.success ? "Sync Completed" : "Sync Failed"}
+              </AlertTitle>
+              <AlertDescription className="text-sm text-gray-300 mt-2">
+                {syncResult.message}
+                
+                {syncResult.success && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <div className="flex justify-between">
+                      <span>Total Products:</span>
+                      <span className="font-semibold">{syncResult.total}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Imported:</span>
+                      <span className="font-semibold text-green-400">{syncResult.imported}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Updated:</span>
+                      <span className="font-semibold text-amber-400">{syncResult.updated}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {syncResult.errors && syncResult.errors.length > 0 && (
+                  <div className="mt-2 text-red-400">
+                    <h5 className="font-semibold">Errors:</h5>
+                    <ul className="list-disc pl-5 mt-1 space-y-1 text-xs">
+                      {syncResult.errors.map((error, i) => (
+                        <li key={i}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </CardContent>
       
