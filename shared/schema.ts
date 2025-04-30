@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, doublePrecision, timestamp, json, boolean, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, doublePrecision, timestamp, json, boolean, date, varchar, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Item Schema
 export const items = pgTable("items", {
@@ -178,3 +179,75 @@ export interface SalesReport {
     profit: number;
   }[];
 }
+
+// Employees Schema
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  employeeId: varchar("employee_id", { length: 10 }).notNull().unique(), // Unique employee identifier
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull().default("staff"), // admin, manager, staff
+  department: text("department").notNull().default("general"),
+  active: boolean("active").notNull().default(true),
+  pin: varchar("pin", { length: 6 }), // Optional PIN for scanner authentication
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+
+// Inventory Actions Schema - track who does what with inventory items
+export const inventoryActions = pgTable("inventory_actions", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").notNull(), // Reference to the item
+  employeeId: integer("employee_id").notNull(), // Reference to the employee
+  actionType: text("action_type").notNull(), // create, update, scan, list, ship, etc.
+  actionDetails: json("action_details").notNull().default({}), // Additional details about the action
+  quantity: integer("quantity").default(1), // Quantity affected if applicable
+  notes: text("notes"), // Any additional notes
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export const insertInventoryActionSchema = createInsertSchema(inventoryActions).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InventoryAction = typeof inventoryActions.$inferSelect;
+export type InsertInventoryAction = z.infer<typeof insertInventoryActionSchema>;
+
+// Define the relationships
+export const inventoryActionsRelations = relations(inventoryActions, ({ one }) => ({
+  item: one(items, {
+    fields: [inventoryActions.itemId],
+    references: [items.id],
+  }),
+  employee: one(employees, {
+    fields: [inventoryActions.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+export const itemsRelations = relations(items, ({ many }) => ({
+  inventoryActions: many(inventoryActions),
+  sales: many(sales),
+}));
+
+export const salesRelations = relations(sales, ({ one }) => ({
+  item: one(items, {
+    fields: [sales.itemId],
+    references: [items.id],
+  }),
+}));
+
+// Employee relations
+export const employeesRelations = relations(employees, ({ many }) => ({
+  inventoryActions: many(inventoryActions),
+}));

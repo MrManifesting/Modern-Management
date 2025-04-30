@@ -10,7 +10,9 @@ import {
   insertSaleSchema,
   csvExportSchema, 
   aiAnalysisSchema,
-  reportSchema
+  reportSchema,
+  insertEmployeeSchema,
+  insertInventoryActionSchema
 } from "@shared/schema";
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";

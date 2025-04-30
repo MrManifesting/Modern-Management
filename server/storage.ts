@@ -1,7 +1,8 @@
 import { 
   Item, InsertItem, 
   Marketplace, InsertMarketplace,
-  Sale, InsertSale, ReportParams, SalesReport, TimeSeriesData
+  Sale, InsertSale, ReportParams, SalesReport, TimeSeriesData,
+  Employee, InsertEmployee, InventoryAction, InsertInventoryAction
 } from "@shared/schema";
 
 // Interface for storage methods
@@ -34,6 +35,21 @@ export interface IStorage {
   getTopSellingItems(limit?: number): Promise<{id: number, name: string, quantity: number, revenue: number}[]>;
   getSalesByMarketplace(): Promise<{name: string, sales: number, revenue: number}[]>;
   getSalesByCategory(): Promise<{name: string, sales: number, revenue: number}[]>;
+  
+  // Employee methods
+  getEmployees(): Promise<Employee[]>;
+  getEmployee(id: number): Promise<Employee | undefined>;
+  getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee | undefined>;
+  deleteEmployee(id: number): Promise<boolean>;
+  
+  // Inventory Action methods
+  getInventoryActions(filters?: { itemId?: number, employeeId?: number, actionType?: string }): Promise<InventoryAction[]>;
+  getInventoryAction(id: number): Promise<InventoryAction | undefined>;
+  createInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
+  getInventoryActionsByItem(itemId: number): Promise<InventoryAction[]>;
+  getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]>;
 }
 
 // Memory storage implementation
@@ -41,20 +57,45 @@ export class MemStorage implements IStorage {
   private items: Map<number, Item>;
   private marketplaces: Map<number, Marketplace>;
   private sales: Map<number, Sale>;
+  private employees: Map<number, Employee>;
+  private inventoryActions: Map<number, InventoryAction>;
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
+  private employeeCurrentId: number;
+  private inventoryActionCurrentId: number;
 
   constructor() {
     this.items = new Map();
     this.marketplaces = new Map();
     this.sales = new Map();
+    this.employees = new Map();
+    this.inventoryActions = new Map();
     this.itemCurrentId = 1;
     this.marketplaceCurrentId = 1;
     this.salesCurrentId = 1;
+    this.employeeCurrentId = 1;
+    this.inventoryActionCurrentId = 1;
     
     // Initialize with some default marketplaces
     this.initializeMarketplaces();
+    
+    // Initialize with a default admin employee
+    this.initializeEmployees();
+  }
+  
+  private initializeEmployees() {
+    const defaultEmployee: InsertEmployee = {
+      employeeId: "ADMIN001",
+      name: "Admin User",
+      email: "admin@mrmanifestlister.com",
+      role: "admin",
+      department: "management",
+      active: true,
+      pin: "123456"
+    };
+    
+    this.createEmployee(defaultEmployee);
   }
 
   private initializeMarketplaces() {
@@ -199,7 +240,7 @@ export class MemStorage implements IStorage {
     // If the sale was successful, update the item's quantity
     if (sale.status !== 'cancelled' && sale.status !== 'refunded') {
       const item = this.items.get(sale.itemId);
-      if (item) {
+      if (item && sale.quantity) {
         const newQuantity = Math.max(0, item.quantity - sale.quantity);
         this.updateItem(item.id, { quantity: newQuantity });
       }
@@ -295,7 +336,7 @@ export class MemStorage implements IStorage {
       const item = this.items.get(sale.itemId);
       if (item) {
         const itemCost = item.price; // Assuming price is our cost
-        const profit = (sale.salePrice - itemCost) * sale.quantity - sale.fees - sale.shippingCost;
+        const profit = (sale.salePrice - itemCost) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         return sum + profit;
       }
       return sum;
@@ -393,20 +434,30 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5)
       .map(item => {
-        const product = this.items.get(item.id);
-        const totalItemProfit = filteredSales
-          .filter(sale => sale.itemId === item.id)
-          .reduce((sum, sale) => {
-            const profit = (sale.salePrice - (product?.price || 0)) * sale.quantity - sale.fees - sale.shippingCost;
-            return sum + profit;
-          }, 0);
+        const itemEntity = this.items.get(item.id);
+        if (!itemEntity) {
+          return {
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            revenue: item.revenue,
+            profit: 0
+          };
+        }
+        
+        // Calculate profit for this item
+        const itemSalesList = filteredSales.filter(sale => sale.itemId === item.id);
+        const profit = itemSalesList.reduce((total, sale) => {
+          const profitPerUnit = sale.salePrice - itemEntity.price;
+          return total + (profitPerUnit * sale.quantity) - (sale.fees || 0) - (sale.shippingCost || 0);
+        }, 0);
         
         return {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
           revenue: item.revenue,
-          profit: totalItemProfit
+          profit
         };
       });
     
@@ -428,69 +479,156 @@ export class MemStorage implements IStorage {
   }
   
   private generateTimeSeries(sales: Sale[], groupBy: string): TimeSeriesData[] {
-    const timeSeriesMap = new Map<string, { label: string, sales: number, revenue: number, profit: number }>();
-    
-    sales.forEach(sale => {
-      let label = '';
-      
-      if (groupBy === 'marketplace') {
-        label = sale.marketplace;
-      } else if (groupBy === 'category') {
-        const item = this.items.get(sale.itemId);
-        label = item ? item.category : 'Unknown';
-      } else {
-        // Date-based grouping
-        const date = new Date(sale.saleDate);
-        
-        if (groupBy === 'day') {
-          label = date.toISOString().split('T')[0]; // YYYY-MM-DD
-        } else if (groupBy === 'week') {
-          // Get the first day of the week (Sunday)
-          const day = date.getDay();
-          const diff = date.getDate() - day;
-          const weekStart = new Date(date);
-          weekStart.setDate(diff);
-          label = weekStart.toISOString().split('T')[0];
-        } else if (groupBy === 'month') {
-          label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        }
-      }
-      
-      const existing = timeSeriesMap.get(label) || { label, sales: 0, revenue: 0, profit: 0 };
-      
-      existing.sales += 1;
-      existing.revenue += sale.salePrice * sale.quantity;
-      
-      const item = this.items.get(sale.itemId);
-      if (item) {
-        const profit = (sale.salePrice - item.price) * sale.quantity - sale.fees - sale.shippingCost;
-        existing.profit += profit;
-      }
-      
-      timeSeriesMap.set(label, existing);
-    });
-    
-    // For date-based grouping, sort by date
-    const result = Array.from(timeSeriesMap.values());
-    
-    if (['day', 'week', 'month'].includes(groupBy)) {
-      result.sort((a, b) => a.label.localeCompare(b.label));
-    } else {
-      // For marketplace or category, sort by revenue
-      result.sort((a, b) => b.revenue - a.revenue);
+    if (sales.length === 0) {
+      return [];
     }
     
-    return result;
+    if (groupBy === 'marketplace') {
+      // Group by marketplace
+      const marketplaceData = new Map<string, { sales: number, revenue: number, profit: number }>();
+      
+      sales.forEach(sale => {
+        const existing = marketplaceData.get(sale.marketplace) || { sales: 0, revenue: 0, profit: 0 };
+        existing.sales += 1;
+        
+        const revenue = sale.salePrice * sale.quantity;
+        existing.revenue += revenue;
+        
+        const item = this.items.get(sale.itemId);
+        if (item) {
+          const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          existing.profit += profit;
+        }
+        
+        marketplaceData.set(sale.marketplace, existing);
+      });
+      
+      return Array.from(marketplaceData.entries()).map(([name, data]) => {
+        return {
+          label: name,
+          sales: data.sales,
+          revenue: data.revenue,
+          profit: data.profit
+        };
+      });
+    } else if (groupBy === 'category') {
+      // Group by category
+      const categoryData = new Map<string, { sales: number, revenue: number, profit: number }>();
+      
+      sales.forEach(sale => {
+        const item = this.items.get(sale.itemId);
+        if (!item) return;
+        
+        const category = item.category;
+        const existing = categoryData.get(category) || { sales: 0, revenue: 0, profit: 0 };
+        existing.sales += 1;
+        
+        const revenue = sale.salePrice * sale.quantity;
+        existing.revenue += revenue;
+        
+        const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+        existing.profit += profit;
+        
+        categoryData.set(category, existing);
+      });
+      
+      return Array.from(categoryData.entries()).map(([name, data]) => {
+        return {
+          label: name,
+          sales: data.sales,
+          revenue: data.revenue,
+          profit: data.profit
+        };
+      });
+    } else {
+      // Group by time period (day, week, month)
+      const timeData = new Map<string, { sales: number, revenue: number, profit: number }>();
+      
+      // Sort sales by date
+      const sortedSales = [...sales].sort((a, b) => {
+        return new Date(a.saleDate).getTime() - new Date(b.saleDate).getTime();
+      });
+      
+      sortedSales.forEach(sale => {
+        const date = new Date(sale.saleDate);
+        let key = '';
+        
+        if (groupBy === 'day') {
+          key = date.toISOString().slice(0, 10); // YYYY-MM-DD
+        } else if (groupBy === 'week') {
+          // Get the week start (Monday)
+          const day = date.getDay(); // 0 is Sunday, 1 is Monday, etc.
+          const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+          const weekStart = new Date(date);
+          weekStart.setDate(diff);
+          key = weekStart.toISOString().slice(0, 10);
+        } else if (groupBy === 'month') {
+          key = date.toISOString().slice(0, 7); // YYYY-MM
+        }
+        
+        const existing = timeData.get(key) || { sales: 0, revenue: 0, profit: 0 };
+        existing.sales += 1;
+        
+        const revenue = sale.salePrice * sale.quantity;
+        existing.revenue += revenue;
+        
+        const item = this.items.get(sale.itemId);
+        if (item) {
+          const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          existing.profit += profit;
+        }
+        
+        timeData.set(key, existing);
+      });
+      
+      // Sort time series data by date
+      return Array.from(timeData.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, data]) => {
+          return {
+            label: key,
+            sales: data.sales,
+            revenue: data.revenue,
+            profit: data.profit
+          };
+        });
+    }
   }
   
   async getSalesTimeSeries(params: ReportParams): Promise<TimeSeriesData[]> {
-    const report = await this.getSalesReport(params);
-    return report.timeSeries;
+    const { startDate, endDate, marketplaces = [], categories = [] } = params;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Get all applicable sales
+    const allSales = Array.from(this.sales.values()).filter(sale => {
+      const saleDate = new Date(sale.saleDate);
+      if (saleDate < start || saleDate > end) {
+        return false;
+      }
+      
+      if (marketplaces.length > 0 && !marketplaces.includes(sale.marketplace)) {
+        return false;
+      }
+      
+      if (categories.length > 0) {
+        const item = this.items.get(sale.itemId);
+        if (!item || !categories.includes(item.category)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    return this.generateTimeSeries(allSales, params.groupBy);
   }
   
   async getTopSellingItems(limit: number = 5): Promise<{ id: number, name: string, quantity: number, revenue: number }[]> {
-    const allSales = Array.from(this.sales.values());
     const itemSales = new Map<number, { id: number, name: string, quantity: number, revenue: number }>();
+    
+    // Calculate total sales for each item
+    const allSales = Array.from(this.sales.values()).filter(sale => sale.status === 'completed');
     
     allSales.forEach(sale => {
       const item = this.items.get(sale.itemId);
@@ -502,14 +640,17 @@ export class MemStorage implements IStorage {
       }
     });
     
+    // Sort by revenue and limit
     return Array.from(itemSales.values())
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, limit);
   }
   
   async getSalesByMarketplace(): Promise<{ name: string, sales: number, revenue: number }[]> {
-    const allSales = Array.from(this.sales.values());
     const marketplaceSales = new Map<string, { name: string, sales: number, revenue: number }>();
+    
+    // Calculate sales for each marketplace
+    const allSales = Array.from(this.sales.values()).filter(sale => sale.status === 'completed');
     
     allSales.forEach(sale => {
       const existing = marketplaceSales.get(sale.marketplace) || { name: sale.marketplace, sales: 0, revenue: 0 };
@@ -518,13 +659,14 @@ export class MemStorage implements IStorage {
       marketplaceSales.set(sale.marketplace, existing);
     });
     
-    return Array.from(marketplaceSales.values())
-      .sort((a, b) => b.revenue - a.revenue);
+    return Array.from(marketplaceSales.values());
   }
   
   async getSalesByCategory(): Promise<{ name: string, sales: number, revenue: number }[]> {
-    const allSales = Array.from(this.sales.values());
     const categorySales = new Map<string, { name: string, sales: number, revenue: number }>();
+    
+    // Calculate sales for each category
+    const allSales = Array.from(this.sales.values()).filter(sale => sale.status === 'completed');
     
     allSales.forEach(sale => {
       const item = this.items.get(sale.itemId);
@@ -536,10 +678,108 @@ export class MemStorage implements IStorage {
       }
     });
     
-    return Array.from(categorySales.values())
-      .sort((a, b) => b.revenue - a.revenue);
+    return Array.from(categorySales.values());
+  }
+
+  // Employee methods
+  async getEmployees(): Promise<Employee[]> {
+    return Array.from(this.employees.values());
+  }
+
+  async getEmployee(id: number): Promise<Employee | undefined> {
+    return this.employees.get(id);
+  }
+  
+  async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
+    return Array.from(this.employees.values()).find(
+      employee => employee.employeeId === employeeId
+    );
+  }
+  
+  async createEmployee(employee: InsertEmployee): Promise<Employee> {
+    const id = this.employeeCurrentId++;
+    const now = new Date();
+    const newEmployee: Employee = {
+      ...employee,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.employees.set(id, newEmployee);
+    return newEmployee;
+  }
+  
+  async updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee | undefined> {
+    const existingEmployee = this.employees.get(id);
+    
+    if (!existingEmployee) {
+      return undefined;
+    }
+    
+    const updatedEmployee: Employee = {
+      ...existingEmployee,
+      ...employee,
+      updatedAt: new Date()
+    };
+    
+    this.employees.set(id, updatedEmployee);
+    return updatedEmployee;
+  }
+  
+  async deleteEmployee(id: number): Promise<boolean> {
+    return this.employees.delete(id);
+  }
+  
+  // Inventory Action methods
+  async getInventoryActions(filters?: { itemId?: number, employeeId?: number, actionType?: string }): Promise<InventoryAction[]> {
+    const actions = Array.from(this.inventoryActions.values());
+    
+    if (!filters) {
+      return actions;
+    }
+    
+    return actions.filter(action => {
+      if (filters.itemId && action.itemId !== filters.itemId) {
+        return false;
+      }
+      
+      if (filters.employeeId && action.employeeId !== filters.employeeId) {
+        return false;
+      }
+      
+      if (filters.actionType && action.actionType !== filters.actionType) {
+        return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  async getInventoryAction(id: number): Promise<InventoryAction | undefined> {
+    return this.inventoryActions.get(id);
+  }
+  
+  async createInventoryAction(action: InsertInventoryAction): Promise<InventoryAction> {
+    const id = this.inventoryActionCurrentId++;
+    const now = new Date();
+    const newAction: InventoryAction = {
+      ...action,
+      id,
+      timestamp: now
+    };
+    
+    this.inventoryActions.set(id, newAction);
+    return newAction;
+  }
+  
+  async getInventoryActionsByItem(itemId: number): Promise<InventoryAction[]> {
+    return this.getInventoryActions({ itemId });
+  }
+  
+  async getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]> {
+    return this.getInventoryActions({ employeeId });
   }
 }
 
-// Create and export storage instance
 export const storage = new MemStorage();
