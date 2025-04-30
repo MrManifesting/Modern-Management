@@ -13,8 +13,7 @@ import {
   CheckCircle2, 
   ShoppingBag, 
   UploadCloud, 
-  Database,
-  Stamp
+  Database
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -141,9 +140,8 @@ export default function CSVImport() {
       setImportStatus("complete");
       setProgress(100);
       toast({
-        title: isStampImport ? "Stamp Collection Imported" : "Import Completed",
-        description: `Successfully imported ${data.importedCount} ${isStampImport ? "stamps" : "items"}`,
-        className: "gold-toast",
+        title: "Import completed",
+        description: `Successfully imported ${data.importedCount} items`,
       });
       // Invalidate inventory queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
@@ -223,53 +221,18 @@ export default function CSVImport() {
         
         {importStatus === "idle" && (
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-gold/30 bg-black/30 rounded-md p-6 mb-4">
-            <div className="flex items-center justify-center mb-2">
-              <FileText className="h-12 w-12 text-gold" />
-              <Stamp className="h-8 w-8 text-gold/70 ml-1 mt-4" />
-            </div>
-            <h3 className="text-gold text-lg font-medium mb-1">Import Your Inventory</h3>
+            <FileText className="h-12 w-12 text-gold mb-2" />
             <p className="text-center text-sm text-gray-300 mb-4">
-              Upload a CSV file with your inventory data or stamp collection.
+              Upload a CSV file with your inventory data.
               <br />
-              {isStampImport ? 
-                "For stamp collections, include title, description, price, and condition columns." :
-                "The file should include columns for name, description, price, and quantity."}
+              The file should include columns for name, description, price, and condition.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <Button 
-                onClick={() => {
-                  setIsStampImport(true);
-                  triggerFileInput();
-                }} 
-                className="gold-btn"
-              >
-                <Stamp className="h-4 w-4 mr-2" /> Import Stamp Collection
-              </Button>
-              <Button 
-                onClick={() => {
-                  setIsStampImport(false);
-                  triggerFileInput();
-                }} 
-                variant="outline" 
-                className="gold-outline-btn"
-              >
-                <Upload className="h-4 w-4 mr-2" /> Import Standard Inventory
-              </Button>
-            </div>
-            <div className="text-center px-4 py-3 bg-black/40 rounded-md border border-gold/20">
-              <p className="text-xs text-gold font-medium mb-1">Compatible Formats</p>
-              <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
-                <span className="flex items-center">
-                  <FileText className="h-3 w-3 mr-1" /> Shopify CSV
-                </span>
-                <span className="flex items-center">
-                  <FileText className="h-3 w-3 mr-1" /> Standard Inventory
-                </span>
-                <span className="flex items-center">
-                  <Stamp className="h-3 w-3 mr-1" /> Stamp Collections
-                </span>
-              </div>
-            </div>
+            <Button onClick={triggerFileInput} className="gold-btn">
+              <Upload className="h-4 w-4 mr-2" /> Select CSV File
+            </Button>
+            <p className="text-center text-xs text-gray-400 mt-4">
+              <span className="text-gold">Pro Tip:</span> We auto-detect stamp collection format
+            </p>
           </div>
         )}
         
@@ -381,48 +344,18 @@ export default function CSVImport() {
         
         {importStatus === "complete" && (
           <div className="py-6 text-center">
-            {isStampImport ? (
-              <div className="relative mx-auto w-16 h-16 mb-3">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Stamp className="h-12 w-12 text-gold" />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-green-500 absolute bottom-0 right-0" />
-                </div>
-              </div>
-            ) : (
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-            )}
-            
-            <h3 className="text-lg font-medium text-gold">
-              {isStampImport ? "Stamp Collection Imported" : "Import Completed"}
-            </h3>
-            
+            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
+            <h3 className="text-lg font-medium text-gold">Import Completed</h3>
             <p className="text-gray-300 mt-1">
               {syncToShopify 
                 ? isStampImport 
                   ? "Your stamp collection has been successfully imported and synchronized with your Shopify store."
                   : "Your inventory has been successfully imported and synchronized with Shopify to prevent overselling."
-                : isStampImport
-                  ? "Your stamp collection has been successfully imported. You can sync with marketplaces later if needed."
-                  : "Your inventory has been successfully imported. You can sync with marketplaces later if needed."
+                : "Your inventory has been successfully imported. You can sync with marketplaces later if needed."
               }
             </p>
-            
-            {isStampImport && (
-              <div className="mt-3 mb-4 p-3 bg-black/40 rounded-md border border-gold/20 max-w-md mx-auto">
-                <p className="text-xs text-gold/80 mb-1 font-medium">Stamp Collection Features Activated</p>
-                <ul className="text-xs text-gray-300 text-left pl-4 list-disc">
-                  <li>Specialized stamp SKUs for better tracking</li>
-                  <li>Automatic tagging by country and year</li>
-                  <li>Visual highlighting in inventory</li>
-                  <li>Condition-based search filtering</li>
-                </ul>
-              </div>
-            )}
-            
             <Button onClick={resetForm} className="mt-4 gold-btn">
-              {isStampImport ? "Import More Stamps" : "Import Another File"}
+              Import Another File
             </Button>
           </div>
         )}
