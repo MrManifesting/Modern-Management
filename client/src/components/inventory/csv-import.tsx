@@ -76,10 +76,7 @@ export default function CSVImport() {
   // Handle import mutation
   const importMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("/api/items/import-csv", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await apiRequest("POST", "/api/items/import-csv", formData);
       return response.json();
     },
     onSuccess: (data) => {
