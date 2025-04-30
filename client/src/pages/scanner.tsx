@@ -1,115 +1,115 @@
-import React from 'react';
-import MainLayout from '@/components/layout/main-layout';
-import UniversalScanner from '@/components/scanner/universal-scanner';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScanLine, Barcode, QrCode } from 'lucide-react';
+import QuickScanner from '../components/scanner/quick-scanner';
+import UniversalScanner from '../components/scanner/universal-scanner';
 
-const ScannerPage = () => {
+export default function ScannerPage() {
+  const [scanMode, setScanMode] = useState<string>('quick');
+  
+  const handleItemFound = (item: any) => {
+    console.log('Item found:', item);
+    // You could add additional functionality here, such as showing a toast
+  };
+  
+  const handleActionComplete = (result: any) => {
+    console.log('Action completed:', result);
+    // You could add additional functionality here, such as refreshing data
+  };
+  
   return (
-    <MainLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Universal Barcode Scanner</h1>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Scanner Hub</h1>
+        <p className="text-muted-foreground">
+          Scan barcodes and QR codes for quick inventory management
+        </p>
+      </div>
+      
+      <Tabs value={scanMode} onValueChange={setScanMode} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="quick" className="flex items-center gap-2">
+            <ScanLine className="h-4 w-4" />
+            <span>Quick Scanner</span>
+          </TabsTrigger>
+          <TabsTrigger value="universal" className="flex items-center gap-2">
+            <Barcode className="h-4 w-4" />
+            <span>Universal Scanner</span>
+          </TabsTrigger>
+        </TabsList>
         
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle>Enhanced Scanner Features</CardTitle>
-            <CardDescription>
-              Scan any product barcode to retrieve information, even if it's not in your inventory
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-4 border rounded-lg bg-blue-50">
-                  <div className="font-semibold text-lg mb-2 text-blue-700">Universal Lookup</div>
-                  <p className="text-sm text-gray-600">
-                    Our scanner can identify products from external databases even if they're not in your inventory, giving you accurate product information for any barcode.
-                  </p>
-                </div>
-                
-                <div className="p-4 border rounded-lg bg-green-50">
-                  <div className="font-semibold text-lg mb-2 text-green-700">Voice Recognition</div>
-                  <p className="text-sm text-gray-600">
-                    Use voice commands to control the scanner or dictate barcode numbers for a hands-free operation experience. Perfect for warehouse environments.
-                  </p>
-                </div>
-                
-                <div className="p-4 border rounded-lg bg-purple-50">
-                  <div className="font-semibold text-lg mb-2 text-purple-700">Mobile Employee QR</div>
-                  <p className="text-sm text-gray-600">
-                    Generate QR codes that employees can scan with their phones to turn their personal device into an inventory scanner connected to your system.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <UniversalScanner />
-        
-        <Separator className="my-8" />
-        
-        <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">Accessibility Features</h2>
-          <p className="text-gray-600">
-            Our scanner includes built-in accessibility features to make inventory management easier for everyone:
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TabsContent value="quick">
+          <div className="grid gap-6">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Voice Dictation</CardTitle>
+              <CardHeader>
+                <CardTitle>Quick Item Scanner</CardTitle>
+                <CardDescription>
+                  Scan items to check, add, or remove from inventory with minimal steps
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600">
-                  For times when typing is difficult or impossible, our voice dictation feature allows you to speak barcode numbers. The system converts your speech to text with high accuracy.
-                </p>
+                <QuickScanner 
+                  onItemFound={handleItemFound}
+                  onActionComplete={handleActionComplete}
+                />
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Screen Reader Support</CardTitle>
+              <CardHeader>
+                <CardTitle>Quick Scanner Features</CardTitle>
+                <CardDescription>
+                  Benefits of using the Quick Scanner for inventory management
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600">
-                  Our scanner can read product information aloud, making it accessible to users with visual impairments. Information is structured for clear understanding through audio.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Mobile Device Support</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  Allow employees to use their own mobile devices as scanners. The QR code system creates a secure connection to your inventory system without complex setup.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Keyboard Navigation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  Full keyboard support allows users to navigate the scanner interface without using a mouse. All interactive elements are properly labeled for screen readers.
-                </p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col items-center p-4 border rounded-lg">
+                      <ScanLine className="h-8 w-8 text-primary mb-2" />
+                      <h3 className="font-medium text-center">Fast Scanning</h3>
+                      <p className="text-sm text-center text-muted-foreground">
+                        Scan items with minimal steps for quick inventory updates
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col items-center p-4 border rounded-lg">
+                      <QrCode className="h-8 w-8 text-primary mb-2" />
+                      <h3 className="font-medium text-center">Multiple Input Methods</h3>
+                      <p className="text-sm text-center text-muted-foreground">
+                        Use camera to scan or manually enter barcodes and SKUs
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col items-center p-4 border rounded-lg">
+                      <Barcode className="h-8 w-8 text-primary mb-2" />
+                      <h3 className="font-medium text-center">Inventory Actions</h3>
+                      <p className="text-sm text-center text-muted-foreground">
+                        Check, add, or remove inventory with a single scan
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
-    </MainLayout>
+        </TabsContent>
+        
+        <TabsContent value="universal">
+          <Card>
+            <CardHeader>
+              <CardTitle>Universal Product Scanner</CardTitle>
+              <CardDescription>
+                Look up any product by scanning its barcode, even items not in your inventory
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UniversalScanner />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-};
-
-export default ScannerPage;
+}
