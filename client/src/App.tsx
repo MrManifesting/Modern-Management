@@ -17,13 +17,18 @@ import Employees from "@/pages/employees";
 import Settings from "@/pages/settings";
 import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
 import AccessibilityGuide from "@/pages/accessibility-guide";
+import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
 import NotFound from "@/pages/not-found";
+
+// Onboarding components
+import { OnboardingTour, WelcomeBanner } from "@/components/onboarding";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/inventory" component={Inventory} />
+      <Route path="/inventory/thca-flower" component={THCaFlowerInventoryPage} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/scanner" component={Scanner} />
@@ -47,6 +52,9 @@ function App() {
           <MainLayout>
             <Router />
           </MainLayout>
+          {/* Global application onboarding components */}
+          <OnboardingTour />
+          <WelcomeBanner />
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
