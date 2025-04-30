@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, Keyboard, Sparkles } from 'lucide-react';
+import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, Keyboard, Sparkles, Store } from 'lucide-react';
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
@@ -165,6 +165,27 @@ const SettingsPage = () => {
                     </div>
                   </div>
                   <Switch defaultChecked />
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 rounded-md bg-gold/20">
+                      <Store className="h-5 w-5 text-gold" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Shopify Integration</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure Shopify marketplace connection
+                      </p>
+                    </div>
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="border-gold/40 text-gold hover:bg-gold/10">
+                    <Link href="/shopify-settings">
+                      Configure
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </CardContent>

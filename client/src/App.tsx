@@ -15,6 +15,7 @@ import Reports from "@/pages/reports";
 import ImageOptimization from "@/pages/image-optimization";
 import Employees from "@/pages/employees";
 import Settings from "@/pages/settings";
+import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import NotFound from "@/pages/not-found";
 
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/image-optimization" component={ImageOptimization} />
       <Route path="/employees" component={Employees} />
       <Route path="/settings" component={Settings} />
+      <Route path="/shopify-settings" component={ShopifySettingsPage} />
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
       <Route component={NotFound} />
     </Switch>

@@ -31,6 +31,7 @@ export const items = pgTable("items", {
   attributes: json("attributes").notNull().default({}), // Product-specific attributes (e.g., cannabis strain data)
   externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
   seoDescription: text("seo_description"),
+  shopifyId: text("shopify_id"), // Shopify product ID for integration
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
