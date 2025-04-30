@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   BarChart3,
   Settings,
+  ScanLine,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -36,6 +37,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Marketplace",
       icon: <ShoppingBag className="h-5 w-5" />,
       path: "/marketplace",
+    },
+    {
+      title: "Scanner",
+      icon: <ScanLine className="h-5 w-5" />,
+      path: "/scanner",
     },
     {
       title: "Analytics",

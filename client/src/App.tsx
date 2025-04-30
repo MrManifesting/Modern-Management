@@ -8,6 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import AITools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
+import Scanner from "@/pages/scanner";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/inventory" component={Inventory} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/marketplace" component={Marketplace} />
+      <Route path="/scanner" component={Scanner} />
       <Route component={NotFound} />
     </Switch>
   );
