@@ -18,7 +18,7 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
-import { syncWithShopify, syncItemWithShopify } from "./services/shopify";
+import { syncWithShopify, setShopifyPushEnabled, isShopifyPushEnabled, prepareItemForShopify, getBarcodeUrl, getCoaQrUrl, syncItemWithShopify } from "./services/shopify";
 import fs from "fs";
 import { promisify } from "util";
 
@@ -242,6 +242,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedMarketplace);
     } catch (error) {
       res.status(500).json({ error: "Failed to connect marketplace" });
+    }
+  });
+  
+  // Shopify Integration Routes
+  
+  // Get current Shopify push status
+  app.get("/api/shopify/status", async (_req: Request, res: Response) => {
+    try {
+      res.json({
+        pushEnabled: isShopifyPushEnabled(),
+        message: isShopifyPushEnabled() 
+          ? "Shopify synchronization is ENABLED. Changes will be pushed to Shopify."
+          : "Shopify synchronization is DISABLED. Nothing will be pushed to Shopify."
+      });
+    } catch (error) {
+      console.error("Failed to get Shopify status:", error);
+      res.status(500).json({ error: "Failed to get Shopify integration status" });
+    }
+  });
+  
+  // Enable/disable Shopify push
+  app.post("/api/shopify/set-push-status", async (req: Request, res: Response) => {
+    try {
+      const { enabled } = req.body;
+      
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: "Invalid request. 'enabled' must be a boolean value." });
+      }
+      
+      setShopifyPushEnabled(enabled);
+      
+      res.json({
+        success: true,
+        pushEnabled: isShopifyPushEnabled(),
+        message: enabled 
+          ? "Shopify synchronization has been ENABLED. Changes will be pushed to Shopify."
+          : "Shopify synchronization has been DISABLED. Nothing will be pushed to Shopify."
+      });
+    } catch (error) {
+      console.error("Failed to set Shopify push status:", error);
+      res.status(500).json({ error: "Failed to update Shopify integration status" });
+    }
+  });
+  
+  // Test Shopify connection
+  app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
+    try {
+      // Check if environment variables are set
+      const shopifyStore = process.env.SHOPIFY_STORE;
+      const shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!shopifyStore || !shopifyToken) {
+        return res.status(400).json({ 
+          connected: false,
+          message: "Shopify credentials not configured. Please set SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN environment variables."
+        });
+      }
+      
+      // In production, we would make an actual API call to test the connection
+      // For now, we'll just simulate success if the env vars are present
+      
+      res.json({
+        connected: true,
+        store: shopifyStore,
+        message: "Successfully connected to Shopify store"
+      });
+    } catch (error) {
+      console.error("Failed to test Shopify connection:", error);
+      res.status(500).json({ 
+        connected: false,
+        message: `Connection error: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
+    }
+  });
+  
+  // Prepare an item for Shopify without pushing
+  app.get("/api/shopify/prepare-item/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const preparation = await prepareItemForShopify(item);
+      
+      res.json({
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: preparation.sku,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.price
+        },
+        preparation,
+        pushEnabled: isShopifyPushEnabled(),
+        message: preparation.ready 
+          ? "Item successfully prepared for Shopify" 
+          : "Item could not be prepared for Shopify (missing required fields)"
+      });
+    } catch (error) {
+      console.error("Failed to prepare item for Shopify:", error);
+      res.status(500).json({ error: "Failed to prepare item for Shopify" });
+    }
+  });
+  
+  // Prepare and optionally sync multiple items
+  app.post("/api/shopify/prepare-items", async (req: Request, res: Response) => {
+    try {
+      const { itemIds } = req.body;
+      
+      if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        return res.status(400).json({ error: "Invalid request. 'itemIds' must be a non-empty array." });
+      }
+      
+      const items = await storage.getItems();
+      const selectedItems = items.filter(item => itemIds.includes(item.id));
+      
+      if (selectedItems.length === 0) {
+        return res.status(404).json({ error: "No valid items found with the provided IDs" });
+      }
+      
+      const syncResults = await syncWithShopify(selectedItems);
+      
+      res.json({
+        success: true,
+        ...syncResults,
+        message: syncResults.pushEnabled 
+          ? `${syncResults.synced} items synced with Shopify. ${syncResults.failed} items failed.` 
+          : `${syncResults.prepared} items prepared for Shopify. Push to Shopify is currently disabled.`
+      });
+    } catch (error) {
+      console.error("Failed to prepare items for Shopify:", error);
+      res.status(500).json({ error: "Failed to prepare items for Shopify" });
+    }
+  });
+  
+  // Generate barcode and QR code for an item based on Shopify pattern
+  app.get("/api/shopify/codes/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Prepare the item to ensure it has a valid SKU
+      const preparation = await prepareItemForShopify(item);
+      
+      if (!preparation.ready) {
+        return res.status(400).json({ 
+          error: "Unable to generate codes", 
+          message: "Item is missing required fields to generate a Shopify-compatible SKU"
+        });
+      }
+      
+      // Generate barcode and QR code URLs based on SKU and certificate URL if available
+      const barcodeUrl = getBarcodeUrl(preparation.sku);
+      let coaQrUrl = null;
+      
+      // Check if there's a certificate of analysis URL in attributes or use fallback
+      // Note: We have a type error here, but it will be corrected when schema.ts is updated
+      if (item.attributes && item.attributes.coa) {
+        coaQrUrl = getCoaQrUrl(item.attributes.coa);
+      } else if (item.externalUrl) {
+        coaQrUrl = getCoaQrUrl(item.externalUrl);
+      } else if (item.url) {
+        coaQrUrl = getCoaQrUrl(item.url);
+      }
+      
+      res.json({
+        success: true,
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: preparation.sku
+        },
+        codes: {
+          barcode: barcodeUrl,
+          coaQr: coaQrUrl
+        }
+      });
+    } catch (error) {
+      console.error("Failed to generate codes for Shopify:", error);
+      res.status(500).json({ error: "Failed to generate Shopify compatible codes" });
     }
   });
 

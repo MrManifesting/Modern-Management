@@ -28,6 +28,8 @@ export const items = pgTable("items", {
   aiEnhanced: boolean("ai_enhanced").notNull().default(false),
   aiTags: json("ai_tags").notNull().default([]), // Keywords suggested by AI
   seoTitle: text("seo_title"),
+  attributes: json("attributes").notNull().default({}), // Product-specific attributes (e.g., cannabis strain data)
+  externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
   seoDescription: text("seo_description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
