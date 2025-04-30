@@ -290,6 +290,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Synchronize inventory from Shopify to our local database
+  app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
+    try {
+      // Check if Shopify is configured
+      const isConfigured = await isShopifyConfigured();
+      if (!isConfigured) {
+        return res.status(400).json({
+          success: false,
+          message: "Shopify integration is not properly configured. Please check your API credentials."
+        });
+      }
+      
+      // Perform the synchronization
+      const result = await syncProductsFromShopify(storage);
+      
+      res.json({
+        success: true,
+        ...result,
+        message: `Successfully synced ${result.total} products from Shopify. Imported: ${result.imported}, Updated: ${result.updated}.`
+      });
+    } catch (error) {
+      console.error("Failed to sync inventory from Shopify:", error);
+      res.status(500).json({
+        success: false,
+        message: `Failed to sync inventory from Shopify: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  });
+  
   // Prepare an item for Shopify without pushing
   app.get("/api/shopify/prepare-item/:id", async (req: Request, res: Response) => {
     try {

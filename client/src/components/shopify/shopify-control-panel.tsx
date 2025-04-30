@@ -10,9 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ShieldAlert, ShieldCheck, Store, RefreshCw, BarChart3 } from "lucide-react";
+import { AlertCircle, ShieldAlert, ShieldCheck, Store, RefreshCw, BarChart3, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ShopifyControlPanel() {
   const [status, setStatus] = useState<{
@@ -28,6 +29,15 @@ export default function ShopifyControlPanel() {
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{
+    success?: boolean;
+    imported?: number;
+    updated?: number;
+    total?: number;
+    message?: string;
+    errors?: string[];
+  } | null>(null);
   const { toast } = useToast();
   
   // Fetch initial status
