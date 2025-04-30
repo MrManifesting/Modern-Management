@@ -1,0 +1,55 @@
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+QR code parse error, error = No barcode or QR code detected.
+QR code parse error, error = D: No MultiFormat Readers were able to detect the code.
+Error generating QR code: 
+TypeError {message: "Failed to execute 'fetch' on 'Window': '/api/qrcode/generate' is not a valid HTTP method."}
+
+Failed to execute 'fetch' on 'Window': '/api/qrcode/generate' is not a valid HTTP method.
+Error generating QR code: 
+TypeError {message: "Failed to execute 'fetch' on 'Window': '/api/qrcode/generate' is not a valid HTTP method."}
+
+Failed to execute 'fetch' on 'Window': '/api/qrcode/generate' is not a valid HTTP method.
+Cannot stop, scanner is not running or paused.
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+The above error occurred in the <UniversalScanner> component:
+
+    at UniversalScanner (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/scanner/universal-scanner.tsx:32:21)
+    at div
+    at _c9 (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/ui/card.tsx:20:11)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Cannot stop, scanner is not running or paused.

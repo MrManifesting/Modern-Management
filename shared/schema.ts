@@ -13,12 +13,18 @@ export const items = pgTable("items", {
   condition: text("condition").notNull(),
   sku: text("sku").notNull(), // Unique Stock Keeping Unit
   quantity: integer("quantity").notNull().default(1), // Current inventory quantity
+  lowStockThreshold: integer("low_stock_threshold").default(5), // Threshold for low stock alerts
+  reorderPoint: integer("reorder_point").default(3), // When to reorder
+  reorderQuantity: integer("reorder_quantity").default(10), // How many to reorder
+  stockAlerts: boolean("stock_alerts").default(true), // Whether to send alerts
+  lastRestockDate: timestamp("last_restock_date"), // When the item was last restocked
   barcode: text("barcode"), // Store barcode data (can be UPC, EAN, etc.)
   qrCode: text("qr_code"), // Store QR code data
   status: text("status").notNull().default("draft"), // draft, listed, sold
   images: json("images").notNull().default([]), // Array of image URLs
   tags: json("tags").notNull().default([]), // Array of tags
   marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers (ebay, etsy, etc)
+  syncedToMarketplaces: json("synced_to_marketplaces").notNull().default([]), // Which marketplaces this is synced to
   aiEnhanced: boolean("ai_enhanced").notNull().default(false),
   aiTags: json("ai_tags").notNull().default([]), // Keywords suggested by AI
   seoTitle: text("seo_title"),
@@ -50,8 +56,15 @@ export type ItemForm = z.infer<typeof itemFormSchema>;
 export const marketplaces = pgTable("marketplaces", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  type: text("type").notNull().default("general"), // shopify, ebay, etsy, amazon, etc.
   isConnected: boolean("is_connected").notNull().default(false),
   credentials: json("credentials").notNull().default({}),
+  apiEndpoint: text("api_endpoint"), // API URL for the marketplace
+  storeUrl: text("store_url"), // URL of the store/seller account
+  syncEnabled: boolean("sync_enabled").default(false), // Whether automatic syncing is enabled
+  syncInterval: integer("sync_interval").default(60), // Minutes between syncs
+  lastSyncDate: timestamp("last_sync_date"), // When the marketplace was last synced
+  syncLog: json("sync_log").default([]), // Log of sync activities
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
