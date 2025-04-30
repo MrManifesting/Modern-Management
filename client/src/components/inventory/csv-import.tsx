@@ -102,7 +102,6 @@ export default function CSVImport() {
       
       // Set import type
       setIsStampImport(isStampFormat);
-      const [isCannabisImport, setIsCannabisImport] = useState(false);
       setIsCannabisImport(isCannabisFormat);
       
       // Set required columns based on import type
@@ -183,6 +182,7 @@ export default function CSVImport() {
     formData.append("file", file);
     formData.append("syncToShopify", syncToShopify.toString());
     formData.append("isStampImport", isStampImport.toString());
+    formData.append("isCannabisImport", isCannabisImport.toString());
     
     // Start an interval to simulate progress while waiting for the import
     const progressInterval = setInterval(() => {
@@ -211,6 +211,7 @@ export default function CSVImport() {
     setErrorMessage(null);
     setProgress(0);
     setIsStampImport(false);
+    setIsCannabisImport(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -218,8 +219,13 @@ export default function CSVImport() {
     <Card className="w-full border-gold">
       <CardHeader className="gold-theme card-header">
         <CardTitle className="flex items-center gap-2 gold-gradient-text">
-          <UploadCloud className="h-5 w-5" />
-          {isStampImport ? "Import Stamp Collection" : "Import Inventory from CSV"}
+          {isStampImport ? (
+            <><Stamp className="h-5 w-5" /> Import Stamp Collection</>
+          ) : isCannabisImport ? (
+            <><Leaf className="h-5 w-5" /> Import Cannabis Inventory</>
+          ) : (
+            <><UploadCloud className="h-5 w-5" /> Import Inventory from CSV</>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="gold-theme">
@@ -271,7 +277,11 @@ export default function CSVImport() {
                 <p className="text-sm text-gray-400">
                   {preview.totalRows} items - 
                   <span className="text-gold ml-1">
-                    {isStampImport ? "Stamp Collection Detected" : "Standard Inventory"}
+                    {isStampImport 
+                      ? "Stamp Collection Detected" 
+                      : isCannabisImport 
+                        ? "Cannabis Inventory Detected" 
+                        : "Standard Inventory"}
                   </span>
                 </p>
               </div>
@@ -370,8 +380,14 @@ export default function CSVImport() {
               {syncToShopify 
                 ? isStampImport 
                   ? "Your stamp collection has been successfully imported and synchronized with your Shopify store."
-                  : "Your inventory has been successfully imported and synchronized with Shopify to prevent overselling."
-                : "Your inventory has been successfully imported. You can sync with marketplaces later if needed."
+                  : isCannabisImport
+                    ? "Your cannabis inventory has been successfully imported and synchronized with Shopify to prevent overselling."
+                    : "Your inventory has been successfully imported and synchronized with Shopify to prevent overselling."
+                : isStampImport
+                  ? "Your stamp collection has been successfully imported. You can sync with marketplaces later if needed."
+                  : isCannabisImport
+                    ? "Your cannabis inventory has been successfully imported. You can sync with marketplaces later if needed."
+                    : "Your inventory has been successfully imported. You can sync with marketplaces later if needed."
               }
             </p>
             <Button onClick={resetForm} className="mt-4 gold-btn">
