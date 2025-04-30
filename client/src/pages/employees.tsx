@@ -203,12 +203,12 @@ export default function EmployeesPage() {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Employees</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 order-2 lg:order-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Employees</CardTitle>
             <CardDescription>
-              Manage your employees and track inventory handling
+              Manage your team members and track inventory handling
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -217,16 +217,18 @@ export default function EmployeesPage() {
             ) : (
               <>
                 {employees.length === 0 ? (
-                  <div className="py-4 text-center text-muted-foreground">
-                    No employees found. Add your first employee to get started.
+                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center">
+                    <Users className="h-12 w-12 text-muted-foreground/40 mb-3" />
+                    <p>No employees found.</p>
+                    <p className="text-sm">Add your first employee to get started.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {employees.map((employee) => (
                       <div 
                         key={employee.id}
-                        className={`p-3 border rounded-md flex justify-between items-center cursor-pointer hover:bg-accent/50 ${
-                          selectedEmployee?.id === employee.id ? "bg-accent" : ""
+                        className={`p-3 border rounded-md flex flex-col sm:flex-row sm:justify-between gap-3 cursor-pointer hover:bg-accent/50 transition-colors ${
+                          selectedEmployee?.id === employee.id ? "bg-accent/70 border-primary/30" : ""
                         }`}
                         onClick={() => handleEmployeeSelect(employee)}
                       >
@@ -236,32 +238,34 @@ export default function EmployeesPage() {
                             {employee.employeeId} - {employee.role}
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex items-center justify-between sm:justify-end gap-2 sm:space-x-2">
                           {employee.active ? (
                             <Badge variant="outline" className="bg-green-100 text-green-800">Active</Badge>
                           ) : (
                             <Badge variant="outline" className="bg-red-100 text-red-800">Inactive</Badge>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditForm(employee);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteEmployee(employee.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditForm(employee);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEmployee(employee.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -272,16 +276,16 @@ export default function EmployeesPage() {
           </CardContent>
         </Card>
         
-        <Card className="md:col-span-2">
+        <Card className="lg:col-span-2 order-1 lg:order-2">
           {selectedEmployee ? (
             <Tabs defaultValue="details">
               <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                   <div>
                     <CardTitle>{selectedEmployee.name}</CardTitle>
                     <CardDescription>ID: {selectedEmployee.employeeId}</CardDescription>
                   </div>
-                  <TabsList>
+                  <TabsList className="grid w-full sm:w-auto grid-cols-2">
                     <TabsTrigger value="details">Details</TabsTrigger>
                     <TabsTrigger value="activity">Activity Log</TabsTrigger>
                   </TabsList>
@@ -291,7 +295,7 @@ export default function EmployeesPage() {
               <CardContent>
                 <TabsContent value="details" className="mt-0">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Employee ID</Label>
                         <div className="font-medium">{selectedEmployee.employeeId}</div>
@@ -302,10 +306,10 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Email</Label>
-                        <div className="font-medium">{selectedEmployee.email}</div>
+                        <div className="font-medium break-words">{selectedEmployee.email}</div>
                       </div>
                       <div>
                         <Label>Status</Label>
@@ -323,7 +327,7 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Role</Label>
                         <div className="font-medium">{selectedEmployee.role}</div>
@@ -334,7 +338,7 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Created</Label>
                         <div className="font-medium">
@@ -349,16 +353,18 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                     
-                    <div className="flex justify-end space-x-2 mt-6">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-2 mt-6">
                       <Button 
                         variant="outline" 
                         onClick={() => openEditForm(selectedEmployee)}
+                        className="w-full sm:w-auto"
                       >
                         Edit Employee
                       </Button>
                       <Button 
                         variant="destructive"
                         onClick={() => handleDeleteEmployee(selectedEmployee.id)}
+                        className="w-full sm:w-auto"
                       >
                         Delete Employee
                       </Button>
@@ -368,29 +374,23 @@ export default function EmployeesPage() {
                 
                 <TabsContent value="activity" className="mt-0">
                   {isLoadingActions ? (
-                    <div className="py-4 text-center">Loading activity...</div>
+                    <div className="py-4 text-center">Loading activity history...</div>
                   ) : (
                     <>
-                      <div className="flex items-center mb-4">
-                        <Activity className="mr-2 h-5 w-5" />
-                        <h3 className="text-lg font-medium">Inventory Actions</h3>
-                      </div>
-                      
                       {employeeActions.length === 0 ? (
-                        <div className="py-6 text-center border rounded-md">
-                          <Package className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                          <p className="text-muted-foreground">
-                            No inventory actions found for this employee.
-                          </p>
+                        <div className="p-8 text-center text-muted-foreground flex flex-col items-center">
+                          <Activity className="h-12 w-12 text-muted-foreground/40 mb-3" />
+                          <p>No activity history found.</p>
+                          <p className="text-sm">This employee hasn't performed any inventory actions yet.</p>
                         </div>
                       ) : (
-                        <div className="border rounded-md overflow-hidden">
+                        <div className="space-y-4 overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Date & Time</TableHead>
-                                <TableHead>Item ID</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>Action</TableHead>
+                                <TableHead>Item ID</TableHead>
                                 <TableHead>Quantity</TableHead>
                                 <TableHead>Notes</TableHead>
                               </TableRow>
@@ -398,13 +398,15 @@ export default function EmployeesPage() {
                             <TableBody>
                               {employeeActions.map((action) => (
                                 <TableRow key={action.id}>
-                                  <TableCell>{formatTimestamp(action.timestamp)}</TableCell>
-                                  <TableCell>{action.itemId}</TableCell>
-                                  <TableCell>{getActionTypeLabel(action.actionType)}</TableCell>
                                   <TableCell>
-                                    {action.quantity !== null ? action.quantity : "N/A"}
+                                    {formatTimestamp(action.timestamp)}
                                   </TableCell>
-                                  <TableCell>{action.notes || "—"}</TableCell>
+                                  <TableCell>
+                                    {getActionTypeLabel(action.actionType)}
+                                  </TableCell>
+                                  <TableCell>{action.itemId}</TableCell>
+                                  <TableCell>{action.quantity !== null ? action.quantity : "N/A"}</TableCell>
+                                  <TableCell>{action.notes || '-'}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -417,14 +419,20 @@ export default function EmployeesPage() {
               </CardContent>
             </Tabs>
           ) : (
-            <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center">
-              <Search className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-1">No Employee Selected</h3>
-              <p className="text-muted-foreground mb-6">
-                Select an employee from the list to view their details and activity.
-              </p>
-              <Button onClick={openCreateForm}>Add New Employee</Button>
-            </CardContent>
+            <div className="h-full flex flex-col items-center justify-center p-10 text-center">
+              <Users className="h-16 w-16 text-muted-foreground/40 mb-4" />
+              <CardTitle className="mb-2">Employee Details</CardTitle>
+              <CardDescription className="max-w-md">
+                Select an employee from the list to view their details and activity history.
+              </CardDescription>
+              <Button 
+                variant="outline" 
+                className="mt-6"
+                onClick={openCreateForm}
+              >
+                Add New Employee
+              </Button>
+            </div>
           )}
         </Card>
       </div>
@@ -437,13 +445,13 @@ export default function EmployeesPage() {
             </DialogTitle>
             <DialogDescription>
               {isEditing 
-                ? "Update the employee details below." 
-                : "Fill in the employee details below to create a new employee."}
+                ? "Update the employee information in the form below." 
+                : "Fill in the employee details to add them to the system."}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="employeeId">Employee ID</Label>
                 <Input 
@@ -484,7 +492,7 @@ export default function EmployeesPage() {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <Select 
@@ -529,9 +537,9 @@ export default function EmployeesPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pin">PIN Code (for access)</Label>
+                <Label htmlFor="pin">PIN Code (Optional)</Label>
                 <Input 
                   id="pin"
                   type="password"
@@ -540,30 +548,29 @@ export default function EmployeesPage() {
                     ...employeeFormData,
                     pin: e.target.value
                   })}
-                  placeholder="6-digit PIN"
+                  placeholder="4-6 digit PIN"
                   maxLength={6}
                 />
               </div>
-              <div className="space-y-2 pt-6">
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="active" 
-                    checked={employeeFormData.active}
-                    onCheckedChange={(checked) => setEmployeeFormData({
-                      ...employeeFormData,
-                      active: checked
-                    })}
-                  />
-                  <Label htmlFor="active">Active Employee</Label>
-                </div>
+              <div className="flex items-center space-x-2 h-full pt-8">
+                <Switch 
+                  id="active" 
+                  checked={employeeFormData.active}
+                  onCheckedChange={(checked) => setEmployeeFormData({
+                    ...employeeFormData,
+                    active: checked
+                  })}
+                />
+                <Label htmlFor="active">Active Employee</Label>
               </div>
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setEmployeeFormOpen(false)}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -574,6 +581,7 @@ export default function EmployeesPage() {
                 !employeeFormData.name ||
                 !employeeFormData.email
               }
+              className="w-full sm:w-auto"
             >
               {isEditing ? "Update Employee" : "Create Employee"}
             </Button>
