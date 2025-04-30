@@ -153,9 +153,14 @@ export default function ItemFormComponent({
         form.setValue("seoDescription", analysisResult.seoDescription || form.getValues("seoDescription"));
         form.setValue("aiEnhanced", true);
 
+        // Extract price range info from description if it exists
+        const description = analysisResult.description || '';
+        const hasPriceRange = description.includes('Price Range:');
+        const hasMarketAnalysis = description.includes('Market Analysis:');
+        
         toast({
           title: "AI Analysis Complete",
-          description: "Item details have been populated based on the image.",
+          description: "Item details and market pricing data have been populated based on the image."
         });
       }
     } catch (error) {
@@ -278,27 +283,47 @@ export default function ItemFormComponent({
           <FormField
             control={form.control}
             name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">$</span>
-                    </div>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="pl-7"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                    />
+            render={({ field }) => {
+              // Extract price range from description if it exists
+              const description = form.getValues("description") || '';
+              const priceRangeMatch = description.match(/Price Range:\s*([$\d\-\.]+)/i);
+              const priceRangeText = priceRangeMatch ? priceRangeMatch[1] : null;
+              
+              return (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Price</FormLabel>
+                    {priceRangeText && (
+                      <span className="text-xs text-green-600 font-medium">
+                        Market Range: {priceRangeText}
+                      </span>
+                    )}
                   </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+                  <FormControl>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">$</span>
+                      </div>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="pl-7"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      />
+                    </div>
+                  </FormControl>
+                  {form.getValues("aiEnhanced") && (
+                    <div className="text-xs text-gray-500 flex items-center mt-1">
+                      <Info className="h-3 w-3 mr-1 inline" />
+                      AI-suggested price based on current market data
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
