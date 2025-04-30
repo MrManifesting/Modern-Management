@@ -1,0 +1,44 @@
+Error analyzing image: 
+Error {}
+message: "400: {"error":"No image provided"}"
+stack: "Error: 400: {"error":"No image provided"}↵ at throwIfResNotOk (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:5:11)↵ at async apiRequest (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:15:3)↵ at async analyzeWithAI (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/inventory/item-form.tsx:127:24)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Error analyzing image: 
+Error {}
+message: "400: {"error":"No image provided"}"
+stack: "Error: 400: {"error":"No image provided"}↵ at throwIfResNotOk (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:5:11)↵ at async apiRequest (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/lib/queryClient.ts:15:3)↵ at async analyzeWithAI (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/src/components/inventory/item-form.tsx:127:24)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Error analyzing image: 
+Error {}
+
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error analyzing image: 
+Error {}
+
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Error analyzing group group-0: 
+Error {}
+
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://4bb8ab6c-e3c3-49e5-9feb-c05bc11fd3c7-00-k8hmwnjv0hoo.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error analyzing group group-1: 
+Error {}
+
+Error analyzing image: 
+Error {}

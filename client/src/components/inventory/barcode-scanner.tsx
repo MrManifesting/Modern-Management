@@ -29,10 +29,7 @@ export default function BarcodeScanner() {
   
   const { mutate, isPending } = useMutation({
     mutationFn: async (formData: { sku: string; action: string; quantity: number }) => {
-      const response = await apiRequest("/api/scan", {
-        method: "POST",
-        body: JSON.stringify(formData),
-      });
+      const response = await apiRequest("POST", "/api/scan", formData);
       
       return response.json();
     },
