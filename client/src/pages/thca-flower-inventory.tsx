@@ -92,29 +92,56 @@ const THCaFlowerInventoryPage = () => {
       <OnboardingTour steps={tourSteps} />
 
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 thca-inventory-header">
-          <div>
-            <h1 className="text-3xl font-bold gold-gradient-text">THCa Flower Inventory</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your THCa flower products, pricing tiers, and inventory levels
-            </p>
+        <div className="flex flex-col gap-4 thca-inventory-header">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">THCa Flower Inventory</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Manage your THCa flower products, pricing tiers, and inventory levels
+              </p>
+            </div>
+            
+            {/* Mobile: Show only primary actions */}
+            <div className="flex md:hidden gap-2 inventory-actions">
+              <Button className="gap-1.5 flex-1" size="sm">
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+              <Button variant="outline" className="gap-1.5 flex-1 import-csv-button" size="sm">
+                <UploadCloud className="h-4 w-4" />
+                Import
+              </Button>
+            </div>
+            
+            {/* Desktop: Show all actions */}
+            <div className="hidden md:flex flex-wrap gap-2 inventory-actions">
+              <Button className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+              <Button variant="outline" className="gap-1.5 import-csv-button">
+                <UploadCloud className="h-4 w-4" />
+                Import CSV
+              </Button>
+              <Button variant="outline" className="gap-1.5">
+                <DownloadCloud className="h-4 w-4" />
+                Export
+              </Button>
+              <Button variant="outline" className="gap-1.5">
+                <FileSpreadsheet className="h-4 w-4" />
+                Price Sheet
+              </Button>
+            </div>
           </div>
           
-          <div className="flex flex-wrap gap-2 inventory-actions">
-            <Button className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
-            <Button variant="outline" className="gap-1.5 import-csv-button">
-              <UploadCloud className="h-4 w-4" />
-              Import CSV
-            </Button>
-            <Button variant="outline" className="gap-1.5">
-              <DownloadCloud className="h-4 w-4" />
+          {/* Mobile: Extra actions in a second row, hidden on desktop */}
+          <div className="flex md:hidden gap-2 flex-wrap">
+            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
+              <DownloadCloud className="h-3 w-3" />
               Export
             </Button>
-            <Button variant="outline" className="gap-1.5">
-              <FileSpreadsheet className="h-4 w-4" />
+            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
+              <FileSpreadsheet className="h-3 w-3" />
               Price Sheet
             </Button>
           </div>
