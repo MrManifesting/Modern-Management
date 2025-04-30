@@ -181,11 +181,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No image provided" });
       }
 
+      // Import the OpenAI Vision service
+      const { analyzeImageWithOpenAI } = await import("./services/vision-openai");
+      
       const imageBuffer = req.file.buffer;
-      const analysisResult = await analyzeImage(imageBuffer);
+      const analysisResult = await analyzeImageWithOpenAI(imageBuffer);
       
       res.json(analysisResult);
     } catch (error) {
+      console.error("Image analysis error:", error);
       res.status(500).json({ error: "Failed to analyze image" });
     }
   });

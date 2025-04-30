@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Image, X, ArrowRight, Plus, Check } from "lucide-react";
+import { Image as ImageIcon, X, ArrowRight, Plus, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -55,9 +55,29 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
   // Get all group IDs
   const groupIds = Object.keys(groupedImages);
   
+  // Memory cleanup for image URLs
+  useEffect(() => {
+    return () => {
+      // Clean up object URLs on component unmount
+      Object.values(groupedImages).forEach(files => {
+        files.forEach(file => {
+          if ((file as any).preview) {
+            URL.revokeObjectURL((file as any).preview);
+          }
+        });
+      });
+    };
+  }, [groupedImages]);
+  
   // Get current group preview URLs
   const getGroupPreviews = (groupId: string) => {
-    return groupedImages[groupId]?.map(file => URL.createObjectURL(file)) || [];
+    return groupedImages[groupId]?.map(file => {
+      // Create and cache preview URL if it doesn't exist
+      if (!(file as any).preview) {
+        (file as any).preview = URL.createObjectURL(file);
+      }
+      return (file as any).preview;
+    }) || [];
   };
   
   // Remove a file from a group
@@ -174,7 +194,7 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
             className="mt-1 flex justify-center border-2 border-dashed border-gray-300 rounded-md px-6 pt-5 pb-6"
           >
             <div className="space-y-1 text-center">
-              <Image className="mx-auto h-12 w-12 text-gray-400" />
+              <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
               <div className="flex text-sm text-gray-600">
                 <label htmlFor="file-upload" className="relative cursor-pointer rounded-md bg-white font-medium text-primary-600 hover:text-primary-500">
                   <span>Upload multiple files</span>
