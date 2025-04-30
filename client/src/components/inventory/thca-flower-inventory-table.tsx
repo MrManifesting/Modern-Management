@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -32,7 +32,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Filter, MoreHorizontal, Eye, Edit, Trash, ShoppingCart, BarChart2, ExternalLink } from 'lucide-react';
+import { 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Trash, 
+  ShoppingCart, 
+  BarChart2, 
+  ExternalLink,
+  Mic,
+  MicOff,
+  Camera,
+  Upload
+} from 'lucide-react';
 
 // Define the THCa Flower product interface
 export interface THCaFlowerProduct {
@@ -337,6 +351,17 @@ const brands = [
   "Tree Mason"
 ];
 
+const packageSizes = [
+  "ALL",
+  "1lb",
+  "0.5lb",
+  "0.25lb",
+  "28g", // 1 ounce
+  "14g", // 1/2 ounce
+  "7g",  // 1/4 ounce
+  "3.5g" // 1/8 ounce
+];
+
 interface THCaFlowerInventoryTableProps {
   data?: THCaFlowerProduct[];
   onEdit?: (product: THCaFlowerProduct) => void;
@@ -355,6 +380,62 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
   const [selectedStrainType, setSelectedStrainType] = useState("ALL");
   const [selectedPackageType, setSelectedPackageType] = useState("ALL");
   const [selectedBrand, setSelectedBrand] = useState("ALL");
+  const [selectedPackageSize, setSelectedPackageSize] = useState("ALL");
+  
+  // Voice recognition
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice recognition
+  const toggleListening = () => {
+    if (!isListening) {
+      startListening();
+    } else {
+      stopListening();
+    }
+  };
+
+  const startListening = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      setIsListening(true);
+      setVoiceError(null);
+      
+      // @ts-ignore - We're checking existence before using
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (searchInputRef.current) {
+          setSearchTerm(transcript);
+        }
+        stopListening();
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setVoiceError(`Error: ${event.error}`);
+        setIsListening(false);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.start();
+    } else {
+      setVoiceError('Speech recognition is not supported in this browser');
+    }
+  };
+  
+  const stopListening = () => {
+    setIsListening(false);
+  };
 
   // Filter products based on search term and filters
   const filteredProducts = data.filter(product => {
@@ -365,13 +446,16 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
     const matchesTier = selectedTier === "ALL" || product.tier.includes(selectedTier);
     const matchesStrainType = selectedStrainType === "ALL" || product.strainType.includes(selectedStrainType);
     
-    // Additional filters for package type and brand
+    // Additional filters for package type, brand, and package size
     const matchesPackageType = selectedPackageType === "ALL" || 
       (product.packageType && product.packageType.includes(selectedPackageType));
     const matchesBrand = selectedBrand === "ALL" || 
       (product.brand && product.brand === selectedBrand);
+    const matchesPackageSize = selectedPackageSize === "ALL" || 
+      (product.packageSize && product.packageSize === selectedPackageSize);
     
-    return matchesSearch && matchesTier && matchesStrainType && matchesPackageType && matchesBrand;
+    return matchesSearch && matchesTier && matchesStrainType && 
+           matchesPackageType && matchesBrand && matchesPackageSize;
   });
 
   // Format currency
@@ -549,11 +633,30 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Search by strain or SKU..."
-              className="pl-8"
+              className="pl-8 pr-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-primary"
+              onClick={toggleListening}
+              title="Use voice search"
+            >
+              {isListening ? (
+                <Mic className="h-4 w-4 text-red-500 animate-pulse" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+              <span className="sr-only">Voice Search</span>
+            </Button>
+            {voiceError && (
+              <p className="text-xs text-red-500 mt-1">{voiceError}</p>
+            )}
           </div>
           {/* Primary filters visible on both mobile and desktop */}
           <div className="flex flex-col sm:flex-row gap-2">
@@ -601,6 +704,35 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          
+          {/* Weight filter */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select value={selectedPackageSize} onValueChange={setSelectedPackageSize}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Package Size" />
+              </SelectTrigger>
+              <SelectContent>
+                {packageSizes.map((size) => (
+                  <SelectItem key={size} value={size}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              variant="outline" 
+              className="flex-1 bg-gold/10 hover:bg-gold/20 border-gold/30"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedTier("ALL");
+                setSelectedStrainType("ALL");
+                setSelectedPackageType("ALL");
+                setSelectedBrand("ALL");
+                setSelectedPackageSize("ALL");
+              }}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Reset Filters
+            </Button>
           </div>
         </div>
       </CardHeader>
