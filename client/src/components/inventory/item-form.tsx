@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
@@ -21,9 +21,18 @@ import {
 } from "@/components/ui/select";
 import { itemFormSchema, ItemForm, Item, AIAnalysis } from "@shared/schema";
 import { useDropzone } from "react-dropzone";
-import { Zap, Image, X } from "lucide-react";
+import { Zap, Image as ImageIcon, X, Upload, PlusCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import BulkUpload from "./bulk-upload";
 
 interface ItemFormProps {
   defaultValues?: Partial<ItemForm>;
@@ -56,31 +65,44 @@ export default function ItemFormComponent({
     (defaultValues.images as string[]) || []
   );
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const form = useForm<ItemForm>({
     resolver: zodResolver(itemFormSchema),
     defaultValues,
   });
 
+  // Handle file preview URLs cleanup
+  useEffect(() => {
+    return () => {
+      // Revoke object URLs to avoid memory leaks
+      imageUrls.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [imageUrls]);
+
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".gif"],
     },
     onDrop: (acceptedFiles) => {
-      const newFiles = acceptedFiles.map(file =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file)
-        })
-      );
-      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+      setFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
       
       // Create preview URLs for display
-      const newUrls = newFiles.map(file => URL.createObjectURL(file));
+      const newUrls = acceptedFiles.map(file => URL.createObjectURL(file));
       setImageUrls(prevUrls => [...prevUrls, ...newUrls]);
     },
   });
 
   const removeImage = (index: number) => {
+    // Revoke the object URL first to prevent memory leaks
+    if (imageUrls[index] && imageUrls[index].startsWith('blob:')) {
+      URL.revokeObjectURL(imageUrls[index]);
+    }
+    
     setImageUrls(prev => prev.filter((_, i) => i !== index));
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
@@ -112,6 +134,11 @@ export default function ItemFormComponent({
 
       // Send request to analyze image
       const response = await apiRequest("POST", "/api/analyze-image", formData);
+      
+      if (!response.ok) {
+        throw new Error(`Analysis failed with status: ${response.status}`);
+      }
+      
       const analysisResult: AIAnalysis = await response.json();
 
       // Update form with AI analysis
@@ -140,6 +167,40 @@ export default function ItemFormComponent({
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+  
+  const handleBulkUploadComplete = (items: Array<{ images: File[]; analysis: AIAnalysis }>) => {
+    // Use the first item's data to populate this form
+    if (items.length > 0) {
+      const firstItem = items[0];
+      
+      // Set the files
+      setFiles(firstItem.images);
+      
+      // Create preview URLs for display
+      const newUrls = firstItem.images.map(file => URL.createObjectURL(file));
+      setImageUrls(newUrls);
+      
+      // Set form values from analysis
+      const analysis = firstItem.analysis;
+      form.setValue("name", analysis.name || form.getValues("name"));
+      form.setValue("description", analysis.description || form.getValues("description"));
+      form.setValue("category", analysis.category || form.getValues("category"));
+      form.setValue("condition", analysis.condition || form.getValues("condition"));
+      form.setValue("price", analysis.suggestedPrice || form.getValues("price"));
+      form.setValue("tags", analysis.tags || form.getValues("tags"));
+      form.setValue("seoTitle", analysis.seoTitle || form.getValues("seoTitle"));
+      form.setValue("seoDescription", analysis.seoDescription || form.getValues("seoDescription"));
+      form.setValue("aiEnhanced", true);
+      
+      // Close dialog
+      setBulkUploadOpen(false);
+      
+      toast({
+        title: "Bulk Upload Complete",
+        description: `Added ${items.length} items with the first one shown. Save this item, then add the others.`,
+      });
     }
   };
 
@@ -315,18 +376,33 @@ export default function ItemFormComponent({
           />
 
           <div className="sm:col-span-2">
-            <FormLabel>Photos</FormLabel>
+            <div className="flex justify-between items-center">
+              <FormLabel>Photos</FormLabel>
+              <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Upload className="h-4 w-4 mr-1" /> Bulk Upload
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl">
+                  <DialogHeader>
+                    <DialogTitle>Bulk Upload Items</DialogTitle>
+                  </DialogHeader>
+                  <BulkUpload onComplete={handleBulkUploadComplete} />
+                </DialogContent>
+              </Dialog>
+            </div>
             <div className="mt-1">
               <div 
                 {...getRootProps()} 
                 className="mt-1 flex justify-center border-2 border-dashed border-gray-300 rounded-md px-6 pt-5 pb-6"
               >
                 <div className="space-y-1 text-center">
-                  <Image className="mx-auto h-12 w-12 text-gray-400" />
+                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <div className="flex text-sm text-gray-600">
-                    <label htmlFor="file-upload" className="relative cursor-pointer rounded-md bg-white font-medium text-primary-600 hover:text-primary-500">
+                    <label className="relative cursor-pointer rounded-md bg-white font-medium text-primary-600 hover:text-primary-500">
                       <span>Upload files</span>
-                      <input {...getInputProps()} />
+                      <input {...getInputProps()} className="sr-only" />
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
@@ -359,7 +435,7 @@ export default function ItemFormComponent({
           </div>
 
           <div className="sm:col-span-2">
-            <div className="flex items-center">
+            <div className="flex items-center bg-green-50 p-3 rounded-md border border-green-100">
               <div className="bg-green-100 p-2 rounded-md">
                 <Zap className="h-5 w-5 text-green-600" />
               </div>
