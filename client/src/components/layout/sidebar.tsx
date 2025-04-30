@@ -13,7 +13,8 @@ import {
   Image,
   Users,
   X,
-  Camera
+  Camera,
+  RefreshCw
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
