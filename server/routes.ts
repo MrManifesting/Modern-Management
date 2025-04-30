@@ -8,6 +8,9 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
+import { syncWithShopify } from "./services/shopify";
+import fs from "fs";
+import { promisify } from "util";
 
 // Configure multer for file uploads
 const upload = multer({
