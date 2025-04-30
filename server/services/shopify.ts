@@ -248,3 +248,101 @@ export async function getItemPushInfo(item: Item): Promise<{
 }
 
 export const pushEnabled = () => pushToShopifyEnabled;
+
+/**
+ * Fetches products from Shopify and returns them
+ */
+export async function fetchShopifyProducts(): Promise<ShopifyProduct[]> {
+  if (!isShopifyConfigured()) {
+    throw new Error("Shopify integration is not properly configured");
+  }
+
+  try {
+    const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products.json`, {
+      method: "GET",
+      headers: {
+        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN || "",
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products from Shopify: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.products as ShopifyProduct[];
+  } catch (error) {
+    console.error("Error fetching products from Shopify:", error);
+    throw error;
+  }
+}
+
+/**
+ * Syncs products from Shopify to our local inventory
+ */
+export async function syncProductsFromShopify(storage: any): Promise<{
+  imported: number;
+  updated: number;
+  total: number;
+  errors: string[];
+}> {
+  try {
+    const products = await fetchShopifyProducts();
+    const existingItems = await storage.getItems();
+    
+    const result = {
+      imported: 0,
+      updated: 0,
+      total: products.length,
+      errors: [] as string[]
+    };
+    
+    for (const product of products) {
+      try {
+        // Check if the product already exists in our system by shopifyId
+        const existingItem = existingItems.find(
+          item => item.shopifyId === product.id?.toString()
+        );
+        
+        // Map Shopify product to our schema
+        const productData = {
+          name: product.title,
+          description: product.body_html || "",
+          price: parseFloat(product.variants[0]?.price || "0"),
+          quantity: parseInt(product.variants[0]?.inventory_quantity?.toString() || "0"),
+          category: product.product_type || "uncategorized",
+          condition: "new",
+          status: product.status || "draft",
+          sku: product.variants[0]?.sku || "",
+          barcode: product.variants[0]?.barcode || "",
+          shopifyId: product.id?.toString(),
+          tags: product.tags ? product.tags.split(", ") : [],
+          images: product.images?.map(img => img.src) || [],
+          marketplace: ["shopify"],
+          attributes: {
+            vendor: product.vendor
+          }
+        };
+        
+        if (existingItem) {
+          // Update existing item
+          await storage.updateItem(existingItem.id, productData);
+          result.updated++;
+        } else {
+          // Create new item
+          await storage.createItem(productData);
+          result.imported++;
+        }
+      } catch (error) {
+        console.error(`Error processing Shopify product ${product.title}:`, error);
+        result.errors.push(`Failed to process "${product.title}": ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Failed to sync products from Shopify:", error);
+    throw error;
+  }
+}
