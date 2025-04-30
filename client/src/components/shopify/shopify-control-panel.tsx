@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, ShieldAlert, ShieldCheck, Store, RefreshCw, BarChart3, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, apiRequestSimple } from "@/lib/queryClient";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ShopifyControlPanel() {
@@ -48,10 +48,10 @@ export default function ShopifyControlPanel() {
   const fetchShopifyStatus = async () => {
     setLoading(true);
     try {
-      const statusResult = await apiRequest<{pushEnabled: boolean; message: string}>('/api/shopify/status');
+      const statusResult = await apiRequestSimple<{pushEnabled: boolean; message: string}>('/api/shopify/status');
       setStatus(statusResult);
       
-      const connectionResult = await apiRequest<{connected: boolean; store: string; message: string}>('/api/shopify/test-connection');
+      const connectionResult = await apiRequestSimple<{connected: boolean; store: string; message: string}>('/api/shopify/test-connection');
       setConnectionStatus(connectionResult);
     } catch (error) {
       console.error("Failed to fetch Shopify status:", error);
@@ -68,7 +68,7 @@ export default function ShopifyControlPanel() {
   const togglePushStatus = async () => {
     setUpdating(true);
     try {
-      const result = await apiRequest<{pushEnabled: boolean; message: string}>('/api/shopify/set-push-status', {
+      const result = await apiRequestSimple<{pushEnabled: boolean; message: string}>('/api/shopify/set-push-status', {
         method: 'POST',
         body: JSON.stringify({ enabled: !status.pushEnabled }),
         headers: {
@@ -101,7 +101,7 @@ export default function ShopifyControlPanel() {
     setSyncResult(null);
     
     try {
-      const result = await apiRequest<{
+      const result = await apiRequestSimple<{
         success: boolean;
         imported: number;
         updated: number;
