@@ -734,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Import route with Shopify synchronization and stamp collection support
+  // CSV Import route with support for different product types
   app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
@@ -757,6 +757,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (row[i] === ',' && !insideQuotes) {
             parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
             currentCell = '';
+          } else if (row[i] === '\t' && !insideQuotes) {
+            // Handle tab-delimited files
+            parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
+            currentCell = '';
           } else {
             currentCell += row[i];
           }
@@ -775,8 +779,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const headers = rows[0];
       const isStampImport = req.body.isStampImport === 'true';
+      const isCannabisImport = req.body.isCannabisImport === 'true' || 
+                               (headers.some(h => h.includes('Strain')) && 
+                                headers.some(h => h.includes('Tier')));
+      
       console.log("CSV Import - Headers:", headers);
-      console.log("Is Stamp Import:", isStampImport);
+      console.log("Import Type:", isStampImport ? "Stamp Collection" : 
+                                isCannabisImport ? "Cannabis Inventory" : "Standard Inventory");
+      
+      // For cannabis import, use the specialized processing function
+      if (isCannabisImport) {
+        const { processCannabisImport } = await import('./services/cannabis-import');
+        const importedItems = await processCannabisImport(rows);
+        
+        // Synchronize with Shopify if requested
+        const syncToShopify = req.body.syncToShopify === 'true';
+        let syncResults = null;
+        
+        if (syncToShopify && importedItems.length > 0) {
+          syncResults = await syncWithShopify(importedItems);
+        }
+        
+        return res.status(201).json({
+          success: true,
+          importedCount: importedItems.length,
+          totalRows: rows.length,
+          type: 'cannabis_inventory',
+          syncResults
+        });
+      }
       
       // Map CSV headers to schema fields with stamp collection support
       const fieldMap: Record<string, string> = {

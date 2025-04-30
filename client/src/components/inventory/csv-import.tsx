@@ -13,7 +13,9 @@ import {
   CheckCircle2, 
   ShoppingBag, 
   UploadCloud, 
-  Database
+  Database,
+  Leaf,
+  Stamp
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -35,6 +37,7 @@ export default function CSVImport() {
   const [progress, setProgress] = useState(0);
   const [syncToShopify, setSyncToShopify] = useState(true);
   const [isStampImport, setIsStampImport] = useState(false);
+  const [isCannabisImport, setIsCannabisImport] = useState(false);
   
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,18 +92,29 @@ export default function CSVImport() {
       
       const headers = rows[0];
       
-      // Detect if this is a stamp collection CSV
+      // Detect file type by headers
       const isStampFormat = headers.some(h => 
         h.toLowerCase().includes('title') || 
         h.toLowerCase().includes('condition')
       );
       
-      setIsStampImport(isStampFormat);
+      const isCannabisFormat = isCannabisInventory(headers);
       
-      // Validate required columns based on type
-      let requiredColumns = isStampFormat 
-        ? ['title', 'description', 'price', 'condition'] 
-        : ['name', 'description', 'price', 'quantity'];
+      // Set import type
+      setIsStampImport(isStampFormat);
+      const [isCannabisImport, setIsCannabisImport] = useState(false);
+      setIsCannabisImport(isCannabisFormat);
+      
+      // Set required columns based on import type
+      let requiredColumns = [];
+      
+      if (isStampFormat) {
+        requiredColumns = ['title', 'description', 'price', 'condition'];
+      } else if (isCannabisFormat) {
+        requiredColumns = ['strain', 'tier', 'price']; 
+      } else {
+        requiredColumns = ['name', 'description', 'price', 'quantity'];
+      };
       
       const headersLower = headers.map(h => h.toLowerCase());
       const missingColumns = requiredColumns.filter(col => 
@@ -182,6 +196,12 @@ export default function CSVImport() {
       onSuccess: () => clearInterval(progressInterval),
       onError: () => clearInterval(progressInterval)
     });
+  };
+
+  // Check if file is likely a cannabis inventory spreadsheet
+  const isCannabisInventory = (headers: string[]): boolean => {
+    return headers.some(h => h.includes('Strain')) && 
+           headers.some(h => h.includes('Tier') || h.includes('THC') || h.includes('CBD'));
   };
 
   const resetForm = () => {
