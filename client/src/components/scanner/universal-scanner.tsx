@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 import { Camera, Mic, ScanLine, Search, Loader2, Type, Smartphone } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -252,7 +252,7 @@ const UniversalScanner = () => {
     
     try {
       // First, check our internal inventory
-      const internalResult = await apiRequest(`/api/items/barcode/${barcodeToSearch}`, {
+      const internalResult = await apiRequestSimple(`/api/items/barcode/${barcodeToSearch}`, {
         method: 'GET',
       }).catch(() => null);
       
@@ -277,7 +277,7 @@ const UniversalScanner = () => {
         });
       } else {
         // If not in our inventory, query external product database
-        const externalResult = await apiRequest('/api/scan', {
+        const externalResult = await apiRequestSimple('/api/scan', {
           method: 'POST',
           body: JSON.stringify({ barcode: barcodeToSearch }),
           headers: {
@@ -337,7 +337,7 @@ const UniversalScanner = () => {
       // For demo, we'll create a simple URL-based QR code
       const scannerUrl = `${window.location.origin}/scanner?mode=employee`;
       
-      const response = await apiRequest('/api/qrcode/generate', {
+      const response = await apiRequestSimple('/api/qrcode/generate', {
         method: 'POST',
         body: JSON.stringify({ 
           data: scannerUrl,
@@ -367,7 +367,7 @@ const UniversalScanner = () => {
     if (!productInfo) return;
     
     try {
-      const response = await apiRequest('/api/items', {
+      const response = await apiRequestSimple('/api/items', {
         method: 'POST',
         body: JSON.stringify({
           name: productInfo.name,
