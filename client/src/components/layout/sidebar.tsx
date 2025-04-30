@@ -12,7 +12,9 @@ import {
   FileBarChart,
   Image,
   Users,
+  X
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 type SidebarProps = {
   expanded: boolean;
@@ -20,6 +22,29 @@ type SidebarProps = {
 
 export default function Sidebar({ expanded }: SidebarProps) {
   const [location] = useLocation();
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  // Handle click outside sidebar on mobile to auto-close
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        sidebarRef.current && 
+        !sidebarRef.current.contains(event.target as Node) &&
+        window.innerWidth < 1024 && // Only on small screens
+        expanded
+      ) {
+        // We can't directly manipulate the expanded state here
+        // Instead, we'll use a custom event that main-layout can listen for
+        const closeEvent = new CustomEvent('closeSidebar');
+        window.dispatchEvent(closeEvent);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [expanded]);
 
   const navigationItems = [
     {
@@ -76,15 +101,33 @@ export default function Sidebar({ expanded }: SidebarProps) {
 
   return (
     <aside
+      ref={sidebarRef}
       className={cn(
-        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm",
-        expanded ? "w-64" : "w-20"
+        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r shadow-sm overflow-y-auto",
+        // New black-gold theme with translucent background
+        "bg-black/95 border-gold/30", 
+        expanded ? "translate-x-0 w-64" : "translate-x-[-100%] w-64 lg:w-20 lg:translate-x-0",
+        // Add padding to prevent content from being hidden under iOS Safari's bottom navigation bar
+        "pb-safe-bottom"
       )}
     >
+      {/* Close button for mobile */}
+      {expanded && (
+        <button 
+          className="lg:hidden absolute top-4 right-4 z-50 text-gold rounded-full p-1 hover:bg-gold/10"
+          onClick={() => {
+            const closeEvent = new CustomEvent('closeSidebar');
+            window.dispatchEvent(closeEvent);
+          }}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Logo and Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
+      <div className="flex h-16 items-center justify-center border-b border-gold/30 px-4">
         <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
-          <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-primary-400 to-primary-600 p-1.5 text-white">
+          <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-gold to-gold-dark p-1.5 text-black">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6"
@@ -101,40 +144,40 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Gold-Standard-Inventory</span>
+            <span className="text-lg font-semibold gold-gradient-text">Gold-Standard</span>
           )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col space-y-1 px-3 py-4">
+      <nav className="flex flex-col space-y-1 px-3 py-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
         {navigationItems.map((item) => (
           <Link
             key={item.path}
             href={item.path}
             className={cn(
-              "flex items-center space-x-2 rounded-lg px-3 py-2",
+              "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
               location === item.path
-                ? "bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
-                : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                ? "bg-gold/20 text-gold border-l-2 border-gold"
+                : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
             )}
           >
             {item.icon}
-            {expanded && <span>{item.title}</span>}
+            {expanded && <span className="text-sm">{item.title}</span>}
           </Link>
         ))}
       </nav>
 
       {/* User Menu */}
-      <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="mt-auto border-t border-gold/30 p-4">
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-[hsl(var(--wood))] text-[hsl(var(--wood-foreground))] flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-gold text-black flex items-center justify-center">
             <span className="text-sm font-medium">JS</span>
           </div>
           {expanded && (
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">John Smith</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">john@example.com</p>
+              <p className="text-sm font-medium text-gray-200">John Smith</p>
+              <p className="text-xs text-gold/70">john@example.com</p>
             </div>
           )}
         </div>
