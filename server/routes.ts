@@ -8,7 +8,7 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
-import { syncWithShopify } from "./services/shopify";
+import { syncWithShopify, syncItemWithShopify } from "./services/shopify";
 import fs from "fs";
 import { promisify } from "util";
 
@@ -336,15 +336,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       let updatedItem = item;
+      let shopifySyncResult = { status: 'not_required' };
       
       // Perform the requested action
       if (action === "add") {
         const newQuantity = item.quantity + quantity;
         updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+        
+        // Sync with Shopify if inventory was modified
+        if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
+          console.log(`Syncing inventory add to Shopify for ${updatedItem.name}`);
+          const syncSuccess = await syncItemWithShopify(updatedItem);
+          shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'add' };
+        }
       } else if (action === "remove") {
         // Prevent negative inventory
         const newQuantity = Math.max(0, item.quantity - quantity);
         updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+        
+        // Sync with Shopify if inventory was modified
+        if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
+          console.log(`Syncing inventory removal to Shopify for ${updatedItem.name}`);
+          const syncSuccess = await syncItemWithShopify(updatedItem);
+          shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'remove' };
+        }
       }
       
       res.json({
@@ -353,7 +368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sku: updatedItem.sku,
         quantity: updatedItem.quantity,
         price: updatedItem.price,
-        action: action
+        action: action,
+        shopifySyncResult
       });
     } catch (error) {
       console.error("Error during scan operation:", error);
@@ -390,6 +406,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // CSV Import route with Shopify synchronization
+  app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No CSV file provided" });
+      }
+      
+      // Parse CSV file
+      const fileContent = req.file.buffer.toString('utf8');
+      const rows = fileContent.split('\\n').map(row => row.split(',').map(cell => cell.trim()));
+      const headers = rows[0];
+      
+      // Map CSV headers to schema fields
+      const fieldMap: Record<string, string> = {
+        'name': 'name',
+        'title': 'name',
+        'product name': 'name',
+        'description': 'description',
+        'price': 'price',
+        'cost': 'price',
+        'quantity': 'quantity',
+        'qty': 'quantity',
+        'stock': 'quantity',
+        'sku': 'sku',
+        'item number': 'sku',
+        'product id': 'sku',
+        'category': 'category',
+        'condition': 'condition',
+        'status': 'status'
+      };
+      
+      // Find index for each field
+      const fieldIndices: Record<string, number> = {};
+      headers.forEach((header, index) => {
+        const normalizedHeader = header.toLowerCase();
+        for (const [csvField, schemaField] of Object.entries(fieldMap)) {
+          if (normalizedHeader === csvField) {
+            fieldIndices[schemaField] = index;
+          }
+        }
+      });
+      
+      // Verify required fields
+      const requiredFields = ['name', 'price', 'quantity'];
+      const missingFields = requiredFields.filter(field => fieldIndices[field] === undefined);
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Missing required fields in CSV", 
+          missingFields 
+        });
+      }
+      
+      // Process data rows (skip header)
+      const dataRows = rows.slice(1).filter(row => row.length >= headers.length);
+      const importedItems: any[] = [];
+      
+      for (const row of dataRows) {
+        try {
+          // Extract data from row
+          const itemData: Record<string, any> = {
+            name: row[fieldIndices['name']],
+            description: fieldIndices['description'] !== undefined ? row[fieldIndices['description']] : '',
+            price: parseFloat(row[fieldIndices['price']]),
+            quantity: parseInt(row[fieldIndices['quantity']]),
+            status: fieldIndices['status'] !== undefined ? row[fieldIndices['status']] : 'draft',
+            category: fieldIndices['category'] !== undefined ? row[fieldIndices['category']] : 'uncategorized',
+            condition: fieldIndices['condition'] !== undefined ? row[fieldIndices['condition']] : 'used',
+            tags: [],
+            images: [],
+            marketplace: [],
+            aiEnhanced: false,
+            aiTags: []
+          };
+          
+          // Generate SKU if not provided
+          if (fieldIndices['sku'] !== undefined && row[fieldIndices['sku']]) {
+            itemData.sku = row[fieldIndices['sku']];
+          } else {
+            itemData.sku = generateSKU(itemData);
+          }
+          
+          // Generate barcode data
+          itemData.barcode = generateBarcodeData(itemData.sku);
+          
+          // Validate and create item
+          const parsedData = insertItemSchema.parse(itemData);
+          const item = await storage.createItem(parsedData);
+          
+          // Generate QR code
+          const qrCodeDataURL = await generateQRCodeDataURL(item);
+          const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
+          
+          if (updatedItem) {
+            importedItems.push(updatedItem);
+          }
+        } catch (error) {
+          console.error('Error processing row:', error);
+          // Continue with next row
+        }
+      }
+      
+      // Synchronize with Shopify if requested
+      const syncToShopify = req.body.syncToShopify === 'true';
+      let syncResults = null;
+      
+      if (syncToShopify && importedItems.length > 0) {
+        syncResults = await syncWithShopify(importedItems);
+      }
+      
+      res.status(201).json({
+        success: true,
+        importedCount: importedItems.length,
+        totalRows: dataRows.length,
+        syncResults
+      });
+    } catch (error) {
+      console.error('CSV import error:', error);
+      res.status(500).json({ 
+        error: "Failed to import items from CSV",
+        details: error.message
+      });
     }
   });
 
