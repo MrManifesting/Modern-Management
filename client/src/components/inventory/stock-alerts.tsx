@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ const StockAlerts: React.FC<StockAlertsProps> = ({
   const { data: stockAlerts, isLoading, isError, refetch } = useQuery({
     queryKey: ['/api/items'], 
     queryFn: async () => {
-      const items = await apiRequest('/api/items', { method: 'GET' }) as any[];
+      const items = await apiRequestSimple('/api/items', { method: 'GET' });
       
       // Transform items into stock alerts
       return items.map(item => {
