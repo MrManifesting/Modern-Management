@@ -262,7 +262,7 @@ export default function CSVImport() {
               )}
             </div>
             
-            {importStatus === "importing" && (
+            {(importStatus === "importing") && (
               <div className="space-y-2 my-4">
                 <p className="text-sm text-gray-300">Importing inventory...</p>
                 <Progress value={progress} className="h-2 bg-black border border-gold/20" />
@@ -373,7 +373,7 @@ export default function CSVImport() {
           </div>
           <Button 
             onClick={handleImport} 
-            disabled={importStatus === "importing"}
+            disabled={importStatus !== "validated"}
             className="gold-btn ml-auto"
           >
             {syncToShopify 
