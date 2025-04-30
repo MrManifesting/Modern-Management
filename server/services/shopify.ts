@@ -78,7 +78,9 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
     }
     
     // Make a simple API call to test authentication
-    const response = await fetch(`https://${SHOPIFY_STORE}/admin/api/2023-10/shop.json`, {
+    // Ensure the store URL doesn't include the protocol
+    const storeUrl = SHOPIFY_STORE.replace(/^https?:\/\//, '');
+    const response = await fetch(`https://${storeUrl}/admin/api/2023-10/shop.json`, {
       headers: {
         'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
         'Content-Type': 'application/json'
@@ -183,9 +185,11 @@ export async function pushItemToShopify(product: ShopifyProduct): Promise<{ succ
     }
 
     const method = product.id ? 'PUT' : 'POST';
+    // Ensure the store URL doesn't include the protocol
+    const storeUrl = SHOPIFY_STORE.replace(/^https?:\/\//, '');
     const url = product.id 
-      ? `https://${SHOPIFY_STORE}/admin/api/2023-10/products/${product.id}.json` 
-      : `https://${SHOPIFY_STORE}/admin/api/2023-10/products.json`;
+      ? `https://${storeUrl}/admin/api/2023-10/products/${product.id}.json` 
+      : `https://${storeUrl}/admin/api/2023-10/products.json`;
     
     const response = await fetch(url, {
       method,
@@ -243,7 +247,7 @@ export async function getItemPushInfo(item: Item): Promise<{
     shopifyProduct,
     canPush: errors.length === 0 && pushToShopifyEnabled,
     errors,
-    shopifyProductUrl: item.shopifyId ? `https://${SHOPIFY_STORE}/admin/products/${item.shopifyId}` : undefined
+    shopifyProductUrl: item.shopifyId ? `https://${SHOPIFY_STORE.replace(/^https?:\/\//, '')}/admin/products/${item.shopifyId}` : undefined
   };
 }
 
@@ -258,10 +262,12 @@ export async function fetchShopifyProducts(): Promise<ShopifyProduct[]> {
   }
 
   try {
-    const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products.json`, {
+    // Ensure the store URL doesn't include the protocol
+    const storeUrl = SHOPIFY_STORE.replace(/^https?:\/\//, '');
+    const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
       method: "GET",
       headers: {
-        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN || "",
+        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
         "Content-Type": "application/json"
       }
     });
