@@ -6,6 +6,7 @@ import { z } from "zod";
 import { insertItemSchema, insertMarketplaceSchema, csvExportSchema, aiAnalysisSchema } from "@shared/schema";
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
+import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { Parser } from "@json2csv/plainjs";
 
 // Configure multer for file uploads
@@ -51,7 +52,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return `https://storage.example.com/item-${Date.now()}-${index}.jpg`;
       }) || [];
       
-      const parsedData = insertItemSchema.parse({
+      // Prepare the item data
+      const itemData = {
         ...req.body,
         images: fileUrls,
         price: parseFloat(req.body.price),
@@ -59,14 +61,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         marketplace: req.body.marketplace ? JSON.parse(req.body.marketplace) : [],
         aiEnhanced: req.body.aiEnhanced === "true",
         aiTags: req.body.aiTags ? JSON.parse(req.body.aiTags) : [],
-      });
+      };
       
+      // Generate SKU if not provided
+      if (!itemData.sku) {
+        itemData.sku = generateSKU(itemData);
+      }
+      
+      // Generate barcode data
+      itemData.barcode = generateBarcodeData(itemData.sku);
+      
+      // Parse the data through Zod schema
+      const parsedData = insertItemSchema.parse(itemData);
+      
+      // Create the item in storage
       const item = await storage.createItem(parsedData);
-      res.status(201).json(item);
+      
+      // Generate QR code (requires the item ID, so we do this after creation)
+      const qrCodeDataURL = await generateQRCodeDataURL(item);
+      
+      // Update the item with the QR code data
+      const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
+      
+      res.status(201).json(updatedItem);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      console.error("Failed to create item:", error);
       res.status(500).json({ error: "Failed to create item" });
     }
   });
@@ -246,6 +268,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to generate CSV export" });
+    }
+  });
+
+  // Barcode and QR code route for printing
+  app.get("/api/items/:id/codes", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Regenerate QR code data URL if it doesn't exist
+      if (!item.qrCode) {
+        const qrCodeDataURL = await generateQRCodeDataURL(item);
+        const updatedItem = await storage.updateItem(id, { qrCode: qrCodeDataURL });
+        res.json({
+          sku: updatedItem.sku,
+          barcode: updatedItem.barcode,
+          qrCode: updatedItem.qrCode,
+          name: updatedItem.name,
+          price: updatedItem.price,
+          category: updatedItem.category,
+          quantity: updatedItem.quantity
+        });
+      } else {
+        res.json({
+          sku: item.sku,
+          barcode: item.barcode,
+          qrCode: item.qrCode,
+          name: item.name,
+          price: item.price,
+          category: item.category,
+          quantity: item.quantity
+        });
+      }
+    } catch (error) {
+      console.error("Failed to generate codes:", error);
+      res.status(500).json({ error: "Failed to generate barcode/QR code" });
+    }
+  });
+  
+  // Route for scanning a barcode/QR code and updating inventory
+  app.post("/api/scan", async (req: Request, res: Response) => {
+    try {
+      const { sku, action, quantity = 1 } = req.body;
+      
+      if (!sku) {
+        return res.status(400).json({ error: "SKU is required" });
+      }
+      
+      if (!action || !["add", "remove", "check"].includes(action)) {
+        return res.status(400).json({ error: "Valid action is required (add, remove, or check)" });
+      }
+      
+      // Find the item by SKU
+      const items = await storage.getItems();
+      const item = items.find(item => item.sku === sku);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found with the provided SKU" });
+      }
+      
+      let updatedItem = item;
+      
+      // Perform the requested action
+      if (action === "add") {
+        const newQuantity = item.quantity + quantity;
+        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+      } else if (action === "remove") {
+        // Prevent negative inventory
+        const newQuantity = Math.max(0, item.quantity - quantity);
+        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+      }
+      
+      res.json({
+        id: updatedItem.id,
+        name: updatedItem.name,
+        sku: updatedItem.sku,
+        quantity: updatedItem.quantity,
+        price: updatedItem.price,
+        action: action
+      });
+    } catch (error) {
+      console.error("Error during scan operation:", error);
+      res.status(500).json({ error: "Failed to process scan" });
     }
   });
 
