@@ -90,6 +90,7 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
     console.log(`Store URL: ${storeUrl}`);
     console.log(`Access Token: ${SHOPIFY_ACCESS_TOKEN.substring(0, 4)}...`);
     
+    // Construct the API URL, ensuring it's properly formatted
     const apiUrl = `https://${storeUrl}/admin/api/2023-10/shop.json`;
     console.log(`API URL: ${apiUrl}`);
     
