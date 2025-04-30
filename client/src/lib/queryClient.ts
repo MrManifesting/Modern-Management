@@ -7,6 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Original API request function that takes separate method, url, and data parameters
+ */
 export async function apiRequest(
   method: string,
   url: string,
@@ -36,6 +39,27 @@ export async function apiRequest(
 
   await throwIfResNotOk(res);
   return res;
+}
+
+/**
+ * Simpler API request function that just takes a URL and options
+ * This is easier to use with React Query
+ */
+export async function apiRequestSimple<T = any>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
+  const res = await fetch(url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    }
+  });
+
+  await throwIfResNotOk(res);
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

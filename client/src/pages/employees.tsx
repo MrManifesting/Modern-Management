@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequestSimple, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Edit, CheckCircle, AlertCircle, Activity, Package, Search } from "lucide-react";
+import { Trash2, Edit, CheckCircle, AlertCircle, Activity, Package, Search, Users } from "lucide-react";
 import type { Employee, InventoryAction } from "@shared/schema";
 
 export default function EmployeesPage() {
@@ -32,23 +32,21 @@ export default function EmployeesPage() {
   
   const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
     queryKey: ["/api/employees"],
-    queryFn: () => apiRequest<Employee[]>("/api/employees")
   });
   
   const { data: employeeActions = [], isLoading: isLoadingActions } = useQuery({
-    queryKey: ["/api/inventory-actions", selectedEmployee?.id],
+    queryKey: ["/api/employees", selectedEmployee?.id, "inventory-actions"],
     queryFn: () => 
       selectedEmployee 
-        ? apiRequest<InventoryAction[]>(`/api/employees/${selectedEmployee.id}/inventory-actions`) 
+        ? apiRequestSimple<InventoryAction[]>(`/api/employees/${selectedEmployee.id}/inventory-actions`) 
         : Promise.resolve([]),
     enabled: !!selectedEmployee
   });
   
   const createEmployee = useMutation({
     mutationFn: (data: typeof employeeFormData) => 
-      apiRequest("/api/employees", {
+      apiRequestSimple<Employee>("/api/employees", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       }),
     onSuccess: () => {
@@ -79,9 +77,8 @@ export default function EmployeesPage() {
   
   const updateEmployee = useMutation({
     mutationFn: (data: { id: number; data: Partial<typeof employeeFormData> }) => 
-      apiRequest(`/api/employees/${data.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      apiRequestSimple<Employee>(`/api/employees/${data.id}`, {
+        method: "PATCH", 
         body: JSON.stringify(data.data)
       }),
     onSuccess: () => {
@@ -104,7 +101,7 @@ export default function EmployeesPage() {
   
   const deleteEmployee = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/employees/${id}`, {
+      apiRequestSimple<{success: boolean}>(`/api/employees/${id}`, {
         method: "DELETE"
       }),
     onSuccess: () => {
@@ -195,10 +192,15 @@ export default function EmployeesPage() {
   };
   
   return (
-    <div className="container py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Employee Management</h1>
-        <Button onClick={openCreateForm}>Add New Employee</Button>
+    <div className="container py-6 px-4 md:px-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <Users className="h-7 w-7 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold">Employee Management</h1>
+        </div>
+        <Button onClick={openCreateForm} className="w-full sm:w-auto">
+          Add New Employee
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
