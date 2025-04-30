@@ -734,19 +734,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Import route with Shopify synchronization
+  // CSV Import route with Shopify synchronization and stamp collection support
   app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No CSV file provided" });
       }
       
-      // Parse CSV file
+      // Parse CSV file handling quotes properly
       const fileContent = req.file.buffer.toString('utf8');
-      const rows = fileContent.split('\\n').map(row => row.split(',').map(cell => cell.trim()));
-      const headers = rows[0];
+      const rawRows = fileContent.split('\n').filter(row => row.trim() !== '');
+      const rows: string[][] = [];
       
-      // Map CSV headers to schema fields
+      for (const row of rawRows) {
+        const parsedRow: string[] = [];
+        let currentCell = '';
+        let insideQuotes = false;
+        
+        for (let i = 0; i < row.length; i++) {
+          if (row[i] === '"' && (i === 0 || row[i-1] !== '\\')) {
+            insideQuotes = !insideQuotes;
+          } else if (row[i] === ',' && !insideQuotes) {
+            parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
+            currentCell = '';
+          } else {
+            currentCell += row[i];
+          }
+        }
+        
+        if (currentCell) {
+          parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
+        }
+        
+        rows.push(parsedRow);
+      }
+      
+      if (rows.length === 0) {
+        return res.status(400).json({ error: "Empty CSV file" });
+      }
+      
+      const headers = rows[0];
+      const isStampImport = req.body.isStampImport === 'true';
+      console.log("CSV Import - Headers:", headers);
+      console.log("Is Stamp Import:", isStampImport);
+      
+      // Map CSV headers to schema fields with stamp collection support
       const fieldMap: Record<string, string> = {
         'name': 'name',
         'title': 'name',
@@ -762,6 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'product id': 'sku',
         'category': 'category',
         'condition': 'condition',
+        'image_filename': 'image',
         'status': 'status'
       };
       
@@ -776,8 +809,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Verify required fields
-      const requiredFields = ['name', 'price', 'quantity'];
+      console.log("Field indices:", fieldIndices);
+      
+      // Different required fields based on import type
+      const requiredFields = isStampImport 
+        ? ['name', 'price'] 
+        : ['name', 'price', 'quantity'];
+      
       const missingFields = requiredFields.filter(field => fieldIndices[field] === undefined);
       
       if (missingFields.length > 0) {
@@ -788,36 +826,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process data rows (skip header)
-      const dataRows = rows.slice(1).filter(row => row.length >= headers.length);
+      const dataRows = rows.slice(1);
       const importedItems: any[] = [];
       
       for (const row of dataRows) {
         try {
+          if (row.length < 2) continue; // Skip empty rows
+          
           // Extract data from row
           const itemData: Record<string, any> = {
             name: row[fieldIndices['name']],
             description: fieldIndices['description'] !== undefined ? row[fieldIndices['description']] : '',
             price: parseFloat(row[fieldIndices['price']]),
-            quantity: parseInt(row[fieldIndices['quantity']]),
+            quantity: fieldIndices['quantity'] !== undefined ? parseInt(row[fieldIndices['quantity']]) : 1, // Default to 1 for stamps
             status: fieldIndices['status'] !== undefined ? row[fieldIndices['status']] : 'draft',
-            category: fieldIndices['category'] !== undefined ? row[fieldIndices['category']] : 'uncategorized',
+            category: isStampImport ? 'stamps' : (fieldIndices['category'] !== undefined ? row[fieldIndices['category']] : 'uncategorized'),
             condition: fieldIndices['condition'] !== undefined ? row[fieldIndices['condition']] : 'used',
-            tags: [],
+            tags: isStampImport ? ['stamp', 'collectible'] : [],
             images: [],
             marketplace: [],
             aiEnhanced: false,
             aiTags: []
           };
           
+          // For stamp collections, extract detailed info and enhance with AI description
+          if (isStampImport) {
+            // Extract any year or country information from the name
+            const yearMatch = itemData.name.match(/\((\d{4})\)/);
+            if (yearMatch && yearMatch[1]) {
+              const year = yearMatch[1];
+              itemData.tags.push(`year-${year}`);
+            }
+            
+            // Extract country information
+            const countryMatches = [
+              'Austria', 'Germany', 'France', 'Italy', 'Spain', 'UK', 'US', 'Canada', 
+              'Japan', 'China', 'Russia', 'Brazil', 'Australia'
+            ];
+            
+            for (const country of countryMatches) {
+              if (itemData.name.includes(country)) {
+                itemData.tags.push(country.toLowerCase());
+                break;
+              }
+            }
+            
+            // Add condition tag
+            if (itemData.condition) {
+              itemData.tags.push(`condition-${itemData.condition.toLowerCase()}`);
+            }
+          }
+          
           // Generate SKU if not provided
           if (fieldIndices['sku'] !== undefined && row[fieldIndices['sku']]) {
             itemData.sku = row[fieldIndices['sku']];
           } else {
-            itemData.sku = generateSKU(itemData);
+            // For stamp collection, create a more specific SKU
+            if (isStampImport) {
+              const prefix = 'STAMP';
+              const namePart = itemData.name.slice(0, 10).replace(/[^a-zA-Z0-9]/g, '');
+              const randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+              itemData.sku = `${prefix}-${namePart}-${randomPart}`;
+            } else {
+              itemData.sku = generateSKU(itemData);
+            }
           }
           
           // Generate barcode data
           itemData.barcode = generateBarcodeData(itemData.sku);
+          
+          // Add image reference if available
+          if (fieldIndices['image'] !== undefined && row[fieldIndices['image']]) {
+            const imagePath = row[fieldIndices['image']];
+            // Store image reference for future processing
+            itemData.imageReference = imagePath;
+          }
+          
+          console.log("Importing item:", itemData.name);
           
           // Validate and create item
           const parsedData = insertItemSchema.parse(itemData);
@@ -848,13 +933,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         importedCount: importedItems.length,
         totalRows: dataRows.length,
+        type: isStampImport ? 'stamp_collection' : 'standard_inventory',
         syncResults
       });
     } catch (error) {
       console.error('CSV import error:', error);
       res.status(500).json({ 
         error: "Failed to import items from CSV",
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
