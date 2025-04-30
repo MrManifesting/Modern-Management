@@ -8,6 +8,8 @@ import {
   BarChart3,
   Settings,
   ScanLine,
+  DollarSign,
+  FileBarChart,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -44,9 +46,14 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/scanner",
     },
     {
-      title: "Analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      path: "/analytics",
+      title: "Sales",
+      icon: <DollarSign className="h-5 w-5" />,
+      path: "/sales",
+    },
+    {
+      title: "Reports",
+      icon: <FileBarChart className="h-5 w-5" />,
+      path: "/reports",
     },
     {
       title: "Settings",
@@ -82,7 +89,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold text-gray-800">MrLister</span>
+            <span className="text-lg font-semibold text-gray-800">MrManifestlister</span>
           )}
         </div>
       </div>

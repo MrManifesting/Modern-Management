@@ -24,12 +24,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "AI Tools";
       case "/marketplace":
         return "Marketplace";
-      case "/analytics":
-        return "Analytics";
+      case "/scanner":
+        return "Barcode Scanner";
+      case "/sales":
+        return "Sales Management";
+      case "/reports":
+        return "Sales Analytics";
       case "/settings":
         return "Settings";
       default:
-        return "MrLister";
+        return "MrManifestlister";
     }
   };
 
