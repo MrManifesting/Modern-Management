@@ -49,13 +49,18 @@ export async function apiRequestSimple<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  // Check if we're sending FormData
+  const isFormData = options?.body instanceof FormData;
+  
   const res = await fetch(url, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    }
+    headers: isFormData 
+      ? { ...options?.headers } // Don't set Content-Type for FormData
+      : {
+          "Content-Type": "application/json",
+          ...options?.headers,
+        }
   });
 
   await throwIfResNotOk(res);
