@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { itemFormSchema, ItemForm, Item, AIAnalysis } from "@shared/schema";
 import { useDropzone } from "react-dropzone";
-import { Zap, Image as ImageIcon, X, Upload, PlusCircle } from "lucide-react";
+import { Zap, Image as ImageIcon, X, Upload, PlusCircle, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -284,10 +284,14 @@ export default function ItemFormComponent({
             control={form.control}
             name="price"
             render={({ field }) => {
-              // Extract price range from description if it exists
+              // Extract market data from description
               const description = form.getValues("description") || '';
               const priceRangeMatch = description.match(/Price Range:\s*([$\d\-\.]+)/i);
               const priceRangeText = priceRangeMatch ? priceRangeMatch[1] : null;
+              
+              // Extract market analysis data
+              const marketAnalysisMatch = description.match(/Market Analysis:\s*([^]*?)(?=\n\n|$)/i);
+              const marketAnalysisText = marketAnalysisMatch ? marketAnalysisMatch[1].trim() : null;
               
               return (
                 <FormItem>
@@ -314,12 +318,23 @@ export default function ItemFormComponent({
                       />
                     </div>
                   </FormControl>
+                  
                   {form.getValues("aiEnhanced") && (
-                    <div className="text-xs text-gray-500 flex items-center mt-1">
-                      <Info className="h-3 w-3 mr-1 inline" />
-                      AI-suggested price based on current market data
+                    <div className="mt-2 space-y-1">
+                      <div className="text-xs text-gray-500 flex items-center">
+                        <Info className="h-3 w-3 mr-1 inline" />
+                        AI-suggested price based on current market data
+                      </div>
+                      
+                      {marketAnalysisText && (
+                        <div className="bg-gray-50 p-2 rounded text-xs text-gray-600 border border-gray-100">
+                          <p className="font-medium mb-1">Market Analysis:</p>
+                          <p>{marketAnalysisText}</p>
+                        </div>
+                      )}
                     </div>
                   )}
+                  
                   <FormMessage />
                 </FormItem>
               );
