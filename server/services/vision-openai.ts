@@ -14,20 +14,43 @@ export async function analyzeImageWithOpenAI(imageBuffer: Buffer): Promise<AIAna
     // Convert buffer to base64
     const base64Image = imageBuffer.toString("base64");
     
-    // Call OpenAI vision model
+    // Call OpenAI vision model with enhanced prompt for accurate price estimation
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are an expert product identifier for e-commerce. You analyze images and provide detailed product information for marketplace listings."
+          content: `You are an expert e-commerce product analyst specializing in merchandise valuation and identification.
+You have extensive knowledge of current market prices and historical sales data across multiple marketplaces including eBay, Amazon, and Shopify.
+Your analysis MUST include:
+1. Precise item identification with brand, model, and specific features
+2. Accurate price estimation based on REAL current market data (not estimates)
+3. Price range showing low-high values from actual recent sales
+4. Condition assessment based on visual inspection
+5. Specific marketplace recommendations based on item category
+6. SEO-optimized title and description that would maximize marketplace visibility`
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Analyze this product image in detail. Identify the item, its likely condition, category, and suggest a price. Format your response as structured JSON with these fields: name, description, category, condition, suggestedPrice (number), tags (array), seoTitle, seoDescription."
+              text: `Analyze this product image with extreme detail.
+
+Provide the following in JSON format:
+- name: Precise product name with brand and model (if visible)
+- description: Comprehensive description including features, specifications, and material
+- category: Specific e-commerce category (use standard marketplace categories)
+- condition: Assessment of condition (New, Like New, Good, Fair, etc.) with explanation
+- suggestedPrice: The OPTIMAL listing price based on real market data (number only, no currency symbol)
+- priceRange: The actual price range this item sells for online (e.g. "$45-65")
+- marketComparison: Brief notes on similar items' actual selling prices on marketplaces
+- bestMarketplaces: Array of 2-3 platforms where this item would sell best
+- tags: Array of relevant search keywords (8-12 terms)
+- seoTitle: Optimized listing title (max 80 chars)
+- seoDescription: SEO-friendly description (max 250 chars)
+
+YOUR ANALYSIS MUST BE BASED ON REAL MARKET DATA - NOT ESTIMATES. Use your extensive knowledge of current prices.`
             },
             {
               type: "image_url",
@@ -38,13 +61,31 @@ export async function analyzeImageWithOpenAI(imageBuffer: Buffer): Promise<AIAna
           ]
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 1200
     });
 
     // Parse the result
-    const result = JSON.parse(response.choices[0].message.content || "{}");
+    const rawResult = JSON.parse(response.choices[0].message.content || "{}");
     
-    // Validate the result
+    // Extract price range text but ensure numeric suggestedPrice for database
+    const priceRange = rawResult.priceRange || "";
+    const marketComparison = rawResult.marketComparison || "";
+    
+    // Create a modified result to match our schema
+    const result = {
+      name: rawResult.name || "",
+      description: `${rawResult.description || ""}\n\nPrice Range: ${priceRange}\n\nMarket Analysis: ${marketComparison}`,
+      category: rawResult.category || "",
+      condition: rawResult.condition || "",
+      suggestedPrice: typeof rawResult.suggestedPrice === 'number' ? rawResult.suggestedPrice : 
+                     parseFloat(String(rawResult.suggestedPrice).replace(/[^0-9.]/g, '')) || 0,
+      tags: rawResult.tags || [],
+      seoTitle: rawResult.seoTitle || "",
+      seoDescription: rawResult.seoDescription || ""
+    };
+    
+    // Validate the result against our schema
     const validatedResult = aiAnalysisSchema.parse(result);
     
     return validatedResult;
