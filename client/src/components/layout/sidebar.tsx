@@ -92,6 +92,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/marketplace",
     },
     {
+      title: "Shopify Sync",
+      icon: <RefreshCw className="h-5 w-5" />,
+      path: "/shopify-sync",
+    },
+    {
       title: "Scanner",
       icon: <ScanLine className="h-5 w-5" />,
       path: "/scanner",
