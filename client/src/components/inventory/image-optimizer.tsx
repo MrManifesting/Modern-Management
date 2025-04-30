@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Mic, ImageDown, Image, Loader2 } from 'lucide-react';
 
@@ -163,7 +163,7 @@ const ImageOptimizer = () => {
       formData.append('maintainAspectRatio', maintainAspectRatio.toString());
       formData.append('generateAltText', generateAltText.toString());
       
-      const response = await apiRequest('/api/optimize-image', {
+      const response = await apiRequestSimple('/api/optimize-image', {
         method: 'POST',
         body: formData,
         headers: {
