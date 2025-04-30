@@ -44,8 +44,8 @@ export const ITEM_STATUSES = [
   { value: "sold", label: "Sold" },
 ];
 
-// Marketplace platforms
-export const MARKETPLACE_PLATFORMS = [
+// Marketplace platforms (full objects with details)
+export const MARKETPLACE_PLATFORM_DETAILS = [
   { 
     name: "eBay", 
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/2560px-EBay_logo.svg.png",
@@ -71,6 +71,9 @@ export const MARKETPLACE_PLATFORMS = [
     badgeClass: "marketplace-badge-shopify"
   },
 ];
+
+// Simple marketplace platform names (for form selects)
+export const MARKETPLACE_PLATFORMS = ["eBay", "Etsy", "Amazon", "Shopify", "Poshmark", "Mercari", "Facebook Marketplace", "Craigslist", "In-Store", "Other"];
 
 // Status badge classes
 export const STATUS_BADGE_CLASSES = {
