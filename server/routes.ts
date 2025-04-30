@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
+import OpenAI from "openai";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
@@ -330,63 +331,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Route for scanning a barcode/QR code and updating inventory
+  // Inventory scan and universal barcode lookup
   app.post("/api/scan", async (req: Request, res: Response) => {
     try {
-      const { sku, action, quantity = 1 } = req.body;
+      const { barcode, sku, action, quantity = 1 } = req.body;
       
-      if (!sku) {
-        return res.status(400).json({ error: "SKU is required" });
-      }
-      
-      if (!action || !["add", "remove", "check"].includes(action)) {
-        return res.status(400).json({ error: "Valid action is required (add, remove, or check)" });
-      }
-      
-      // Find the item by SKU
-      const items = await storage.getItems();
-      const item = items.find(item => item.sku === sku);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found with the provided SKU" });
-      }
-      
-      let updatedItem = item;
-      let shopifySyncResult = { status: 'not_required' };
-      
-      // Perform the requested action
-      if (action === "add") {
-        const newQuantity = item.quantity + quantity;
-        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
-        
-        // Sync with Shopify if inventory was modified
-        if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
-          console.log(`Syncing inventory add to Shopify for ${updatedItem.name}`);
-          const syncSuccess = await syncItemWithShopify(updatedItem);
-          shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'add' };
+      // For inventory actions (updating stock)
+      if (sku && action) {
+        if (!["add", "remove", "check"].includes(action)) {
+          return res.status(400).json({ error: "Valid action is required (add, remove, or check)" });
         }
-      } else if (action === "remove") {
-        // Prevent negative inventory
-        const newQuantity = Math.max(0, item.quantity - quantity);
-        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
         
-        // Sync with Shopify if inventory was modified
-        if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
-          console.log(`Syncing inventory removal to Shopify for ${updatedItem.name}`);
-          const syncSuccess = await syncItemWithShopify(updatedItem);
-          shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'remove' };
+        // Find the item by SKU
+        const items = await storage.getItems();
+        const item = items.find(item => item.sku === sku);
+        
+        if (!item) {
+          return res.status(404).json({ error: "Item not found with the provided SKU" });
+        }
+        
+        let updatedItem = item;
+        let shopifySyncResult = { status: 'not_required' };
+        
+        // Perform the requested action
+        if (action === "add") {
+          const newQuantity = item.quantity + quantity;
+          updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+          
+          // Sync with Shopify if inventory was modified
+          if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
+            console.log(`Syncing inventory add to Shopify for ${updatedItem.name}`);
+            const syncSuccess = await syncItemWithShopify(updatedItem);
+            shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'add' };
+          }
+        } else if (action === "remove") {
+          // Prevent negative inventory
+          const newQuantity = Math.max(0, item.quantity - quantity);
+          updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+          
+          // Sync with Shopify if inventory was modified
+          if (updatedItem && item.marketplace && (item.marketplace as string[]).includes('shopify')) {
+            console.log(`Syncing inventory removal to Shopify for ${updatedItem.name}`);
+            const syncSuccess = await syncItemWithShopify(updatedItem);
+            shopifySyncResult = { status: syncSuccess ? 'success' : 'failed', action: 'remove' };
+          }
+        }
+        
+        return res.json({
+          id: updatedItem.id,
+          name: updatedItem.name,
+          sku: updatedItem.sku,
+          quantity: updatedItem.quantity,
+          price: updatedItem.price,
+          action: action,
+          shopifySyncResult
+        });
+      }
+      
+      // Universal barcode lookup if not updating inventory
+      if (barcode) {
+        // First check if the barcode exists in our database
+        const items = await storage.getItems();
+        const existingItem = items.find(item => item.barcode === barcode);
+        
+        if (existingItem) {
+          return res.json(existingItem);
+        }
+        
+        // If not found in our database, perform an external lookup
+        try {
+          // Use OpenAI to simulate a product database lookup
+          const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+          });
+          
+          // The newest OpenAI model is "gpt-4o" which was released May 13, 2024
+          // do not change this unless explicitly requested by the user
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: "You are a product database API. When provided with a barcode or UPC code, return realistic product information in JSON format. Include: name, description, category, condition, price, manufacturer, sku, and a price range showing estimated minimum and maximum market prices."
+              },
+              {
+                role: "user",
+                content: `Lookup product information for barcode: ${barcode}`
+              }
+            ],
+            response_format: { type: "json_object" }
+          });
+          
+          // Parse the response and return structured product data
+          const productInfo = JSON.parse(completion.choices[0].message.content);
+          
+          // Add the source barcode to the response
+          productInfo.barcode = barcode;
+          
+          return res.json(productInfo);
+        } catch (aiError) {
+          console.error("Error with external API lookup:", aiError);
+          
+          // Fallback to providing a basic response
+          return res.status(404).json({ 
+            error: "Product not found in external database",
+            message: "The barcode could not be found in any connected database."
+          });
         }
       }
       
-      res.json({
-        id: updatedItem.id,
-        name: updatedItem.name,
-        sku: updatedItem.sku,
-        quantity: updatedItem.quantity,
-        price: updatedItem.price,
-        action: action,
-        shopifySyncResult
-      });
+      // If neither SKU nor barcode provided
+      return res.status(400).json({ error: "Either barcode or SKU is required" });
     } catch (error) {
       console.error("Error during scan operation:", error);
       res.status(500).json({ error: "Failed to process scan" });
@@ -579,6 +634,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error analyzing image SEO:', error);
       res.status(500).json({ error: "Failed to analyze image SEO potential" });
+    }
+  });
+
+  // No duplicate endpoint needed - universal barcode scanning is now handled by the main /api/scan endpoint
+  
+  // Generate QR code for employee mobile scanning
+  app.post("/api/qrcode/generate", async (req: Request, res: Response) => {
+    try {
+      const { data, type } = req.body;
+      
+      if (!data) {
+        return res.status(400).json({ error: "QR code data is required" });
+      }
+      
+      // Use qrcode library to generate a QR code
+      const QRCode = await import('qrcode');
+      
+      // For employee QR codes, we can add additional metadata
+      let qrData = data;
+      
+      if (type === 'employee') {
+        // Add timestamp and expiration for security
+        const expiration = new Date();
+        expiration.setDate(expiration.getDate() + 7); // 7 day expiration
+        
+        qrData = JSON.stringify({
+          url: data,
+          type: 'employee_scanner',
+          generated: new Date().toISOString(),
+          expires: expiration.toISOString(),
+        });
+      }
+      
+      // Generate QR code as data URL
+      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+        errorCorrectionLevel: 'H',
+        margin: 1,
+        scale: 8,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      });
+      
+      // Create formatted expiration date for response
+      let expirationDate = null;
+      if (type === 'employee') {
+        const expDate = new Date();
+        expDate.setDate(expDate.getDate() + 7);
+        expirationDate = expDate.toISOString();
+      }
+      
+      res.json({
+        qrCodeUrl: qrCodeDataURL,
+        expires: expirationDate,
+      });
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+      res.status(500).json({ error: "Failed to generate QR code" });
     }
   });
 
