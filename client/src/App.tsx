@@ -18,6 +18,7 @@ import Employees from "@/pages/employees";
 import Settings from "@/pages/settings";
 import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
 import ShopifySyncPage from "@/pages/shopify-sync";
+import ShopifyReportsPage from "@/pages/shopify-reports";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
 import GoldStandardInventoryPage from "@/pages/gold-standard-inventory";
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/shopify-settings" component={ShopifySettingsPage} />
       <Route path="/shopify-sync" component={ShopifySyncPage} />
+      <Route path="/shopify-reports" component={ShopifyReportsPage} />
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
       <Route path="/media-manager" component={MediaManagerPage} />
       <Route path="/bulk-breakdown" component={BulkBreakdownPage} />

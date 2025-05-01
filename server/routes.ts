@@ -2284,6 +2284,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify Reports API Routes
+  app.get("/api/shopify/reports/sales/:timeframe", async (req: Request, res: Response) => {
+    try {
+      const timeframe = req.params.timeframe || '30d';
+      const report = await fetchShopifySalesReport(timeframe);
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching Shopify sales report:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch Shopify sales report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  app.get("/api/shopify/reports/inventory", async (_req: Request, res: Response) => {
+    try {
+      const report = await fetchShopifyInventoryReport();
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching Shopify inventory report:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch Shopify inventory report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  app.get("/api/shopify/reports/customers", async (_req: Request, res: Response) => {
+    try {
+      const report = await fetchShopifyCustomerReport();
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching Shopify customer report:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch Shopify customer report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
