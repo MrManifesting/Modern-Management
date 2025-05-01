@@ -29,9 +29,9 @@ interface ShopifyProduct {
 }
 
 let pushToShopifyEnabled = false;
-// Using fixed credentials from the user input for Shopify
-const SHOPIFY_STORE = 'gold-standard-cbd.myshopify.com';
-const SHOPIFY_ACCESS_TOKEN = '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';
+// Using credentials from environment variables
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 
 // Log the credentials for debugging
 console.log("Using Shopify credentials:", SHOPIFY_STORE, SHOPIFY_ACCESS_TOKEN ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
