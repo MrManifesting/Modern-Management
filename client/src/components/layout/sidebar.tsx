@@ -98,6 +98,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/shopify-sync",
     },
     {
+      title: "Shopify Reports",
+      icon: <BarChart3 className="h-5 w-5 text-gold-400" />,
+      path: "/shopify-reports",
+    },
+    {
       title: "Scanner",
       icon: <ScanLine className="h-5 w-5" />,
       path: "/scanner",
