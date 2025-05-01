@@ -18,6 +18,7 @@ import {
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
+import { generateForecast, calculateKPIs } from "./services/forecasting";
 import { Parser } from "@json2csv/plainjs";
 import { 
   prepareItemForShopify, 
@@ -1445,6 +1446,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to fetch category sales:", error);
       res.status(500).json({ error: "Failed to fetch sales by category" });
+    }
+  });
+  
+  // Sales Forecasting endpoint
+  app.post("/api/analytics/forecast", async (req: Request, res: Response) => {
+    try {
+      // Validate request parameters
+      const params = forecastRequestSchema.parse(req.body);
+      
+      // Get historical time series data
+      const historicalParams = {
+        startDate: (() => {
+          const date = new Date();
+          date.setMonth(date.getMonth() - params.historicalPeriods);
+          return date.toISOString().split('T')[0];
+        })(),
+        endDate: new Date().toISOString().split('T')[0],
+        groupBy: params.groupBy as "day" | "week" | "month"
+      };
+      
+      // Get historical data
+      const historicalData = await storage.getSalesTimeSeries(historicalParams);
+      
+      // If we don't have enough data, return an error
+      if (historicalData.length < 2) {
+        return res.status(400).json({ 
+          error: "Insufficient historical data for forecasting",
+          message: "At least 2 data points are required for forecasting. Please add more sales data."
+        });
+      }
+      
+      // Generate forecasts for overall sales
+      const forecastedData = generateForecast(historicalData, params.forecastPeriods);
+      
+      // Calculate KPIs based on historical and forecasted data
+      const kpis = calculateKPIs(historicalData, forecastedData);
+      
+      // Create category-specific forecasts if requested
+      const categoryForecasts: Record<string, { timeSeries: any[], suggestedInventoryLevel: number }> = {};
+      
+      if (params.categories && params.categories.length > 0) {
+        for (const category of params.categories) {
+          // Get category-specific data by adding metadata
+          const categoryData = historicalData.map(d => ({
+            ...d,
+            metadata: { category }
+          }));
+          
+          // Generate forecast for this category
+          const categoryForecast = generateForecast(categoryData, params.forecastPeriods, category);
+          
+          // Calculate inventory suggestion for this category
+          const categoryAvgSales = categoryForecast.reduce((sum, d) => sum + d.sales, 0) / 
+                                  (categoryForecast.length || 1);
+          
+          categoryForecasts[category] = {
+            timeSeries: categoryForecast,
+            suggestedInventoryLevel: categoryAvgSales * 1.5 // Keep 1.5 months of inventory
+          };
+        }
+      }
+      
+      // Create weight-specific forecasts if requested
+      const weightForecasts: Record<string, { timeSeries: any[], suggestedInventoryLevel: number }> = {};
+      
+      if (params.weights && params.weights.length > 0) {
+        for (const weight of params.weights) {
+          // Get weight-specific data by adding metadata
+          const weightData = historicalData.map(d => ({
+            ...d,
+            metadata: { packageSize: weight }
+          }));
+          
+          // Generate forecast for this weight
+          const weightForecast = generateForecast(weightData, params.forecastPeriods, weight);
+          
+          // Calculate inventory suggestion for this weight
+          const weightAvgSales = weightForecast.reduce((sum, d) => sum + d.sales, 0) / 
+                               (weightForecast.length || 1);
+          
+          weightForecasts[weight] = {
+            timeSeries: weightForecast,
+            suggestedInventoryLevel: weightAvgSales * 1.5 // Keep 1.5 months of inventory
+          };
+        }
+      }
+      
+      // Combine all forecasts
+      const forecast = {
+        timeSeries: forecastedData,
+        kpis,
+        categoryForecasts: Object.keys(categoryForecasts).length > 0 ? categoryForecasts : undefined,
+        weightForecasts: Object.keys(weightForecasts).length > 0 ? weightForecasts : undefined
+      };
+      
+      res.json(forecast);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Failed to generate forecast:", error);
+      res.status(500).json({ error: "Failed to generate sales forecast" });
     }
   });
 
