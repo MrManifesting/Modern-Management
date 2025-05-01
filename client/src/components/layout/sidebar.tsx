@@ -117,6 +117,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/reports",
     },
     {
+      title: "Forecast",
+      icon: <BarChart3 className="h-5 w-5" />,
+      path: "/forecast",
+    },
+    {
       title: "Image Optimization",
       icon: <Image className="h-5 w-5" />,
       path: "/image-optimization",
