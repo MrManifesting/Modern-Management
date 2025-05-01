@@ -2300,6 +2300,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Export sales report as CSV
+  app.get("/api/shopify/reports/sales/:timeframe/export", async (req: Request, res: Response) => {
+    try {
+      const timeframe = req.params.timeframe || '30d';
+      const report = await fetchShopifySalesReport(timeframe);
+      
+      // Convert top products to CSV
+      const topProductsParser = new Parser({
+        fields: ['title', 'sku', 'quantity', 'revenue']
+      });
+      const topProductsCsv = topProductsParser.parse(report.topProducts);
+      
+      // Convert period sales to CSV
+      const periodSalesParser = new Parser({
+        fields: ['date', 'orders', 'revenue']
+      });
+      const periodSalesCsv = periodSalesParser.parse(report.periodSales);
+      
+      // Combine with summary data
+      const csvData = 
+`# Shopify Sales Report - ${timeframe}
+# Generated: ${new Date().toISOString()}
+# 
+# Summary
+Total Orders,${report.totalOrders}
+Total Revenue,${report.totalRevenue}
+Average Order Value,${report.averageOrderValue}
+
+# Top Products
+${topProductsCsv}
+
+# Period Sales
+${periodSalesCsv}`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=shopify-sales-report-${timeframe}.csv`);
+      res.status(200).send(csvData);
+    } catch (error) {
+      console.error("Error exporting Shopify sales report:", error);
+      res.status(500).json({ 
+        error: "Failed to export Shopify sales report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   app.get("/api/shopify/reports/inventory", async (_req: Request, res: Response) => {
     try {
       const report = await fetchShopifyInventoryReport();
@@ -2313,6 +2359,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Export inventory report as CSV
+  app.get("/api/shopify/reports/inventory/export", async (_req: Request, res: Response) => {
+    try {
+      const report = await fetchShopifyInventoryReport();
+      
+      // Convert low stock items to CSV
+      const lowStockParser = new Parser({
+        fields: ['title', 'sku', 'inventory', 'price']
+      });
+      const lowStockCsv = lowStockParser.parse(report.lowStockItems);
+      
+      // Convert out of stock items to CSV
+      const outOfStockParser = new Parser({
+        fields: ['title', 'sku', 'price']
+      });
+      const outOfStockCsv = outOfStockParser.parse(report.outOfStockItems);
+      
+      // Combine with summary data
+      const csvData = 
+`# Shopify Inventory Report
+# Generated: ${new Date().toISOString()}
+#
+# Summary
+Total Products,${report.totalProducts}
+Total Variants,${report.totalVariants}
+Inventory Value,${report.inventoryValue}
+
+# Low Stock Items
+${lowStockCsv}
+
+# Out of Stock Items
+${outOfStockCsv}`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=shopify-inventory-report.csv');
+      res.status(200).send(csvData);
+    } catch (error) {
+      console.error("Error exporting Shopify inventory report:", error);
+      res.status(500).json({ 
+        error: "Failed to export Shopify inventory report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   app.get("/api/shopify/reports/customers", async (_req: Request, res: Response) => {
     try {
       const report = await fetchShopifyCustomerReport();
@@ -2321,6 +2412,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching Shopify customer report:", error);
       res.status(500).json({ 
         error: "Failed to fetch Shopify customer report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Export customer report as CSV
+  app.get("/api/shopify/reports/customers/export", async (_req: Request, res: Response) => {
+    try {
+      const report = await fetchShopifyCustomerReport();
+      
+      // Convert top customers to CSV (exclude email for privacy in exports)
+      const topCustomersParser = new Parser({
+        fields: ['name', 'ordersCount', 'totalSpent']
+      });
+      const topCustomersCsv = topCustomersParser.parse(report.topCustomers);
+      
+      // Combine with summary data
+      const csvData = 
+`# Shopify Customer Report
+# Generated: ${new Date().toISOString()}
+#
+# Summary
+Total Customers,${report.totalCustomers}
+New Customers,${report.newCustomers}
+Returning Customers,${report.returningCustomers}
+
+# Top Customers (by Spending)
+${topCustomersCsv}`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=shopify-customer-report.csv');
+      res.status(200).send(csvData);
+    } catch (error) {
+      console.error("Error exporting Shopify customer report:", error);
+      res.status(500).json({ 
+        error: "Failed to export Shopify customer report",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }

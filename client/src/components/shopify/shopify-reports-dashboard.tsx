@@ -51,9 +51,11 @@ import {
   DollarSign,
   Calendar,
   TrendingUp,
-  Tag
+  Tag,
+  FileDown
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 // Types for Shopify report data
 interface ShopifyOrderReport {
@@ -243,21 +245,57 @@ export function ShopifyReportsDashboard() {
         </p>
       </div>
 
-      <div className="flex justify-end mb-6">
-        <Select
-          value={timeframe}
-          onValueChange={setTimeframe}
-        >
-          <SelectTrigger className="w-[180px]">
-            <Calendar className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Select timeframe" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">Last 7 Days</SelectItem>
-            <SelectItem value="30d">Last 30 Days</SelectItem>
-            <SelectItem value="90d">Last 90 Days</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <Select
+            value={timeframe}
+            onValueChange={setTimeframe}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="14d">Last 14 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="60d">Last 60 Days</SelectItem>
+              <SelectItem value="90d">Last 90 Days</SelectItem>
+              <SelectItem value="180d">Last 180 Days</SelectItem>
+              <SelectItem value="365d">Last 365 Days</SelectItem>
+              <SelectItem value="ytd">Year to Date</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            className="flex gap-2 items-center"
+            onClick={() => window.open(`/api/shopify/reports/sales/${timeframe}/export`, '_blank')}
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Export Sales</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="flex gap-2 items-center"
+            onClick={() => window.open('/api/shopify/reports/inventory/export', '_blank')}
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Export Inventory</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="flex gap-2 items-center"
+            onClick={() => window.open('/api/shopify/reports/customers/export', '_blank')}
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Export Customers</span>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -388,7 +426,16 @@ export function ShopifyReportsDashboard() {
               <Card className="col-span-full bg-gradient-to-br from-background to-muted/30 border-gold-500/20">
                 <CardHeader>
                   <CardTitle>Sales Trend</CardTitle>
-                  <CardDescription>Revenue over time ({timeframe} days)</CardDescription>
+                  <CardDescription>
+                    Revenue over time ({timeframe === '7d' ? 'Last 7 Days' : 
+                                      timeframe === '14d' ? 'Last 14 Days' : 
+                                      timeframe === '30d' ? 'Last 30 Days' : 
+                                      timeframe === '60d' ? 'Last 60 Days' : 
+                                      timeframe === '90d' ? 'Last 90 Days' : 
+                                      timeframe === '180d' ? 'Last 180 Days' : 
+                                      timeframe === '365d' ? 'Last 365 Days' : 
+                                      timeframe === 'ytd' ? 'Year to Date' : timeframe})
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
