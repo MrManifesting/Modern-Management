@@ -12,6 +12,7 @@ import Marketplace from "@/pages/marketplace";
 import Scanner from "@/pages/scanner";
 import Sales from "@/pages/sales";
 import Reports from "@/pages/reports";
+import Forecast from "@/pages/forecast";
 import ImageOptimization from "@/pages/image-optimization";
 import Employees from "@/pages/employees";
 import Settings from "@/pages/settings";
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/scanner" component={Scanner} />
       <Route path="/sales" component={Sales} />
       <Route path="/reports" component={Reports} />
+      <Route path="/forecast" component={Forecast} />
       <Route path="/image-optimization" component={ImageOptimization} />
       <Route path="/employees" component={Employees} />
       <Route path="/settings" component={Settings} />
