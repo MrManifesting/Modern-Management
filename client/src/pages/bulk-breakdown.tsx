@@ -70,11 +70,34 @@ export default function BulkBreakdownPage() {
   const [createBreakdownOpen, setCreateBreakdownOpen] = useState(false);
   const [selectedBreakdown, setSelectedBreakdown] = useState<ProductBreakdown | null>(null);
   
-  // Get all bulk items
-  const { data: bulkItems, isLoading: isLoadingBulk } = useQuery({ 
-    queryKey: ['/api/bulk-items'],
+  // Get all items with sufficient weight for breakdown (1lb+)
+  const { data: allItems, isLoading: isLoadingItems } = useQuery({ 
+    queryKey: ['/api/items'],
     staleTime: 1000 * 60, // 1 minute
   });
+  
+  // Filter items with weight >= 1 lb or 16 oz
+  const bulkItems = React.useMemo(() => {
+    if (!allItems) return [];
+    
+    return allItems.filter((item: Item) => {
+      // Convert different units to a standard (ounces)
+      let standardizedWeight = 0;
+      
+      if (item.weight && item.weightUnit) {
+        if (item.weightUnit.toLowerCase() === 'lb' || item.weightUnit.toLowerCase() === 'lbs') {
+          standardizedWeight = item.weight * 16; // 1 lb = 16 oz
+        } else if (item.weightUnit.toLowerCase() === 'oz') {
+          standardizedWeight = item.weight;
+        } else if (item.weightUnit.toLowerCase() === 'g') {
+          standardizedWeight = item.weight / 28.35; // Approximate conversion from grams to oz
+        }
+      }
+      
+      // Consider items with at least 16 oz (1 lb) as bulk items
+      return standardizedWeight >= 16 && item.quantity > 0;
+    });
+  }, [allItems]);
   
   // Get all waiting items
   const { data: waitingItems, isLoading: isLoadingWaiting } = useQuery({ 
@@ -163,11 +186,43 @@ export default function BulkBreakdownPage() {
     const bulkItem = bulkItems?.find((item: Item) => item.id === selectedBreakdown.bulkItemId);
     if (!bulkItem) return;
     
+    // Determine smaller weight unit based on bulk item weight
+    let smallerWeight = 0;
+    let smallerUnit = 'oz';
+    
+    if (bulkItem.weight && bulkItem.weightUnit) {
+      // If it's pounds, convert to ounces for smaller units
+      if (bulkItem.weightUnit.toLowerCase() === 'lb' || bulkItem.weightUnit.toLowerCase() === 'lbs') {
+        smallerWeight = 1; // Default to 1 oz
+        smallerUnit = 'oz';
+      } 
+      // If it's already ounces, use grams or partial ounces
+      else if (bulkItem.weightUnit.toLowerCase() === 'oz') {
+        smallerWeight = 3.5; // Default to eighth (3.5g)
+        smallerUnit = 'g';
+      }
+      // If it's grams, use smaller gram amounts
+      else if (bulkItem.weightUnit.toLowerCase() === 'g') {
+        smallerWeight = 1;
+        smallerUnit = 'g';
+      }
+    }
+    
+    // Set pricing based on a proportional weight basis
+    let proportionalPrice = bulkItem.price;
+    
+    // Calculate proportional price if converting from lb to oz
+    if (bulkItem.weightUnit?.toLowerCase() === 'lb' || bulkItem.weightUnit?.toLowerCase() === 'lbs') {
+      // 1 oz is 1/16th of a pound
+      proportionalPrice = bulkItem.price / 16;
+    }
+    
     const newTarget: BreakdownTarget = {
-      price: bulkItem.price / 4, // Default to 1/4 of bulk price
-      quantity: 1,
-      weight: bulkItem.weight ? bulkItem.weight / 4 : 3.5, // Default to quarter if weight exists
-      weightUnit: bulkItem.weightUnit || 'g'
+      name: `${bulkItem.name} - ${smallerWeight}${smallerUnit}`,
+      price: proportionalPrice, // Default to proportional pricing
+      quantity: 1, // Start with 1 unit
+      weight: smallerWeight,
+      weightUnit: smallerUnit
     };
     
     setBreakdownTargets([...breakdownTargets, newTarget]);
@@ -200,8 +255,8 @@ export default function BulkBreakdownPage() {
     });
   };
   
-  if (isLoadingBulk || isLoadingWaiting || isLoadingBreakdown || isLoadingProductBreakdowns) {
-    return <LoadingPage text="Loading inventory data..." variant="bud" />;
+  if (isLoadingItems || isLoadingWaiting || isLoadingBreakdown || isLoadingProductBreakdowns) {
+    return <LoadingPage message="Loading inventory data..." variant="bud" />;
   }
   
   return (
