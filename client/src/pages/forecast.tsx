@@ -1,11 +1,11 @@
 import React from 'react';
 import { SalesForecastingDashboard } from '../components/analytics/forecasting';
-import { AppLayout } from '../components/layout';
+import MainLayout from '@/components/layout/main-layout';
 
 export default function ForecastPage() {
   return (
-    <AppLayout>
+    <MainLayout>
       <SalesForecastingDashboard />
-    </AppLayout>
+    </MainLayout>
   );
 }

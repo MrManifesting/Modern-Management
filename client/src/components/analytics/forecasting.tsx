@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@lib/queryClient';
+import { apiRequestSimple, queryClient } from '../../lib/queryClient';
 import { TimeSeriesData } from '@shared/schema';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -96,7 +96,7 @@ export function SalesForecastingDashboard() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['/api/analytics/forecast', forecastParams],
     queryFn: async () => {
-      return apiRequest('/api/analytics/forecast', {
+      return apiRequestSimple<ForecastResponse>('/api/analytics/forecast', {
         method: 'POST',
         body: JSON.stringify(forecastParams)
       });
