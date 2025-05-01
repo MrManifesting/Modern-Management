@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import 'regenerator-runtime/runtime';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Mic, 
   MicOff, 
@@ -33,24 +31,70 @@ interface Command {
   extractArgs: (transcript: string) => string;
 }
 
+// Type definition for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 export function VoiceCommand() {
   const [isListening, setIsListening] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [transcript, setTranscript] = useState<string>('');
   const [lastExecutedCommand, setLastExecutedCommand] = useState<string | null>(null);
   const [activeTrigger, setActiveTrigger] = useState<string | null>(null);
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [error, setError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition,
-    isMicrophoneAvailable
-  } = useSpeechRecognition();
+  // Check browser support
+  const isBrowserSupported = useCallback(() => {
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }, []);
 
-  // Handle browser support and microphone access issues
-  if (!browserSupportsSpeechRecognition) {
+  // Initialize speech recognition
+  useEffect(() => {
+    if (isBrowserSupported()) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+      
+      recognitionRef.current.onresult = (event: any) => {
+        const last = event.results.length - 1;
+        const result = event.results[last][0].transcript;
+        setTranscript(result);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setError(event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        if (isListening) {
+          // Auto restart if it was supposed to be listening
+          recognitionRef.current.start();
+        } else {
+          processTranscript();
+        }
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Handle browser support issues
+  if (!isBrowserSupported()) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
@@ -62,7 +106,7 @@ export function VoiceCommand() {
     );
   }
 
-  if (!isMicrophoneAvailable) {
+  if (error === 'not-allowed') {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
@@ -248,11 +292,13 @@ export function VoiceCommand() {
           setTimeout(() => {
             setLastExecutedCommand(transcript);
             setActiveTrigger(matchedKeyword);
-            resetTranscript();
+            setTranscript('');
             command.action(transcript, args);
             setProcessing(false);
             setIsListening(false);
-            SpeechRecognition.stopListening();
+            if (recognitionRef.current) {
+              recognitionRef.current.stop();
+            }
           }, 500);
           return;
         }
@@ -260,26 +306,45 @@ export function VoiceCommand() {
     }
     
     setProcessing(false);
-  }, [transcript, processing, commands, resetTranscript, navigate]);
+  }, [transcript, processing, commands, navigate]);
 
-  // Process transcript when stopped listening
+  // Process transcript when we have a full transcript to analyze
   useEffect(() => {
-    if (!listening && transcript && !processing) {
+    if (!isListening && transcript && !processing) {
       processTranscript();
     }
-  }, [listening, transcript, processing, processTranscript, navigate]);
+  }, [isListening, transcript, processing, processTranscript, navigate]);
+
+  // Reset transcript
+  const resetTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
 
   // Start/stop listening
   const toggleListening = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
     } else {
-      resetTranscript();
-      SpeechRecognition.startListening({ continuous: true });
-      setIsListening(true);
+      setTranscript('');
       setLastExecutedCommand(null);
       setActiveTrigger(null);
+      
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch (err) {
+          console.error('Failed to start speech recognition', err);
+          toast({
+            title: "Error",
+            description: "Could not start speech recognition",
+            variant: "destructive"
+          });
+        }
+      }
     }
   };
 
@@ -300,12 +365,12 @@ export function VoiceCommand() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
-                  variant={listening ? "destructive" : "outline"} 
+                  variant={isListening ? "destructive" : "outline"} 
                   size="sm"
                   onClick={toggleListening}
-                  className={listening ? "animate-pulse" : ""}
+                  className={isListening ? "animate-pulse" : ""}
                 >
-                  {listening ? (
+                  {isListening ? (
                     <><MicOff className="h-4 w-4 mr-2" /> Stop</>
                   ) : (
                     <><Mic className="h-4 w-4 mr-2" /> Start</>
@@ -313,7 +378,7 @@ export function VoiceCommand() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {listening ? "Stop listening" : "Start listening for commands"}
+                {isListening ? "Stop listening" : "Start listening for commands"}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -321,12 +386,12 @@ export function VoiceCommand() {
       </CardHeader>
       
       <CardContent className="pb-3">
-        {listening && (
+        {isListening && (
           <div className="relative mb-3 border rounded-md p-3 bg-card/50">
             <div className="absolute right-2 top-2">
               {processing ? (
                 <Loader className="h-4 w-4 animate-spin text-gold-500" />
-              ) : listening ? (
+              ) : isListening ? (
                 <div className="flex items-center space-x-1">
                   <div className="w-1 h-3 bg-red-500 rounded-full animate-pulse"></div>
                   <div className="w-1 h-4 bg-red-500 rounded-full animate-pulse delay-75"></div>
@@ -340,7 +405,7 @@ export function VoiceCommand() {
           </div>
         )}
         
-        {!listening && lastExecutedCommand && (
+        {!isListening && lastExecutedCommand && (
           <div className="mb-3">
             <Badge variant="outline" className="mb-1 bg-gold-500/10">Last command</Badge>
             <div className="border rounded-md p-3 bg-card/50">
@@ -378,7 +443,7 @@ export function VoiceCommand() {
       </CardContent>
       
       <CardFooter className="text-xs text-muted-foreground">
-        {listening ? 
+        {isListening ? 
           "Speak a command clearly..." : 
           "Click Start to use voice commands"
         }
