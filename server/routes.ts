@@ -2093,6 +2093,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Bulk Product Breakdown Routes
+  
+  // Get all bulk items
+  app.get("/api/bulk-items", async (_req: Request, res: Response) => {
+    try {
+      const bulkItems = await storage.getBulkItems();
+      res.json(bulkItems);
+    } catch (error) {
+      console.error("Error fetching bulk items:", error);
+      res.status(500).json({ error: "Failed to fetch bulk items" });
+    }
+  });
+  
+  // Get all breakdown items
+  app.get("/api/breakdown-items", async (_req: Request, res: Response) => {
+    try {
+      const breakdownItems = await storage.getBreakdownItems();
+      res.json(breakdownItems);
+    } catch (error) {
+      console.error("Error fetching breakdown items:", error);
+      res.status(500).json({ error: "Failed to fetch breakdown items" });
+    }
+  });
+  
+  // Get all waiting items (bulk items in waiting status)
+  app.get("/api/waiting-items", async (_req: Request, res: Response) => {
+    try {
+      const waitingItems = await storage.getWaitingItems();
+      res.json(waitingItems);
+    } catch (error) {
+      console.error("Error fetching waiting items:", error);
+      res.status(500).json({ error: "Failed to fetch waiting items" });
+    }
+  });
+  
+  // Get all product breakdowns
+  app.get("/api/product-breakdowns", async (_req: Request, res: Response) => {
+    try {
+      const breakdowns = await storage.getProductBreakdowns();
+      res.json(breakdowns);
+    } catch (error) {
+      console.error("Error fetching product breakdowns:", error);
+      res.status(500).json({ error: "Failed to fetch product breakdowns" });
+    }
+  });
+  
+  // Get a specific product breakdown
+  app.get("/api/product-breakdowns/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const breakdown = await storage.getProductBreakdown(id);
+      
+      if (!breakdown) {
+        return res.status(404).json({ error: "Product breakdown not found" });
+      }
+      
+      res.json(breakdown);
+    } catch (error) {
+      console.error("Error fetching product breakdown:", error);
+      res.status(500).json({ error: "Failed to fetch product breakdown" });
+    }
+  });
+  
+  // Create a product breakdown
+  app.post("/api/product-breakdowns", async (req: Request, res: Response) => {
+    try {
+      const parsedData = insertBreakdownSchema.parse(req.body);
+      const breakdown = await storage.createProductBreakdown(parsedData);
+      res.status(201).json(breakdown);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating product breakdown:", error);
+      res.status(500).json({ error: "Failed to create product breakdown" });
+    }
+  });
+  
+  // Update a product breakdown
+  app.patch("/api/product-breakdowns/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existingBreakdown = await storage.getProductBreakdown(id);
+      
+      if (!existingBreakdown) {
+        return res.status(404).json({ error: "Product breakdown not found" });
+      }
+      
+      const updatedBreakdown = await storage.updateProductBreakdown(id, req.body);
+      res.json(updatedBreakdown);
+    } catch (error) {
+      console.error("Error updating product breakdown:", error);
+      res.status(500).json({ error: "Failed to update product breakdown" });
+    }
+  });
+  
+  // Delete a product breakdown
+  app.delete("/api/product-breakdowns/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteProductBreakdown(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Product breakdown not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product breakdown:", error);
+      res.status(500).json({ error: "Failed to delete product breakdown" });
+    }
+  });
+  
+  // Move bulk item to waiting area
+  app.post("/api/bulk-items/:id/move-to-waiting", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { quantity, employeeId } = req.body;
+      
+      if (!quantity || isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: "Invalid quantity" });
+      }
+      
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID is required" });
+      }
+      
+      const updatedItem = await storage.moveToBulkWaiting(id, quantity, employeeId);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Bulk item not found or insufficient quantity" });
+      }
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error moving bulk item to waiting:", error);
+      res.status(500).json({ error: "Failed to move bulk item to waiting area" });
+    }
+  });
+  
+  // Create breakdown products from bulk item
+  app.post("/api/product-breakdowns/:id/create-products", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { targetProducts, employeeId } = req.body;
+      
+      if (!targetProducts || !Array.isArray(targetProducts) || targetProducts.length === 0) {
+        return res.status(400).json({ error: "Target products are required" });
+      }
+      
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID is required" });
+      }
+      
+      // Validate each target product
+      const validatedTargets = [];
+      for (const target of targetProducts) {
+        try {
+          const parsedTarget = breakdownTargetSchema.parse(target);
+          validatedTargets.push(parsedTarget);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            return res.status(400).json({ 
+              error: "Invalid target product data", 
+              details: error.errors,
+              invalidTarget: target
+            });
+          }
+          throw error;
+        }
+      }
+      
+      const createdProducts = await storage.createBreakdownProducts(id, validatedTargets, employeeId);
+      
+      if (createdProducts.length === 0) {
+        return res.status(404).json({ error: "Breakdown not found or already completed" });
+      }
+      
+      res.status(201).json(createdProducts);
+    } catch (error) {
+      console.error("Error creating breakdown products:", error);
+      res.status(500).json({ error: "Failed to create breakdown products" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

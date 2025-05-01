@@ -14,7 +14,8 @@ import {
   Users,
   X,
   Camera,
-  RefreshCw
+  RefreshCw,
+  Layers
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -130,6 +131,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Media Manager",
       icon: <Camera className="h-5 w-5" />,
       path: "/media-manager",
+    },
+    {
+      title: "Bulk Breakdown",
+      icon: <Layers className="h-5 w-5" />,
+      path: "/bulk-breakdown",
     },
     {
       title: "Settings",

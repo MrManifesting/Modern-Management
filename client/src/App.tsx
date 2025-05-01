@@ -24,6 +24,7 @@ import GoldStandardInventoryPage from "@/pages/gold-standard-inventory";
 import TreeMasonInventoryPage from "@/pages/tree-mason-inventory";
 import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
+import BulkBreakdownPage from "@/pages/bulk-breakdown";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/shopify-sync" component={ShopifySyncPage} />
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
       <Route path="/media-manager" component={MediaManagerPage} />
+      <Route path="/bulk-breakdown" component={BulkBreakdownPage} />
       <Route component={NotFound} />
     </Switch>
   );
