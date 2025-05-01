@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import Sidebar from "@/components/layout/sidebar";
 import TopBar from "@/components/layout/top-bar";
+import { VoiceCommandButton } from "@/components/voice/voice-command-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type MainLayoutProps = {
@@ -98,6 +99,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             : 'bg-gray-50 dark:bg-gray-800 dark:text-white'
         }`}>
           {children}
+          <VoiceCommandButton />
         </main>
       </div>
     </div>
