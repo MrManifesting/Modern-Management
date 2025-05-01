@@ -40,6 +40,11 @@ import {
   createShopifyProduct
 } from "./services/shopify-sync";
 import {
+  fetchShopifySalesReport,
+  fetchShopifyInventoryReport,
+  fetchShopifyCustomerReport
+} from "./services/shopify-reports";
+import {
   initializeTelegramBot,
   getMediaFiles,
   getMediaUrl,
