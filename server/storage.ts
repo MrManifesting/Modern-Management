@@ -2,7 +2,9 @@ import {
   Item, InsertItem, 
   Marketplace, InsertMarketplace,
   Sale, InsertSale, ReportParams, SalesReport, TimeSeriesData,
-  Employee, InsertEmployee, InventoryAction, InsertInventoryAction
+  Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
+  ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
+  ItemType, BreakdownStatus
 } from "@shared/schema";
 
 // Interface for storage methods
@@ -13,6 +15,10 @@ export interface IStorage {
   createItem(item: InsertItem): Promise<Item>;
   updateItem(id: number, item: Partial<InsertItem>): Promise<Item | undefined>;
   deleteItem(id: number): Promise<boolean>;
+  getItemBySku(sku: string): Promise<Item | undefined>;
+  getBulkItems(): Promise<Item[]>;
+  getBreakdownItems(): Promise<Item[]>;
+  getWaitingItems(): Promise<Item[]>;
   
   // Marketplace methods
   getMarketplaces(): Promise<Marketplace[]>;
@@ -50,6 +56,18 @@ export interface IStorage {
   createInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
   getInventoryActionsByItem(itemId: number): Promise<InventoryAction[]>;
   getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]>;
+  
+  // Product Breakdown methods
+  getProductBreakdowns(): Promise<ProductBreakdown[]>;
+  getProductBreakdown(id: number): Promise<ProductBreakdown | undefined>;
+  createProductBreakdown(breakdown: InsertProductBreakdown): Promise<ProductBreakdown>;
+  updateProductBreakdown(id: number, breakdown: Partial<InsertProductBreakdown>): Promise<ProductBreakdown | undefined>;
+  completeProductBreakdown(id: number, completedProducts: number[]): Promise<ProductBreakdown | undefined>;
+  deleteProductBreakdown(id: number): Promise<boolean>;
+  
+  // Bulk product management
+  moveToBulkWaiting(bulkItemId: number, quantity: number, employeeId: number): Promise<Item | undefined>;
+  createBreakdownProducts(breakdownId: number, targetProducts: BreakdownTarget[], employeeId: number): Promise<Item[]>;
 }
 
 // Memory storage implementation
@@ -59,11 +77,13 @@ export class MemStorage implements IStorage {
   private sales: Map<number, Sale>;
   private employees: Map<number, Employee>;
   private inventoryActions: Map<number, InventoryAction>;
+  private productBreakdowns: Map<number, ProductBreakdown>;
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
   private employeeCurrentId: number;
   private inventoryActionCurrentId: number;
+  private breakdownCurrentId: number;
 
   constructor() {
     this.items = new Map();
@@ -71,11 +91,13 @@ export class MemStorage implements IStorage {
     this.sales = new Map();
     this.employees = new Map();
     this.inventoryActions = new Map();
+    this.productBreakdowns = new Map();
     this.itemCurrentId = 1;
     this.marketplaceCurrentId = 1;
     this.salesCurrentId = 1;
     this.employeeCurrentId = 1;
     this.inventoryActionCurrentId = 1;
+    this.breakdownCurrentId = 1;
     
     // Initialize with some default marketplaces
     this.initializeMarketplaces();

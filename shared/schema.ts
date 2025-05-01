@@ -3,6 +3,20 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Enums
+export const ItemType = {
+  REGULAR: 'regular',
+  BULK: 'bulk',
+  BREAKDOWN: 'breakdown'
+} as const;
+
+export const BreakdownStatus = {
+  NONE: 'none',
+  WAITING: 'waiting',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed'
+} as const;
+
 // Item Schema
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
@@ -32,6 +46,15 @@ export const items = pgTable("items", {
   externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
   seoDescription: text("seo_description"),
   shopifyId: text("shopify_id"), // Shopify product ID for integration
+  
+  // Fields for bulk product tracking
+  itemType: text("item_type").notNull().default(ItemType.REGULAR), // regular, bulk, breakdown
+  weight: doublePrecision("weight"), // Weight in grams
+  weightUnit: text("weight_unit").default("g"), // g, oz, lb, kg
+  breakdownStatus: text("breakdown_status").notNull().default(BreakdownStatus.NONE), // none, waiting, in_progress, completed
+  sourceItemId: integer("source_item_id"), // Reference to parent bulk item if this is a breakdown product
+  breakdownPlan: json("breakdown_plan").default([]), // Array of planned breakdown products
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -292,6 +315,41 @@ export const insertInventoryActionSchema = createInsertSchema(inventoryActions).
 export type InventoryAction = typeof inventoryActions.$inferSelect;
 export type InsertInventoryAction = z.infer<typeof insertInventoryActionSchema>;
 
+// Product Breakdown Schema
+export const productBreakdowns = pgTable("product_breakdowns", {
+  id: serial("id").primaryKey(),
+  bulkItemId: integer("bulk_item_id").notNull(), // Reference to the bulk item
+  status: text("status").notNull().default(BreakdownStatus.WAITING), // waiting, in_progress, completed
+  employeeId: integer("employee_id"), // Employee who initiated or completed the breakdown
+  targetProducts: json("target_products").notNull().default([]), // Array of planned breakdown products
+  completedProducts: json("completed_products").notNull().default([]), // Array of created breakdown products
+  notes: text("notes"), // Notes about the breakdown process
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertBreakdownSchema = createInsertSchema(productBreakdowns).omit({
+  id: true,
+  completedAt: true,
+});
+
+export type ProductBreakdown = typeof productBreakdowns.$inferSelect;
+export type InsertProductBreakdown = z.infer<typeof insertBreakdownSchema>;
+
+// Breakdown target product schema
+export const breakdownTargetSchema = z.object({
+  name: z.string(),
+  weight: z.number(),
+  weightUnit: z.string().default("g"),
+  quantity: z.number().int().positive(),
+  sku: z.string().optional(),
+  price: z.number().positive(),
+  status: z.string().default(BreakdownStatus.WAITING),
+  resultItemId: z.number().optional(), // ID of the created item when completed
+});
+
+export type BreakdownTarget = z.infer<typeof breakdownTargetSchema>;
+
 // Define the relationships
 export const inventoryActionsRelations = relations(inventoryActions, ({ one }) => ({
   item: one(items, {
@@ -304,9 +362,25 @@ export const inventoryActionsRelations = relations(inventoryActions, ({ one }) =
   }),
 }));
 
-export const itemsRelations = relations(items, ({ many }) => ({
+export const productBreakdownsRelations = relations(productBreakdowns, ({ one }) => ({
+  bulkItem: one(items, {
+    fields: [productBreakdowns.bulkItemId],
+    references: [items.id],
+  }),
+  employee: one(employees, {
+    fields: [productBreakdowns.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+export const itemsRelations = relations(items, ({ many, one }) => ({
   inventoryActions: many(inventoryActions),
   sales: many(sales),
+  breakdowns: many(productBreakdowns),
+  sourceItem: one(items, {
+    fields: [items.sourceItemId],
+    references: [items.id],
+  }),
 }));
 
 export const salesRelations = relations(sales, ({ one }) => ({
@@ -319,4 +393,5 @@ export const salesRelations = relations(sales, ({ one }) => ({
 // Employee relations
 export const employeesRelations = relations(employees, ({ many }) => ({
   inventoryActions: many(inventoryActions),
+  breakdowns: many(productBreakdowns),
 }));
