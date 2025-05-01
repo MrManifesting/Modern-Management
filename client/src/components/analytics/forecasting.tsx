@@ -26,6 +26,7 @@ import {
   Legend,
   TooltipProps
 } from 'recharts';
+import { AlertCircle, Check, RefreshCw } from 'lucide-react';
 
 // Define the forecast response type
 interface ForecastResponse {
@@ -113,12 +114,61 @@ export function SalesForecastingDashboard() {
   
   if (isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Error loading forecast data</AlertTitle>
-        <AlertDescription>
-          {error instanceof Error ? error.message : 'An unknown error occurred'}
-        </AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle className="flex items-center font-semibold">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Error loading forecast data
+          </AlertTitle>
+          <AlertDescription className="mt-2">
+            {error instanceof Error ? error.message : 'An unknown error occurred'}
+          </AlertDescription>
+        </Alert>
+        
+        <Card className="mt-6 border-amber-500/30 bg-gradient-to-r from-zinc-900 to-zinc-950">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Try These Solutions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-2">
+              <div className="mt-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full p-1">
+                <Check className="h-4 w-4 text-amber-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-amber-400">Check date range</h4>
+                <p className="text-sm text-muted-foreground">Ensure the historical and forecast periods are properly set</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full p-1">
+                <Check className="h-4 w-4 text-amber-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-amber-400">Refresh data</h4>
+                <p className="text-sm text-muted-foreground">Try refreshing your browser or updating forecast parameters</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full p-1">
+                <Check className="h-4 w-4 text-amber-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-amber-400">Verify API connection</h4>
+                <p className="text-sm text-muted-foreground">Check that the API is accessible and returning valid data</p>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/analytics/forecast'] })}
+              className="bg-amber-500 hover:bg-amber-600 text-black"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Forecast
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
     );
   }
   
