@@ -802,6 +802,254 @@ export class MemStorage implements IStorage {
   async getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]> {
     return this.getInventoryActions({ employeeId });
   }
+  
+  // Additional item methods for bulk product handling
+  async getItemBySku(sku: string): Promise<Item | undefined> {
+    return Array.from(this.items.values()).find(item => item.sku === sku);
+  }
+  
+  async getBulkItems(): Promise<Item[]> {
+    return Array.from(this.items.values()).filter(item => item.itemType === ItemType.BULK);
+  }
+  
+  async getBreakdownItems(): Promise<Item[]> {
+    return Array.from(this.items.values()).filter(item => item.itemType === ItemType.BREAKDOWN);
+  }
+  
+  async getWaitingItems(): Promise<Item[]> {
+    return Array.from(this.items.values()).filter(item => 
+      item.itemType === ItemType.BULK && item.breakdownStatus === BreakdownStatus.WAITING);
+  }
+  
+  // Product Breakdown methods
+  async getProductBreakdowns(): Promise<ProductBreakdown[]> {
+    return Array.from(this.productBreakdowns.values());
+  }
+  
+  async getProductBreakdown(id: number): Promise<ProductBreakdown | undefined> {
+    return this.productBreakdowns.get(id);
+  }
+  
+  async createProductBreakdown(breakdown: InsertProductBreakdown): Promise<ProductBreakdown> {
+    const id = this.breakdownCurrentId++;
+    const now = new Date();
+    
+    const newBreakdown: ProductBreakdown = {
+      ...breakdown,
+      id,
+      startedAt: now,
+      completedAt: null
+    };
+    
+    this.productBreakdowns.set(id, newBreakdown);
+    
+    // Update the bulk item to be in the "waiting" status
+    const bulkItem = this.items.get(breakdown.bulkItemId);
+    if (bulkItem) {
+      this.updateItem(bulkItem.id, { breakdownStatus: BreakdownStatus.WAITING });
+    }
+    
+    return newBreakdown;
+  }
+  
+  async updateProductBreakdown(id: number, breakdown: Partial<InsertProductBreakdown>): Promise<ProductBreakdown | undefined> {
+    const existingBreakdown = this.productBreakdowns.get(id);
+    
+    if (!existingBreakdown) {
+      return undefined;
+    }
+    
+    const updatedBreakdown: ProductBreakdown = {
+      ...existingBreakdown,
+      ...breakdown,
+    };
+    
+    this.productBreakdowns.set(id, updatedBreakdown);
+    
+    // If status changed, update the bulk item status as well
+    if (breakdown.status && breakdown.status !== existingBreakdown.status) {
+      const bulkItem = this.items.get(existingBreakdown.bulkItemId);
+      if (bulkItem) {
+        this.updateItem(bulkItem.id, { breakdownStatus: breakdown.status });
+      }
+    }
+    
+    return updatedBreakdown;
+  }
+  
+  async completeProductBreakdown(id: number, completedProducts: number[]): Promise<ProductBreakdown | undefined> {
+    const breakdown = this.productBreakdowns.get(id);
+    
+    if (!breakdown) {
+      return undefined;
+    }
+    
+    const now = new Date();
+    const updatedBreakdown: ProductBreakdown = {
+      ...breakdown,
+      status: BreakdownStatus.COMPLETED,
+      completedAt: now,
+      completedProducts: completedProducts
+    };
+    
+    this.productBreakdowns.set(id, updatedBreakdown);
+    
+    // Update the bulk item to be in "completed" status
+    const bulkItem = this.items.get(breakdown.bulkItemId);
+    if (bulkItem) {
+      this.updateItem(bulkItem.id, { breakdownStatus: BreakdownStatus.COMPLETED });
+    }
+    
+    return updatedBreakdown;
+  }
+  
+  async deleteProductBreakdown(id: number): Promise<boolean> {
+    const breakdown = this.productBreakdowns.get(id);
+    
+    if (breakdown && breakdown.status !== BreakdownStatus.COMPLETED) {
+      // Reset the bulk item status if the breakdown is not completed
+      const bulkItem = this.items.get(breakdown.bulkItemId);
+      if (bulkItem) {
+        this.updateItem(bulkItem.id, { breakdownStatus: BreakdownStatus.NONE });
+      }
+    }
+    
+    return this.productBreakdowns.delete(id);
+  }
+  
+  // Bulk product management methods
+  async moveToBulkWaiting(bulkItemId: number, quantity: number, employeeId: number): Promise<Item | undefined> {
+    const bulkItem = this.items.get(bulkItemId);
+    
+    if (!bulkItem || bulkItem.itemType !== ItemType.BULK) {
+      return undefined;
+    }
+    
+    // Make sure the bulk item has enough quantity
+    if (bulkItem.quantity < quantity) {
+      return undefined;
+    }
+    
+    // Create inventory action
+    await this.createInventoryAction({
+      itemId: bulkItemId,
+      employeeId,
+      actionType: 'move_to_waiting',
+      quantity,
+      actionDetails: {
+        fromStatus: bulkItem.breakdownStatus,
+        toStatus: BreakdownStatus.WAITING
+      }
+    });
+    
+    // Create or update a breakdown request
+    const existingBreakdowns = Array.from(this.productBreakdowns.values())
+      .filter(bd => bd.bulkItemId === bulkItemId && bd.status === BreakdownStatus.WAITING);
+    
+    if (existingBreakdowns.length > 0) {
+      // Update the existing breakdown request
+      // (This is a simplification - in a real system you might want to create a new breakdown for each batch)
+      return this.updateItem(bulkItemId, { 
+        breakdownStatus: BreakdownStatus.WAITING,
+        quantity: bulkItem.quantity - quantity
+      });
+    } else {
+      // Create a new breakdown request
+      await this.createProductBreakdown({
+        bulkItemId,
+        status: BreakdownStatus.WAITING,
+        employeeId,
+        targetProducts: [],
+        completedProducts: [],
+        notes: `Moving ${quantity} units to waiting area for breakdown`
+      });
+      
+      return this.updateItem(bulkItemId, { 
+        breakdownStatus: BreakdownStatus.WAITING,
+        quantity: bulkItem.quantity - quantity
+      });
+    }
+  }
+  
+  async createBreakdownProducts(breakdownId: number, targetProducts: BreakdownTarget[], employeeId: number): Promise<Item[]> {
+    const breakdown = this.productBreakdowns.get(breakdownId);
+    
+    if (!breakdown || breakdown.status === BreakdownStatus.COMPLETED) {
+      return [];
+    }
+    
+    const bulkItem = this.items.get(breakdown.bulkItemId);
+    if (!bulkItem) {
+      return [];
+    }
+    
+    // Update breakdown status to in progress
+    await this.updateProductBreakdown(breakdownId, { 
+      status: BreakdownStatus.IN_PROGRESS,
+      targetProducts: targetProducts
+    });
+    
+    // Update bulk item status
+    await this.updateItem(bulkItem.id, { breakdownStatus: BreakdownStatus.IN_PROGRESS });
+    
+    // Create each breakdown product
+    const createdProducts: Item[] = [];
+    
+    for (const target of targetProducts) {
+      // Create breakdown product
+      const newProduct: InsertItem = {
+        name: target.name || `${bulkItem.name} - ${target.weight}${target.weightUnit}`,
+        description: bulkItem.description,
+        price: target.price,
+        category: bulkItem.category,
+        condition: bulkItem.condition,
+        sku: target.sku || `${bulkItem.sku}-${target.weight}${target.weightUnit}`,
+        quantity: target.quantity,
+        images: bulkItem.images,
+        tags: bulkItem.tags,
+        attributes: bulkItem.attributes,
+        itemType: ItemType.BREAKDOWN,
+        weight: target.weight,
+        weightUnit: target.weightUnit,
+        sourceItemId: bulkItem.id
+      };
+      
+      const createdProduct = await this.createItem(newProduct);
+      createdProducts.push(createdProduct);
+      
+      // Record inventory action
+      await this.createInventoryAction({
+        itemId: createdProduct.id,
+        employeeId,
+        actionType: 'create_from_breakdown',
+        quantity: target.quantity,
+        actionDetails: {
+          sourceItemId: bulkItem.id,
+          breakdownId
+        }
+      });
+    }
+    
+    // Record inventory action on bulk item
+    await this.createInventoryAction({
+      itemId: bulkItem.id,
+      employeeId,
+      actionType: 'broken_down',
+      quantity: createdProducts.reduce((sum, product) => sum + product.quantity, 0),
+      actionDetails: {
+        breakdownId,
+        resultItemIds: createdProducts.map(product => product.id)
+      }
+    });
+    
+    // Update the breakdown with the actual completed products
+    await this.completeProductBreakdown(
+      breakdownId, 
+      createdProducts.map(product => product.id)
+    );
+    
+    return createdProducts;
+  }
 }
 
 export const storage = new MemStorage();
