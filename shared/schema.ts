@@ -180,6 +180,13 @@ export interface TimeSeriesData {
   sales: number;
   revenue: number;
   profit: number;
+  isForecasted?: boolean; // Flag to indicate if this is a forecasted data point
+  metadata?: {
+    category?: string;
+    packageSize?: string;
+    strain?: string;
+    brand?: string;
+  }; // Additional metadata for filtering
 }
 
 export interface SalesReport {
@@ -194,7 +201,53 @@ export interface SalesReport {
     revenue: number;
     profit: number;
   }[];
+  forecast?: {
+    timeSeries: TimeSeriesData[];
+    kpis: {
+      historicalMetrics: {
+        totalSales: number;
+        totalRevenue: number;
+        totalProfit: number;
+        avgMonthlySales: number;
+      };
+      forecastedMetrics: {
+        totalSales: number;
+        totalRevenue: number;
+        totalProfit: number;
+        avgMonthlySales: number;
+      };
+      growthMetrics: {
+        salesGrowth: number;
+        revenueGrowth: number;
+        profitGrowth: number;
+      };
+      inventoryMetrics: {
+        suggestedInventoryLevel: number;
+      };
+    };
+    categoryForecasts?: {
+      [category: string]: {
+        timeSeries: TimeSeriesData[];
+        suggestedInventoryLevel: number;
+      };
+    };
+    weightForecasts?: {
+      [weight: string]: {
+        timeSeries: TimeSeriesData[];
+        suggestedInventoryLevel: number;
+      };
+    };
+  };
 }
+
+// Forecast request schema
+export const forecastRequestSchema = z.object({
+  historicalPeriods: z.number().int().positive().default(3),
+  forecastPeriods: z.number().int().positive().default(3),
+  categories: z.array(z.string()).optional(),
+  weights: z.array(z.string()).optional(),
+  groupBy: z.enum(["day", "week", "month"]).default("month"),
+});
 
 // Employees Schema
 export const employees = pgTable("employees", {

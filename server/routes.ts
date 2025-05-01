@@ -11,6 +11,7 @@ import {
   csvExportSchema, 
   aiAnalysisSchema,
   reportSchema,
+  forecastRequestSchema,
   insertEmployeeSchema,
   insertInventoryActionSchema
 } from "@shared/schema";
