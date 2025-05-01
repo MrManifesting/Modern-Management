@@ -13,7 +13,11 @@ import {
   reportSchema,
   forecastRequestSchema,
   insertEmployeeSchema,
-  insertInventoryActionSchema
+  insertInventoryActionSchema,
+  breakdownTargetSchema,
+  ItemType,
+  BreakdownStatus,
+  insertBreakdownSchema
 } from "@shared/schema";
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
