@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
+import { Parser } from "@json2csv/plainjs";
 import OpenAI from "openai";
 import { 
   fetchShopifySalesReport, 
@@ -28,7 +29,6 @@ import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { generateForecast, calculateKPIs } from "./services/forecasting";
-import { Parser } from "@json2csv/plainjs";
 import { 
   prepareItemForShopify, 
   getPushStatus, 
