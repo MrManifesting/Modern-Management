@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import 'regenerator-runtime/runtime';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { 
   Mic, 
@@ -17,7 +18,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 
 // Define the types of commands we support
@@ -38,7 +39,7 @@ export function VoiceCommand() {
   const [lastExecutedCommand, setLastExecutedCommand] = useState<string | null>(null);
   const [activeTrigger, setActiveTrigger] = useState<string | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
 
   const {
     transcript,
@@ -259,14 +260,14 @@ export function VoiceCommand() {
     }
     
     setProcessing(false);
-  }, [transcript, processing, commands, resetTranscript]);
+  }, [transcript, processing, commands, resetTranscript, navigate]);
 
   // Process transcript when stopped listening
   useEffect(() => {
     if (!listening && transcript && !processing) {
       processTranscript();
     }
-  }, [listening, transcript, processing, processTranscript]);
+  }, [listening, transcript, processing, processTranscript, navigate]);
 
   // Start/stop listening
   const toggleListening = () => {
