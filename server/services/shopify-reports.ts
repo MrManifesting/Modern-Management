@@ -1,5 +1,8 @@
 import Shopify from 'shopify-api-node';
-import { getShopifyCredentials } from './shopify';
+
+// Using fixed credentials from the user input for Shopify
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 
 // Types for Shopify report data
 export interface ShopifyOrderReport {
@@ -332,17 +335,21 @@ export async function fetchShopifyCustomerReport(): Promise<ShopifyCustomerRepor
 
 // Helper function to get Shopify client
 async function getShopifyClient() {
-  const credentials = await getShopifyCredentials();
-  
-  if (!credentials.shopName || !credentials.accessToken) {
+  if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
     throw new Error('Shopify credentials are not properly configured');
   }
   
   const shopify = new Shopify({
-    shopName: credentials.shopName,
-    accessToken: credentials.accessToken,
+    shopName: SHOPIFY_STORE,
+    accessToken: SHOPIFY_ACCESS_TOKEN,
     apiVersion: '2023-10'
   });
   
-  return { shopify, credentials };
+  return { 
+    shopify, 
+    credentials: { 
+      shopName: SHOPIFY_STORE, 
+      accessToken: SHOPIFY_ACCESS_TOKEN 
+    } 
+  };
 }
