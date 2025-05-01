@@ -96,9 +96,12 @@ export function SalesForecastingDashboard() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['/api/analytics/forecast', forecastParams],
     queryFn: async () => {
-      return apiRequestSimple<ForecastResponse>('/api/analytics/forecast', {
+      return await apiRequestSimple<ForecastResponse>('/api/analytics/forecast', {
         method: 'POST',
-        body: JSON.stringify(forecastParams)
+        body: JSON.stringify(forecastParams),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     enabled: true // We're always fetching on component mount
