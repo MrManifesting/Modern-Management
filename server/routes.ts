@@ -5,6 +5,11 @@ import multer from "multer";
 import { z } from "zod";
 import OpenAI from "openai";
 import { 
+  fetchShopifySalesReport, 
+  fetchShopifyInventoryReport, 
+  fetchShopifyCustomerReport 
+} from "./services/shopify-reports";
+import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
   insertSaleSchema,
@@ -39,11 +44,7 @@ import {
   updateShopifyProduct,
   createShopifyProduct
 } from "./services/shopify-sync";
-import {
-  fetchShopifySalesReport,
-  fetchShopifyInventoryReport,
-  fetchShopifyCustomerReport
-} from "./services/shopify-reports";
+
 import {
   initializeTelegramBot,
   getMediaFiles,
