@@ -19,6 +19,9 @@ import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
 import ShopifySyncPage from "@/pages/shopify-sync";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
+import GoldStandardInventoryPage from "@/pages/gold-standard-inventory";
+import TreeMasonInventoryPage from "@/pages/tree-mason-inventory";
+import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
 import NotFound from "@/pages/not-found";
 
@@ -31,6 +34,9 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/inventory/thca-flower" component={THCaFlowerInventoryPage} />
+      <Route path="/inventory/gold-standard" component={GoldStandardInventoryPage} />
+      <Route path="/inventory/tree-mason" component={TreeMasonInventoryPage} />
+      <Route path="/inventory/package" component={PackageInventoryPage} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/scanner" component={Scanner} />
