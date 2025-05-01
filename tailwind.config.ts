@@ -96,12 +96,53 @@ export default {
           "100%": {
             backgroundPosition: "0% 50%",
           },
+        },
+        "cannabis-bounce": {
+          "0%, 100%": {
+            transform: "translateY(0)",
+          },
+          "50%": {
+            transform: "translateY(-15%)",
+          }
+        },
+        "cannabis-float": {
+          "0%, 100%": {
+            transform: "translateY(0) rotate(0deg)",
+          },
+          "25%": {
+            transform: "translateY(-5px) rotate(2deg)",
+          },
+          "75%": {
+            transform: "translateY(5px) rotate(-2deg)",
+          }
+        },
+        "cannabis-pulse": {
+          "0%, 100%": {
+            opacity: "1",
+            transform: "scale(1)",
+          },
+          "50%": {
+            opacity: "0.7",
+            transform: "scale(0.85)",
+          }
+        },
+        "cannabis-spin": {
+          "0%": {
+            transform: "rotate(0deg)",
+          },
+          "100%": {
+            transform: "rotate(360deg)",
+          }
         }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "gold-shimmer": "gold-shimmer 3s ease infinite",
+        "cannabis-bounce": "cannabis-bounce 2s ease-in-out infinite",
+        "cannabis-float": "cannabis-float 3s ease-in-out infinite",
+        "cannabis-pulse": "cannabis-pulse 2s ease-in-out infinite",
+        "cannabis-spin": "cannabis-spin 5s linear infinite",
       },
       backgroundImage: {
         "gold-gradient": "linear-gradient(to right, hsl(45, 80%, 50%), hsl(45, 90%, 65%), hsl(45, 80%, 50%))",
