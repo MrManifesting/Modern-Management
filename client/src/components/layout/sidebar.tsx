@@ -18,6 +18,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 type SidebarProps = {
   expanded: boolean;
@@ -38,6 +39,7 @@ type NavigationItem = {
 export default function Sidebar({ expanded }: SidebarProps) {
   const [location] = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
+  const { user } = useAuth();
 
   // Handle click outside sidebar on mobile to auto-close
   useEffect(() => {
