@@ -1465,45 +1465,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request parameters
       const params = forecastRequestSchema.parse(req.body);
       
-      // Get historical time series data
-      const historicalParams = {
-        startDate: (() => {
-          const date = new Date();
-          date.setMonth(date.getMonth() - params.historicalPeriods);
-          return date.toISOString().split('T')[0];
-        })(),
-        endDate: new Date().toISOString().split('T')[0],
-        groupBy: params.groupBy as "day" | "week" | "month"
-      };
+      // Time periods for historical data
+      const historicalPeriods = params.historicalPeriods;
       
-      // Get historical data
-      let historicalData = await storage.getSalesTimeSeries(historicalParams);
+      // Convert to timeframe format for Shopify API
+      const timeframe = `${historicalPeriods * 30}d`;
       
-      // If we don't have enough data, create sample historical data
-      // This ensures we can always generate forecasts even without historical data
+      // Try to get data from Shopify first for more accurate forecasts
+      let historicalData: TimeSeriesData[] = [];
+      
+      try {
+        // Get Shopify sales report data
+        const shopifyReport = await fetchShopifySalesReport(timeframe);
+        
+        if (shopifyReport && shopifyReport.periodSales && shopifyReport.periodSales.length > 0) {
+          // We have Shopify data, convert it to our time series format
+          historicalData = shopifyReport.periodSales.map(sale => ({
+            label: sale.date,
+            sales: sale.orders, // Use order count as sales
+            revenue: sale.revenue,
+            profit: sale.revenue * 0.4, // Estimate profit as 40% of revenue
+            isForecasted: false,
+            metadata: {
+              source: 'shopify'
+            }
+          }));
+          
+          console.log(`Using Shopify data for forecasting: ${historicalData.length} data points`);
+        }
+      } catch (error) {
+        console.warn("Could not fetch Shopify data for forecasting:", error);
+      }
+      
+      // If we don't have Shopify data, fallback to storage data
+      if (historicalData.length === 0) {
+        const historicalParams = {
+          startDate: (() => {
+            const date = new Date();
+            date.setMonth(date.getMonth() - params.historicalPeriods);
+            return date.toISOString().split('T')[0];
+          })(),
+          endDate: new Date().toISOString().split('T')[0],
+          groupBy: params.groupBy as "day" | "week" | "month"
+        };
+        
+        historicalData = await storage.getSalesTimeSeries(historicalParams);
+        console.log(`Using storage data for forecasting: ${historicalData.length} data points`);
+      }
+      
+      // Group the data if needed by the groupBy parameter
+      if (params.groupBy !== 'day' && historicalData.length > 0) {
+        historicalData = groupTimeSeriesData(historicalData, params.groupBy);
+      }
+      
+      // If we still don't have enough data, create deterministic sample data
+      // This ensures we always generate forecasts even without historical data
+      // Using a fixed seed for deterministic random values
       if (historicalData.length < 3) {
         // Create data for the last few months
-        historicalData = [];
+        const deterministicData: TimeSeriesData[] = [];
         
-        // Generate dates for the last few months with realistic sample data
+        // Generate dates for the last few months with deterministic sample data
+        const seed = new Date().getDate() + new Date().getMonth() + 1; // Fixed seed based on current day/month
+        
         for (let i = params.historicalPeriods; i > 0; i--) {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
           
-          // Generate sample values with slight upward trend
-          const baseSales = 100 + Math.floor(Math.random() * 20);
+          // Generate deterministic values with slight upward trend
+          // Using the seed to create consistent "random" values
+          const baseSales = 100 + ((seed * i) % 20);
           const sales = baseSales + (params.historicalPeriods - i) * 10; // Increasing trend
           const revenue = sales * 25; // Assume $25 per unit
           const profit = revenue * 0.4; // Assume 40% profit margin
           
-          historicalData.push({
+          deterministicData.push({
             label: date.toISOString().split('T')[0],
             sales,
             revenue,
             profit,
-            isForecasted: false
+            isForecasted: false,
+            metadata: {
+              source: 'generated',
+              seed
+            }
           });
         }
+        
+        // Use this deterministic data
+        historicalData = deterministicData;
+        console.log(`Using deterministic sample data: ${historicalData.length} data points with seed ${seed}`);
       }
       
       // Generate forecasts for overall sales
@@ -1516,11 +1567,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categoryForecasts: Record<string, { timeSeries: any[], suggestedInventoryLevel: number }> = {};
       
       if (params.categories && params.categories.length > 0) {
+        // Try to get real product data for these categories
+        let items: any[] = [];
+        try {
+          items = await storage.getItems();
+        } catch (error) {
+          console.warn("Could not fetch items for category forecasts:", error);
+        }
+        
+        const categoryPercentages: Record<string, number> = {};
+        const totalItems = items.length || 1;
+        
+        // Calculate percentage of inventory in each category
+        params.categories.forEach(category => {
+          const itemsInCategory = items.filter(item => item.category === category).length;
+          categoryPercentages[category] = itemsInCategory / totalItems;
+        });
+        
+        // Generate forecasts scaled by category percentage
         for (const category of params.categories) {
-          // Get category-specific data by adding metadata
+          const categoryPercentage = categoryPercentages[category] || (1 / params.categories.length);
+          
+          // Create scaled data for this category based on overall data
           const categoryData = historicalData.map(d => ({
             ...d,
-            metadata: { category }
+            sales: d.sales * categoryPercentage,
+            revenue: d.revenue * categoryPercentage,
+            profit: d.profit * categoryPercentage,
+            metadata: { 
+              ...d.metadata, 
+              category 
+            }
           }));
           
           // Generate forecast for this category
@@ -1541,11 +1618,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weightForecasts: Record<string, { timeSeries: any[], suggestedInventoryLevel: number }> = {};
       
       if (params.weights && params.weights.length > 0) {
+        // Try to get real product data for these weights
+        let items: any[] = [];
+        try {
+          items = await storage.getItems();
+        } catch (error) {
+          console.warn("Could not fetch items for weight forecasts:", error);
+        }
+        
+        const weightPercentages: Record<string, number> = {};
+        const totalItems = items.length || 1;
+        
+        // Calculate percentage of inventory in each weight category
+        params.weights.forEach(weight => {
+          const itemsWithWeight = items.filter(item => 
+            item.packageSize === weight || 
+            item.weight === weight || 
+            item.size === weight
+          ).length;
+          weightPercentages[weight] = itemsWithWeight / totalItems;
+        });
+        
+        // Generate forecasts scaled by weight percentage
         for (const weight of params.weights) {
-          // Get weight-specific data by adding metadata
+          const weightPercentage = weightPercentages[weight] || (1 / params.weights.length);
+          
+          // Create scaled data for this weight based on overall data
           const weightData = historicalData.map(d => ({
             ...d,
-            metadata: { packageSize: weight }
+            sales: d.sales * weightPercentage,
+            revenue: d.revenue * weightPercentage,
+            profit: d.profit * weightPercentage,
+            metadata: { 
+              ...d.metadata, 
+              packageSize: weight 
+            }
           }));
           
           // Generate forecast for this weight
