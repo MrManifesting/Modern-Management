@@ -258,12 +258,18 @@ export default function Sidebar({ expanded }: SidebarProps) {
       <div className="mt-auto border-t border-gold/30 p-4">
         <div className="flex items-center">
           <div className="h-8 w-8 rounded-full bg-gold text-black flex items-center justify-center">
-            <span className="text-sm font-medium">JS</span>
+            <span className="text-sm font-medium">
+              {user ? (user.firstName?.charAt(0) || user.username.charAt(0)).toUpperCase() : '?'}
+            </span>
           </div>
-          {expanded && (
+          {expanded && user && (
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-200">John Smith</p>
-              <p className="text-xs text-gold/70">john@example.com</p>
+              <p className="text-sm font-medium text-gray-200">
+                {user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user.username}
+              </p>
+              <p className="text-xs text-gold/70">{user.email || ''}</p>
             </div>
           )}
         </div>
