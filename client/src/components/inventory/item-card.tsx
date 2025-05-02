@@ -43,7 +43,16 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   });
 
   // Get marketplace badge class
-  const getMarketplaceBadgeClass = (marketplace: string) => {
+  const getMarketplaceBadgeClass = (marketplace: string | any) => {
+    // Handle case where marketplace might be an object with name property
+    let marketplaceName = 'default';
+    
+    if (typeof marketplace === 'string') {
+      marketplaceName = marketplace.toLowerCase();
+    } else if (marketplace && typeof marketplace === 'object' && 'name' in marketplace) {
+      marketplaceName = marketplace.name.toLowerCase();
+    }
+    
     const classes = {
       ebay: "marketplace-badge-ebay",
       etsy: "marketplace-badge-etsy",
@@ -52,7 +61,7 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
       default: "bg-gray-500"
     };
     
-    return classes[marketplace as keyof typeof classes] || classes.default;
+    return classes[marketplaceName as keyof typeof classes] || classes.default;
   };
 
   // Get status badge class
@@ -90,9 +99,15 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
 
           {/* Marketplace & status badges */}
           <div className="absolute top-2 right-2 flex space-x-1">
-            {(item.marketplace as string[])[0] && (
-              <span className={`rounded-full ${getMarketplaceBadgeClass((item.marketplace as string[])[0])} px-2 py-1 text-xs font-medium text-white`}>
-                {(item.marketplace as string[])[0]}
+            {item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0 && (
+              <span className={`rounded-full ${getMarketplaceBadgeClass(
+                typeof item.marketplace[0] === 'string' 
+                  ? item.marketplace[0] 
+                  : (item.marketplace[0] as any)?.name || 'unknown'
+              )} px-2 py-1 text-xs font-medium text-white`}>
+                {typeof item.marketplace[0] === 'string' 
+                  ? item.marketplace[0]
+                  : (item.marketplace[0] as any)?.name || 'unknown'}
               </span>
             )}
             <span className={`rounded-full ${getStatusBadgeClass(item.status)} px-2 py-1 text-xs font-medium text-white`}>
