@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, PlusCircle, Menu, Sparkles, Moon, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddItemModal from "@/components/modals/add-item-modal";
@@ -33,6 +33,26 @@ export default function TopBar({
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
   const { user, logoutMutation } = useAuth();
+  const [itemNameFromVoice, setItemNameFromVoice] = useState<string | null>(null);
+  const itemNameInputRef = useRef<HTMLInputElement>(null);
+  
+  // Listen for voice command events to open the Add Item modal
+  useEffect(() => {
+    const handleVoiceAddItem = (event: CustomEvent) => {
+      console.log("Voice add item event received:", event);
+      const itemName = event.detail?.itemName || '';
+      setShowAddItemModal(true);
+      setItemNameFromVoice(itemName);
+    };
+
+    // Add the event listener
+    window.addEventListener('openAddItemModal', handleVoiceAddItem as EventListener);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('openAddItemModal', handleVoiceAddItem as EventListener);
+    };
+  }, []);
   
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
