@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { 
   Edit,
   FileText,
@@ -89,11 +90,12 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   return (
     <>
       <Card 
-        className={`group overflow-hidden transition-all ${
+        className={`group overflow-hidden transition-all cursor-pointer ${
           item.quantity <= 0 ? 'border-red-200 bg-red-50/30' : ''
         }`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={handleViewDetails}
       >
         <div className="relative h-48 bg-gray-200">
           {/* Item image */}
