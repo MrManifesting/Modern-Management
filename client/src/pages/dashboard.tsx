@@ -16,7 +16,14 @@ import QRCode from "qrcode";
 
 export default function Dashboard() {
   // Fetch dashboard stats
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{
+    inventory: {
+      total: number;
+      listed: number;
+      inStock: number;
+      revenue: number;
+    }
+  }>({
     queryKey: ['/api/stats'],
   });
   
