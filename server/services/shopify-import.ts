@@ -320,7 +320,8 @@ export async function importShopifyCSV(
   const errors: {row: number; reason: string}[] = [];
   const processedHandles = new Set<string>();
   
-  for (const [rowIndex, row] of rows.entries()) {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
     try {
       // Skip rows with insufficient data
       if (row.length < 5) {
@@ -329,7 +330,7 @@ export async function importShopifyCSV(
       }
       
       // Skip Printify items
-      if (row.some(cell => cell.includes('Printify') || cell.includes('not stocked'))) {
+      if (row.some((cell: string) => cell.includes('Printify') || cell.includes('not stocked'))) {
         errors.push({row: rowIndex + 2, reason: "Printify or not stocked items are skipped"});
         continue;
       }
