@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Bell, Search, PlusCircle, Menu, Sparkles, Moon, User, LogOut } from "lucide-react";
+import { Search, PlusCircle, Menu, Sparkles, Moon, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddItemModal from "@/components/modals/add-item-modal";
 import { useLocation } from "wouter";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
+import NotificationsDropdown from "@/components/notifications/notifications-dropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,25 +141,7 @@ export default function TopBar({
           {!isGoldTheme && <ThemeToggle />}
           
           {/* Notifications */}
-          <div className="relative">
-            <button 
-              className={`rounded-full p-2 ${
-                isGoldTheme 
-                  ? 'bg-gold/20 text-gold hover:bg-gold/30' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-              }`}
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-            </button>
-            <div className={`absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center ${
-              isGoldTheme 
-                ? 'bg-gold text-black' 
-                : 'bg-primary-500 text-white'
-            }`}>
-              3
-            </div>
-          </div>
+          <NotificationsDropdown isGoldTheme={isGoldTheme} />
 
           {/* Search - not shown on very small screens */}
           <div className="relative hidden sm:block">
