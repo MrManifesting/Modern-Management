@@ -1323,6 +1323,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import route with support for different product types
+  // Special endpoint just for Shopify imports
+  app.post("/api/items/import-shopify", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf-8');
+      
+      // Simple CSV parser that correctly handles quotes
+      const parseCSV = (csv: string): { rows: string[][] } => {
+        const rows: string[][] = [];
+        const lines = csv.split(/\r?\n/);
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          const row: string[] = [];
+          let cell = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
+              cell = '';
+            } else {
+              cell += char;
+            }
+          }
+          
+          // Add the last cell
+          row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
+          rows.push(row);
+        }
+        
+        return { rows };
+      };
+      
+      const parsed = parseCSV(csvContent);
+      const rows = parsed.rows;
+      
+      if (!rows.length) {
+        return res.status(400).json({ error: "Empty CSV file" });
+      }
+      
+      const headers = rows[0];
+      
+      // Process Shopify rows directly
+      const importedItems: any[] = [];
+      const processedHandles = new Set<string>();
+      
+      // Skip header row
+      const dataRows = rows.slice(1);
+      
+      console.log(`Processing ${dataRows.length} Shopify rows, headers:`, headers);
+      
+      for (const row of dataRows) {
+        try {
+          // Skip rows with invalid data or "Printify" locations
+          if (row.length < 5 || row.includes('Printify') || row.includes('not stocked')) {
+            continue;
+          }
+          
+          // Extract the basic product info
+          const handleIndex = headers.indexOf('Handle');
+          const titleIndex = headers.indexOf('Title');
+          const option1NameIndex = headers.indexOf('Option1 Name');
+          const option1ValueIndex = headers.indexOf('Option1 Value');
+          const availableIndex = headers.indexOf('Available');
+          
+          if (handleIndex < 0 || titleIndex < 0) {
+            continue; // Skip if we can't find basic fields
+          }
+          
+          const handle = row[handleIndex]?.trim() || '';
+          const title = row[titleIndex]?.trim() || '';
+          const optionName = option1NameIndex >= 0 ? row[option1NameIndex]?.trim() || '' : '';
+          const optionValue = option1ValueIndex >= 0 ? row[option1ValueIndex]?.trim() || '' : '';
+          
+          // Find quantity
+          let quantity = 0;
+          if (availableIndex >= 0 && row[availableIndex]) {
+            const qtyStr = row[availableIndex].trim();
+            quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
+          }
+          
+          // Skip duplicate products (only take the first variant)
+          if (processedHandles.has(handle)) {
+            continue;
+          }
+          processedHandles.add(handle);
+          
+          // Extract strain & tier from the title
+          const titleParts = title.split(' - ');
+          const strain = titleParts[0];
+          let tier = 'Standard';
+          let category = 'Cannabis';
+          
+          if (title.toUpperCase().includes('TOP SHELF')) {
+            tier = 'Top Shelf';
+          } else if (title.toUpperCase().includes('EXOTIC')) {
+            tier = 'Exotic';
+          } else if (title.toUpperCase().includes('CLASSIC RESERVE')) { 
+            tier = 'Classic Reserve';
+          } else if (title.toUpperCase().includes('AAA')) {
+            tier = 'AAA Indoor';
+          } else if (title.toUpperCase().includes('AA')) {
+            tier = 'AA Indoor';
+          }
+          
+          if (title.toUpperCase().includes('THCA')) {
+            category = 'THCA Flower';
+          }
+          
+          // Generate default price based on tier and weight
+          let price = 39.99;
+          
+          if (optionValue.toLowerCase().includes('pound')) {
+            price = 500;
+          } else if (optionValue.toLowerCase().includes('1/2')) {
+            price = 275;
+          } else if (optionValue.toLowerCase().includes('1/4')) {
+            price = 150;
+          } else if (optionValue.match(/\b28\s*g/i)) {
+            price = 120;
+          } else if (optionValue.match(/\b14\s*g/i)) {
+            price = 75;
+          } else if (optionValue.match(/\b7\s*g/i)) {
+            price = 40;
+          } else if (optionValue.match(/\b3.5\s*g/i)) {
+            price = 25;
+          }
+          
+          // Create item with cannabis-specific attributes
+          const item = {
+            name: title,
+            description: `${strain} - Premium Quality Cannabis - ${tier}`,
+            price: price,
+            sku: `THCA-${handle}`.toUpperCase(),
+            quantity: quantity,
+            status: 'active',
+            category: category,
+            condition: 'Hybrid', // Use condition field for strain type
+            tags: ['cannabis', 'thca', tier.toLowerCase().replace(/\s+/g, '-')],
+            images: [],
+            marketplace: [{
+              name: 'Shopify',
+              isListed: true
+            }],
+            aiEnhanced: false,
+            aiTags: []
+          };
+          
+          console.log(`Creating item: ${item.name} (${item.sku}), Qty: ${item.quantity}`);
+          
+          // Create item in storage
+          const createdItem = await storage.createItem(item);
+          
+          // Generate barcode
+          const barcode = generateBarcodeData(item.sku);
+          const qrCode = await generateQRCodeDataURL(createdItem);
+          
+          // Update with barcode and QR code
+          const updatedItem = await storage.updateItem(createdItem.id, { 
+            barcode, 
+            qrCode 
+          });
+          
+          if (updatedItem) {
+            importedItems.push(updatedItem);
+          }
+        } catch (e) {
+          console.error("Error processing Shopify row:", e);
+        }
+      }
+      
+      return res.status(201).json({
+        success: true,
+        importedCount: importedItems.length,
+        totalRows: dataRows.length,
+        message: "Successfully imported Shopify inventory",
+        type: 'cannabis_inventory',
+      });
+    } catch (error) {
+      console.error("Error in Shopify import:", error);
+      return res.status(500).json({ 
+        error: "Failed to process Shopify CSV", 
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
