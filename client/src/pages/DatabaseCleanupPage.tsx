@@ -25,7 +25,8 @@ export default function DatabaseCleanupPage() {
   // Cleanup Mutations
   const removeDuplicatesByStrainPrice = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/duplicates-by-strain-price", "POST", {});
+      const response = await apiRequest("POST", "/api/cleanup/duplicates-by-strain-price", {});
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
@@ -46,7 +47,8 @@ export default function DatabaseCleanupPage() {
 
   const removeDuplicatesBySku = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/duplicates", "POST", {});
+      const response = await apiRequest("POST", "/api/cleanup/duplicates", {});
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
@@ -67,9 +69,10 @@ export default function DatabaseCleanupPage() {
 
   const removeZeroItems = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/zero-items", "POST", {
+      const response = await apiRequest("POST", "/api/cleanup/zero-items", {
         confirmDelete: "YES_DELETE_ZERO_ITEMS"
       });
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
@@ -90,10 +93,11 @@ export default function DatabaseCleanupPage() {
 
   const removeBySource = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/import-batch", "POST", {
+      const response = await apiRequest("POST", "/api/cleanup/import-batch", {
         source: sourceValue,
         confirmDelete: `YES_DELETE_IMPORT_${sourceValue.toUpperCase()}`
       });
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
