@@ -128,8 +128,14 @@ async function processShopifyInventoryImport(rows: string[][]): Promise<Item[]> 
     const optionName = row[2]?.trim() || '';
     const optionValue = row[3]?.trim() || '';
     const sku = row[8]?.trim() || '';
-    const location = row[11]?.trim() || '';
-    const quantity = row[16]?.trim() || '0';
+    
+    // Find the Available column index
+    const headers = rows[0];
+    const availableIndex = headers.indexOf('Available');
+    const locationIndex = headers.indexOf('Location');
+    
+    const location = locationIndex >= 0 ? row[locationIndex]?.trim() || '' : '';
+    const quantity = availableIndex >= 0 ? row[availableIndex]?.trim() || '0' : '0';
     
     // Skip empty titles or handles
     if (!title || !handle) continue;
@@ -1451,10 +1457,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Field indices:", fieldIndices);
       
-      // Check if it's Shopify format (Handle, Title, Option1 Name, etc.)
-      const isShopifyFormat = headers.some(h => h === 'Handle') && headers.some(h => h === 'Title') && headers.some(h => h.includes('Option'));
+      // Check if it's Shopify format (Handle, Title, etc.)
+      // Shopify exports always have at least Handle and Title
+      const isShopifyFormat = headers.includes('Handle') && headers.includes('Title');
       
-      // For Shopify format, we'll handle it specially
+      // For Shopify format, we'll handle it specially and bypass standard validation
       if (isShopifyFormat) {
         console.log("Detected Shopify format, using specialized handler");
         try {
@@ -1469,7 +1476,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (error) {
           console.error("Error processing Shopify format:", error);
-          // Continue with standard processing as fallback
+          return res.status(500).json({ 
+            error: "Failed to process Shopify inventory format",
+            details: error instanceof Error ? error.message : String(error)
+          });
         }
       }
       
