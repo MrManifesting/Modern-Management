@@ -54,10 +54,8 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
     }
     
     const classes = {
-      ebay: "marketplace-badge-ebay",
-      etsy: "marketplace-badge-etsy",
-      amazon: "marketplace-badge-amazon",
       shopify: "marketplace-badge-shopify",
+      website: "bg-blue-500",
       default: "bg-gray-500"
     };
     
@@ -176,11 +174,6 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
             {(item.tags as string[]).length > 0 && `, ${(item.tags as string[])[0]}`}
           </p>
           <div className="mt-3 flex items-center">
-            {item.aiEnhanced && (
-              <div className="ai-badge mr-2">
-                <span>AI Enhanced</span>
-              </div>
-            )}
             <span className="text-xs text-gray-500">Added {formattedDate}</span>
           </div>
         </CardContent>
