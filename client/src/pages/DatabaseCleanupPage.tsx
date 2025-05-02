@@ -12,8 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Trash2, RefreshCw, Tag, Calendar, BarChart, Database } from "lucide-react";
-import MainLayout from "../components/layout/main-layout";
-
 export default function DatabaseCleanupPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -189,7 +187,7 @@ export default function DatabaseCleanupPage() {
   });
 
   return (
-    <MainLayout>
+    <>
       <Helmet>
         <title>Database Cleanup - Inventory Management</title>
       </Helmet>
@@ -621,6 +619,6 @@ export default function DatabaseCleanupPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
+    </>
   );
 }
