@@ -3,10 +3,9 @@ import { useLocation } from "wouter";
 import { Helmet } from "react-helmet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Package, Upload, ArrowDownToLine, Plus } from "lucide-react";
+import { Package, ArrowDownToLine, Plus } from "lucide-react";
 import ItemGrid from "@/components/inventory/item-grid";
 import AddItemModal from "@/components/modals/add-item-modal";
-import CSVImport from "@/components/inventory/csv-import";
 
 export default function Inventory() {
   const [location] = useLocation();
@@ -33,10 +32,6 @@ export default function Inventory() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setActiveTab("import")}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import Inventory
-          </Button>
           <Button onClick={() => setIsAddModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Item
@@ -45,18 +40,13 @@ export default function Inventory() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
           <TabsTrigger value="view">View Inventory</TabsTrigger>
-          <TabsTrigger value="import">Import CSV</TabsTrigger>
           <TabsTrigger value="export">Export</TabsTrigger>
         </TabsList>
         
         <TabsContent value="view" className="space-y-6">
           <ItemGrid showViewAll={false} />
-        </TabsContent>
-        
-        <TabsContent value="import" className="space-y-6">
-          <CSVImport />
         </TabsContent>
         
         <TabsContent value="export" className="space-y-6">
