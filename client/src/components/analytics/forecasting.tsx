@@ -28,6 +28,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 import { 
   AreaChart, 
   Area, 
@@ -176,12 +177,16 @@ export function SalesForecastingDashboard() {
     forecastPeriods: 3,
     categories: ['Top Shelf', 'Exotic', 'Premium'],
     weights: ['3.5g', '7g', '14g'],
-    groupBy: 'month' as 'day' | 'week' | 'month'
+    groupBy: 'month' as 'day' | 'week' | 'month',
+    compareYOY: false, // Year-over-year comparison option
+    priceAdjustment: 0, // For what-if scenarios: -10 to +10 percent
+    specificStrain: '' // For strain-specific forecasting
   });
   
   const [activeTab, setActiveTab] = useState('overview');
   const [activeMetric, setActiveMetric] = useState('sales');
   const [showConfidenceIntervals, setShowConfidenceIntervals] = useState(true);
+  const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false);
   const forecastAccuracy = calculateForecastAccuracy();
   
   // Query for fetching forecast data
@@ -280,8 +285,13 @@ export function SalesForecastingDashboard() {
       }).format(date);
     }
     
+    // Create YoY comparison data (simulate last year's data)
+    // In a real app, this would come from the backend
+    const lastYearFactor = 0.7 + Math.random() * 0.5; // Random factor between 0.7 and 1.2
+    
     return {
       name: displayDate,
+      rawDate: point.label,
       sales: Math.round(point.sales),
       revenue: Math.round(point.revenue),
       profit: Math.round(point.profit),
@@ -292,7 +302,18 @@ export function SalesForecastingDashboard() {
       historicalRevenue: point.isForecasted ? null : Math.round(point.revenue),
       forecastedRevenue: point.isForecasted ? Math.round(point.revenue) : null,
       historicalProfit: point.isForecasted ? null : Math.round(point.profit),
-      forecastedProfit: point.isForecasted ? Math.round(point.profit) : null
+      forecastedProfit: point.isForecasted ? Math.round(point.profit) : null,
+      // YoY comparison data for chart display
+      lastYearSales: forecastParams.compareYOY ? Math.round(point.sales * lastYearFactor) : null,
+      lastYearRevenue: forecastParams.compareYOY ? Math.round(point.revenue * lastYearFactor) : null,
+      lastYearProfit: forecastParams.compareYOY ? Math.round(point.profit * lastYearFactor) : null,
+      // Price adjusted data for "what-if" scenario
+      adjustedSales: forecastParams.priceAdjustment !== 0 ? 
+        Math.round(point.sales * (1 - (forecastParams.priceAdjustment * 0.01 * 0.8))) : null, // Price elasticity simulated
+      adjustedRevenue: forecastParams.priceAdjustment !== 0 ? 
+        Math.round(point.revenue * (1 + (forecastParams.priceAdjustment * 0.01))) : null,
+      adjustedProfit: forecastParams.priceAdjustment !== 0 ? 
+        Math.round(point.profit * (1 + (forecastParams.priceAdjustment * 0.01 * 1.2))) : null // Profit margin effect
     };
   });
   
@@ -559,6 +580,99 @@ export function SalesForecastingDashboard() {
                     <Label htmlFor="month">Month</Label>
                   </div>
                 </RadioGroup>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">What-If Scenarios</Label>
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-[250px] text-xs">
+                          Simulate how price changes and other factors might affect your forecast
+                        </p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
+                
+                <div className="space-y-4 rounded-md bg-accent/20 p-3 border border-accent/20">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label htmlFor="price-adjustment" className="text-xs">
+                        Price Adjustment
+                      </Label>
+                      <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">
+                        {forecastParams.priceAdjustment > 0 ? '+' : ''}{forecastParams.priceAdjustment}%
+                      </Badge>
+                    </div>
+                    <Slider
+                      id="price-adjustment"
+                      defaultValue={[0]}
+                      min={-20}
+                      max={20}
+                      step={1}
+                      value={[forecastParams.priceAdjustment]}
+                      onValueChange={(value: number[]) => {
+                        setForecastParams(prev => ({
+                          ...prev,
+                          priceAdjustment: value[0]
+                        }));
+                      }}
+                      className="py-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="compare-yoy"
+                        checked={forecastParams.compareYOY}
+                        onCheckedChange={(checked) => {
+                          setForecastParams(prev => ({
+                            ...prev,
+                            compareYOY: !!checked
+                          }));
+                        }}
+                      />
+                      <Label htmlFor="compare-yoy" className="text-xs cursor-pointer">
+                        Compare Year-Over-Year
+                      </Label>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="specific-strain" className="text-xs block mb-1">
+                      Strain-Specific Forecast
+                    </Label>
+                    <Select
+                      value={forecastParams.specificStrain}
+                      onValueChange={(value) => {
+                        setForecastParams(prev => ({
+                          ...prev,
+                          specificStrain: value
+                        }));
+                      }}
+                    >
+                      <SelectTrigger id="specific-strain" className="h-8 text-xs">
+                        <SelectValue placeholder="Select strain" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Strains</SelectItem>
+                        <SelectItem value="Blue Dream">Blue Dream</SelectItem>
+                        <SelectItem value="OG Kush">OG Kush</SelectItem>
+                        <SelectItem value="Purple Punch">Purple Punch</SelectItem>
+                        <SelectItem value="Wedding Cake">Wedding Cake</SelectItem>
+                        <SelectItem value="Gelato">Gelato</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
               
               <Button
