@@ -1297,14 +1297,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const headers = rows[0];
-      const isStampImport = req.body.isStampImport === 'true';
-      const isCannabisImport = req.body.isCannabisImport === 'true' || 
-                               (headers.some(h => h.includes('Strain')) && 
-                                headers.some(h => h.includes('Tier')));
+      // Default to cannabis import unless explicitly set otherwise
+      const isCannabisImport = req.body.isCannabisImport !== 'false';
+      const isStampImport = false; // Remove stamp import detection
       
       console.log("CSV Import - Headers:", headers);
-      console.log("Import Type:", isStampImport ? "Stamp Collection" : 
-                                isCannabisImport ? "Cannabis Inventory" : "Standard Inventory");
+      console.log("Import Type: Cannabis Inventory");
       
       // For cannabis import, use the specialized processing function
       if (isCannabisImport) {
@@ -1557,7 +1555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         importedCount: importedItems.length,
         totalRows: dataRows.length,
-        type: isStampImport ? 'stamp_collection' : 'standard_inventory',
+        type: 'cannabis_inventory',
         syncResults
       });
     } catch (error) {
