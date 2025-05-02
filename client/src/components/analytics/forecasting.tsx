@@ -219,7 +219,7 @@ export function SalesForecastingDashboard() {
     historicalPeriods: 3,
     forecastPeriods: 3,
     categories: ['Top Shelf', 'Exotic', 'Premium'],
-    weights: ['3.5g', '7g', '14g'],
+    weights: ['3.5g', '7g', '14g', '28g'],
     groupBy: 'month' as 'day' | 'week' | 'month',
     compareYOY: false, // Year-over-year comparison option
     priceAdjustment: 0, // For what-if scenarios: -10 to +10 percent
