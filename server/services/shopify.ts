@@ -1,4 +1,10 @@
 import { Item } from "@shared/schema";
+import { 
+  logShopifyOperation, 
+  isOperationAllowed, 
+  isConfirmationValid 
+} from './shopify-safety';
+import { generateSku } from './sku-generator';
 
 interface ShopifyProduct {
   id?: number;
@@ -125,20 +131,18 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
  * Transforms inventory item to Shopify product format
  */
 export function prepareItemForShopify(item: Item): ShopifyProduct {
-  // Generate SKU according to pattern based on the item's CBD/THC content
+  // Use the safer SKU generator that doesn't make API calls
   let sku = item.sku;
   
-  if (!sku && item.category?.toLowerCase().includes('thca flower')) {
-    // SKU Pattern: INITIALS-TIER-THCVALUE
-    // Example: IS-AAA-28
-    const initials = (item.name.split(' ').map(word => word[0]).join('')).slice(0, 2).toUpperCase();
-    const attributes = item.attributes || {};
-    const percentage = attributes["percentage"] || '0';
-    const tier = attributes["tier"] || 'A';
-    
-    // Extract THC percentage, remove any % signs and round to nearest whole number
-    const thcValue = percentage.toString().replace('%', '').trim();
-    sku = `${initials}-${tier}-${thcValue}`;
+  if (!sku) {
+    // Generate a SKU without making API calls
+    sku = generateSku(item);
+    // Log the SKU generation
+    logShopifyOperation(
+      'generateSku',
+      { item, generatedSku: sku },
+      true
+    );
   }
 
   // Build the main product 
@@ -183,15 +187,60 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
  * Creates or updates a product in Shopify
  */
 export async function pushItemToShopify(product: ShopifyProduct): Promise<{ success: boolean, productId?: number, message: string }> {
+  // Check if push is enabled
   if (!pushToShopifyEnabled) {
+    logShopifyOperation(
+      'pushItemRejected',
+      { product, reason: 'push disabled' },
+      false,
+      'Shopify push is disabled'
+    );
+    
     return { 
       success: false,
       message: 'Shopify push is currently disabled. Enable it in settings to push products.'
     };
   }
   
+  // Check if the operation is allowed by safety settings
+  if (!isOperationAllowed(product.id ? 'update' : 'create')) {
+    logShopifyOperation(
+      'pushItemRejected',
+      { product, reason: 'operation not allowed by safety settings' },
+      false,
+      'Operation not allowed by current safety settings'
+    );
+    
+    return {
+      success: false,
+      message: 'Operation not allowed by current safety settings'
+    };
+  }
+  
+  // Check if confirmation is required and valid
+  if (!isConfirmationValid()) {
+    logShopifyOperation(
+      'pushItemRejected',
+      { product, reason: 'confirmation required or expired' },
+      false,
+      'Operation confirmation required or has expired'
+    );
+    
+    return {
+      success: false,
+      message: 'Operation confirmation required or has expired. Please confirm the operation before proceeding.'
+    };
+  }
+  
   try {
     if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
+      logShopifyOperation(
+        'pushItemRejected',
+        { product, reason: 'credentials missing' },
+        false,
+        'Shopify API credentials are not configured'
+      );
+      
       return { 
         success: false,
         message: 'Shopify API credentials are not configured.'
@@ -220,12 +269,35 @@ export async function pushItemToShopify(product: ShopifyProduct): Promise<{ succ
     }
     
     const data = await response.json();
+    
+    // Log successful operation
+    logShopifyOperation(
+      product.id ? 'updateItem' : 'createItem',
+      { 
+        product, 
+        productId: data.product.id,
+        method
+      },
+      true
+    );
+    
     return {
       success: true,
       productId: data.product.id,
       message: `Product successfully ${product.id ? 'updated' : 'created'} in Shopify.`
     };
   } catch (error) {
+    // Log failed operation
+    logShopifyOperation(
+      product.id ? 'updateItemFailed' : 'createItemFailed',
+      { 
+        product, 
+        error: error instanceof Error ? error.message : String(error)
+      },
+      false,
+      error instanceof Error ? error.message : 'Unknown error pushing to Shopify'
+    );
+    
     console.error('Failed to push product to Shopify:', error);
     return { 
       success: false,
