@@ -12,6 +12,7 @@ import {
 } from "./services/shopify-reports";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
+import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
@@ -377,6 +378,8 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication system
+  setupAuth(app);
   // Item Routes
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {
