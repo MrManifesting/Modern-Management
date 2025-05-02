@@ -26,11 +26,11 @@ export default function QuickActions() {
       onClick: () => navigate("/marketplace?action=bulk"),
     },
     {
-      title: "Improve Product Photos",
-      icon: <Palette className="h-6 w-6" />,
-      bgColor: "bg-green-100",
-      textColor: "text-green-500",
-      onClick: () => navigate("/ai-tools?action=photos"),
+      title: "Generate Price Sheet",
+      icon: <Zap className="h-6 w-6" />,
+      bgColor: "bg-amber-100",
+      textColor: "text-amber-500",
+      onClick: () => navigate("/export?type=price-sheet"),
     },
   ];
 
