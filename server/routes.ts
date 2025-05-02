@@ -3046,6 +3046,9 @@ ${topCustomersCsv}`;
 
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
+  
+  // Register database cleanup and maintenance routes
+  registerCleanupRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;

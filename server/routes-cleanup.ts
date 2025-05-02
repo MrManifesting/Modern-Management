@@ -109,8 +109,10 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       const items = await storage.getItems();
       const itemCount = items.length;
       
-      // Use the direct DB connection to clear the items table
-      await db.delete(items);
+      // Delete items one by one using storage interface
+      for (const item of items) {
+        await storage.deleteItem(item.id);
+      }
       
       return res.status(200).json({
         success: true,
