@@ -26,13 +26,6 @@ export default function QuickActions() {
       onClick: () => navigate("/marketplace?action=bulk"),
     },
     {
-      title: "Generate SEO Content",
-      icon: <Zap className="h-6 w-6" />,
-      bgColor: "bg-purple-100", 
-      textColor: "text-purple-500",
-      onClick: () => navigate("/ai-tools?action=seo"),
-    },
-    {
       title: "Improve Product Photos",
       icon: <Palette className="h-6 w-6" />,
       bgColor: "bg-green-100",
