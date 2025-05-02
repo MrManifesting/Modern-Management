@@ -3,8 +3,6 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Package,
-  Zap,
-  ShoppingBag,
   BarChart3,
   Settings,
   ScanLine,
@@ -95,16 +93,6 @@ export default function Sidebar({ expanded }: SidebarProps) {
           className: "inventory-link",
         }
       ]
-    },
-    {
-      title: "AI Tools",
-      icon: <Zap className="h-5 w-5" />,
-      path: "/ai-tools",
-    },
-    {
-      title: "Marketplace",
-      icon: <ShoppingBag className="h-5 w-5" />,
-      path: "/marketplace",
     },
     {
       title: "Shopify Sync",
