@@ -54,6 +54,7 @@ export default function Dashboard() {
           iconColor="text-primary-500"
           changeValue="8.1%"
           isLoading={isLoading}
+          linkTo="/inventory"
         />
         
         <StatsCard
@@ -64,6 +65,7 @@ export default function Dashboard() {
           iconColor="text-blue-500"
           changeValue="12.5%"
           isLoading={isLoading}
+          linkTo="/marketplace"
         />
         
         <StatsCard
@@ -74,6 +76,7 @@ export default function Dashboard() {
           iconColor="text-purple-500"
           changeValue="15.2%"
           isLoading={isLoading}
+          linkTo="/inventory?filter=inStock"
         />
         
         <StatsCard
@@ -84,6 +87,7 @@ export default function Dashboard() {
           iconColor="text-green-500"
           changeValue="5.7%"
           isLoading={isLoading}
+          linkTo="/reports"
         />
       </div>
 
