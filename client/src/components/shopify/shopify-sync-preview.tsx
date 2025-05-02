@@ -489,19 +489,22 @@ const ShopifySyncPreview: React.FC = () => {
   const toggleAllItems = (selected: boolean) => {
     setSyncItems(prev => 
       prev.map(item => {
-        const shouldSelect = selected && (
-          // Only select if appropriate based on their sync status
-          item.syncStatus === 'matched' || 
-          (item.syncStatus === 'new_to_shopify' && item.generatedSku !== undefined) ||
-          item.syncStatus === 'unmatched'
-        );
-        
+        // If selecting all, select everything regardless of status
+        // When deselecting, deselect everything
         return {
           ...item,
-          selected: shouldSelect
+          selected: selected
         };
       })
     );
+    
+    // Show feedback to user
+    if (selected) {
+      toast({
+        title: "Selected All Items",
+        description: "All items have been selected for sync",
+      });
+    }
   };
   
   // Sync mutation
