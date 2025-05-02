@@ -12,6 +12,7 @@ import {
 } from "./services/shopify-reports";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
+import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -3056,6 +3057,9 @@ ${topCustomersCsv}`;
 
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
+  
+  // Register Shopify safety routes
+  registerShopifySafetyRoutes(app, storage);
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
