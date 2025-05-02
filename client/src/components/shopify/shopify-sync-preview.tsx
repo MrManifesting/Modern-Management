@@ -140,7 +140,7 @@ const ShopifySyncPreview: React.FC = () => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25); // Default to 25 items per page
   const [filter, setFilter] = useState('all');
   const [selectedCount, setSelectedCount] = useState(0);
   const [showSkuGenerator, setShowSkuGenerator] = useState(false);
@@ -653,11 +653,14 @@ const ShopifySyncPreview: React.FC = () => {
   const generateMissingSkus = () => {
     // Keep track of how many SKUs were generated
     let generatedCount = 0;
+    let noInventoryItems = true;
     
     setSyncItems(prev => {
       const newItems = prev.map(item => {
         // Generate SKUs for any inventory item that has no existing SKU or is new to Shopify
         if (item.inventoryItem) {
+          noInventoryItems = false;
+          
           // Extract a basic strain code
           const strainName = item.inventoryItem.name || '';
           const strainCode = extractStrainCode(strainName);
@@ -701,18 +704,42 @@ const ShopifySyncPreview: React.FC = () => {
             createNew: true
           };
         }
+        
+        // For Shopify products without inventory items, we should set them as selected
+        if (item.shopifyProduct) {
+          return {
+            ...item,
+            selected: true
+          };
+        }
+        
         return item;
       });
       
       return newItems;
     });
     
-    // Show feedback with the count of generated SKUs
+    // Show appropriate feedback
     setTimeout(() => {
-      toast({
-        title: 'SKUs Generated',
-        description: `Generated ${generatedCount} new SKUs for products`,
-      });
+      if (noInventoryItems) {
+        toast({
+          title: 'No Inventory Items',
+          description: "You need to add inventory items first before generating SKUs. Please import items from a CSV or add them manually.",
+          variant: "destructive"
+        });
+      } else if (generatedCount === 0) {
+        toast({
+          title: 'No Missing SKUs',
+          description: "All inventory items already have SKUs assigned or there are no new items to generate SKUs for.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: 'SKUs Generated',
+          description: `Generated ${generatedCount} new SKUs for products`,
+          variant: "default"
+        });
+      }
     }, 100);
   };
   
@@ -1101,12 +1128,37 @@ const ShopifySyncPreview: React.FC = () => {
                 </Table>
               </div>
               
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-between items-center mt-4">
+              {/* Pagination and Items Per Page */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div className="text-sm text-muted-foreground">
                     Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredItems.length)} of {filteredItems.length} items
                   </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show:</span>
+                    <Select
+                      value={itemsPerPage.toString()}
+                      onValueChange={(value) => {
+                        setItemsPerPage(parseInt(value));
+                        setCurrentPage(1); // Reset to first page when changing items per page
+                      }}
+                    >
+                      <SelectTrigger className="w-[80px] h-8">
+                        <SelectValue placeholder="25" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="200">200</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {totalPages > 1 && (
                   <div className="flex gap-1">
                     <Button
                       variant="outline"
@@ -1150,8 +1202,8 @@ const ShopifySyncPreview: React.FC = () => {
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </CardContent>
