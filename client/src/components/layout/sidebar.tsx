@@ -23,6 +23,18 @@ type SidebarProps = {
   expanded: boolean;
 };
 
+type NavigationItem = {
+  title: string;
+  icon: React.ReactNode;
+  path: string;
+  highlight?: boolean;
+  subItems?: {
+    title: string;
+    path: string;
+    className: string;
+  }[];
+};
+
 export default function Sidebar({ expanded }: SidebarProps) {
   const [location] = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
@@ -49,7 +61,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
     };
   }, [expanded]);
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     {
       title: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
@@ -97,12 +109,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
       icon: <RefreshCw className="h-5 w-5" />,
       path: "/shopify-sync",
     },
-    {
-      title: "Shopify Import",
-      icon: <ShoppingBag className="h-5 w-5 text-gold" />, // Gold tint to stand out
-      path: "/shopify-import",
-      highlight: true, // Special styling to highlight this new feature
-    },
+    // Import option has been moved to a dedicated page
+    // and is now accessed via the Shopify Sync page
     {
       title: "Shopify Reports",
       icon: <BarChart3 className="h-5 w-5 text-gold-400" />,

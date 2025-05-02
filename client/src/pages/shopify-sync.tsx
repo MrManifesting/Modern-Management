@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
+import { Link } from 'wouter';
 import ShopifySyncPreview from '@/components/shopify/shopify-sync-preview';
 import DemoDataCreator from '@/components/demo-data-creator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle, ExternalLink, Upload, Settings } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -45,17 +46,37 @@ const ShopifySyncPage: React.FC = () => {
             </p>
           </div>
           
-          <div className="flex items-center">
-            <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
-              shopifyStatus === 'connected' ? 'bg-green-500' : 
-              shopifyStatus === 'loading' ? 'bg-yellow-500' : 
-              'bg-red-500'
-            }`}></div>
-            <span className="text-sm font-medium">
-              {shopifyStatus === 'connected' ? 'Shopify Connected' : 
-               shopifyStatus === 'loading' ? 'Checking Connection...' : 
-               'Shopify Disconnected'}
-            </span>
+          <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+            <div className="flex items-center mr-4">
+              <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
+                shopifyStatus === 'connected' ? 'bg-green-500' : 
+                shopifyStatus === 'loading' ? 'bg-yellow-500' : 
+                'bg-red-500'
+              }`}></div>
+              <span className="text-sm font-medium">
+                {shopifyStatus === 'connected' ? 'Shopify Connected' : 
+                 shopifyStatus === 'loading' ? 'Checking Connection...' : 
+                 'Shopify Disconnected'}
+              </span>
+            </div>
+            
+            <div className="flex gap-2">
+              <Link href="/shopify-import">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-1.5 bg-gradient-to-r from-gold/10 to-transparent border-gold/50 hover:bg-gold/20 text-gold"
+                >
+                  <Upload className="h-4 w-4" /> Import from Shopify
+                </Button>
+              </Link>
+              
+              <Link href="/shopify-settings">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Settings className="h-4 w-4" /> Settings
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
         
