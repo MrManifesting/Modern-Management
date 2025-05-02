@@ -87,7 +87,7 @@ function groupTimeSeriesData(data: TimeSeriesData[], groupBy: 'day' | 'week' | '
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-import { analyzeImage } from "./services/vision";
+// analyzeImage import removed per requirements
 // generateSEOContent import removed per requirements
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { generateForecast, calculateKPIs } from "./services/forecasting";
@@ -2148,8 +2148,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Count listed items
       const listedItems = items.filter(item => item.status === "listed").length;
       
-      // Count AI-enhanced items
-      const aiEnhancedItems = items.filter(item => item.aiEnhanced).length;
+      // Count in-stock items
+      const inStockItems = items.filter(item => item.quantity > 0).length;
       
       // Count connected marketplaces
       const connectedMarketplaces = marketplaces.filter(m => m.isConnected).length;
