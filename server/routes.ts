@@ -11,6 +11,7 @@ import {
   fetchShopifyCustomerReport 
 } from "./services/shopify-reports";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
+import { registerCleanupRoutes } from "./routes-cleanup";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
