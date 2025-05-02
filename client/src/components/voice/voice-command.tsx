@@ -172,6 +172,19 @@ export function VoiceCommand() {
     return '';
   };
 
+  // Sound effect for command acknowledgment
+  const playAcknowledgmentSound = () => {
+    const audio = new Audio('/sounds/command-acknowledged.mp3');
+    try {
+      audio.volume = 0.5;
+      audio.play().catch(err => {
+        console.error('Error playing sound:', err);
+      });
+    } catch (err) {
+      console.error('Error with audio playback:', err);
+    }
+  };
+
   // Define our commands
   const commands: Command[] = [
     {
@@ -185,11 +198,21 @@ export function VoiceCommand() {
         ]);
       },
       action: (transcript, args) => {
+        // Play sound for feedback
+        playAcknowledgmentSound();
+        
+        // Display toast message
         toast({
           title: "Adding new item",
           description: `Creating item: ${args}`,
         });
-        navigate('/items/new?name=' + encodeURIComponent(args));
+
+        // Trigger opening the add item modal with name pre-filled
+        // We need to use a custom event to trigger the modal from anywhere in the app
+        const addItemEvent = new CustomEvent('openAddItemModal', { 
+          detail: { itemName: args } 
+        });
+        window.dispatchEvent(addItemEvent);
       }
     },
     {
