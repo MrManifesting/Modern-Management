@@ -261,24 +261,50 @@ export function SalesForecastingDashboard() {
   // Custom tooltip for the area chart
   const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
-      const isForecast = payload[0].payload.isForecast;
+      const isForecast = payload[0]?.payload?.isForecast;
+      const dataType = payload[0]?.dataKey?.toString().includes('forecast') ? 'forecast' : 'historical';
+      
+      // Find the right values based on payload keys
+      let salesValue = null;
+      let revenueValue = null;
+      let profitValue = null;
+      
+      payload.forEach(item => {
+        if (item.dataKey?.toString().includes('Sales')) {
+          salesValue = item.value;
+        } else if (item.dataKey?.toString().includes('Revenue')) {
+          revenueValue = item.value;
+        } else if (item.dataKey?.toString().includes('Profit')) {
+          profitValue = item.value;
+        }
+      });
+      
       return (
         <div className="bg-background border rounded p-3 shadow-md">
           <p className="font-medium">{label}</p>
-          <p className="text-sm flex justify-between">
-            Sales: <span className="ml-2 font-medium">{payload[0].value}</span>
-          </p>
-          <p className="text-sm flex justify-between">
-            Revenue: <span className="ml-2 font-medium">{formatCurrency(payload[1].value as number)}</span>
-          </p>
-          <p className="text-sm flex justify-between">
-            Profit: <span className="ml-2 font-medium">{formatCurrency(payload[2].value as number)}</span>
-          </p>
-          {isForecast && (
-            <Badge variant="outline" className="mt-1 bg-amber-100 text-amber-800">
-              Forecasted
-            </Badge>
+          {salesValue !== null && (
+            <p className="text-sm flex justify-between">
+              Sales: <span className="ml-2 font-medium">{salesValue}</span>
+            </p>
           )}
+          {revenueValue !== null && (
+            <p className="text-sm flex justify-between">
+              Revenue: <span className="ml-2 font-medium">{formatCurrency(revenueValue as number)}</span>
+            </p>
+          )}
+          {profitValue !== null && (
+            <p className="text-sm flex justify-between">
+              Profit: <span className="ml-2 font-medium">{formatCurrency(profitValue as number)}</span>
+            </p>
+          )}
+          <Badge 
+            variant="outline" 
+            className={`mt-1 ${dataType === 'forecast' ? 
+              'bg-green-100 text-green-800 border-green-500' : 
+              'bg-blue-100 text-blue-800 border-blue-500'}`}
+          >
+            {dataType === 'forecast' ? 'Forecasted' : 'Historical'}
+          </Badge>
         </div>
       );
     }
