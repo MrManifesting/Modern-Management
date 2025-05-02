@@ -117,65 +117,18 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
     setGroupedImages(newGroups);
   };
   
-  // Analyze all groups
-  const analyzeGroups = async () => {
-    setIsAnalyzing(true);
-    const results: Record<string, AIAnalysis> = {};
-    
-    try {
-      // Analyze each group using its first image
-      for (const groupId of groupIds) {
-        const firstImage = groupedImages[groupId][0];
-        
-        if (firstImage) {
-          const formData = new FormData();
-          formData.append("image", firstImage);
-          
-          try {
-            const response = await apiRequest("POST", "/api/analyze-image", formData);
-            const analysis = await response.json();
-            results[groupId] = analysis;
-          } catch (error) {
-            console.error(`Error analyzing group ${groupId}:`, error);
-            results[groupId] = {
-              name: `Item ${groupId}`,
-              description: "Failed to analyze this item. Please edit it manually.",
-              category: "Other",
-            };
-          }
-        }
-      }
-      
-      setAnalysisResults(results);
-      
-      toast({
-        title: "Analysis complete",
-        description: `Successfully analyzed ${Object.keys(results).length} items.`,
-      });
-    } catch (error) {
-      console.error("Error during analysis:", error);
-      toast({
-        title: "Analysis failed",
-        description: "There was an error analyzing your items. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-  
   // Complete the process and send the result back
   const completeProcess = () => {
     const result = groupIds.map(groupId => ({
-      images: groupedImages[groupId],
-      analysis: analysisResults[groupId] || {
-        name: `Item ${groupId}`,
-        description: "",
-        category: "Other",
-      }
+      images: groupedImages[groupId]
     }));
     
     onComplete(result);
+    
+    toast({
+      title: "Images grouped",
+      description: `${groupIds.length} group${groupIds.length !== 1 ? 's' : ''} of images ready to use.`,
+    });
   };
   
   return (
@@ -252,23 +205,12 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
                   <div className="flex flex-col space-y-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium truncate">
-                        {analysisResults[groupId]?.name || `Item ${groupId.split('-')[1]}`}
+                        Item Group {groupId.split('-')[1]}
                       </span>
                       <span className="text-xs text-gray-500">
                         {groupedImages[groupId]?.length || 0} photos
                       </span>
                     </div>
-                    
-                    {analysisResults[groupId]?.suggestedPrice && (
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-700">
-                          {analysisResults[groupId].category || "Uncategorized"}
-                        </span>
-                        <span className="text-green-600 font-medium">
-                          ${analysisResults[groupId].suggestedPrice}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -278,29 +220,8 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
               {activeGroup && (
                 <div>
                   <h3 className="text-sm font-medium mb-2">
-                    {analysisResults[activeGroup]?.name || `Item ${activeGroup.split('-')[1]}`}
+                    Item Group {activeGroup.split('-')[1]}
                   </h3>
-                  
-                  {analysisResults[activeGroup] && (
-                    <div className="mb-3 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-gray-700">
-                        <span>Category: <span className="font-medium">{analysisResults[activeGroup].category || "Unknown"}</span></span>
-                        <span>Condition: <span className="font-medium">{analysisResults[activeGroup].condition || "Unspecified"}</span></span>
-                      </div>
-                      
-                      {analysisResults[activeGroup].suggestedPrice && (
-                        <div className="flex items-center space-x-2 bg-green-50 p-2 rounded text-xs border border-green-100">
-                          <div className="font-medium text-green-700">Suggested Price: ${analysisResults[activeGroup].suggestedPrice}</div>
-                          
-                          {analysisResults[activeGroup].description?.includes("Price Range:") && (
-                            <div className="text-gray-600">
-                              {(analysisResults[activeGroup].description.match(/Price Range:\s*([$\d\-\.]+)/i) || [])[1]}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                   
                   <div className="grid grid-cols-3 gap-2">
                     {getGroupPreviews(activeGroup).map((url, index) => (
@@ -380,14 +301,8 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
               Cancel
             </Button>
             <Button
-              onClick={analyzeGroups}
-              disabled={groupIds.length === 0 || isAnalyzing}
-            >
-              {isAnalyzing ? 'Analyzing...' : 'Analyze All Items'}
-            </Button>
-            <Button
               onClick={completeProcess}
-              disabled={groupIds.length === 0 || Object.keys(analysisResults).length === 0}
+              disabled={groupIds.length === 0}
             >
               <Check className="h-4 w-4 mr-1" /> Complete
             </Button>

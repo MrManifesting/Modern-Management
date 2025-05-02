@@ -39,10 +39,8 @@ export const items = pgTable("items", {
   tags: json("tags").notNull().default([]), // Array of tags
   marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers (shopify, website, etc)
   syncedToMarketplaces: json("synced_to_marketplaces").notNull().default([]), // Which marketplaces this is synced to
-  seoTitle: text("seo_title"),
   attributes: json("attributes").notNull().default({}), // Product-specific attributes (e.g., cannabis strain data)
   externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
-  seoDescription: text("seo_description"),
   shopifyId: text("shopify_id"), // Shopify product ID for integration
   
   // Fields for bulk product tracking
@@ -102,19 +100,7 @@ export const insertMarketplaceSchema = createInsertSchema(marketplaces).omit({
 export type Marketplace = typeof marketplaces.$inferSelect;
 export type InsertMarketplace = z.infer<typeof insertMarketplaceSchema>;
 
-// AI Analysis Response Schema
-export const aiAnalysisSchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  condition: z.string().optional(),
-  suggestedPrice: z.number().optional(),
-  tags: z.array(z.string()).optional(),
-  seoTitle: z.string().optional(),
-  seoDescription: z.string().optional(),
-});
 
-export type AIAnalysis = z.infer<typeof aiAnalysisSchema>;
 
 // CSV Export Schema
 export const csvExportSchema = z.object({
