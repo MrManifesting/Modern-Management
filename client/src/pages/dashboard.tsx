@@ -3,11 +3,15 @@ import { useState, useEffect } from "react";
 import StatsCard from "@/components/dashboard/stats-card";
 import QuickActions from "@/components/dashboard/quick-actions";
 import ItemGrid from "@/components/inventory/item-grid";
-import { Package, FileText, DollarSign, QrCode } from "lucide-react";
+import { DepartmentPriorities } from "@/components/dashboard/department-priorities";
+import { CompanyCalendar } from "@/components/dashboard/company-calendar";
+import { Package, FileText, DollarSign, QrCode, ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import QRCode from "qrcode";
 
 export default function Dashboard() {
@@ -18,6 +22,8 @@ export default function Dashboard() {
   
   const [qrUrl, setQrUrl] = useState("");
   const [showEmployeeQrDialog, setShowEmployeeQrDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [isPrioritiesExpanded, setIsPrioritiesExpanded] = useState(true);
 
   // Generate QR code URL for employee app access
   useEffect(() => {
@@ -44,6 +50,47 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Department filter tabs */}
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mt-2">
+        <TabsList className="mb-4">
+          <TabsTrigger value="all">All Departments</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      
+      {/* Priority Section - Collapsible */}
+      <Collapsible
+        open={isPrioritiesExpanded}
+        onOpenChange={setIsPrioritiesExpanded}
+        className="bg-gradient-to-r from-amber-50/20 to-amber-100/10 dark:from-amber-950/20 dark:to-amber-900/5 rounded-lg p-4 border border-amber-200/30 dark:border-amber-800/30 mb-6"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center">
+            <span className="relative flex h-3 w-3 mr-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            Priority Tasks
+          </h2>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 p-0">
+              {isPrioritiesExpanded ? 
+                <ChevronUp className="h-4 w-4" /> : 
+                <ChevronDown className="h-4 w-4" />
+              }
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        
+        <CollapsibleContent className="mt-4">
+          {(activeTab === "all" || activeTab === "marketing" || activeTab === "fulfillment" || activeTab === "inventory") && (
+            <DepartmentPriorities />
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Stats Overview */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
@@ -94,10 +141,19 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <QuickActions />
 
+      {/* Company Calendar */}
+      <CompanyCalendar />
+      
       {/* Recent Inventory */}
-      <ItemGrid limit={4} />
-
-      {/* Additional dashboard content can be added here */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Recent Inventory</h2>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = "/inventory"}>
+            View All
+          </Button>
+        </div>
+        <ItemGrid limit={4} />
+      </div>
       
       {/* Employee App QR Code Card */}
       <Card className="border-2 border-amber-400 bg-gradient-to-r from-zinc-900 to-zinc-800">
