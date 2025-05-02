@@ -227,8 +227,8 @@ export function CompanyCalendar() {
                         />
                         <Label htmlFor="event-type" className="mt-4">Event Type</Label>
                         <Select
-                          value={newEvent.type}
-                          onValueChange={(value) => setNewEvent({ ...newEvent, type: value })}
+                          value={newEvent.type || 'meeting'}
+                          onValueChange={(value: 'intake' | 'marketing' | 'meeting' | 'other') => setNewEvent({ ...newEvent, type: value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select event type" />
