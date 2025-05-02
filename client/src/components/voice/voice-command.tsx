@@ -59,29 +59,59 @@ export function VoiceCommand() {
   useEffect(() => {
     if (isBrowserSupported()) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
       
+      // Create a new instance if it doesn't exist
+      if (!recognitionRef.current) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false; // Changed to false for more reliable command detection
+        recognitionRef.current.interimResults = false; // Changed to false to get only final results
+        recognitionRef.current.lang = 'en-US';
+        
+        console.log("Speech recognition initialized");
+      }
+      
+      // Set up event handlers
       recognitionRef.current.onresult = (event: any) => {
+        console.log("Speech recognition result received", event);
         const last = event.results.length - 1;
         const result = event.results[last][0].transcript;
+        console.log("Transcript:", result);
         setTranscript(result);
+        
+        // Process the transcript right away if we have a final result
+        if (event.results[last].isFinal) {
+          setTimeout(() => {
+            processTranscript();
+          }, 100);
+        }
       };
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('Speech recognition error', event.error);
         setError(event.error);
         setIsListening(false);
+        
+        toast({
+          title: "Speech Recognition Error",
+          description: `Error: ${event.error}. Please try again.`,
+          variant: "destructive"
+        });
       };
 
       recognitionRef.current.onend = () => {
+        console.log("Speech recognition ended, isListening:", isListening);
         if (isListening) {
-          // Auto restart if it was supposed to be listening
-          recognitionRef.current.start();
-        } else {
-          processTranscript();
+          // Only try to restart if we're supposed to be listening
+          try {
+            setTimeout(() => {
+              if (isListening && recognitionRef.current) {
+                recognitionRef.current.start();
+                console.log("Restarted speech recognition");
+              }
+            }, 200);
+          } catch (err) {
+            console.error("Failed to restart speech recognition", err);
+          }
         }
       };
     }
@@ -336,21 +366,21 @@ export function VoiceCommand() {
       if (matchedKeyword) {
         const args = command.extractArgs(transcript);
         
-        if (args) {
-          // Execute the command after a short delay to allow the UI to update
-          setTimeout(() => {
-            setLastExecutedCommand(transcript);
-            setActiveTrigger(matchedKeyword);
-            setTranscript('');
-            command.action(transcript, args);
-            setProcessing(false);
-            setIsListening(false);
-            if (recognitionRef.current) {
-              recognitionRef.current.stop();
-            }
-          }, 500);
-          return;
-        }
+        // Execute the command even if args is empty - sometimes we just need the trigger
+        // Execute the command after a short delay to allow the UI to update
+        setTimeout(() => {
+          console.log(`Executing voice command: ${matchedKeyword} with args: ${args || 'none'}`);
+          setLastExecutedCommand(transcript);
+          setActiveTrigger(matchedKeyword);
+          setTranscript('');
+          command.action(transcript, args || '');
+          setProcessing(false);
+          setIsListening(false);
+          if (recognitionRef.current) {
+            recognitionRef.current.stop();
+          }
+        }, 500);
+        return;
       }
     }
     
@@ -372,27 +402,88 @@ export function VoiceCommand() {
   // Start/stop listening
   const toggleListening = () => {
     if (isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
-    } else {
-      setTranscript('');
-      setLastExecutedCommand(null);
-      setActiveTrigger(null);
+      console.log("Stopping speech recognition");
+      setIsListening(false); // Set state first to prevent auto-restart
       
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.start();
-          setIsListening(true);
+          recognitionRef.current.stop();
+          console.log("Speech recognition stopped");
         } catch (err) {
-          console.error('Failed to start speech recognition', err);
-          toast({
-            title: "Error",
-            description: "Could not start speech recognition",
-            variant: "destructive"
-          });
+          console.error('Failed to stop speech recognition', err);
         }
+      }
+    } else {
+      console.log("Starting speech recognition");
+      // Reset state
+      setTranscript('');
+      setLastExecutedCommand(null);
+      setActiveTrigger(null);
+      setError(null);
+      
+      // Recreate recognition instance if needed
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!recognitionRef.current) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+        
+        // Reattach event handlers
+        recognitionRef.current.onresult = (event: any) => {
+          console.log("Speech recognition result received", event);
+          const last = event.results.length - 1;
+          const result = event.results[last][0].transcript;
+          console.log("Transcript:", result);
+          setTranscript(result);
+          
+          if (event.results[last].isFinal) {
+            setTimeout(() => {
+              processTranscript();
+            }, 100);
+          }
+        };
+        
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error', event.error);
+          setError(event.error);
+          setIsListening(false);
+        };
+        
+        recognitionRef.current.onend = () => {
+          console.log("Speech recognition ended");
+          // If we're still supposed to be listening, restart
+          if (isListening) {
+            try {
+              setTimeout(() => {
+                if (isListening && recognitionRef.current) {
+                  recognitionRef.current.start();
+                  console.log("Speech recognition restarted");
+                }
+              }, 500);
+            } catch (err) {
+              console.error("Failed to restart speech recognition", err);
+            }
+          }
+        };
+      }
+      
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        console.log("Speech recognition started successfully");
+        
+        toast({
+          title: "Voice Commands Activated",
+          description: "Say a command like 'add new item' or 'print barcode'",
+        });
+      } catch (err) {
+        console.error('Failed to start speech recognition', err);
+        toast({
+          title: "Error",
+          description: "Could not start speech recognition. Please ensure microphone access is allowed.",
+          variant: "destructive"
+        });
       }
     }
   };
