@@ -24,7 +24,9 @@ import {
   ItemType,
   BreakdownStatus,
   insertBreakdownSchema,
-  TimeSeriesData
+  TimeSeriesData,
+  Item,
+  InsertItem
 } from "@shared/schema";
 
 /**
@@ -98,6 +100,186 @@ import {
   isShopifyConfigured,
   syncProductsFromShopify
 } from "./services/shopify";
+
+/**
+ * Process Shopify inventory CSV format
+ * 
+ * @param rows The CSV rows from the Shopify export
+ * @returns Array of imported items
+ */
+async function processShopifyInventoryImport(rows: string[][]): Promise<Item[]> {
+  // Skip header row
+  const dataRows = rows.slice(1);
+  const importedItems: Item[] = [];
+  const itemsMap = new Map<string, InsertItem>();
+  
+  console.log(`Processing ${dataRows.length} Shopify inventory rows`);
+  
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    if (row.length < 5) continue; // Skip rows with insufficient data
+    
+    // Skip "not stocked" items from Printify
+    if (row.includes("Printify") && row.includes("not stocked")) continue;
+    
+    // Extract data from Shopify format
+    const handle = row[0]?.trim() || '';
+    const title = row[1]?.trim() || '';
+    const optionName = row[2]?.trim() || '';
+    const optionValue = row[3]?.trim() || '';
+    const sku = row[8]?.trim() || '';
+    const location = row[11]?.trim() || '';
+    const quantity = row[16]?.trim() || '0';
+    
+    // Skip empty titles or handles
+    if (!title || !handle) continue;
+    
+    // Parse the product data
+    try {
+      // If this is a variant of a product already in our map, update that product
+      if (itemsMap.has(handle)) {
+        continue; // Skip variants for now, or merge them if needed
+      }
+      
+      // Weight information from option value
+      let weight: number | null = null;
+      let weightUnit = '';
+      
+      if (optionValue) {
+        // Try to extract weight information
+        const weightMatch = optionValue.match(/(\d+(?:\.\d+)?)\s*(pound|pounds|lb|lbs|gram|grams|g|ounce|ounces|oz)/i);
+        if (weightMatch) {
+          const weightAmount = parseFloat(weightMatch[1]);
+          weightUnit = weightMatch[2].toLowerCase();
+          
+          // Convert to a standard unit (grams)
+          if (weightUnit.includes('pound') || weightUnit.includes('lb')) {
+            weight = weightAmount * 453.592; // Convert pounds to grams
+          } else if (weightUnit.includes('ounce') || weightUnit.includes('oz')) {
+            weight = weightAmount * 28.3495; // Convert ounces to grams
+          } else {
+            weight = weightAmount; // Already in grams
+          }
+        }
+      }
+      
+      // Extract product information
+      const titleParts = title.split(' - ');
+      const strain = titleParts[0] || title;
+      
+      // Try to extract category/tier from the title
+      let category = 'cannabis';
+      let strainType = 'HYBRID';
+      
+      if (titleParts.length > 1) {
+        // Process THCA identification
+        if (titleParts.some(part => part.toUpperCase().includes('THCA'))) {
+          category = 'thca';
+        }
+        
+        // Process tier information
+        const tierParts = titleParts.filter(part => 
+          part.includes('TOP SHELF') || 
+          part.includes('CLASSIC RESERVE') || 
+          part.includes('AAA INDOOR') || 
+          part.includes('AA INDOOR') || 
+          part.includes('EXOTIC')
+        );
+        
+        if (tierParts.length > 0) {
+          category = tierParts[0].trim();
+        }
+        
+        // Look for strain type indicators
+        const strainTypes = [
+          { keyword: 'INDICA', type: 'INDICA' },
+          { keyword: 'SATIVA', type: 'SATIVA' },
+          { keyword: 'HYBRID', type: 'HYBRID' }
+        ];
+        
+        for (const { keyword, type } of strainTypes) {
+          if (title.toUpperCase().includes(keyword)) {
+            strainType = type;
+            break;
+          }
+        }
+      }
+      
+      // Generate a description with available information
+      const description = `${strain} - ${strainType}
+${optionName}: ${optionValue}
+SKU: ${sku || 'Auto-generated'}
+Location: ${location}`;
+      
+      // Prepare tags
+      const tags = [
+        'cannabis',
+        strainType.toLowerCase(),
+        category.toLowerCase(),
+        handle.toLowerCase()
+      ];
+      
+      // Create or update item
+      const itemData: InsertItem = {
+        name: title,
+        description,
+        price: 0, // Will need to be updated manually
+        quantity: parseInt(quantity) || 0,
+        status: parseInt(quantity) > 0 ? 'in_stock' : 'out_of_stock',
+        category,
+        condition: 'new',
+        weight: weight,
+        sku: sku || `CBD-${handle.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        barcode: '',
+        tags,
+        itemType: 'regular', // Use the enum value from ItemType
+        images: [],
+        marketplace: [],
+        aiEnhanced: false,
+        aiTags: [],
+        // Store cannabis-specific data in attributes
+        attributes: {
+          strainType,
+          handle
+        }
+      };
+      
+      // Generate barcode data
+      itemData.barcode = generateBarcodeData(itemData.sku);
+      
+      // Store in our map to prevent duplicates
+      itemsMap.set(handle, itemData);
+    } catch (error) {
+      console.error(`Error processing Shopify row ${i}:`, error);
+    }
+  }
+  
+  // Save all items
+  console.log(`Saving ${itemsMap.size} unique products`);
+  
+  // Convert map to array to avoid iteration issues
+  const itemsList = Array.from(itemsMap).map(([handle, data]) => ({ handle, data }));
+  
+  for (const { handle, data } of itemsList) {
+    try {
+      // Validate and create item
+      const parsedData = insertItemSchema.parse(data);
+      const item = await storage.createItem(parsedData);
+      
+      // Generate QR code
+      const qrCodeDataURL = await generateQRCodeDataURL(item);
+      const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
+      
+      if (updatedItem) {
+        importedItems.push(updatedItem);
+      }
+    } catch (error) {
+      console.error(`Error saving Shopify product ${handle}:`, error);
+    }
+  }
+  
+  return importedItems;
+}
 import {
   getShopifyProducts,
   updateShopifyProduct,
