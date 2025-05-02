@@ -36,11 +36,23 @@ type ItemCardProps = {
 export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   // Format date for display
   const formattedDate = formatDistanceToNow(new Date(item.createdAt), { 
     addSuffix: true 
   });
+  
+  // Handle click to view item details
+  const handleViewDetails = (e: React.MouseEvent) => {
+    // Don't navigate if we're clicking on a button
+    if ((e.target as HTMLElement).closest('button') || 
+        (e.target as HTMLElement).closest('.dropdown-menu')) {
+      return;
+    }
+    
+    navigate(`/inventory/${item.id}`);
+  };
 
   // Get marketplace badge class
   const getMarketplaceBadgeClass = (marketplace: string | any) => {
