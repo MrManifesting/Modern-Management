@@ -98,6 +98,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/shopify-sync",
     },
     {
+      title: "Shopify Import",
+      icon: <ShoppingBag className="h-5 w-5 text-gold" />, // Gold tint to stand out
+      path: "/shopify-import",
+      highlight: true, // Special styling to highlight this new feature
+    },
+    {
       title: "Shopify Reports",
       icon: <BarChart3 className="h-5 w-5 text-gold-400" />,
       path: "/shopify-reports",
@@ -209,7 +215,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
                 "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
                 location === item.path || (item.subItems && item.subItems.some(subItem => location === subItem.path))
                   ? "bg-gold/20 text-gold border-l-2 border-gold"
-                  : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
+                  : item.highlight 
+                    ? "text-white bg-gradient-to-r from-gold/20 to-transparent border-l-2 border-gold/80 font-medium"
+                    : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
               )}
             >
               {item.icon}
