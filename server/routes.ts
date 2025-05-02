@@ -232,7 +232,7 @@ Location: ${location}`;
         sku: sku || `CBD-${handle.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
         barcode: '',
         tags,
-        itemType: 'regular', // Use the enum value from ItemType
+        itemType: ItemType.REGULAR, // Use the enum value from ItemType
         images: [],
         marketplace: [],
         aiEnhanced: false,
