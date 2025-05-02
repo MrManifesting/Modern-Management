@@ -203,13 +203,8 @@ export interface TimeSeriesData {
   sales: number;
   revenue: number;
   profit: number;
-  isForecasted?: boolean; // Flag to indicate if this is a forecasted data point
-  metadata?: {
-    category?: string;
-    packageSize?: string;
-    strain?: string;
-    brand?: string;
-  }; // Additional metadata for filtering
+  isForecasted: boolean; // Flag to indicate if this is a forecasted data point
+  metadata?: Record<string, any>; // Additional metadata for filtering (category, packageSize, etc)
 }
 
 export interface SalesReport {
