@@ -307,8 +307,6 @@ THC/CBD: Lab tested for potency and purity`;
             url: `https://${process.env.SHOPIFY_STORE}/products/${handle}`
           }
         ],
-        aiEnhanced: false,
-        aiTags: [],
         tier,
         strainType
       };
@@ -456,8 +454,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: parseFloat(req.body.price),
         tags: req.body.tags ? JSON.parse(req.body.tags) : [],
         marketplace: req.body.marketplace ? JSON.parse(req.body.marketplace) : [],
-        aiEnhanced: req.body.aiEnhanced === "true",
-        aiTags: req.body.aiTags ? JSON.parse(req.body.aiTags) : [],
       };
       
       // Generate SKU if not provided
@@ -513,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle JSON fields
-      ["tags", "marketplace", "aiTags", "images"].forEach(field => {
+      ["tags", "marketplace", "images"].forEach(field => {
         if (updateData[field]) {
           try {
             updateData[field] = JSON.parse(updateData[field]);
@@ -522,11 +518,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       });
-      
-      // Handle boolean fields
-      if (updateData.aiEnhanced !== undefined) {
-        updateData.aiEnhanced = updateData.aiEnhanced === "true";
-      }
       
       // Add new images if any
       if (fileUrls.length > 0) {
@@ -827,8 +818,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Transform data for CSV format based on marketplace requirements
       const csvData = selectedItems.map(item => ({
-        Title: item.seoTitle || item.name,
-        Description: item.seoDescription || item.description,
+        Title: item.name,
+        Description: item.description,
         Price: item.price.toString(),
         Category: item.category,
         Condition: item.condition,
@@ -2158,7 +2149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inventory: {
           total: items.length,
           listed: listedItems,
-          aiEnhanced: aiEnhancedItems,
+          inStock: inStockItems,
           revenue: revenue
         },
         marketplaces: {
