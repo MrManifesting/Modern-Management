@@ -52,8 +52,6 @@ export default function ItemFormComponent({
     images: [],
     tags: [],
     marketplace: [],
-    aiEnhanced: false,
-    aiTags: [],
   },
   onSubmit,
   isLoading = false,
@@ -64,7 +62,6 @@ export default function ItemFormComponent({
   const [imageUrls, setImageUrls] = useState<string[]>(
     (defaultValues.images as string[]) || []
   );
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const form = useForm<ItemForm>({
@@ -115,9 +112,9 @@ export default function ItemFormComponent({
     });
   };
 
-  // AI analysis functionality removed
+  // Bulk upload functionality
   
-  const handleBulkUploadComplete = (items: Array<{ images: File[]; analysis: AIAnalysis }>) => {
+  const handleBulkUploadComplete = (items: Array<{ images: File[] }>) => {
     // Use the first item's data to populate this form
     if (items.length > 0) {
       const firstItem = items[0];
@@ -128,18 +125,6 @@ export default function ItemFormComponent({
       // Create preview URLs for display
       const newUrls = firstItem.images.map(file => URL.createObjectURL(file));
       setImageUrls(newUrls);
-      
-      // Set form values from analysis
-      const analysis = firstItem.analysis;
-      form.setValue("name", analysis.name || form.getValues("name"));
-      form.setValue("description", analysis.description || form.getValues("description"));
-      form.setValue("category", analysis.category || form.getValues("category"));
-      form.setValue("condition", analysis.condition || form.getValues("condition"));
-      form.setValue("price", analysis.suggestedPrice || form.getValues("price"));
-      form.setValue("tags", analysis.tags || form.getValues("tags"));
-      form.setValue("seoTitle", analysis.seoTitle || form.getValues("seoTitle"));
-      form.setValue("seoDescription", analysis.seoDescription || form.getValues("seoDescription"));
-      form.setValue("aiEnhanced", true);
       
       // Close dialog
       setBulkUploadOpen(false);
@@ -226,24 +211,10 @@ export default function ItemFormComponent({
             control={form.control}
             name="price"
             render={({ field }) => {
-              // Extract market data from description
-              const description = form.getValues("description") || '';
-              const priceRangeMatch = description.match(/Price Range:\s*([$\d\-\.]+)/i);
-              const priceRangeText = priceRangeMatch ? priceRangeMatch[1] : null;
-              
-              // Extract market analysis data
-              const marketAnalysisMatch = description.match(/Market Analysis:\s*([^]*?)(?=\n\n|$)/i);
-              const marketAnalysisText = marketAnalysisMatch ? marketAnalysisMatch[1].trim() : null;
-              
               return (
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Price</FormLabel>
-                    {priceRangeText && (
-                      <span className="text-xs text-green-600 font-medium">
-                        Market Range: {priceRangeText}
-                      </span>
-                    )}
                   </div>
                   <FormControl>
                     <div className="relative">
@@ -261,21 +232,6 @@ export default function ItemFormComponent({
                     </div>
                   </FormControl>
                   
-                  {form.getValues("aiEnhanced") && (
-                    <div className="mt-2 space-y-1">
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <Info className="h-3 w-3 mr-1 inline" />
-                        AI-suggested price based on current market data
-                      </div>
-                      
-                      {marketAnalysisText && (
-                        <div className="bg-gray-50 p-2 rounded text-xs text-gray-600 border border-gray-100">
-                          <p className="font-medium mb-1">Market Analysis:</p>
-                          <p>{marketAnalysisText}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
                   
                   <FormMessage />
                 </FormItem>
@@ -416,32 +372,7 @@ export default function ItemFormComponent({
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-            <div className="flex items-center bg-green-50 p-3 rounded-md border border-green-100">
-              <div className="bg-green-100 p-2 rounded-md">
-                <Zap className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-gray-700">
-                  Use AI to identify item and generate details
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Our AI will analyze your photos and suggest item details
-                </p>
-              </div>
-              <div className="ml-auto">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={analyzeWithAI}
-                  disabled={isAnalyzing || files.length === 0}
-                >
-                  {isAnalyzing ? "Analyzing..." : "Run AI Analysis"}
-                </Button>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <div className="flex justify-end space-x-3">

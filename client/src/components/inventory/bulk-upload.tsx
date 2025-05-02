@@ -12,11 +12,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/queryClient";
-import { AIAnalysis } from "@shared/schema";
 
 interface BulkUploadProps {
-  onComplete: (items: Array<{ images: File[]; analysis: AIAnalysis }>) => void;
+  onComplete: (items: Array<{ images: File[] }>) => void;
 }
 
 export default function BulkUpload({ onComplete }: BulkUploadProps) {
@@ -25,8 +23,6 @@ export default function BulkUpload({ onComplete }: BulkUploadProps) {
   const [groupedImages, setGroupedImages] = useState<Record<string, File[]>>({});
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<Record<string, AIAnalysis>>({});
   
   // File dropzone setup
   const { getRootProps, getInputProps } = useDropzone({
