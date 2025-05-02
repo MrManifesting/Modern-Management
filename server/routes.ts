@@ -1463,15 +1463,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // For Shopify format, we'll handle it specially and bypass standard validation
       if (isShopifyFormat) {
-        console.log("Detected Shopify format, using specialized handler");
+        console.log("Detected Shopify format, handling directly with no validation");
+        
+        // Special direct handling for Shopify export format to bypass validation
         try {
-          // Extract the Shopify inventory
-          const shopifyItems = await processShopifyInventoryImport(rows);
+          // Process Shopify rows directly
+          const importedItems: any[] = [];
+          const processedHandles = new Set<string>();
+          
+          // Skip header row
+          const dataRows = rows.slice(1);
+          
+          for (const row of dataRows) {
+            try {
+              // Skip rows with invalid data or "Printify" locations
+              if (row.length < 5 || row.includes('Printify') || row.includes('not stocked')) {
+                continue;
+              }
+              
+              // Extract the basic product info
+              const handle = row[0]?.trim() || '';
+              const title = row[1]?.trim() || '';
+              const optionName = row[2]?.trim() || '';
+              const optionValue = row[3]?.trim() || '';
+              
+              // Find quantity (Available column, typically index 15)
+              let quantity = 0;
+              const availableIndex = headers.indexOf('Available');
+              if (availableIndex >= 0 && row[availableIndex]) {
+                const qtyStr = row[availableIndex].trim();
+                quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
+              }
+              
+              // Skip duplicate products (only take the first variant)
+              if (processedHandles.has(handle)) {
+                continue;
+              }
+              processedHandles.add(handle);
+              
+              // Extract strain & tier from the title
+              const titleParts = title.split(' - ');
+              const strain = titleParts[0];
+              let tier = 'Standard';
+              let category = 'Cannabis';
+              
+              if (title.toUpperCase().includes('TOP SHELF')) {
+                tier = 'Top Shelf';
+              } else if (title.toUpperCase().includes('EXOTIC')) {
+                tier = 'Exotic';
+              } else if (title.toUpperCase().includes('CLASSIC RESERVE')) { 
+                tier = 'Classic Reserve';
+              } else if (title.toUpperCase().includes('AAA')) {
+                tier = 'AAA Indoor';
+              } else if (title.toUpperCase().includes('AA')) {
+                tier = 'AA Indoor';
+              }
+              
+              if (title.toUpperCase().includes('THCA')) {
+                category = 'THCA Flower';
+              }
+              
+              // Generate default price based on tier and weight
+              let price = 39.99;
+              const tierMultiplier = {
+                'Top Shelf': 1.5,
+                'Exotic': 1.8,
+                'Classic Reserve': 1.3,
+                'AAA Indoor': 1.2,
+                'AA Indoor': 1.0
+              };
+              
+              const multiplier = tierMultiplier[tier] || 1.0;
+              
+              if (optionValue.toLowerCase().includes('pound')) {
+                price = 500 * multiplier;
+              } else if (optionValue.toLowerCase().includes('1/2')) {
+                price = 275 * multiplier;
+              } else if (optionValue.toLowerCase().includes('1/4')) {
+                price = 150 * multiplier;
+              } else if (optionValue.match(/\b28\s*g/i)) {
+                price = 120 * multiplier;
+              } else if (optionValue.match(/\b14\s*g/i)) {
+                price = 75 * multiplier;
+              } else if (optionValue.match(/\b7\s*g/i)) {
+                price = 40 * multiplier;
+              } else if (optionValue.match(/\b3.5\s*g/i)) {
+                price = 25 * multiplier;
+              }
+              
+              // Create item with cannabis-specific attributes
+              const item = {
+                name: title,
+                description: `${strain} - Premium Quality Cannabis - ${tier}`,
+                price: price,
+                sku: `THCA-${handle}`.toUpperCase(),
+                quantity: quantity,
+                status: 'active',
+                category: category,
+                condition: 'Hybrid', // Use condition for strain type
+                tags: ['cannabis', 'thca', tier.toLowerCase().replace(/\s+/g, '-')],
+                packageSize: optionValue,
+                images: [],
+                marketplace: [{
+                  name: 'Shopify',
+                  isListed: true
+                }],
+                aiEnhanced: false,
+                aiTags: [],
+                strainType: 'Hybrid',
+                tier: tier
+              };
+              
+              // Create item in storage
+              const createdItem = await storage.createItem(item);
+              
+              // Generate barcode
+              const barcode = generateBarcodeData(item.sku);
+              const qrCode = await generateQRCodeDataURL(createdItem);
+              
+              // Update with barcode and QR code
+              const updatedItem = await storage.updateItem(createdItem.id, { 
+                barcode, 
+                qrCode 
+              });
+              
+              if (updatedItem) {
+                importedItems.push(updatedItem);
+              }
+            } catch (e) {
+              console.error("Error processing row:", e);
+            }
+          }
           
           return res.status(201).json({
             success: true,
-            importedCount: shopifyItems.length,
-            totalRows: rows.length,
+            importedCount: importedItems.length,
+            totalRows: dataRows.length,
             type: 'cannabis_inventory',
           });
         } catch (error) {
