@@ -146,7 +146,15 @@ export default function CSVImport() {
   // Handle import mutation
   const importMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("POST", "/api/items/import-csv", formData);
+      // Check if file appears to be a Shopify export
+      const isShopifyFile = file?.name.toLowerCase().includes('shopify') || 
+                            file?.name.toLowerCase().includes('inventory_export');
+      
+      console.log(`Using ${isShopifyFile ? 'Shopify' : 'standard'} import endpoint for ${file?.name}`);
+      
+      // Use our dedicated Shopify import endpoint for Shopify files
+      const endpoint = isShopifyFile ? "/api/items/import-shopify" : "/api/items/import-csv";
+      const response = await apiRequest("POST", endpoint, formData);
       return response.json();
     },
     onSuccess: (data) => {
@@ -219,8 +227,8 @@ export default function CSVImport() {
     <Card className="w-full border-gold">
       <CardHeader className="gold-theme card-header">
         <CardTitle className="flex items-center gap-2 gold-gradient-text">
-          {isStampImport ? (
-            <><Stamp className="h-5 w-5" /> Import Stamp Collection</>
+          {file?.name?.toLowerCase().includes('shopify') || file?.name?.toLowerCase().includes('inventory_export') ? (
+            <><ShoppingBag className="h-5 w-5" /> Import Shopify Inventory</>
           ) : isCannabisImport ? (
             <><Leaf className="h-5 w-5" /> Import Cannabis Inventory</>
           ) : (
@@ -257,7 +265,7 @@ export default function CSVImport() {
               <Upload className="h-4 w-4 mr-2" /> Select CSV File
             </Button>
             <p className="text-center text-xs text-gray-400 mt-4">
-              <span className="text-gold">Pro Tip:</span> We auto-detect stamp collection format
+              <span className="text-gold">Pro Tip:</span> We auto-detect Shopify exports and cannabis inventory formats
             </p>
           </div>
         )}
@@ -277,8 +285,8 @@ export default function CSVImport() {
                 <p className="text-sm text-gray-400">
                   {preview.totalRows} items - 
                   <span className="text-gold ml-1">
-                    {isStampImport 
-                      ? "Stamp Collection Detected" 
+                    {file?.name?.toLowerCase().includes('shopify') || file?.name?.toLowerCase().includes('inventory_export')
+                      ? "Shopify Inventory Export" 
                       : isCannabisImport 
                         ? "Cannabis Inventory Detected" 
                         : "Standard Inventory"}
@@ -363,9 +371,11 @@ export default function CSVImport() {
               </div>
               <p className="text-sm text-gray-400">
                 {syncToShopify 
-                  ? isStampImport 
-                    ? "Your stamp collection will be synchronized with your Shopify store." 
-                    : "All imported items will be automatically synchronized with Shopify to prevent overselling."
+                  ? file?.name?.toLowerCase().includes('shopify') || file?.name?.toLowerCase().includes('inventory_export')
+                    ? "Your Shopify products will be imported and synchronized with inventory management." 
+                    : isCannabisImport
+                      ? "Your cannabis products will be synchronized with Shopify to prevent overselling."
+                      : "All imported items will be automatically synchronized with Shopify to prevent overselling."
                   : "Items will only be imported locally. You can sync them later manually."}
               </p>
             </div>
@@ -419,13 +429,13 @@ export default function CSVImport() {
             className="gold-btn ml-auto"
           >
             {syncToShopify 
-              ? isStampImport 
-                ? "Import & Sync Stamp Collection"
+              ? file?.name?.toLowerCase().includes('shopify') || file?.name?.toLowerCase().includes('inventory_export')
+                ? "Import & Sync Shopify Products"
                 : isCannabisImport
                   ? "Import & Sync Cannabis Products"
                   : "Import & Sync Inventory" 
-              : isStampImport
-                ? "Import Stamp Collection Only"
+              : file?.name?.toLowerCase().includes('shopify') || file?.name?.toLowerCase().includes('inventory_export')
+                ? "Import Shopify Products Only"
                 : isCannabisImport
                   ? "Import Cannabis Products Only"
                   : "Import Inventory Only"}
