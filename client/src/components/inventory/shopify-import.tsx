@@ -68,11 +68,21 @@ export default function ShopifyImport() {
       }
     },
     onSuccess: (data) => {
-      setImportedItems(data.items);
-      toast({
-        title: 'Success!',
-        description: `Successfully imported ${data.items.length} items from Shopify CSV.`,
-      });
+      // Make sure items exists in the response before using it
+      if (data && data.items) {
+        setImportedItems(data.items || []);
+        toast({
+          title: 'Success!',
+          description: `Successfully imported ${data.items.length} items from Shopify CSV.`,
+        });
+      } else {
+        // Handle case where data.items is missing
+        setImportedItems([]);
+        toast({
+          title: 'Import Completed',
+          description: 'Import process completed, but no items were returned.',
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -159,7 +169,7 @@ export default function ShopifyImport() {
         </div>
       )}
 
-      {importedItems.length > 0 && (
+      {importedItems && importedItems.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gold">Successfully Imported Items</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -189,7 +199,7 @@ export default function ShopifyImport() {
             ))}
           </div>
           
-          {importedItems.length > 9 && (
+          {importedItems && importedItems.length > 9 && (
             <div className="text-center text-gold/70">
               + {importedItems.length - 9} more items imported successfully
             </div>
