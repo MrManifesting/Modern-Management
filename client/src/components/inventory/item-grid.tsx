@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Item } from "@shared/schema";
 import ItemCard from "@/components/inventory/item-card";
 import AddItemModal from "@/components/modals/add-item-modal";
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FilterIcon } from "lucide-react";
+import { ArrowRight, FilterIcon } from "lucide-react";
 
 type ItemGridProps = {
   limit?: number;
@@ -33,6 +34,7 @@ export default function ItemGrid({
 }: ItemGridProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
