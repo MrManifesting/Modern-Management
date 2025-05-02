@@ -169,32 +169,36 @@ async function processShopifyInventoryImport(rows: string[][]): Promise<Item[]> 
       
       // Try to extract category/tier from the title
       let category = 'cannabis';
-      let strainType = 'HYBRID';
+      let strainType = 'Hybrid';
+      let tier = '';
       
       if (titleParts.length > 1) {
         // Process THCA identification
         if (titleParts.some(part => part.toUpperCase().includes('THCA'))) {
-          category = 'thca';
+          category = 'THCA Flower';
         }
         
         // Process tier information
-        const tierParts = titleParts.filter(part => 
-          part.includes('TOP SHELF') || 
-          part.includes('CLASSIC RESERVE') || 
-          part.includes('AAA INDOOR') || 
-          part.includes('AA INDOOR') || 
-          part.includes('EXOTIC')
-        );
+        const tierKeywords = [
+          { keyword: 'TOP SHELF', tier: 'Top Shelf' },
+          { keyword: 'CLASSIC RESERVE', tier: 'Classic Reserve' },
+          { keyword: 'AAA INDOOR', tier: 'AAA Indoor' },
+          { keyword: 'AA INDOOR', tier: 'AA Indoor' },
+          { keyword: 'EXOTIC INDOOR', tier: 'Exotic Indoor' }
+        ];
         
-        if (tierParts.length > 0) {
-          category = tierParts[0].trim();
+        for (const { keyword, tier: tierValue } of tierKeywords) {
+          if (title.toUpperCase().includes(keyword)) {
+            tier = tierValue;
+            break;
+          }
         }
         
         // Look for strain type indicators
         const strainTypes = [
-          { keyword: 'INDICA', type: 'INDICA' },
-          { keyword: 'SATIVA', type: 'SATIVA' },
-          { keyword: 'HYBRID', type: 'HYBRID' }
+          { keyword: 'INDICA', type: 'Indica' },
+          { keyword: 'SATIVA', type: 'Sativa' },
+          { keyword: 'HYBRID', type: 'Hybrid' }
         ];
         
         for (const { keyword, type } of strainTypes) {
@@ -205,43 +209,101 @@ async function processShopifyInventoryImport(rows: string[][]): Promise<Item[]> 
         }
       }
       
+      // Set a reasonable price based on the tier and weight
+      let price = 39.99; // Default price
+      
+      // Price multiplier based on tier
+      const tierMultiplier = {
+        'Top Shelf': 1.5,
+        'Exotic Indoor': 1.8,
+        'Classic Reserve': 1.3,
+        'AAA Indoor': 1.2,
+        'AA Indoor': 1.0
+      };
+      
+      const multiplier = tier ? (tierMultiplier[tier] || 1.0) : 1.0;
+      
+      // Adjust price based on weight
+      if (weight) {
+        if (weight > 400) { // Pound (453g)
+          price = 500 * multiplier;
+        } else if (weight > 200) { // Half pound
+          price = 275 * multiplier;
+        } else if (weight > 100) { // Quarter pound
+          price = 150 * multiplier;
+        } else if (weight >= 28) { // Ounce (28g)
+          price = 120 * multiplier;
+        } else if (weight >= 14) { // Half ounce
+          price = 75 * multiplier;
+        } else if (weight >= 7) { // Quarter ounce
+          price = 40 * multiplier;
+        } else if (weight >= 3.5) { // Eighth (3.5g)
+          price = 25 * multiplier;
+        } else {
+          price = weight * 5 * multiplier; // $5 per gram adjusted by tier
+        }
+      } else if (optionValue) {
+        // If we couldn't parse the weight but we have option values
+        if (optionValue.toLowerCase().includes('pound')) {
+          price = 500 * multiplier;
+        } else if (optionValue.toLowerCase().includes('1/2')) {
+          price = 275 * multiplier;
+        } else if (optionValue.toLowerCase().includes('1/4')) {
+          price = 150 * multiplier;
+        } else if (optionValue.match(/\b28\s*g/i)) {
+          price = 120 * multiplier;
+        } else if (optionValue.match(/\b14\s*g/i)) {
+          price = 75 * multiplier;
+        } else if (optionValue.match(/\b7\s*g/i)) {
+          price = 40 * multiplier;
+        } else if (optionValue.match(/\b3.5\s*g/i)) {
+          price = 25 * multiplier;
+        }
+      }
+      
       // Generate a description with available information
-      const description = `${strain} - ${strainType}
+      const description = `${strain} - ${strainType}${tier ? ' - ' + tier : ''}
 ${optionName}: ${optionValue}
 SKU: ${sku || 'Auto-generated'}
-Location: ${location}`;
+Quality: Premium Grade Cannabis
+THC/CBD: Lab tested for potency and purity`;
       
       // Prepare tags
       const tags = [
         'cannabis',
+        'thca',
         strainType.toLowerCase(),
         category.toLowerCase(),
+        tier ? tier.toLowerCase().replace(/\s+/g, '-') : '',
         handle.toLowerCase()
-      ];
+      ].filter(Boolean);
       
       // Create or update item
       const itemData: InsertItem = {
         name: title,
         description,
-        price: 0, // Will need to be updated manually
+        price, // Calculated price based on tier and weight
         quantity: parseInt(quantity) || 0,
-        status: parseInt(quantity) > 0 ? 'in_stock' : 'out_of_stock',
+        status: 'active',
         category,
-        condition: 'new',
-        weight: weight,
-        sku: sku || `CBD-${handle.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        condition: strainType, // Using condition field for strain type
+        weight,
+        packageSize: optionValue,
+        sku: sku || `THCA-${handle.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
         barcode: '',
         tags,
-        itemType: ItemType.REGULAR, // Use the enum value from ItemType
         images: [],
-        marketplace: [],
+        marketplace: [
+          {
+            name: 'Shopify',
+            isListed: true,
+            url: `https://${process.env.SHOPIFY_STORE}/products/${handle}`
+          }
+        ],
         aiEnhanced: false,
         aiTags: [],
-        // Store cannabis-specific data in attributes
-        attributes: {
-          strainType,
-          handle
-        }
+        tier,
+        strainType
       };
       
       // Generate barcode data
@@ -255,7 +317,7 @@ Location: ${location}`;
   }
   
   // Save all items
-  console.log(`Saving ${itemsMap.size} unique products`);
+  console.log(`Saving ${itemsMap.size} unique cannabis products`);
   
   // Convert map to array to avoid iteration issues
   const itemsList = Array.from(itemsMap).map(([handle, data]) => ({ handle, data }));
@@ -274,7 +336,8 @@ Location: ${location}`;
         importedItems.push(updatedItem);
       }
     } catch (error) {
-      console.error(`Error saving Shopify product ${handle}:`, error);
+      console.error(`Error saving cannabis product ${handle}:`, error);
+      console.error(`Validation error details:`, error);
     }
   }
   
@@ -1389,19 +1452,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Field indices:", fieldIndices);
       
       // Check if it's Shopify format (Handle, Title, Option1 Name, etc.)
-      const isShopifyFormat = headers.includes('Handle') && headers.includes('Title') && headers.includes('Option1 Name');
+      const isShopifyFormat = headers.some(h => h === 'Handle') && headers.some(h => h === 'Title') && headers.some(h => h.includes('Option'));
       
       // For Shopify format, we'll handle it specially
       if (isShopifyFormat) {
-        // Extract the Shopify inventory
-        const shopifyItems = await processShopifyInventoryImport(rows);
-        
-        return res.status(201).json({
-          success: true,
-          importedCount: shopifyItems.length,
-          totalRows: rows.length,
-          type: 'shopify_inventory',
-        });
+        console.log("Detected Shopify format, using specialized handler");
+        try {
+          // Extract the Shopify inventory
+          const shopifyItems = await processShopifyInventoryImport(rows);
+          
+          return res.status(201).json({
+            success: true,
+            importedCount: shopifyItems.length,
+            totalRows: rows.length,
+            type: 'cannabis_inventory',
+          });
+        } catch (error) {
+          console.error("Error processing Shopify format:", error);
+          // Continue with standard processing as fallback
+        }
       }
       
       // Different required fields based on import type
