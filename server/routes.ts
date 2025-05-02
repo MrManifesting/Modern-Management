@@ -10,6 +10,7 @@ import {
   fetchShopifyInventoryReport, 
   fetchShopifyCustomerReport 
 } from "./services/shopify-reports";
+import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
