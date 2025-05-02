@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { itemFormSchema, ItemForm, Item, AIAnalysis } from "@shared/schema";
+import { itemFormSchema, ItemForm, Item } from "@shared/schema";
 import { useDropzone } from "react-dropzone";
 import { Zap, Image as ImageIcon, X, Upload, PlusCircle, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -115,78 +115,7 @@ export default function ItemFormComponent({
     });
   };
 
-  const analyzeWithAI = async () => {
-    if (files.length === 0) {
-      toast({
-        title: "No image selected",
-        description: "Please upload at least one image to analyze.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAnalyzing(true);
-
-    try {
-      // Log file details for debugging
-      console.log("Analyzing file:", files[0].name, "Size:", files[0].size, "Type:", files[0].type);
-      
-      // Create form data with the first image
-      const formData = new FormData();
-      formData.append("image", files[0]);
-      
-      // Log FormData for debugging
-      console.log("FormData created with image field");
-      
-      // Send request to analyze image
-      console.log("Sending API request to /api/analyze-image");
-      const response = await apiRequest("POST", "/api/analyze-image", formData);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Server returned error:", response.status, errorText);
-        throw new Error(`Analysis failed with status: ${response.status}. ${errorText}`);
-      }
-      
-      console.log("Received successful response from server");
-      const analysisResult: AIAnalysis = await response.json();
-      console.log("Analysis result:", analysisResult);
-
-      // Update form with AI analysis
-      if (analysisResult) {
-        form.setValue("name", analysisResult.name || form.getValues("name"));
-        form.setValue("description", analysisResult.description || form.getValues("description"));
-        form.setValue("category", analysisResult.category || form.getValues("category"));
-        form.setValue("condition", analysisResult.condition || form.getValues("condition"));
-        form.setValue("price", analysisResult.suggestedPrice || form.getValues("price"));
-        form.setValue("tags", analysisResult.tags || form.getValues("tags"));
-        form.setValue("seoTitle", analysisResult.seoTitle || form.getValues("seoTitle"));
-        form.setValue("seoDescription", analysisResult.seoDescription || form.getValues("seoDescription"));
-        form.setValue("aiEnhanced", true);
-
-        // Extract price range info from description if it exists
-        const description = analysisResult.description || '';
-        const hasPriceRange = description.includes('Price Range:');
-        const hasMarketAnalysis = description.includes('Market Analysis:');
-        
-        toast({
-          title: "AI Analysis Complete",
-          description: "Item details and market pricing data have been populated based on the image."
-        });
-      }
-    } catch (error) {
-      console.error("Error analyzing image:", error);
-      toast({
-        title: "Analysis failed",
-        description: typeof error === 'object' && error !== null && 'message' in error 
-          ? `Error: ${(error as any).message}` 
-          : "Could not analyze the image. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  // AI analysis functionality removed
   
   const handleBulkUploadComplete = (items: Array<{ images: File[]; analysis: AIAnalysis }>) => {
     // Use the first item's data to populate this form
