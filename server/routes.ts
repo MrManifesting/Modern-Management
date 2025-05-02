@@ -1208,6 +1208,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Field indices:", fieldIndices);
       
+      // Check if it's Shopify format (Handle, Title, Option1 Name, etc.)
+      const isShopifyFormat = headers.includes('Handle') && headers.includes('Title') && headers.includes('Option1 Name');
+      
+      // For Shopify format, we'll handle it specially
+      if (isShopifyFormat) {
+        // Extract the Shopify inventory
+        const shopifyItems = await processShopifyInventoryImport(rows);
+        
+        return res.status(201).json({
+          success: true,
+          importedCount: shopifyItems.length,
+          totalRows: rows.length,
+          type: 'shopify_inventory',
+        });
+      }
+      
       // Different required fields based on import type
       const requiredFields = isStampImport 
         ? ['name', 'price'] 
@@ -1217,7 +1233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (missingFields.length > 0) {
         return res.status(400).json({ 
-          error: "Missing required fields in CSV", 
+          error: `Missing required columns: ${missingFields.join(', ')}`, 
           missingFields 
         });
       }
