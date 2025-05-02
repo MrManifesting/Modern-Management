@@ -5,11 +5,18 @@ import {
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
   ItemType, BreakdownStatus,
-  User, InsertUser
+  User, InsertUser,
+  
+  // Import schema tables for Drizzle
+  users, items, marketplaces, sales, employees, inventoryActions, productBreakdowns
 } from "@shared/schema";
 import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
 import memoryStoreModule from 'memorystore';
+import { db } from './db';
+import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
+import connectPgSimple from 'connect-pg-simple';
+import { pool } from './db';
 
 // Interface for storage methods
 export interface IStorage {
