@@ -410,7 +410,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const barcode = req.params.barcode;
       const items = await storage.getItems();
-      const item = items.find(item => item.barcode === barcode);
+      
+      // First, try to find the item by barcode
+      let item = items.find(item => item.barcode === barcode);
+      
+      // If not found by barcode, try other fields
+      if (!item) {
+        // Try to find by SKU
+        item = items.find(item => item.sku === barcode);
+        
+        // If still not found, try by name
+        if (!item && barcode.length > 3) {
+          item = items.find(item => item.name && item.name.includes(barcode));
+        }
+        
+        // If found by something other than barcode, update the barcode field
+        if (item && !item.barcode) {
+          await storage.updateItem(item.id, { barcode: barcode });
+          item.barcode = barcode;
+        }
+      }
       
       if (!item) {
         return res.status(404).json({ error: "Item not found with the provided barcode" });
@@ -1052,11 +1071,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Universal barcode lookup if not updating inventory
       if (barcode) {
-        // First check if the barcode exists in our database
+        // First check if the barcode exists in our database as a barcode
         const items = await storage.getItems();
-        const existingItem = items.find(item => item.barcode === barcode);
+        let existingItem = items.find(item => item.barcode === barcode);
+        
+        // If not found by barcode, try to find it by SKU (since the barcode might be the SKU)
+        if (!existingItem) {
+          existingItem = items.find(item => item.sku === barcode);
+        }
+        
+        // If not found by SKU, try to find it by name containing the code (more flexible search)
+        if (!existingItem) {
+          existingItem = items.find(item => item.name && item.name.includes(barcode));
+        }
         
         if (existingItem) {
+          // If found, update the barcode field if it's not already set
+          if (!existingItem.barcode) {
+            await storage.updateItem(existingItem.id, { barcode: barcode });
+            existingItem.barcode = barcode;
+          }
           return res.json(existingItem);
         }
         
