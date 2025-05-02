@@ -315,6 +315,11 @@ export async function getItemPushInfo(item: Item): Promise<{
   shopifyProduct: ShopifyProduct;
   canPush: boolean;
   errors: string[];
+  safetyStatus: {
+    pushEnabled: boolean;
+    operationAllowed: boolean;
+    confirmationValid: boolean;
+  };
   shopifyProductUrl?: string;
 }> {
   const shopifyProduct = prepareItemForShopify(item);
@@ -328,12 +333,21 @@ export async function getItemPushInfo(item: Item): Promise<{
   // Validate product requirements for Shopify
   if (!shopifyProduct.variants[0].sku) errors.push('SKU is missing and could not be generated');
   
+  // Check all safety conditions
+  const operationAllowed = isOperationAllowed(item.shopifyId ? 'update' : 'create');
+  const confirmationValid = isConfirmationValid();
+  
   return {
     item,
     shopifyProduct,
-    canPush: errors.length === 0 && pushToShopifyEnabled,
+    canPush: errors.length === 0 && pushToShopifyEnabled && operationAllowed && confirmationValid,
     errors,
-    shopifyProductUrl: item.shopifyId ? `https://${SHOPIFY_STORE.replace(/^https?:\/\//, '')}/admin/products/${item.shopifyId}` : undefined
+    safetyStatus: {
+      pushEnabled: pushToShopifyEnabled,
+      operationAllowed,
+      confirmationValid
+    },
+    shopifyProductUrl: item.shopifyId ? `https://${SHOPIFY_STORE?.replace(/^https?:\/\//, '')}/admin/products/${item.shopifyId}` : undefined
   };
 }
 
