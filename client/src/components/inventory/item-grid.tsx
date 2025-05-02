@@ -73,9 +73,19 @@ export default function ItemGrid({
 
   // Get unique categories from items
   const categories = ["all", ...new Set(items.map((item: Item) => item.category))];
+  
+  // Sort items - in stock first (quantity > 0) then alphabetically within each group
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    // First sort by stock status (in stock first)
+    if (a.quantity > 0 && b.quantity <= 0) return -1;
+    if (a.quantity <= 0 && b.quantity > 0) return 1;
+    
+    // Then sort alphabetically within each group
+    return a.name.localeCompare(b.name);
+  });
 
   // Limit the number of items to display
-  const displayedItems = limit ? filteredItems.slice(0, limit) : filteredItems;
+  const displayedItems = limit ? sortedItems.slice(0, limit) : sortedItems;
 
   // Handle edit item
   const handleEditItem = (item: Item) => {
