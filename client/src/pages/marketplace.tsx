@@ -103,12 +103,16 @@ export default function Marketplace() {
     );
   };
 
-  // Toggle all marketplaces
+  // Toggle all marketplaces (only Website and Shopify)
   const toggleAllMarketplaces = () => {
-    if (selectedMarketplaces.length === marketplaces.length) {
+    const filteredMarketplaces = marketplaces.filter(
+      (m: any) => m.name === "Website" || m.name === "Shopify"
+    );
+    
+    if (selectedMarketplaces.length === filteredMarketplaces.length) {
       setSelectedMarketplaces([]);
     } else {
-      setSelectedMarketplaces(marketplaces.map((m: any) => m.name));
+      setSelectedMarketplaces(filteredMarketplaces.map((m: any) => m.name));
     }
   };
 
@@ -154,7 +158,7 @@ export default function Marketplace() {
               <CardContent>
                 {isLoadingMarketplaces ? (
                   <div className="space-y-2">
-                    {[1, 2, 3, 4].map((i) => (
+                    {[1, 2].map((i) => (
                       <div key={i} className="flex items-center space-x-2">
                         <div className="h-4 w-4 rounded bg-gray-200 animate-pulse" />
                         <div className="h-4 w-32 rounded bg-gray-200 animate-pulse" />
@@ -166,13 +170,22 @@ export default function Marketplace() {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="all-marketplaces"
-                        checked={selectedMarketplaces.length === marketplaces.length}
+                        checked={
+                          selectedMarketplaces.length === 
+                          marketplaces.filter((m: any) => 
+                            m.name === "Website" || m.name === "Shopify"
+                          ).length
+                        }
                         onCheckedChange={toggleAllMarketplaces}
                       />
                       <Label htmlFor="all-marketplaces">All Marketplaces</Label>
                     </div>
                     
-                    {marketplaces.map((marketplace: any) => (
+                    {marketplaces
+                      .filter((marketplace: any) => 
+                        marketplace.name === "Website" || marketplace.name === "Shopify"
+                      )
+                      .map((marketplace: any) => (
                       <div 
                         key={marketplace.id} 
                         className="flex items-center space-x-2 ml-4"

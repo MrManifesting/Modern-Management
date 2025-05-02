@@ -39,9 +39,7 @@ export default function MarketplaceStatus() {
   // Get logo URL based on marketplace name
   const getLogoUrl = (name: string) => {
     const logos: Record<string, string> = {
-      "eBay": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/2560px-EBay_logo.svg.png",
-      "Etsy": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Etsy_logo.svg/2560px-Etsy_logo.svg.png",
-      "Amazon": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/2560px-Amazon_logo.svg.png",
+      "Website": "https://via.placeholder.com/100x40?text=Website",
       "Shopify": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Shopify_logo_2018.svg/2560px-Shopify_logo_2018.svg.png",
     };
     return logos[name] || "https://via.placeholder.com/100x40";
@@ -50,9 +48,7 @@ export default function MarketplaceStatus() {
   // Get background color based on marketplace name
   const getBgColor = (name: string) => {
     const colors: Record<string, string> = {
-      "eBay": "bg-blue-50",
-      "Etsy": "bg-purple-50",
-      "Amazon": "bg-red-50",
+      "Website": "bg-green-50",
       "Shopify": "bg-gray-50"
     };
     return colors[name] || "bg-gray-50";
@@ -71,7 +67,7 @@ export default function MarketplaceStatus() {
         <div className="space-y-4">
           {isLoading ? (
             // Loading skeletons
-            Array(4)
+            Array(2)
               .fill(0)
               .map((_, i) => (
                 <div
@@ -86,8 +82,12 @@ export default function MarketplaceStatus() {
                 </div>
               ))
           ) : (
-            // Actual marketplace listings
-            marketplaces.map((marketplace: any) => (
+            // Filter to only show Website and Shopify
+            marketplaces
+              .filter((marketplace: any) => 
+                marketplace.name === "Website" || marketplace.name === "Shopify"
+              )
+              .map((marketplace: any) => (
               <div
                 key={marketplace.id}
                 className={`flex items-center justify-between rounded-lg ${getBgColor(marketplace.name)} p-3`}
@@ -121,9 +121,9 @@ export default function MarketplaceStatus() {
           )}
 
           <div className="mt-4">
-            <Button variant="outline" className="w-full" size="sm">
+            <Button variant="outline" className="w-full" size="sm" disabled>
               <PlusIcon className="mr-1 h-4 w-4" />
-              Add Marketplace
+              Only Website and Shopify Supported
             </Button>
           </div>
         </div>
