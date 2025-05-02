@@ -15,7 +15,9 @@ import {
   X,
   Camera,
   RefreshCw,
-  Layers
+  Layers,
+  Database,
+  Trash2
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -155,6 +157,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Bulk Breakdown",
       icon: <Layers className="h-5 w-5" />,
       path: "/bulk-breakdown",
+    },
+    {
+      title: "Database Cleanup",
+      icon: <Database className="h-5 w-5" />,
+      path: "/database-cleanup",
     },
     {
       title: "Settings",
