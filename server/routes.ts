@@ -705,6 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shopifyProduct: pushInfo.shopifyProduct,
         canPush: pushInfo.canPush,
         errors: pushInfo.errors,
+        safetyStatus: pushInfo.safetyStatus,
         shopifyProductUrl: pushInfo.shopifyProductUrl
       });
     } catch (error) {
@@ -729,8 +730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No valid items found with the provided IDs" });
       }
       
+      // Collect safety status from the first item to provide overall status
+      let overallSafetyStatus = null;
+      
       const results = await Promise.all(selectedItems.map(async (item) => {
         const pushInfo = await getItemPushInfo(item);
+        
+        // Store safety status for the overall response
+        if (!overallSafetyStatus) {
+          overallSafetyStatus = pushInfo.safetyStatus;
+        }
+        
         return {
           id: item.id,
           name: item.name,
@@ -750,6 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         readyCount: readyItems.length,
         totalCount: results.length,
         pushEnabled: pushStatus.pushEnabled,
+        safetyStatus: overallSafetyStatus,
         message: pushStatus.pushEnabled 
           ? `${readyItems.length} of ${results.length} items are ready to sync with Shopify.` 
           : `${readyItems.length} of ${results.length} items prepared for Shopify. Push to Shopify is currently disabled.`
