@@ -45,6 +45,7 @@ export interface InventoryFilters {
   searchQuery?: string;
   sortBy?: keyof Item;
   sortDirection?: "asc" | "desc";
+  inStock?: boolean;
 }
 
 // CSV export options
