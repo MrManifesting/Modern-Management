@@ -1,10 +1,18 @@
 import { useState } from "react";
-import { Bell, Search, PlusCircle, Menu, Sparkles, Moon } from "lucide-react";
+import { Bell, Search, PlusCircle, Menu, Sparkles, Moon, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddItemModal from "@/components/modals/add-item-modal";
 import { useLocation } from "wouter";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type TopBarProps = {
   toggleSidebar: () => void;
@@ -19,10 +27,19 @@ export default function TopBar({
   isGoldTheme = true,
   toggleTheme = () => {}
 }: TopBarProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
+  const { user, logoutMutation } = useAuth();
+  
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        navigate('/auth');
+      }
+    });
+  };
 
   // Get page description based on current location
   const getPageDescription = () => {
@@ -174,6 +191,61 @@ export default function TopBar({
           >
             <Search className="h-4 w-4" />
           </Button>
+
+          {/* User Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`flex items-center gap-2 ${
+                  isGoldTheme
+                    ? 'text-gold hover:bg-gold/10'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <User className="h-4 w-4" />
+                <span className="hidden md:inline-block">
+                  {user ? (user.firstName || user.username) : 'Account'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className={
+              isGoldTheme 
+                ? 'bg-black border border-gold/50 text-gold' 
+                : ''
+            }>
+              {user ? (
+                <>
+                  <div className="px-3 py-2 text-sm">
+                    <div className="font-medium">
+                      {user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : user.username}
+                    </div>
+                    <div className="text-xs opacity-75">{user.email}</div>
+                    <div className="text-xs mt-1 capitalize bg-gold/20 rounded-full px-2 py-0.5 inline-block">
+                      {user.role}
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => navigate('/auth')}
+                >
+                  Sign in
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Add Item button */}
           <Button
