@@ -1,5 +1,4 @@
 import React from 'react';
-import MainLayout from '@/components/layout/main-layout';
 import { ShopifyReportsDashboard } from '@/components/shopify/shopify-reports-dashboard';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,82 +28,72 @@ export default function ShopifyReportsPage() {
   // Show loading state
   if (isLoading) {
     return (
-      <MainLayout>
-        <div className="container mx-auto py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
-            <p className="text-muted-foreground">
-              Loading connection status...
-            </p>
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
+          <p className="text-muted-foreground">
+            Loading connection status...
+          </p>
         </div>
-      </MainLayout>
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
     );
   }
 
   // Show error state
   if (isError) {
     return (
-      <MainLayout>
-        <div className="container mx-auto py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
-            <p className="text-muted-foreground">
-              Integrated reports from your Shopify store
-            </p>
-          </div>
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Connection Error</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error ? error.message : 'Could not connect to Shopify. Please check your API credentials.'}
-            </AlertDescription>
-          </Alert>
-          <Button onClick={() => refetch()} className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Retry Connection
-          </Button>
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
+          <p className="text-muted-foreground">
+            Integrated reports from your Shopify store
+          </p>
         </div>
-      </MainLayout>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Connection Error</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Could not connect to Shopify. Please check your API credentials.'}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => refetch()} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Retry Connection
+        </Button>
+      </div>
     );
   }
 
   // Show not connected state
   if (!connectionStatus?.connected) {
     return (
-      <MainLayout>
-        <div className="container mx-auto py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
-            <p className="text-muted-foreground">
-              Integrated reports from your Shopify store
-            </p>
-          </div>
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Not Connected</AlertTitle>
-            <AlertDescription>
-              Your Shopify store is not connected or the connection has expired. 
-              Please check your API credentials in the environment variables.
-            </AlertDescription>
-          </Alert>
-          <Button onClick={() => refetch()} className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Retry Connection
-          </Button>
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Shopify Reports</h1>
+          <p className="text-muted-foreground">
+            Integrated reports from your Shopify store
+          </p>
         </div>
-      </MainLayout>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Not Connected</AlertTitle>
+          <AlertDescription>
+            Your Shopify store is not connected or the connection has expired. 
+            Please check your API credentials in the environment variables.
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => refetch()} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Retry Connection
+        </Button>
+      </div>
     );
   }
 
   // Show the dashboard when connected
-  return (
-    <MainLayout>
-      <ShopifyReportsDashboard />
-    </MainLayout>
-  );
+  return <ShopifyReportsDashboard />;
 }
