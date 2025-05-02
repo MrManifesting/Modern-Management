@@ -70,9 +70,9 @@ function App() {
           <MainLayout>
             <Router />
           </MainLayout>
-          {/* Global application onboarding components */}
+          {/* Global application onboarding components - only show one to avoid duplicates */}
           <OnboardingTour />
-          <WelcomeBanner />
+          {/* WelcomeBanner removed to prevent duplicate tours */}
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
