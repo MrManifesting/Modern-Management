@@ -115,12 +115,12 @@ export function generateForecast(
         // Different weights should have different percentages of overall sales
         let scaleFactor = 0.25; // Default scaling
         
-        // Assign realistic scale factors based on common package sizes
-        if (categoryOrWeight === '3.5g') scaleFactor = 0.40; // 3.5g is most popular
-        else if (categoryOrWeight === '7g') scaleFactor = 0.30;
-        else if (categoryOrWeight === '14g') scaleFactor = 0.20;
-        else if (categoryOrWeight === '28g' || categoryOrWeight === '1oz') scaleFactor = 0.10;
-        else if (categoryOrWeight.includes('lb')) scaleFactor = 0.05; // Bulk is least common
+        // Assign realistic scale factors based on common package sizes and real sales data
+        if (categoryOrWeight === '28g' || categoryOrWeight === '1oz') scaleFactor = 0.72; // Ounces make up 72% of sales
+        else if (categoryOrWeight === '3.5g') scaleFactor = 0.15; // Eighth
+        else if (categoryOrWeight === '7g') scaleFactor = 0.08; // Quarter
+        else if (categoryOrWeight === '14g') scaleFactor = 0.04; // Half ounce
+        else if (categoryOrWeight.includes('lb')) scaleFactor = 0.01; // Bulk is least common
         
         console.log(`Insufficient data for weight '${categoryOrWeight}', using scale factor ${scaleFactor}`);
         
