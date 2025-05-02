@@ -178,13 +178,32 @@ export function SalesForecastingDashboard() {
   const combinedTimeSeries = forecast?.timeSeries || [];
   
   // Format the data for Recharts
-  const chartData = combinedTimeSeries.map(point => ({
-    name: point.label,
-    sales: Math.round(point.sales),
-    revenue: Math.round(point.revenue),
-    profit: Math.round(point.profit),
-    isForecast: point.isForecasted
-  }));
+  const chartData = combinedTimeSeries.map(point => {
+    // Format date for better display if it's in YYYY-MM-DD format
+    let displayDate = point.label;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(point.label)) {
+      const date = new Date(point.label);
+      displayDate = new Intl.DateTimeFormat('en-US', { 
+        month: 'short', 
+        year: 'numeric'
+      }).format(date);
+    }
+    
+    return {
+      name: displayDate,
+      sales: Math.round(point.sales),
+      revenue: Math.round(point.revenue),
+      profit: Math.round(point.profit),
+      isForecast: point.isForecasted,
+      // Separate historical and forecasted data points for better visualization
+      historicalSales: point.isForecasted ? null : Math.round(point.sales),
+      forecastedSales: point.isForecasted ? Math.round(point.sales) : null,
+      historicalRevenue: point.isForecasted ? null : Math.round(point.revenue),
+      forecastedRevenue: point.isForecasted ? Math.round(point.revenue) : null,
+      historicalProfit: point.isForecasted ? null : Math.round(point.profit),
+      forecastedProfit: point.isForecasted ? Math.round(point.profit) : null
+    };
+  });
   
   // Handle parameter changes
   const handleCategoryChange = (category: string, checked: boolean) => {
@@ -614,33 +633,69 @@ export function SalesForecastingDashboard() {
                 </defs>
                 
                 {activeMetric === 'sales' && (
-                  <Area 
-                    type="monotone" 
-                    dataKey="sales" 
-                    stroke={chartData.filter(d => d.isForecast).length > 0 ? "#047857" : "#1e3a8a"}
-                    fill={chartData.filter(d => d.isForecast).length > 0 ? "url(#forecastSales)" : "url(#historicalSales)"}
-                    name="Sales (Units)"
-                  />
+                  <>
+                    <Area 
+                      type="monotone" 
+                      dataKey="historicalSales" 
+                      stroke="#1e3a8a"
+                      fill="url(#historicalSales)"
+                      name="Historical Sales"
+                      connectNulls
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="forecastedSales" 
+                      stroke="#047857"
+                      fill="url(#forecastSales)"
+                      name="Forecasted Sales"
+                      connectNulls
+                      strokeDasharray="5 5"
+                    />
+                  </>
                 )}
                 
                 {activeMetric === 'revenue' && (
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke={chartData.filter(d => d.isForecast).length > 0 ? "#c026d3" : "#7e22ce"}
-                    fill={chartData.filter(d => d.isForecast).length > 0 ? "url(#forecastRevenue)" : "url(#historicalRevenue)"}
-                    name="Revenue ($)"
-                  />
+                  <>
+                    <Area 
+                      type="monotone" 
+                      dataKey="historicalRevenue" 
+                      stroke="#7e22ce"
+                      fill="url(#historicalRevenue)"
+                      name="Historical Revenue"
+                      connectNulls
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="forecastedRevenue" 
+                      stroke="#c026d3"
+                      fill="url(#forecastRevenue)"
+                      name="Forecasted Revenue"
+                      connectNulls
+                      strokeDasharray="5 5"
+                    />
+                  </>
                 )}
                 
                 {activeMetric === 'profit' && (
-                  <Area 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke={chartData.filter(d => d.isForecast).length > 0 ? "#d97706" : "#b45309"}
-                    fill={chartData.filter(d => d.isForecast).length > 0 ? "url(#forecastProfit)" : "url(#historicalProfit)"}
-                    name="Profit ($)"
-                  />
+                  <>
+                    <Area 
+                      type="monotone" 
+                      dataKey="historicalProfit" 
+                      stroke="#b45309"
+                      fill="url(#historicalProfit)"
+                      name="Historical Profit"
+                      connectNulls
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="forecastedProfit" 
+                      stroke="#d97706"
+                      fill="url(#forecastProfit)"
+                      name="Forecasted Profit"
+                      connectNulls
+                      strokeDasharray="5 5"
+                    />
+                  </>
                 )}
               </AreaChart>
             </ResponsiveContainer>
@@ -671,13 +726,27 @@ export function SalesForecastingDashboard() {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
-                        data={data.timeSeries.map(point => ({
-                          name: point.label,
-                          sales: Math.round(point.sales),
-                          revenue: Math.round(point.revenue),
-                          profit: Math.round(point.profit),
-                          isForecast: point.isForecasted
-                        }))}
+                        data={data.timeSeries.map(point => {
+                          // Format date for better display if it's in YYYY-MM-DD format
+                          let displayDate = point.label;
+                          if (/^\d{4}-\d{2}-\d{2}$/.test(point.label)) {
+                            const date = new Date(point.label);
+                            displayDate = new Intl.DateTimeFormat('en-US', { 
+                              month: 'short', 
+                              year: 'numeric' 
+                            }).format(date);
+                          }
+                          
+                          return {
+                            name: displayDate,
+                            sales: Math.round(point.sales),
+                            revenue: Math.round(point.revenue),
+                            profit: Math.round(point.profit),
+                            isForecast: point.isForecasted,
+                            historicalSales: point.isForecasted ? null : Math.round(point.sales),
+                            forecastedSales: point.isForecasted ? Math.round(point.sales) : null,
+                          };
+                        })}
                         margin={{
                           top: 10,
                           right: 30,
@@ -692,10 +761,20 @@ export function SalesForecastingDashboard() {
                         <Legend />
                         <Area 
                           type="monotone" 
-                          dataKey="sales" 
+                          dataKey="historicalSales" 
                           stroke="#1e3a8a"
                           fill="url(#historicalSales)"
-                          name="Sales (Units)"
+                          name="Historical Sales"
+                          connectNulls
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="forecastedSales" 
+                          stroke="#047857"
+                          fill="url(#forecastSales)"
+                          name="Forecasted Sales"
+                          connectNulls
+                          strokeDasharray="5 5"
                         />
                       </AreaChart>
                     </ResponsiveContainer>
