@@ -657,11 +657,15 @@ const ShopifySyncPreview: React.FC = () => {
   
   // Generate SKUs for all new-to-shopify items that don't have one
   const generateMissingSkus = () => {
-    setSyncItems(prev => 
-      prev.map(item => {
-        if (item.syncStatus === 'new_to_shopify' && !item.generatedSku && item.inventoryItem) {
+    // Keep track of how many SKUs were generated
+    let generatedCount = 0;
+    
+    setSyncItems(prev => {
+      const newItems = prev.map(item => {
+        // Generate SKUs for any inventory item that has no existing SKU or is new to Shopify
+        if (item.inventoryItem) {
           // Extract a basic strain code
-          const strainName = item.inventoryItem.name;
+          const strainName = item.inventoryItem.name || '';
           const strainCode = extractStrainCode(strainName);
           
           // Determine tier
@@ -691,6 +695,11 @@ const ShopifySyncPreview: React.FC = () => {
           // Generate SKU
           const generatedSku = `GS-${strainCode}-${tierCode}-${weightCode}`;
           
+          // Only count this as a new generation if it didn't have one before
+          if (!item.generatedSku) {
+            generatedCount++;
+          }
+          
           return {
             ...item,
             generatedSku,
@@ -699,13 +708,18 @@ const ShopifySyncPreview: React.FC = () => {
           };
         }
         return item;
-      })
-    );
-    
-    toast({
-      title: 'SKUs Generated',
-      description: 'Missing SKUs have been generated for new products',
+      });
+      
+      return newItems;
     });
+    
+    // Show feedback with the count of generated SKUs
+    setTimeout(() => {
+      toast({
+        title: 'SKUs Generated',
+        description: `Generated ${generatedCount} new SKUs for products`,
+      });
+    }, 100);
   };
   
   // Get status badge based on sync status
