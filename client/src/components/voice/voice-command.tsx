@@ -126,8 +126,18 @@ export function VoiceCommand() {
       description: 'Add a new inventory item',
       examples: ['add new item blue dream flower', 'create item gorilla glue 4 top shelf'],
       extractArgs: (transcript) => {
-        const match = transcript.match(/add new item|create item|add inventory(.*)/i);
-        return match && match[1] ? match[1].trim() : '';
+        const lowerTranscript = transcript.toLowerCase();
+        let args = '';
+        
+        if (lowerTranscript.includes('add new item')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('add new item') + 'add new item'.length);
+        } else if (lowerTranscript.includes('create item')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('create item') + 'create item'.length);
+        } else if (lowerTranscript.includes('add inventory')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('add inventory') + 'add inventory'.length);
+        }
+        
+        return args.trim();
       },
       action: (transcript, args) => {
         toast({
@@ -143,8 +153,17 @@ export function VoiceCommand() {
       description: 'Print a barcode or label for an item',
       examples: ['print barcode for item 12', 'print label blue dream'],
       extractArgs: (transcript) => {
-        const match = transcript.match(/print (barcode|label)(?:s)?(?: for)?(?: item)?(.*)/i);
-        return match && match[2] ? match[2].trim() : '';
+        const lowerTranscript = transcript.toLowerCase();
+        let args = '';
+
+        if (lowerTranscript.includes('print barcode')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('print barcode') + 'print barcode'.length);
+        } else if (lowerTranscript.includes('print label')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('print label') + 'print label'.length);
+        }
+        
+        // Remove "for" or "for item" if present
+        return args.replace(/^for(\s+item)?\s+/i, '').trim();
       },
       action: (transcript, args) => {
         // If args is a number, assume it's an item ID
@@ -171,8 +190,18 @@ export function VoiceCommand() {
       description: 'Transfer bulk items to breakdown',
       examples: ['transfer 1 pound of blue dream to breakdown', 'breakdown 1 pound of gorilla glue 4'],
       extractArgs: (transcript) => {
-        const match = transcript.match(/transfer|move to breakdown|breakdown(.*)/i);
-        return match && match[1] ? match[1].trim() : '';
+        const lowerTranscript = transcript.toLowerCase();
+        let args = '';
+        
+        if (lowerTranscript.includes('transfer')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('transfer') + 'transfer'.length);
+        } else if (lowerTranscript.includes('move to breakdown')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('move to breakdown') + 'move to breakdown'.length);
+        } else if (lowerTranscript.includes('breakdown')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('breakdown') + 'breakdown'.length);
+        }
+        
+        return args.trim();
       },
       action: (transcript, args) => {
         // Parse the strain name from the command
@@ -204,8 +233,18 @@ export function VoiceCommand() {
       description: 'Search for items in inventory',
       examples: ['search for blue dream', 'find item gorilla glue', 'locate top shelf items'],
       extractArgs: (transcript) => {
-        const match = transcript.match(/search for|find item|locate(.*)/i);
-        return match && match[1] ? match[1].trim() : '';
+        const lowerTranscript = transcript.toLowerCase();
+        let args = '';
+        
+        if (lowerTranscript.includes('search for')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('search for') + 'search for'.length);
+        } else if (lowerTranscript.includes('find item')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('find item') + 'find item'.length);
+        } else if (lowerTranscript.includes('locate')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('locate') + 'locate'.length);
+        }
+        
+        return args.trim();
       },
       action: (transcript, args) => {
         toast({
@@ -221,8 +260,18 @@ export function VoiceCommand() {
       description: 'Navigate to different pages',
       examples: ['go to dashboard', 'open inventory', 'navigate to bulk breakdown'],
       extractArgs: (transcript) => {
-        const match = transcript.match(/go to|open|navigate to(.*)/i);
-        return match && match[1] ? match[1].trim() : '';
+        const lowerTranscript = transcript.toLowerCase();
+        let args = '';
+        
+        if (lowerTranscript.includes('go to')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('go to') + 'go to'.length);
+        } else if (lowerTranscript.includes('open')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('open') + 'open'.length);
+        } else if (lowerTranscript.includes('navigate to')) {
+          args = transcript.substring(transcript.toLowerCase().indexOf('navigate to') + 'navigate to'.length);
+        }
+        
+        return args.trim();
       },
       action: (transcript, args) => {
         // Map common spoken page names to URLs
