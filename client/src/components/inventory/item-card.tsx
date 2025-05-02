@@ -79,7 +79,9 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   return (
     <>
       <Card 
-        className="group overflow-hidden"
+        className={`group overflow-hidden transition-all ${
+          item.quantity <= 0 ? 'border-red-200 bg-red-50/30' : ''
+        }`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -99,6 +101,13 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
 
           {/* Marketplace & status badges */}
           <div className="absolute top-2 right-2 flex space-x-1">
+            {/* Stock status badge */}
+            <span className={`rounded-full px-2 py-1 text-xs font-medium text-white
+              ${item.quantity > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+              {item.quantity > 0 ? `In Stock (${item.quantity})` : 'Out of Stock'}
+            </span>
+            
+            {/* Marketplace badge */}
             {item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0 && (
               <span className={`rounded-full ${getMarketplaceBadgeClass(
                 typeof item.marketplace[0] === 'string' 
@@ -110,6 +119,8 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                   : (item.marketplace[0] as any)?.name || 'unknown'}
               </span>
             )}
+            
+            {/* Listing status badge */}
             <span className={`rounded-full ${getStatusBadgeClass(item.status)} px-2 py-1 text-xs font-medium text-white`}>
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>

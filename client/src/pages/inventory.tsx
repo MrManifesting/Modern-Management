@@ -32,6 +32,16 @@ export default function Inventory() {
   const filteredItems = selectedCategory === "all" 
     ? items 
     : items.filter((item: Item) => item.category === selectedCategory);
+    
+  // Sort items - in stock first (quantity > 0) then alphabetically within each group
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    // First sort by stock status (in stock first)
+    if (a.quantity > 0 && b.quantity <= 0) return -1;
+    if (a.quantity <= 0 && b.quantity > 0) return 1;
+    
+    // Then sort alphabetically within each group
+    return a.name.localeCompare(b.name);
+  });
 
   // Function to handle CSV export
   const handleExportCSV = () => {
@@ -142,7 +152,7 @@ export default function Inventory() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map((item: Item) => (
+                    {sortedItems.map((item: Item) => (
                       <tr key={item.id} className="border-b hover:bg-muted/30">
                         <td className="py-3 px-4">{item.name}</td>
                         <td className="py-3 px-4 font-mono text-sm">{item.sku}</td>
