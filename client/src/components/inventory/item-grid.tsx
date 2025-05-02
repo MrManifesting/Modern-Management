@@ -112,7 +112,10 @@ export default function ItemGrid({
     <div>
       {showHeader && (
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 
+            className="text-lg font-semibold text-gray-800 hover:text-primary-600 cursor-pointer flex items-center"
+            onClick={() => navigate("/inventory")}
+          >
             {limit ? "Recent Inventory" : "Inventory Items"}
           </h2>
           <div className="flex space-x-2">
@@ -136,9 +139,18 @@ export default function ItemGrid({
               </Select>
             </div>
             
-
-            
-
+            {/* View All button */}
+            {limit && showViewAll && items.length > limit && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center"
+                onClick={() => navigate("/inventory")}
+              >
+                View All
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       )}
