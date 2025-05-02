@@ -17,7 +17,6 @@ import {
   insertMarketplaceSchema, 
   insertSaleSchema,
   csvExportSchema, 
-  aiAnalysisSchema,
   reportSchema,
   forecastRequestSchema,
   insertEmployeeSchema,
