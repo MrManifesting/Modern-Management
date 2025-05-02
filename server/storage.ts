@@ -4,11 +4,26 @@ import {
   Sale, InsertSale, ReportParams, SalesReport, TimeSeriesData,
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
-  ItemType, BreakdownStatus
+  ItemType, BreakdownStatus,
+  User, InsertUser
 } from "@shared/schema";
+import session from 'express-session';
+// We need to import createMemoryStore this way because it has a non-standard export
+import memoryStoreModule from 'memorystore';
 
 // Interface for storage methods
 export interface IStorage {
+  // User authentication methods
+  getUsers(): Promise<User[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  
+  // Session store for authentication
+  sessionStore: any;
+  
   // Item methods
   getItems(): Promise<Item[]>;
   getItem(id: number): Promise<Item | undefined>;
@@ -78,12 +93,17 @@ export class MemStorage implements IStorage {
   private employees: Map<number, Employee>;
   private inventoryActions: Map<number, InventoryAction>;
   private productBreakdowns: Map<number, ProductBreakdown>;
+  private users: Map<number, User>;
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
   private employeeCurrentId: number;
   private inventoryActionCurrentId: number;
   private breakdownCurrentId: number;
+  private userCurrentId: number;
+  
+  // Session store for authentication
+  sessionStore: any;
 
   constructor() {
     this.items = new Map();
@@ -92,18 +112,94 @@ export class MemStorage implements IStorage {
     this.employees = new Map();
     this.inventoryActions = new Map();
     this.productBreakdowns = new Map();
+    this.users = new Map();
     this.itemCurrentId = 1;
     this.marketplaceCurrentId = 1;
     this.salesCurrentId = 1;
     this.employeeCurrentId = 1;
     this.inventoryActionCurrentId = 1;
     this.breakdownCurrentId = 1;
+    this.userCurrentId = 1;
+    
+    // Create in-memory session store
+    const MemoryStore = memoryStoreModule(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
     
     // Initialize with some default marketplaces
     this.initializeMarketplaces();
     
     // Initialize with a default admin employee
     this.initializeEmployees();
+    
+    // Initialize with a default admin user
+    this.initializeUsers();
+  }
+  
+  private initializeUsers() {
+    const defaultUser: InsertUser = {
+      username: "admin",
+      // Hash of "admin123"
+      password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818",
+      email: "admin@goldstandardcbd.com",
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+      isActive: true
+    };
+    
+    this.createUser(defaultUser);
+  }
+  
+  // User authentication methods
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.username === username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userCurrentId++;
+    const now = new Date();
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      lastLogin: null
+    };
+    
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    
+    if (!existingUser) {
+      return undefined;
+    }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...user,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
   }
   
   private initializeEmployees() {
