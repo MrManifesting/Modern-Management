@@ -124,16 +124,9 @@ export default function ItemGrid({
               </Select>
             </div>
             
-            <Button variant="outline" size="sm">
-              <FilterIcon className="mr-1.5 h-4 w-4 text-gray-500" />
-              Filter
-            </Button>
+
             
-            {showViewAll && (
-              <Button variant="secondary" size="sm">
-                View All
-              </Button>
-            )}
+
           </div>
         </div>
       )}
