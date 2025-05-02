@@ -894,6 +894,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate CSV export" });
     }
   });
+  
+  // Generate price sheet CSV
+  app.get("/api/price-sheet", async (_req: Request, res: Response) => {
+    try {
+      // Get all items
+      const items = await storage.getItems();
+      
+      // Transform data for price sheet
+      const priceSheetData = items.map(item => ({
+        Name: item.name,
+        SKU: item.sku || "",
+        RetailPrice: item.price.toString(),
+        WholesalePrice: item.wholesalePrice?.toString() || "",
+        Category: item.category,
+        Strain: item.strain || "",
+        Type: item.type || "",
+        Potency: item.potency || "",
+        Size: item.volume || "",
+        Stock: item.quantity.toString()
+      }));
+      
+      // Generate CSV
+      const parser = new Parser({
+        fields: ["Name", "SKU", "RetailPrice", "WholesalePrice", "Category", "Strain", "Type", "Potency", "Size", "Stock"]
+      });
+      const csv = parser.parse(priceSheetData);
+      
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=price-sheet-${Date.now()}.csv`);
+      res.status(200).send(csv);
+    } catch (error) {
+      console.error("Error generating price sheet:", error);
+      res.status(500).json({ error: "Failed to generate price sheet" });
+    }
+  });
 
   // Barcode and QR code route for printing
   app.get("/api/items/:id/codes", async (req: Request, res: Response) => {
