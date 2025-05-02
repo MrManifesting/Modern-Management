@@ -10,12 +10,14 @@ interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   editItem?: Item | null;
+  initialName?: string | null;
 }
 
 export default function AddItemModal({
   isOpen,
   onClose,
   editItem = null,
+  initialName = null,
 }: AddItemModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -81,6 +83,21 @@ export default function AddItemModal({
         tags: Array.isArray(editItem.tags) ? editItem.tags : [],
         marketplace: Array.isArray(editItem.marketplace) ? editItem.marketplace : [],
         aiTags: Array.isArray(editItem.aiTags) ? editItem.aiTags : [],
+      };
+    } else if (initialName) {
+      // For voice commands with item name
+      return {
+        name: initialName,
+        description: "",
+        price: 0,
+        category: "Flower",
+        condition: "New",
+        sku: "",
+        itemType: "Product",
+        quantity: 1,
+        tags: [],
+        marketplace: [],
+        aiTags: []
       };
     }
     return undefined;
