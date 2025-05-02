@@ -27,6 +27,7 @@ import TreeMasonInventoryPage from "@/pages/tree-mason-inventory";
 import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
 import BulkBreakdownPage from "@/pages/bulk-breakdown";
+import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/accessibility-guide" component={AccessibilityGuide} />
       <Route path="/media-manager" component={MediaManagerPage} />
       <Route path="/bulk-breakdown" component={BulkBreakdownPage} />
+      <Route path="/database-cleanup" component={DatabaseCleanupPage} />
       <Route component={NotFound} />
     </Switch>
   );
