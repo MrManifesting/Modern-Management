@@ -3238,6 +3238,9 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register specialized Shopify import routes
+  registerShopifyImportRoutes(app, storage);
+
   const httpServer = createServer(app);
   return httpServer;
 }
