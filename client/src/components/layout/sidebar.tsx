@@ -75,7 +75,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/inventory",
       subItems: [
         {
-          title: "Gold Standard CBD",
+          title: "Gold Standard Investment Group",
           path: "/inventory/gold-standard",
           className: "inventory-link gold-brand",
         },

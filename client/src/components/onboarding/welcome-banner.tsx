@@ -12,7 +12,7 @@ interface WelcomeBannerProps {
 
 export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   className,
-  title = 'Welcome to Gold Standard CBD Inventory Management',
+  title = 'Welcome to Gold Standard Investment Group Inventory Management',
   description = 'Get started by taking a quick tour of the key features.',
 }) => {
   const [isVisible, setIsVisible] = useState(false);
