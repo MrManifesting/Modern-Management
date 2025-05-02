@@ -29,8 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 
-// Define the Gold CBD product interface
-interface GoldCBDProduct {
+// Define the Gold Standard Investment Group product interface
+interface GoldStandardProduct {
   id?: number;
   name: string;
   category: string;
@@ -49,7 +49,7 @@ interface GoldCBDProduct {
 }
 
 // Mock data for demonstration
-const mockGoldProducts: GoldCBDProduct[] = [
+const mockGoldProducts: GoldStandardProduct[] = [
   {
     id: 1,
     name: "Full Spectrum CBD Oil",
@@ -139,7 +139,7 @@ const categories = [
 ];
 
 const GoldStandardInventoryPage: React.FC = () => {
-  const [products, setProducts] = useState<GoldCBDProduct[]>(mockGoldProducts);
+  const [products, setProducts] = useState<GoldStandardProduct[]>(mockGoldProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -186,7 +186,7 @@ const GoldStandardInventoryPage: React.FC = () => {
   };
 
   // Render mobile product card
-  const renderMobileProductCard = (product: GoldCBDProduct) => (
+  const renderMobileProductCard = (product: GoldStandardProduct) => (
     <Card key={product.id} className="mb-4 border-gold/20">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -235,9 +235,9 @@ const GoldStandardInventoryPage: React.FC = () => {
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">Gold Standard CBD</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">Gold Standard Investment Group</h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Manage your Gold Standard CBD products and inventory levels
+                Manage your Gold Standard Investment Group products and inventory levels
               </p>
             </div>
             
@@ -291,7 +291,7 @@ const GoldStandardInventoryPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-xl gold-gradient-text">Product Inventory</CardTitle>
             <CardDescription>
-              Manage your Gold Standard CBD product catalog
+              Manage your Gold Standard Investment Group product catalog
             </CardDescription>
             <div className="flex flex-col gap-4 mt-4">
               <div className="relative flex-1">
