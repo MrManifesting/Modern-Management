@@ -146,9 +146,12 @@ export function useInventory(initialFilters: InventoryFilters = {}) {
         return false;
       }
       
-      // Filter by AI enhanced
-      if (filters.aiEnhanced !== undefined && item.aiEnhanced !== filters.aiEnhanced) {
-        return false;
+      // Filter by in-stock status
+      if (filters.inStock !== undefined) {
+        const hasStock = item.quantity > 0;
+        if (hasStock !== filters.inStock) {
+          return false;
+        }
       }
       
       // Filter by price range

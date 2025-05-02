@@ -34,9 +34,9 @@ const ImageOptimizationPage = () => {
               </div>
               
               <div className="p-4 border rounded-lg bg-green-50">
-                <div className="font-semibold text-lg mb-2 text-green-700">AI-Generated Alt Text</div>
+                <div className="font-semibold text-lg mb-2 text-green-700">Automatic Alt Text</div>
                 <p className="text-sm text-gray-600">
-                  Our system automatically generates SEO-friendly alt text for your images using advanced AI. Improve accessibility and help search engines understand your images.
+                  Our system automatically generates SEO-friendly alt text for your images. Improve accessibility and help search engines understand your images better.
                 </p>
               </div>
               

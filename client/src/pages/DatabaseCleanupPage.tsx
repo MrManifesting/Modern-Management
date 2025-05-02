@@ -244,11 +244,11 @@ export default function DatabaseCleanupPage() {
           </Card>
           <Card>
             <CardHeader className="py-4">
-              <CardTitle className="text-lg font-medium">AI Enhanced</CardTitle>
+              <CardTitle className="text-lg font-medium">In Stock Items</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {stats?.inventory?.aiEnhanced || 0}
+                {stats?.inventory?.inStock || 0}
                 <span className="text-sm text-muted-foreground font-normal ml-2">items</span>
               </div>
             </CardContent>
