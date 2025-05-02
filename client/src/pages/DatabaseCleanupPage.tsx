@@ -119,11 +119,12 @@ export default function DatabaseCleanupPage() {
 
   const removeByDateRange = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/by-date", "POST", {
+      const response = await apiRequest("POST", "/api/cleanup/by-date", {
         startDate,
         endDate,
         confirmDelete: "YES_DELETE_BY_DATE_RANGE"
       });
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
@@ -146,9 +147,10 @@ export default function DatabaseCleanupPage() {
 
   const removeAllItems = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/cleanup/all-items", "POST", {
+      const response = await apiRequest("POST", "/api/cleanup/all-items", {
         confirmDelete: "YES_DELETE_ALL_ITEMS"
       });
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
