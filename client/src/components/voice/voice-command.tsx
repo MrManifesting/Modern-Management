@@ -8,13 +8,17 @@ import {
   AlertCircle,
   Printer,
   Package,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
@@ -310,27 +314,70 @@ export function VoiceCommand() {
         ]);
       },
       action: (transcript, args) => {
+        // Play sound for feedback
+        playAcknowledgmentSound();
+        
         // Map common spoken page names to URLs
         const pageMap: Record<string, string> = {
+          // Dashboard
           'dashboard': '/',
           'home': '/',
-          'inventory': '/items',
-          'items': '/items',
-          'products': '/items',
+          'main': '/',
+          
+          // Inventory
+          'inventory': '/inventory',
+          'items': '/inventory',
+          'products': '/inventory',
+          'gold standard inventory': '/inventory/gold-standard',
+          'tree mason': '/inventory/tree-mason',
+          'package inventory': '/inventory/package',
+          'thca flower': '/inventory/thca-flower',
+          'thca': '/inventory/thca-flower',
+          'flower': '/inventory/thca-flower',
+          
+          // Bulk breakdown
           'bulk breakdown': '/bulk-breakdown',
           'breakdown': '/bulk-breakdown',
+          'bulk': '/bulk-breakdown',
+          
+          // Employees
           'employees': '/employees',
           'staff': '/employees',
+          'team': '/employees',
+          
+          // Sales and reporting
           'sales': '/sales',
-          'reports': '/shopify-reports',
           'shopify reports': '/shopify-reports',
+          'reports': '/shopify-reports',
+          'shopify': '/shopify-sync',
+          'shopify sync': '/shopify-sync',
+          'sync': '/shopify-sync',
+          
+          // Analytics
           'analytics': '/analytics',
           'forecast': '/forecast',
           'forecasting': '/forecast',
           'predictions': '/forecast',
-          'media': '/media',
-          'photos': '/media',
-          'images': '/media'
+          
+          // Media and images
+          'media': '/media-manager',
+          'photos': '/media-manager',
+          'images': '/media-manager',
+          'media manager': '/media-manager',
+          'image optimization': '/image-optimization',
+          'optimize images': '/image-optimization',
+          
+          // Scanner
+          'scanner': '/scanner',
+          'scan': '/scanner',
+          'barcode': '/scanner',
+          
+          // Settings and admin
+          'settings': '/settings',
+          'preferences': '/settings',
+          'database cleanup': '/database-cleanup',
+          'cleanup': '/database-cleanup',
+          'accessibility': '/accessibility'
         };
 
         // Find the best match
@@ -405,6 +452,9 @@ export function VoiceCommand() {
     setTranscript('');
   }, []);
 
+  // Toggle continuous listening mode
+  const [continuousMode, setContinuousMode] = useState<boolean>(false);
+  
   // Start/stop listening
   const toggleListening = () => {
     if (isListening) {
@@ -431,8 +481,8 @@ export function VoiceCommand() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!recognitionRef.current) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
+        recognitionRef.current.continuous = true; // Enable continuous recognition
+        recognitionRef.current.interimResults = true; // Show interim results
         recognitionRef.current.lang = 'en-US';
         
         // Reattach event handlers
@@ -446,6 +496,21 @@ export function VoiceCommand() {
           if (event.results[last].isFinal) {
             setTimeout(() => {
               processTranscript();
+              
+              // In continuous mode, don't stop listening after command execution
+              if (continuousMode) {
+                setIsListening(true);
+                setTranscript('');
+                setTimeout(() => {
+                  if (recognitionRef.current) {
+                    try {
+                      recognitionRef.current.start();
+                    } catch (err) {
+                      console.error("Failed to restart in continuous mode", err);
+                    }
+                  }
+                }, 1000);
+              }
             }, 100);
           }
         };
@@ -453,18 +518,34 @@ export function VoiceCommand() {
         recognitionRef.current.onerror = (event: any) => {
           console.error('Speech recognition error', event.error);
           setError(event.error);
-          setIsListening(false);
+          
+          // Only completely turn off listening for fatal errors
+          if (event.error !== 'no-speech') {
+            setIsListening(false);
+          } else if (continuousMode) {
+            // In continuous mode, try to restart on non-fatal errors
+            setTimeout(() => {
+              if (isListening && recognitionRef.current) {
+                try {
+                  recognitionRef.current.start();
+                } catch (err) {
+                  console.error("Failed to recover from error", err);
+                  setIsListening(false);
+                }
+              }
+            }, 1000);
+          }
         };
         
         recognitionRef.current.onend = () => {
           console.log("Speech recognition ended");
           // If we're still supposed to be listening, restart
-          if (isListening) {
+          if (isListening && continuousMode) {
             try {
               setTimeout(() => {
                 if (isListening && recognitionRef.current) {
                   recognitionRef.current.start();
-                  console.log("Speech recognition restarted");
+                  console.log("Speech recognition restarted (continuous mode)");
                 }
               }, 500);
             } catch (err) {
@@ -481,7 +562,9 @@ export function VoiceCommand() {
         
         toast({
           title: "Voice Commands Activated",
-          description: "Say a command like 'add new item' or 'print barcode'",
+          description: continuousMode ? 
+            "Continuous listening mode: I'll keep listening for commands" : 
+            "Say a command like 'add new item' or 'print barcode'",
         });
       } catch (err) {
         console.error('Failed to start speech recognition', err);
@@ -496,47 +579,75 @@ export function VoiceCommand() {
 
   return (
     <Card className="w-full max-w-md shadow-lg border border-gold-500/20 bg-gradient-to-br from-background to-muted/30">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <Mic className="h-5 w-5 text-gold-500" />
-              Voice Commands
+              Voice Assistant
             </CardTitle>
             <CardDescription>
-              Use voice to control the app
+              Control the inventory system with your voice
             </CardDescription>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={isListening ? "destructive" : "outline"} 
-                  size="sm"
-                  onClick={toggleListening}
-                  className={isListening ? "animate-pulse" : ""}
-                >
-                  {isListening ? (
-                    <><MicOff className="h-4 w-4 mr-2" /> Stop</>
-                  ) : (
-                    <><Mic className="h-4 w-4 mr-2" /> Start</>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isListening ? "Stop listening" : "Start listening for commands"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            {/* Continuous mode toggle */}
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">Continuous</span>
+                      <Switch
+                        checked={continuousMode}
+                        onCheckedChange={setContinuousMode}
+                        size="sm"
+                        className="data-[state=checked]:bg-gold-500"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {continuousMode 
+                      ? "Continuous mode: will keep listening after commands" 
+                      : "Standard mode: stops after each command"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            
+            {/* Mic toggle button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={isListening ? "destructive" : "outline"} 
+                    size="sm"
+                    onClick={toggleListening}
+                    className={isListening ? "animate-pulse" : ""}
+                  >
+                    {isListening ? (
+                      <><MicOff className="h-4 w-4 mr-1" /> Stop</>
+                    ) : (
+                      <><Mic className="h-4 w-4 mr-1" /> Start</>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isListening ? "Stop listening" : "Start listening for commands"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
       
-      <CardContent className="pb-3">
+      <CardContent className="pb-2">
+        {/* Listening status with minimalist UI */}
         {isListening && (
-          <div className="relative mb-3 border rounded-md p-3 bg-card/50">
+          <div className="relative mb-2 border rounded-md p-2 bg-card/50">
             <div className="absolute right-2 top-2">
               {processing ? (
-                <Loader className="h-4 w-4 animate-spin text-gold-500" />
+                <Loader className="h-3 w-3 animate-spin text-gold-500" />
               ) : isListening ? (
                 <div className="flex items-center space-x-1">
                   <div className="w-1 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -545,54 +656,84 @@ export function VoiceCommand() {
                 </div>
               ) : null}
             </div>
-            <p className="text-sm font-mono min-h-[2.5rem]">
-              {transcript || "Listening..."}
+            <p className="text-sm font-mono min-h-[1.5rem] text-muted-foreground">
+              {transcript ? `"${transcript}"` : "Listening..."}
             </p>
           </div>
         )}
         
+        {/* Last executed command - show only when not listening */}
         {!isListening && lastExecutedCommand && (
-          <div className="mb-3">
-            <Badge variant="outline" className="mb-1 bg-gold-500/10">Last command</Badge>
-            <div className="border rounded-md p-3 bg-card/50">
-              <p className="text-sm font-mono">{lastExecutedCommand}</p>
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <Badge variant="outline" className="bg-gold-500/10">Last command</Badge>
               {activeTrigger && (
-                <Badge className="mt-2 bg-gold-500 text-background">{activeTrigger}</Badge>
+                <Badge className="bg-gold-500 text-background">{activeTrigger}</Badge>
               )}
+            </div>
+            <div className="border rounded-md p-2 bg-card/50">
+              <p className="text-xs font-mono text-muted-foreground">{lastExecutedCommand}</p>
             </div>
           </div>
         )}
         
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-medium mb-2">Available commands:</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 p-2 rounded-md border bg-card/50">
-                <Package className="h-4 w-4 text-gold-500" />
-                <span className="text-xs">Add item</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded-md border bg-card/50">
-                <Printer className="h-4 w-4 text-gold-500" />
-                <span className="text-xs">Print label</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded-md border bg-card/50">
-                <ArrowRightLeft className="h-4 w-4 text-gold-500" />
-                <span className="text-xs">Transfer</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded-md border bg-card/50">
-                <Play className="h-4 w-4 text-gold-500" />
-                <span className="text-xs">Navigate</span>
-              </div>
-            </div>
+        {/* Quick reference for available commands */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-medium">Try saying:</h4>
+            {/* Collapsible commands */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-0 h-6">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="grid grid-cols-2 gap-1 mt-1">
+                  <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
+                    <Package className="h-3 w-3 text-gold-500" />
+                    <span className="text-xs">Add new item</span>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
+                    <Printer className="h-3 w-3 text-gold-500" />
+                    <span className="text-xs">Print label</span>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
+                    <ArrowRightLeft className="h-3 w-3 text-gold-500" />
+                    <span className="text-xs">Transfer</span>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
+                    <Search className="h-3 w-3 text-gold-500" />
+                    <span className="text-xs">Search items</span>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
+                    <Play className="h-3 w-3 text-gold-500" />
+                    <span className="text-xs">Navigate to...</span>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          
+          {/* Command examples */}
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>"Add new item Blue Dream flower"</p>
+            <p>"Navigate to inventory"</p>
+            <p>"Print barcode for item 123"</p>
           </div>
         </div>
       </CardContent>
       
-      <CardFooter className="text-xs text-muted-foreground">
-        {isListening ? 
-          "Speak a command clearly..." : 
-          "Click Start to use voice commands"
-        }
+      <CardFooter className="pt-0 text-xs text-muted-foreground flex items-center justify-between">
+        <span>
+          {isListening ? 
+            (continuousMode ? "Continuous listening active" : "Listening for one command") : 
+            "Click Start to begin"
+          }
+        </span>
+        {error && (
+          <Badge variant="destructive" className="text-xs">{error}</Badge>
+        )}
       </CardFooter>
     </Card>
   );
