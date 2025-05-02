@@ -1,9 +1,4 @@
 import sharp from 'sharp';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 // Define optimization options interface
 interface OptimizationOptions {
@@ -66,43 +61,19 @@ function formatBytes(bytes: number, decimals = 2): string {
 }
 
 /**
- * Generate alt text using OpenAI's Vision model
+ * Generate simple alt text based on image metadata
  */
 export async function generateAltText(imageBuffer: Buffer): Promise<string> {
   try {
-    // Convert the buffer to a base64-encoded string
-    const base64Image = imageBuffer.toString('base64');
-
-    // The newest OpenAI model is "gpt-4o" which was released May 13, 2024. 
-    // do not change this unless explicitly requested by the user
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at writing accessible, SEO-friendly alt text for product images. Keep descriptions concise (under 125 characters), factual, and descriptive, focusing on key product features. Avoid phrases like 'image of' or 'picture of'."
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Generate SEO-friendly alt text for this product image. Make it concise but descriptive."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ],
-        },
-      ],
-      max_tokens: 100,
-    });
-
-    return response.choices[0].message.content?.trim() || "Product image";
-  } catch (error) {
+    // Get metadata from the image for basic information
+    const metadata = await sharp(imageBuffer).metadata();
+    const format = metadata.format || 'unknown';
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
+    
+    // Generate a basic alt text with image dimensions and format
+    return `Product image (${width}x${height} ${format})`;
+  } catch (error: any) {
     console.error("Error generating alt text:", error);
     return "Product image";
   }
@@ -122,7 +93,7 @@ export async function optimizeImage(
   let metadata;
   try {
     metadata = await sharp(imageBuffer).metadata();
-  } catch (error) {
+  } catch (error: any) {
     throw new Error(`Failed to process image: ${error.message}`);
   }
 
