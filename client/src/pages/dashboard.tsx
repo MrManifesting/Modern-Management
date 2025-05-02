@@ -3,9 +3,7 @@ import { useState, useEffect } from "react";
 import StatsCard from "@/components/dashboard/stats-card";
 import QuickActions from "@/components/dashboard/quick-actions";
 import ItemGrid from "@/components/inventory/item-grid";
-import AIInsights from "@/components/dashboard/ai-insights";
-import MarketplaceStatus from "@/components/dashboard/marketplace-status";
-import { Package, FileText, Zap, DollarSign, QrCode } from "lucide-react";
+import { Package, FileText, DollarSign, QrCode } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,12 +67,12 @@ export default function Dashboard() {
         />
         
         <StatsCard
-          title="AI Processed"
-          value={isLoading ? "..." : stats?.inventory?.aiEnhanced || 0}
-          icon={<Zap className="h-6 w-6" />}
+          title="THCa Flower"
+          value={isLoading ? "..." : stats?.inventory?.total || 0}
+          icon={<FileText className="h-6 w-6" />}
           iconBgColor="bg-purple-100"
           iconColor="text-purple-500"
-          changeValue="23.9%"
+          changeValue="15.2%"
           isLoading={isLoading}
         />
         
@@ -95,15 +93,7 @@ export default function Dashboard() {
       {/* Recent Inventory */}
       <ItemGrid limit={4} />
 
-      {/* AI Insights and Marketplace Status */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <AIInsights />
-        </div>
-        <div>
-          <MarketplaceStatus />
-        </div>
-      </div>
+      {/* Additional dashboard content can be added here */}
       
       {/* Employee App QR Code Card */}
       <Card className="border-2 border-amber-400 bg-gradient-to-r from-zinc-900 to-zinc-800">
