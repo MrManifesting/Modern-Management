@@ -856,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Export Route
+  // CSV Export Route - Supports both POST and GET
   app.post("/api/export-csv", async (req: Request, res: Response) => {
     try {
       const validatedData = csvExportSchema.parse(req.body);
@@ -891,6 +891,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      res.status(500).json({ error: "Failed to generate CSV export" });
+    }
+  });
+  
+  // GET version of CSV Export Route for direct links
+  app.get("/api/export-csv", async (req: Request, res: Response) => {
+    try {
+      // Get format from query param
+      const format = req.query.format as string || 'all';
+      
+      // Get all items
+      const allItems = await storage.getItems();
+      
+      // Set title based on format
+      let title = 'All Inventory';
+      let filename = 'all-inventory';
+      
+      // Filter by format if needed
+      const items = allItems;
+      
+      // Transform data for CSV format
+      const csvData = items.map(item => ({
+        Name: item.name,
+        Description: item.description || '',
+        SKU: item.sku || '',
+        Price: item.price.toString(),
+        Category: item.category,
+        Type: item.type || '',
+        Strain: item.strain || '',
+        Potency: item.potency || '',
+        Volume: item.volume || '',
+        Stock: item.quantity.toString(),
+        Status: item.quantity > 0 ? "In Stock" : "Out of Stock"
+      }));
+      
+      // Generate CSV
+      const parser = new Parser({
+        fields: ["Name", "Description", "SKU", "Price", "Category", "Type", "Strain", "Potency", "Volume", "Stock", "Status"]
+      });
+      const csv = parser.parse(csvData);
+      
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=${filename}-${Date.now()}.csv`);
+      res.status(200).send(csv);
+    } catch (error) {
+      console.error("Error generating CSV export:", error);
       res.status(500).json({ error: "Failed to generate CSV export" });
     }
   });

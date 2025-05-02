@@ -256,49 +256,29 @@ const TreeMasonInventoryPage: React.FC = () => {
               </p>
             </div>
             
-            {/* Mobile: Show only primary actions */}
+            {/* Mobile: Show only functional actions */}
             <div className="flex md:hidden gap-2">
-              <Button className="gap-1.5 flex-1" size="sm">
-                <Plus className="h-4 w-4" />
-                Add
+              <Button variant="outline" className="gap-1.5 flex-1" size="sm" onClick={() => window.location.href = '/api/price-sheet'}>
+                <FileSpreadsheet className="h-4 w-4" />
+                Price Sheet
               </Button>
-              <Button variant="outline" className="gap-1.5 flex-1" size="sm">
-                <UploadCloud className="h-4 w-4" />
-                Import
-              </Button>
-            </div>
-            
-            {/* Desktop: Show all actions */}
-            <div className="hidden md:flex flex-wrap gap-2">
-              <Button className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                Add Product
-              </Button>
-              <Button variant="outline" className="gap-1.5">
-                <UploadCloud className="h-4 w-4" />
-                Import CSV
-              </Button>
-              <Button variant="outline" className="gap-1.5">
+              <Button variant="outline" className="gap-1.5 flex-1" size="sm" onClick={() => window.location.href = '/api/export-csv?format=all'}>
                 <DownloadCloud className="h-4 w-4" />
                 Export
               </Button>
-              <Button variant="outline" className="gap-1.5">
+            </div>
+            
+            {/* Desktop: Show functional actions */}
+            <div className="hidden md:flex flex-wrap gap-2">
+              <Button variant="outline" className="gap-1.5" onClick={() => window.location.href = '/api/export-csv?format=all'}>
+                <DownloadCloud className="h-4 w-4" />
+                Export
+              </Button>
+              <Button variant="outline" className="gap-1.5" onClick={() => window.location.href = '/api/price-sheet'}>
                 <FileSpreadsheet className="h-4 w-4" />
-                Catalog
+                Price Sheet
               </Button>
             </div>
-          </div>
-          
-          {/* Mobile: Extra actions in a second row, hidden on desktop */}
-          <div className="flex md:hidden gap-2 flex-wrap">
-            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
-              <DownloadCloud className="h-3 w-3" />
-              Export
-            </Button>
-            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
-              <FileSpreadsheet className="h-3 w-3" />
-              Catalog
-            </Button>
           </div>
         </div>
 
