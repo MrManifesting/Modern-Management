@@ -7,7 +7,6 @@ import { queryClient } from "./lib/queryClient";
 import MainLayout from "@/components/layout/main-layout";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
-import AITools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
 import Scanner from "@/pages/scanner";
 import Sales from "@/pages/sales";
@@ -42,7 +41,6 @@ function Router() {
       <Route path="/inventory/gold-standard" component={GoldStandardInventoryPage} />
       <Route path="/inventory/tree-mason" component={TreeMasonInventoryPage} />
       <Route path="/inventory/package" component={PackageInventoryPage} />
-      <Route path="/ai-tools" component={AITools} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/scanner" component={Scanner} />
       <Route path="/sales" component={Sales} />
