@@ -216,15 +216,25 @@ const AccessibilityGuidePage = () => {
               <p className="text-sm text-muted-foreground mt-1">
                 Toggle between light and dark themes based on your preference. Dark mode can reduce eye strain and is helpful for users sensitive to bright lights.
               </p>
-              <div className="mt-2 flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-5 h-5 rounded-full bg-white border"></div>
-                  <span className="text-sm">Light Mode</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-5 h-5 rounded-full bg-gray-900 border"></div>
-                  <span className="text-sm">Dark Mode</span>
-                </div>
+              <div className="mt-3 flex items-center space-x-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2" 
+                  onClick={() => document.documentElement.classList.remove('dark')}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white border"></div>
+                  <span>Light Mode</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => document.documentElement.classList.add('dark')}
+                >
+                  <div className="w-4 h-4 rounded-full bg-gray-900 border"></div>
+                  <span>Dark Mode</span>
+                </Button>
               </div>
             </div>
 
@@ -345,8 +355,15 @@ const AccessibilityGuidePage = () => {
           We're committed to making Gold-Standard-Inventory accessible to everyone. If you encounter any accessibility issues or have suggestions for improvement, please let us know.
         </p>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button>Contact Support</Button>
-          <Button variant="outline">Submit Feedback</Button>
+          <Button onClick={() => window.location.href = 'tel:458-226-1464'}>
+            Contact Support
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => window.location.href = 'mailto:creationsandautomations@gmail.com?subject=Gold-Standard-Inventory%20Feedback'}
+          >
+            Submit Feedback
+          </Button>
         </div>
       </div>
     </div>
