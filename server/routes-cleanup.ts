@@ -15,6 +15,94 @@ import { eq } from "drizzle-orm";
 export function registerCleanupRoutes(app: Express, storage: IStorage) {
   
   /**
+   * Remove duplicate items based on strain and price
+   * Keeps the first item (by ID) and removes duplicates
+   */
+  app.post("/api/cleanup/duplicates-by-strain-price", async (req: Request, res: Response) => {
+    try {
+      // Get all items
+      const allItems = await storage.getItems();
+      
+      // Track duplicate groups by strain and price
+      const duplicateMap = new Map<string, Item[]>();
+      
+      // Group items by strain+price combination
+      allItems.forEach((item: Item) => {
+        // Skip items without condition (strain) or price
+        if (!item.condition || !item.price) return;
+        
+        const key = `${item.condition.trim().toLowerCase()}_${item.price}`;
+        const existingItems = duplicateMap.get(key) || [];
+        existingItems.push(item);
+        duplicateMap.set(key, existingItems);
+      });
+      
+      // Find items with duplicates
+      const duplicateGroups: { 
+        strain: string, 
+        price: number, 
+        deleteIds: number[], 
+        keepId: number,
+        count: number
+      }[] = [];
+      
+      // Process each group of potential duplicates
+      duplicateMap.forEach((items, key) => {
+        if (items.length > 1) {
+          // Sort by ID (oldest first)
+          items.sort((a, b) => a.id - b.id);
+          
+          // Keep the first one, delete the rest
+          const keepItem = items[0];
+          const deleteIds = items.slice(1).map(item => item.id);
+          
+          // Add to duplicates list
+          duplicateGroups.push({
+            strain: keepItem.condition,
+            price: keepItem.price,
+            keepId: keepItem.id,
+            deleteIds,
+            count: items.length
+          });
+        }
+      });
+      
+      // Calculate total duplicates
+      const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.deleteIds.length, 0);
+      
+      // If no duplicates found, return early
+      if (totalDuplicates === 0) {
+        return res.status(200).json({ 
+          success: true, 
+          message: "No duplicate items found with matching strain and price" 
+        });
+      }
+      
+      // Delete all duplicates 
+      const idsToDelete = duplicateGroups.flatMap(group => group.deleteIds);
+      
+      for (const id of idsToDelete) {
+        await storage.deleteItem(id);
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: `Successfully removed ${totalDuplicates} duplicate items across ${duplicateGroups.length} strain+price combinations`,
+        removed: totalDuplicates,
+        duplicateGroups
+      });
+      
+    } catch (error) {
+      console.error("Error removing strain+price duplicates:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Error removing duplicate items by strain and price", 
+        error: (error as Error).message 
+      });
+    }
+  });
+  
+  /**
    * Remove duplicate items based on SKU
    * Keeps the first item (by ID) and removes duplicates
    */
@@ -151,16 +239,18 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
         });
       }
       
-      // Get all items with metadata.importSource = source
+      // Get all items with attributes.importSource = source
       const items = await storage.getItems();
       const itemsToDelete = items.filter((item: Item) => {
-        if (!item.metadata) return false;
         try {
-          const metadata = typeof item.metadata === 'string' 
-            ? JSON.parse(item.metadata) 
-            : item.metadata;
+          // Check if attributes has importSource field
+          if (!item.attributes) return false;
           
-          return metadata.importSource === source;
+          const attributes = typeof item.attributes === 'string' 
+            ? JSON.parse(item.attributes) 
+            : item.attributes;
+          
+          return attributes.importSource === source;
         } catch (e) {
           return false;
         }
@@ -191,6 +281,63 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       return res.status(500).json({ 
         success: false, 
         message: "Error removing import batch", 
+        error: (error as Error).message 
+      });
+    }
+  });
+  
+  /**
+   * Remove items with zero price and zero quantity
+   */
+  app.post("/api/cleanup/zero-items", async (req: Request, res: Response) => {
+    try {
+      const { confirmDelete } = req.body;
+      
+      if (!confirmDelete || confirmDelete !== "YES_DELETE_ZERO_ITEMS") {
+        return res.status(400).json({
+          success: false,
+          message: "Safety confirmation not provided. Add 'confirmDelete': 'YES_DELETE_ZERO_ITEMS' to the request body"
+        });
+      }
+      
+      // Get all items
+      const items = await storage.getItems();
+      
+      // Filter items with both price = 0 and quantity = 0
+      const itemsToDelete = items.filter((item: Item) => 
+        item.price === 0 && item.quantity === 0
+      );
+      
+      // Nothing to delete
+      if (itemsToDelete.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: "No items found with both zero price and zero quantity",
+          deletedCount: 0
+        });
+      }
+      
+      // Delete all matching items
+      for (const item of itemsToDelete) {
+        await storage.deleteItem(item.id);
+      }
+      
+      return res.status(200).json({
+        success: true, 
+        message: `Successfully removed ${itemsToDelete.length} items with zero price and zero quantity`,
+        deletedCount: itemsToDelete.length,
+        items: itemsToDelete.map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku
+        }))
+      });
+      
+    } catch (error) {
+      console.error("Error removing zero items:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Error removing zero items", 
         error: (error as Error).message 
       });
     }
@@ -228,10 +375,10 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       }
       
       // Get all items
-      const items = await storage.getAllItems();
+      const items = await storage.getItems();
       
       // Filter items created within the date range
-      const itemsToDelete = items.filter(item => {
+      const itemsToDelete = items.filter((item: Item) => {
         const createdAt = new Date(item.createdAt);
         return createdAt >= start && createdAt <= end;
       });
