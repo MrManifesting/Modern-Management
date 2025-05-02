@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
-import OpenAI from "openai";
+// OpenAI import removed per requirements
 import { 
   fetchShopifySalesReport, 
   fetchShopifyInventoryReport, 
@@ -89,7 +89,7 @@ function groupTimeSeriesData(data: TimeSeriesData[], groupBy: 'day' | 'week' | '
 }
 
 import { analyzeImage } from "./services/vision";
-import { generateSEOContent } from "./services/openai";
+// generateSEOContent import removed per requirements
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { generateForecast, calculateKPIs } from "./services/forecasting";
 import { 
@@ -812,49 +812,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Analysis Route
-  app.post("/api/analyze-image", upload.single("image"), async (req: Request, res: Response) => {
-    try {
-      console.log("Analyze image request received");
-      console.log("Request headers:", req.headers);
-      console.log("Request file:", req.file ? "File exists" : "No file");
-      console.log("File details:", req.file);
-      
-      if (!req.file) {
-        console.log("No file found in request");
-        return res.status(400).json({ error: "No image provided" });
-      }
-
-      // Import the OpenAI Vision service
-      const { analyzeImageWithOpenAI } = await import("./services/vision-openai");
-      
-      const imageBuffer = req.file.buffer;
-      console.log("Image buffer size:", imageBuffer.length);
-      
-      const analysisResult = await analyzeImageWithOpenAI(imageBuffer);
-      console.log("Analysis completed successfully");
-      
-      res.json(analysisResult);
-    } catch (error) {
-      console.error("Image analysis error:", error);
-      res.status(500).json({ error: "Failed to analyze image" });
-    }
-  });
-
-  // SEO Content Generation Route
-  app.post("/api/generate-seo", async (req: Request, res: Response) => {
-    try {
-      const { itemDescription, category } = req.body;
-      
-      if (!itemDescription) {
-        return res.status(400).json({ error: "Item description is required" });
-      }
-      
-      const seoContent = await generateSEOContent(itemDescription, category);
-      res.json(seoContent);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to generate SEO content" });
-    }
-  });
+  // AI analyze-image route removed per requirements
+  
+  // SEO Content Generation Route removed per requirements
 
   // CSV Export Route - Supports both POST and GET
   app.post("/api/export-csv", async (req: Request, res: Response) => {
@@ -1107,46 +1067,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json(existingItem);
         }
         
-        // If not found in our database, perform an external lookup
-        try {
-          // Use OpenAI to simulate a product database lookup
-          const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-          });
-          
-          // The newest OpenAI model is "gpt-4o" which was released May 13, 2024
-          // do not change this unless explicitly requested by the user
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-              {
-                role: "system",
-                content: "You are a product database API. When provided with a barcode or UPC code, return realistic product information in JSON format. Include: name, description, category, condition, price, manufacturer, sku, and a price range showing estimated minimum and maximum market prices."
-              },
-              {
-                role: "user",
-                content: `Lookup product information for barcode: ${barcode}`
-              }
-            ],
-            response_format: { type: "json_object" }
-          });
-          
-          // Parse the response and return structured product data
-          const productInfo = JSON.parse(completion.choices[0].message.content);
-          
-          // Add the source barcode to the response
-          productInfo.barcode = barcode;
-          
-          return res.json(productInfo);
-        } catch (aiError) {
-          console.error("Error with external API lookup:", aiError);
-          
-          // Fallback to providing a basic response
-          return res.status(404).json({ 
-            error: "Product not found in external database",
-            message: "The barcode could not be found in any connected database."
-          });
-        }
+        // AI product lookup removed per requirements
+        return res.status(404).json({ 
+          error: "Product not found in database",
+          message: "The barcode could not be found in the database."
+        });
       }
       
       // If neither SKU nor barcode provided
@@ -1165,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const totalItems = items.length;
       const listedItems = items.filter(item => item.status === "listed").length;
-      const aiEnhancedItems = items.filter(item => item.aiEnhanced).length;
+      const inStockItems = items.filter(item => item.quantity > 0).length;
       
       // Calculate estimated revenue (sum of all listed item prices)
       const revenue = items
@@ -1176,7 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inventory: {
           total: totalItems,
           listed: listedItems,
-          aiEnhanced: aiEnhancedItems,
+          inStock: inStockItems,
           revenue: revenue
         },
         marketplaces: {
@@ -1321,30 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Analyze image optimization potential
-  app.post("/api/analyze-image-seo", upload.single("image"), async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No image provided" });
-      }
-
-      // Import image analysis function
-      const { analyzeSEOPotential, generateAltText } = await import('./services/image-optimization');
-
-      // Analyze SEO potential
-      const analysis = await analyzeSEOPotential(req.file.buffer);
-      
-      // Generate alt text if requested
-      if (req.body.generateAltText === 'true') {
-        analysis.suggestedAltText = await generateAltText(req.file.buffer);
-      }
-
-      res.json(analysis);
-    } catch (error) {
-      console.error('Error analyzing image SEO:', error);
-      res.status(500).json({ error: "Failed to analyze image SEO potential" });
-    }
-  });
+  // Image SEO analysis endpoint removed per requirements
 
   // No duplicate endpoint needed - universal barcode scanning is now handled by the main /api/scan endpoint
   

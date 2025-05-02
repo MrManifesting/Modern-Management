@@ -67,8 +67,8 @@ export default function Dashboard() {
         />
         
         <StatsCard
-          title="THCa Flower"
-          value={isLoading ? "..." : stats?.inventory?.total || 0}
+          title="In Stock Items"
+          value={isLoading ? "..." : stats?.inventory?.inStock || 0}
           icon={<FileText className="h-6 w-6" />}
           iconBgColor="bg-purple-100"
           iconColor="text-purple-500"
