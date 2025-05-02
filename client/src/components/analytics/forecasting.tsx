@@ -584,6 +584,111 @@ export function SalesForecastingDashboard() {
                 </div>
               </>
             )}
+            
+            {forecast?.weightForecasts && Object.keys(forecast.weightForecasts).length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Package Size Breakdown</CardTitle>
+                  <CardDescription>
+                    Sales forecast by package weight
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue={Object.keys(forecast.weightForecasts)[0]}>
+                    <TabsList className="mb-4">
+                      {Object.keys(forecast.weightForecasts).map((weight) => (
+                        <TabsTrigger key={weight} value={weight}>
+                          {weight}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    {Object.entries(forecast.weightForecasts).map(([weight, data]) => (
+                      <TabsContent key={weight} value={weight}>
+                        <div className="h-[300px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart
+                              data={data.timeSeries.map(point => {
+                                // Format date for better display if it's in YYYY-MM-DD format
+                                let displayDate = point.label;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(point.label)) {
+                                  const date = new Date(point.label);
+                                  displayDate = new Intl.DateTimeFormat('en-US', { 
+                                    month: 'short', 
+                                    year: 'numeric' 
+                                  }).format(date);
+                                }
+                                
+                                return {
+                                  name: displayDate,
+                                  sales: Math.round(point.sales),
+                                  revenue: Math.round(point.revenue),
+                                  profit: Math.round(point.profit),
+                                  isForecast: point.isForecasted,
+                                  historicalSales: point.isForecasted ? null : Math.round(point.sales),
+                                  forecastedSales: point.isForecasted ? Math.round(point.sales) : null,
+                                };
+                              })}
+                              margin={{
+                                top: 10,
+                                right: 30,
+                                left: 0,
+                                bottom: 0,
+                              }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                              {/* Weight chart reference line */}
+                              {transitionPoint && (
+                                <ReferenceLine
+                                  x={transitionPoint}
+                                  stroke="#f59e0b"
+                                  strokeWidth={2}
+                                  strokeDasharray="3 3"
+                                  label={{
+                                    value: "Forecast Start",
+                                    fill: "#f59e0b",
+                                    fontSize: 10,
+                                    position: "insideTopRight",
+                                  }}
+                                />
+                              )}
+                              <Area 
+                                type="monotone" 
+                                dataKey="historicalSales" 
+                                stroke="#1e3a8a"
+                                fill="url(#historicalSales)"
+                                name="Historical Sales"
+                                connectNulls
+                              />
+                              <Area 
+                                type="monotone" 
+                                dataKey="forecastedSales" 
+                                stroke="#047857"
+                                fill="url(#forecastSales)"
+                                name="Forecasted Sales"
+                                connectNulls
+                                strokeDasharray="5 5"
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        <div className="mt-4 flex justify-between items-center">
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Suggested Inventory:</span>
+                            <span className="ml-2 font-medium">{Math.round(data.suggestedInventoryLevel)} units</span>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -663,6 +768,22 @@ export function SalesForecastingDashboard() {
                     <stop offset="95%" stopColor="#d97706" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
+                
+                {/* Reference line showing transition from historical to forecasted data */}
+                {transitionPoint && (
+                  <ReferenceLine
+                    x={transitionPoint}
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    label={{
+                      value: "Forecast Start",
+                      fill: "#f59e0b",
+                      fontSize: 12,
+                      position: "insideTopRight",
+                    }}
+                  />
+                )}
                 
                 {activeMetric === 'sales' && (
                   <>
@@ -791,6 +912,21 @@ export function SalesForecastingDashboard() {
                         <YAxis />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
+                        {/* Category chart reference line */}
+                        {transitionPoint && (
+                          <ReferenceLine
+                            x={transitionPoint}
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            strokeDasharray="3 3"
+                            label={{
+                              value: "Forecast Start",
+                              fill: "#f59e0b",
+                              fontSize: 10,
+                              position: "insideTopRight",
+                            }}
+                          />
+                        )}
                         <Area 
                           type="monotone" 
                           dataKey="historicalSales" 
