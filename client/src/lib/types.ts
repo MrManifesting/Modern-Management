@@ -1,13 +1,13 @@
 // Utility types that extend shared schema types
 
-import { Item, Marketplace, AIAnalysis } from "@shared/schema";
+import { Item, Marketplace } from "@shared/schema";
 
 // Dashboard stats types
 export interface DashboardStats {
   inventory: {
     total: number;
     listed: number;
-    aiEnhanced: number;
+    inStock: number;
     revenue: number;
   };
   marketplaces: {
@@ -29,12 +29,7 @@ export interface FileWithPreview extends File {
   preview: string;
 }
 
-// SEO Content generation response
-export interface SEOContent {
-  seoTitle: string;
-  seoDescription: string;
-  keywords: string[];
-}
+
 
 // Item with additional UI state
 export interface ItemWithUIState extends Item {
@@ -47,7 +42,6 @@ export interface InventoryFilters {
   category?: string;
   priceRange?: [number, number];
   status?: string;
-  aiEnhanced?: boolean;
   searchQuery?: string;
   sortBy?: keyof Item;
   sortDirection?: "asc" | "desc";
@@ -97,15 +91,7 @@ export interface ModalProps {
   onClose: () => void;
 }
 
-// AI Analysis progress status
-export type AnalysisStatus = "idle" | "loading" | "success" | "error";
 
-// AI Analysis result with status
-export interface AIAnalysisWithStatus {
-  status: AnalysisStatus;
-  data?: AIAnalysis;
-  error?: string;
-}
 
 // Extended Marketplace type with UI elements
 export interface MarketplaceWithUI extends Marketplace {
