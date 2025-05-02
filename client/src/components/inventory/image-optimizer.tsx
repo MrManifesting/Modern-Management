@@ -362,7 +362,7 @@ const ImageOptimizer = () => {
                   checked={generateAltText}
                   onCheckedChange={setGenerateAltText}
                 />
-                <Label htmlFor="generateAlt">Generate alt text (uses AI)</Label>
+                <Label htmlFor="generateAlt">Generate automatic alt text</Label>
               </div>
               
               <Button

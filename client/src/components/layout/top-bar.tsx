@@ -31,8 +31,6 @@ export default function TopBar({
         return "Welcome back, manage your inventory and listings";
       case "/inventory":
         return "View and manage your inventory items";
-      case "/ai-tools":
-        return "Use AI to improve your listings and content";
       case "/marketplace":
         return "Connect and manage marketplace integrations";
       case "/scanner":
