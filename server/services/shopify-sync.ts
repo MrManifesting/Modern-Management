@@ -2,7 +2,8 @@ import { Item } from '@shared/schema';
 import { IStorage } from '../storage';
 import { 
   isShopifyConfigured, 
-  getItemPushInfo 
+  getItemPushInfo,
+  pushEnabled
 } from './shopify';
 import { log } from '../vite';
 import Shopify from 'shopify-api-node';
@@ -155,6 +156,14 @@ export async function updateShopifyProduct(
   }
 ): Promise<{ success: boolean; message: string }> {
   try {
+    // Check if push is enabled
+    if (!pushEnabled()) {
+      return {
+        success: false,
+        message: 'Shopify push is currently disabled. Enable it in settings to push products.'
+      };
+    }
+    
     // Check if Shopify is configured
     if (!await isShopifyConfigured()) {
       return {
@@ -271,6 +280,14 @@ export async function createShopifyProduct(
   customSku?: string
 ): Promise<{ success: boolean; message: string; productId?: string }> {
   try {
+    // Check if push is enabled
+    if (!pushEnabled()) {
+      return {
+        success: false,
+        message: 'Shopify push is currently disabled. Enable it in settings to push products.'
+      };
+    }
+    
     // Check if Shopify is configured
     if (!await isShopifyConfigured()) {
       return {
