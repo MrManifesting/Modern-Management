@@ -18,69 +18,179 @@ export function generateForecast(
   forecastPeriods: number = 3,
   categoryOrWeight?: string
 ): TimeSeriesData[] {
-  // Generate realistic data if we don't have enough historical data for forecasting
+  // Generate deterministic data if we don't have enough historical data for forecasting
   if (timeSeriesData.length < 3) {
     // Create at least 3 months of historical data to ensure reliable forecasts
-    const sampleData: TimeSeriesData[] = [];
+    const deterministicData: TimeSeriesData[] = [];
+    
+    // Create a deterministic seed based on the current date - this will ensure
+    // the same forecast is generated on the same day, but can still change month to month
+    // as business needs evolve
+    const today = new Date();
+    const seed = today.getDate() + (today.getMonth() + 1) * 31; // Fixed seed based on day and month
     
     // Start from a few months ago to create a time series
     for (let i = 3; i >= 1; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       
-      // Use realistic growth pattern
-      // Base values with small random variation for natural looking data
+      // Use realistic growth pattern with deterministic "random" variation
       const monthOffset = 3 - i;  // 0, 1, 2 for months
-      const baseSales = 80 + (monthOffset * 15) + Math.floor(Math.random() * 10); 
-      const avgPrice = 24 + (Math.random() * 2); // Random price between $24-$26 per unit
-      const revenue = baseSales * avgPrice;
-      const profit = revenue * (0.38 + (Math.random() * 0.04)); // Profit margin 38-42%
       
-      // If we have any actual data, use it to scale our synthetic data to a similar magnitude
+      // Generate deterministic values using the seed
+      // These formulas ensure consistent numbers for the same seed
+      const baseSales = 80 + (monthOffset * 15) + ((seed * i) % 10); 
+      const avgPrice = 24 + ((seed * (i + 1)) % 200) / 100; // Price between $24-$26 per unit, deterministic
+      const revenue = baseSales * avgPrice;
+      const profit = revenue * (0.38 + ((seed * (i + 2)) % 400) / 10000); // Profit margin 38-42%, deterministic
+      
+      // If we have any actual data, use it to scale our deterministic data to a similar magnitude
       if (timeSeriesData.length > 0) {
         const avgActualSales = timeSeriesData.reduce((sum, d) => sum + d.sales, 0) / timeSeriesData.length;
-        // Scale factor to make synthetic data match the scale of actual data
+        // Scale factor to make deterministic data match the scale of actual data
         const scaleFactor = avgActualSales > 0 ? avgActualSales / 100 : 1;
         
-        sampleData.push({
+        deterministicData.push({
           label: date.toISOString().split('T')[0],
-          sales: baseSales * scaleFactor,
-          revenue: revenue * scaleFactor,
-          profit: profit * scaleFactor,
+          sales: Math.round(baseSales * scaleFactor * 100) / 100, // Round to 2 decimal places
+          revenue: Math.round(revenue * scaleFactor * 100) / 100,
+          profit: Math.round(profit * scaleFactor * 100) / 100,
           isForecasted: false,
           // Copy any metadata from actual records if available
-          metadata: timeSeriesData[0]?.metadata || undefined
+          metadata: {
+            ...timeSeriesData[0]?.metadata || {},
+            source: 'generated',
+            generatedWithSeed: seed,
+            generatedOn: today.toISOString()
+          }
         });
       } else {
-        sampleData.push({
+        deterministicData.push({
           label: date.toISOString().split('T')[0],
-          sales: baseSales,
-          revenue: revenue,
-          profit: profit,
-          isForecasted: false
+          sales: Math.round(baseSales * 100) / 100,
+          revenue: Math.round(revenue * 100) / 100,
+          profit: Math.round(profit * 100) / 100,
+          isForecasted: false,
+          metadata: {
+            source: 'generated',
+            generatedWithSeed: seed,
+            generatedOn: today.toISOString()
+          }
         });
       }
     }
     
     // Combine with any real data we have
-    timeSeriesData = [...timeSeriesData, ...sampleData].sort((a, b) => {
+    timeSeriesData = [...timeSeriesData, ...deterministicData].sort((a, b) => {
       return new Date(a.label).getTime() - new Date(b.label).getTime();
     });
+    
+    console.log(`Generated deterministic data with seed ${seed} (${deterministicData.length} points)`);
   }
   
   // Filter by category or weight if provided
   let filteredData = timeSeriesData;
   if (categoryOrWeight) {
-    filteredData = timeSeriesData.filter(data => 
-      data.label.includes(categoryOrWeight) || 
-      data.metadata?.category === categoryOrWeight || 
-      data.metadata?.packageSize === categoryOrWeight ||
-      data.metadata?.strain === categoryOrWeight
-    );
+    console.log(`Filtering forecast data by '${categoryOrWeight}'`);
     
-    // If filtering resulted in too few data points, use the original data
-    if (filteredData.length < 3) {
-      filteredData = timeSeriesData;
+    // Check if this is a category or weight filter
+    const isWeight = ['3.5g', '7g', '14g', '28g', '1oz', '1lb', '1kg'].includes(categoryOrWeight);
+    const isCategory = ['top-shelf', 'exotic', 'aa-smalls', 'indoor', 'reserve', 'classic',
+                        'indica', 'sativa', 'hybrid'].includes(categoryOrWeight.toLowerCase());
+    
+    // Apply appropriate filtering based on filter type
+    if (isWeight) {
+      // This is a package size/weight filter
+      filteredData = timeSeriesData.filter(data => 
+        data.metadata?.packageSize === categoryOrWeight ||
+        data.metadata?.weight === categoryOrWeight ||
+        data.metadata?.size === categoryOrWeight
+      );
+      
+      console.log(`Found ${filteredData.length} data points with package size/weight '${categoryOrWeight}'`);
+      
+      // If we have insufficient data after filtering, scale the original data instead
+      if (filteredData.length < 3) {
+        // Generate a scaling factor based on the weight
+        // Different weights should have different percentages of overall sales
+        let scaleFactor = 0.25; // Default scaling
+        
+        // Assign realistic scale factors based on common package sizes
+        if (categoryOrWeight === '3.5g') scaleFactor = 0.40; // 3.5g is most popular
+        else if (categoryOrWeight === '7g') scaleFactor = 0.30;
+        else if (categoryOrWeight === '14g') scaleFactor = 0.20;
+        else if (categoryOrWeight === '28g' || categoryOrWeight === '1oz') scaleFactor = 0.10;
+        else if (categoryOrWeight.includes('lb')) scaleFactor = 0.05; // Bulk is least common
+        
+        console.log(`Insufficient data for weight '${categoryOrWeight}', using scale factor ${scaleFactor}`);
+        
+        // Scale all data points by the weight factor
+        filteredData = timeSeriesData.map(data => ({
+          ...data,
+          sales: data.sales * scaleFactor,
+          revenue: data.revenue * scaleFactor,
+          profit: data.profit * scaleFactor,
+          metadata: {
+            ...data.metadata,
+            packageSize: categoryOrWeight,
+            scaledBy: scaleFactor,
+            scalingReason: 'insufficient_data'
+          }
+        }));
+      }
+    } else if (isCategory) {
+      // This is a category filter
+      filteredData = timeSeriesData.filter(data => 
+        data.metadata?.category === categoryOrWeight ||
+        data.metadata?.strain === categoryOrWeight
+      );
+      
+      console.log(`Found ${filteredData.length} data points with category '${categoryOrWeight}'`);
+      
+      // If we have insufficient data after filtering, scale the original data instead
+      if (filteredData.length < 3) {
+        // Generate a scaling factor based on the category
+        // Different categories should have different percentages of overall sales
+        let scaleFactor = 0.25; // Default scaling
+        
+        // Assign realistic scale factors based on common categories
+        if (categoryOrWeight === 'exotic') scaleFactor = 0.35;
+        else if (categoryOrWeight === 'top-shelf') scaleFactor = 0.30;
+        else if (categoryOrWeight === 'reserve') scaleFactor = 0.25;
+        else if (categoryOrWeight === 'classic') scaleFactor = 0.20;
+        else if (categoryOrWeight === 'aa-smalls') scaleFactor = 0.15;
+        
+        console.log(`Insufficient data for category '${categoryOrWeight}', using scale factor ${scaleFactor}`);
+        
+        // Scale all data points by the category factor
+        filteredData = timeSeriesData.map(data => ({
+          ...data,
+          sales: data.sales * scaleFactor,
+          revenue: data.revenue * scaleFactor,
+          profit: data.profit * scaleFactor,
+          metadata: {
+            ...data.metadata,
+            category: categoryOrWeight,
+            scaledBy: scaleFactor,
+            scalingReason: 'insufficient_data'
+          }
+        }));
+      }
+    } else {
+      // This is a general/custom filter - use simple string matching
+      filteredData = timeSeriesData.filter(data => 
+        data.label.includes(categoryOrWeight) || 
+        data.metadata?.category === categoryOrWeight || 
+        data.metadata?.packageSize === categoryOrWeight ||
+        data.metadata?.strain === categoryOrWeight ||
+        data.metadata?.brand === categoryOrWeight
+      );
+      
+      // If filtering resulted in too few data points, use the original data
+      if (filteredData.length < 3) {
+        console.log(`No data matching filter '${categoryOrWeight}', using original data`);
+        filteredData = timeSeriesData;
+      }
     }
   }
   

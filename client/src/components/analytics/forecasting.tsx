@@ -24,7 +24,8 @@ import {
   Tooltip, 
   ResponsiveContainer,
   Legend,
-  TooltipProps
+  TooltipProps,
+  ReferenceLine
 } from 'recharts';
 import { AlertCircle, Check, RefreshCw } from 'lucide-react';
 
@@ -204,6 +205,11 @@ export function SalesForecastingDashboard() {
       forecastedProfit: point.isForecasted ? Math.round(point.profit) : null
     };
   });
+  
+  // Find the transition point between historical and forecasted data
+  // This will be used to draw a reference line
+  const transitionIndex = chartData.findIndex(data => data.isForecast) - 1;
+  const transitionPoint = transitionIndex >= 0 ? chartData[transitionIndex].name : undefined;
   
   // Handle parameter changes
   const handleCategoryChange = (category: string, checked: boolean) => {

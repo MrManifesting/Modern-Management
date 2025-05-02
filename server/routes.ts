@@ -23,8 +23,67 @@ import {
   breakdownTargetSchema,
   ItemType,
   BreakdownStatus,
-  insertBreakdownSchema
+  insertBreakdownSchema,
+  TimeSeriesData
 } from "@shared/schema";
+
+/**
+ * Group time series data by week or month
+ * 
+ * @param data Original time series data points
+ * @param groupBy Group by 'day', 'week', or 'month'
+ * @returns Grouped time series data
+ */
+function groupTimeSeriesData(data: TimeSeriesData[], groupBy: 'day' | 'week' | 'month'): TimeSeriesData[] {
+  if (groupBy === 'day' || data.length === 0) {
+    return data;
+  }
+  
+  // Sort data by date
+  const sortedData = [...data].sort((a, b) => 
+    new Date(a.label).getTime() - new Date(b.label).getTime()
+  );
+  
+  // Group data points
+  const groupedMap = new Map<string, TimeSeriesData>();
+  
+  sortedData.forEach(point => {
+    const date = new Date(point.label);
+    let groupKey: string;
+    
+    if (groupBy === 'week') {
+      // Get the week number
+      const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+      const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+      const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+      groupKey = `${date.getFullYear()}-W${weekNumber}`;
+    } else {
+      // Month grouping
+      groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    
+    if (!groupedMap.has(groupKey)) {
+      groupedMap.set(groupKey, {
+        label: groupKey,
+        sales: 0,
+        revenue: 0,
+        profit: 0,
+        isForecasted: point.isForecasted,
+        metadata: point.metadata
+      });
+    }
+    
+    const group = groupedMap.get(groupKey)!;
+    group.sales += point.sales;
+    group.revenue += point.revenue;
+    group.profit += point.profit;
+  });
+  
+  // Convert map back to array and sort
+  return Array.from(groupedMap.values())
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 import { analyzeImage } from "./services/vision";
 import { generateSEOContent } from "./services/openai";
 import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
