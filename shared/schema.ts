@@ -37,10 +37,8 @@ export const items = pgTable("items", {
   status: text("status").notNull().default("draft"), // draft, listed, sold
   images: json("images").notNull().default([]), // Array of image URLs
   tags: json("tags").notNull().default([]), // Array of tags
-  marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers (ebay, etsy, etc)
+  marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers (shopify, website, etc)
   syncedToMarketplaces: json("synced_to_marketplaces").notNull().default([]), // Which marketplaces this is synced to
-  aiEnhanced: boolean("ai_enhanced").notNull().default(false),
-  aiTags: json("ai_tags").notNull().default([]), // Keywords suggested by AI
   seoTitle: text("seo_title"),
   attributes: json("attributes").notNull().default({}), // Product-specific attributes (e.g., cannabis strain data)
   externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
