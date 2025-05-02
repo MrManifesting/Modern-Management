@@ -155,7 +155,7 @@ export default function ShopifyImport() {
             <span>Importing Shopify inventory...</span>
             <span>{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2 bg-black/50" indicatorClassName="bg-gold" />
+          <Progress value={progress} className="h-2 bg-black/50 [&>div]:bg-gold" />
         </div>
       )}
 
