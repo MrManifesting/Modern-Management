@@ -707,7 +707,7 @@ export function SalesForecastingDashboard() {
                         <SelectValue placeholder="Select strain" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Strains</SelectItem>
+                        <SelectItem value="all-strains">All Strains</SelectItem>
                         <SelectItem value="Blue Dream">Blue Dream</SelectItem>
                         <SelectItem value="OG Kush">OG Kush</SelectItem>
                         <SelectItem value="Purple Punch">Purple Punch</SelectItem>
@@ -734,7 +734,7 @@ export function SalesForecastingDashboard() {
                         <SelectValue placeholder="Select brand" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Brands</SelectItem>
+                        <SelectItem value="all-brands">All Brands</SelectItem>
                         <SelectItem value="Gold Standard">Gold Standard</SelectItem>
                         <SelectItem value="Tree Mason">Tree Mason</SelectItem>
                       </SelectContent>
@@ -1299,7 +1299,7 @@ export function SalesForecastingDashboard() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Detection Confidence:</span>
-                    <Badge variant={seasonalPatterns.confidenceScore > 85 ? "success" : "secondary"}>
+                    <Badge variant="secondary" className={seasonalPatterns.confidenceScore > 85 ? "bg-green-500 text-white" : ""}>
                       {seasonalPatterns.confidenceScore}%
                     </Badge>
                   </div>
