@@ -95,8 +95,13 @@ export interface ModalProps {
 
 
 // Extended Marketplace type with UI elements
-export interface MarketplaceWithUI extends Marketplace {
+export interface MarketplaceWithUI extends Partial<Marketplace> {
+  id: number;
+  name: string;
+  isConnected: boolean;
   logo: string;
   bgColor: string;
   badgeClass: string;
+  description?: string;
+  credentials: any;
 }
