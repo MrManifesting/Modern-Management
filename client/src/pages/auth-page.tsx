@@ -80,7 +80,7 @@ export default function AuthPage() {
         {/* Authentication Forms */}
         <Card className="w-full max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center text-gold-600">
+            <CardTitle className="text-3xl font-bold text-center text-blue-600">
               Welcome
             </CardTitle>
             <CardDescription className="text-center text-slate-400">
@@ -139,7 +139,7 @@ export default function AuthPage() {
                   <CardFooter>
                     <Button 
                       type="submit" 
-                      className="w-full bg-gold-600 hover:bg-gold-700"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
                       disabled={loginMutation.isPending}
                     >
                       {loginMutation.isPending ? (
@@ -280,7 +280,7 @@ export default function AuthPage() {
                   <CardFooter>
                     <Button 
                       type="submit" 
-                      className="w-full bg-gold-600 hover:bg-gold-700"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
                       disabled={registerMutation.isPending}
                     >
                       {registerMutation.isPending ? (
@@ -301,45 +301,45 @@ export default function AuthPage() {
 
         {/* Hero Section */}
         <div className="flex flex-col justify-center p-6 text-white">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gold-500">
-            Gold Standard CBD
-            <span className="block text-green-500 mt-2">Inventory Management</span>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-blue-500">
+            Inventory Pro
+            <span className="block text-purple-500 mt-2">All-In-One Management</span>
           </h1>
           <p className="text-lg mb-8 text-slate-300">
-            A comprehensive platform for managing your cannabis product inventory across multiple marketplaces.
+            A comprehensive platform for managing your product inventory across multiple marketplaces.
           </p>
           <div className="space-y-4">
             <div className="flex items-start space-x-2">
-              <div className="bg-gold-600 rounded-full p-1 mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-black" viewBox="0 0 20 20" fill="currentColor">
+              <div className="bg-blue-600 rounded-full p-1 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium text-gold-400">Seamless Integration</h3>
-                <p className="text-slate-400">Connect with Shopify and other marketplaces</p>
+                <h3 className="font-medium text-blue-400">Marketplace Integration</h3>
+                <p className="text-slate-400">Connect with multiple online marketplaces easily</p>
               </div>
             </div>
             <div className="flex items-start space-x-2">
-              <div className="bg-gold-600 rounded-full p-1 mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-black" viewBox="0 0 20 20" fill="currentColor">
+              <div className="bg-blue-600 rounded-full p-1 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium text-gold-400">Advanced Analytics</h3>
+                <h3 className="font-medium text-blue-400">Advanced Analytics</h3>
                 <p className="text-slate-400">Track sales and forecast inventory needs</p>
               </div>
             </div>
             <div className="flex items-start space-x-2">
-              <div className="bg-gold-600 rounded-full p-1 mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-black" viewBox="0 0 20 20" fill="currentColor">
+              <div className="bg-blue-600 rounded-full p-1 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium text-gold-400">Voice Commands</h3>
-                <p className="text-slate-400">Control your inventory with voice recognition</p>
+                <h3 className="font-medium text-blue-400">Inventory Management</h3>
+                <p className="text-slate-400">Manage stock levels, bundles, and components</p>
               </div>
             </div>
           </div>
