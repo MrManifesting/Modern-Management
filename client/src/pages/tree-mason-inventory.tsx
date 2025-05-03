@@ -29,8 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 
-// Define the Tree Mason product interface
-interface TreeMasonProduct {
+// Define the product interface for specialty products
+interface SpecialtyProduct {
   id?: number;
   name: string;
   category: string;
@@ -42,108 +42,108 @@ interface TreeMasonProduct {
   barcode?: string;
   quantity: number;
   status?: string;
-  potency?: string;
+  strength?: string; // renamed from potency
   volume?: string;
   description?: string;
   imageUrl?: string;
-  strain?: string;
+  variant?: string; // renamed from strain
   type?: string;
 }
 
 // Mock data for demonstration
-const mockTreeMasonProducts: TreeMasonProduct[] = [
+const mockSpecialtyProducts: SpecialtyProduct[] = [
   {
     id: 1,
-    name: "Premium Delta 8 Vape",
-    category: "Vapes",
-    subcategory: "Delta 8",
+    name: "Premium Sport Drink",
+    category: "Beverages",
+    subcategory: "Sports",
     price: 39.99,
     retailPrice: 39.99,
     wholesalePrice: 19.99,
-    sku: "TM-D8-VAP-1",
+    sku: "SP-SPT-BEV-1",
     quantity: 32,
-    potency: "900mg",
-    strain: "Blue Dream",
-    type: "Hybrid",
+    strength: "500mg",
+    variant: "Berry Blast",
+    type: "Recovery",
     status: "In Stock",
-    description: "Premium Delta 8 vape cartridge"
+    description: "Premium recovery sports beverage"
   },
   {
     id: 2,
-    name: "Delta 8 Gummies",
-    category: "Edibles",
-    subcategory: "Delta 8",
+    name: "Protein Gummies",
+    category: "Supplements",
+    subcategory: "Protein",
     price: 29.99,
     retailPrice: 29.99,
     wholesalePrice: 14.99,
-    sku: "TM-D8-GUM-1",
+    sku: "SP-PRO-GUM-1",
     quantity: 48,
-    potency: "250mg",
+    strength: "25g",
     volume: "10 count",
     status: "In Stock",
-    description: "Delicious Delta 8 infused gummies"
+    description: "Protein-packed gummies for post-workout"
   },
   {
     id: 3,
-    name: "HHC Disposable Vape",
-    category: "Vapes",
-    subcategory: "HHC",
+    name: "Multi-Vitamin Pack",
+    category: "Supplements",
+    subcategory: "Vitamins",
     price: 34.99,
     retailPrice: 34.99,
     wholesalePrice: 17.49,
-    sku: "TM-HHC-DSP-1",
+    sku: "SP-VIT-MUL-1",
     quantity: 15,
-    potency: "2g",
-    strain: "Wedding Cake",
-    type: "Indica",
+    strength: "100%",
+    variant: "Performance",
+    type: "Daily",
     status: "Low Stock",
-    description: "Disposable HHC vape pen"
+    description: "Complete daily multi-vitamin pack"
   },
   {
     id: 4,
-    name: "Delta 8 Tincture",
-    category: "Tinctures",
-    subcategory: "Delta 8",
+    name: "Omega-3 Oil Drops",
+    category: "Oils",
+    subcategory: "Omega",
     price: 49.99,
     retailPrice: 49.99,
     wholesalePrice: 24.99,
-    sku: "TM-D8-TNC-1",
+    sku: "SP-OMG-OIL-1",
     quantity: 22,
-    potency: "1500mg",
+    strength: "1500mg",
     volume: "30ml",
     status: "In Stock",
-    description: "Delta 8 oil tincture"
+    description: "High-potency omega-3 oil"
   },
   {
     id: 5,
-    name: "HHC + Delta 8 Gummies",
-    category: "Edibles",
-    subcategory: "Mixed",
+    name: "Energy & Focus Gummies",
+    category: "Supplements",
+    subcategory: "Energy",
     price: 39.99,
     retailPrice: 39.99,
     wholesalePrice: 19.99,
-    sku: "TM-MIX-GUM-1",
+    sku: "SP-ENR-GUM-1",
     quantity: 8,
-    potency: "500mg",
+    strength: "200mg",
     volume: "20 count",
     status: "Low Stock",
-    description: "Mixed cannabinoid gummies"
+    description: "Energy and focus supplement gummies"
   }
 ];
 
 // Product categories
 const categories = [
   "All",
-  "Vapes",
-  "Edibles",
-  "Tinctures",
-  "Topicals",
-  "Concentrates",
-  "Flower"
+  "Beverages",
+  "Supplements",
+  "Oils",
+  "Powders",
+  "Performance",
+  "Nutrition"
 ];
 
-const TreeMasonInventoryPage: React.FC = () => {
-  const [products, setProducts] = useState<TreeMasonProduct[]>(mockTreeMasonProducts);
+const SpecialtyInventoryPage: React.FC = () => {
+  const [products, setProducts] = useState<SpecialtyProduct[]>(mockSpecialtyProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -177,9 +177,9 @@ const TreeMasonInventoryPage: React.FC = () => {
 
   // Get type badge color
   const getTypeBadgeClass = (type: string = "") => {
-    if (type === "Sativa") return "bg-orange-500 text-white";
-    if (type === "Indica") return "bg-purple-600 text-white";
-    if (type === "Hybrid") return "bg-green-500 text-white";
+    if (type === "Recovery") return "bg-blue-500 text-white";
+    if (type === "Daily") return "bg-purple-600 text-white";
+    if (type === "Performance") return "bg-green-500 text-white";
     return "bg-gray-400 text-white";
   };
 
@@ -198,8 +198,8 @@ const TreeMasonInventoryPage: React.FC = () => {
   };
 
   // Render mobile product card
-  const renderMobileProductCard = (product: TreeMasonProduct) => (
-    <Card key={product.id} className="mb-4 border-gold/20">
+  const renderMobileProductCard = (product: SpecialtyProduct) => (
+    <Card key={product.id} className="mb-4 border-blue-500/20">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
@@ -219,7 +219,7 @@ const TreeMasonInventoryPage: React.FC = () => {
       <CardContent className="pt-0">
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div>
-            <span className="text-muted-foreground">Potency:</span> {product.potency}
+            <span className="text-muted-foreground">Strength:</span> {product.strength}
           </div>
           <div>
             <span className="text-muted-foreground">SKU:</span> <span className="font-mono">{product.sku}</span>
@@ -250,9 +250,9 @@ const TreeMasonInventoryPage: React.FC = () => {
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">Tree Mason Inventory</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold blue-gradient-text">Specialty Products</h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Manage your Tree Mason hemp products and inventory levels
+                Manage your specialty nutrition and health products inventory
               </p>
             </div>
             
@@ -284,9 +284,9 @@ const TreeMasonInventoryPage: React.FC = () => {
 
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-xl gold-gradient-text">Tree Mason Products</CardTitle>
+            <CardTitle className="text-xl blue-gradient-text">Specialty Product Inventory</CardTitle>
             <CardDescription>
-              Manage your Tree Mason alternative cannabinoid products
+              Manage your specialty nutrition and health products inventory
             </CardDescription>
             <div className="flex flex-col gap-4 mt-4">
               <div className="relative flex-1">
@@ -343,7 +343,7 @@ const TreeMasonInventoryPage: React.FC = () => {
                       <th className="text-left py-3 px-4">Product</th>
                       <th className="text-left py-3 px-4">Category</th>
                       <th className="text-center py-3 px-4">SKU</th>
-                      <th className="text-center py-3 px-4">Potency</th>
+                      <th className="text-center py-3 px-4">Strength</th>
                       <th className="text-center py-3 px-4">Type</th>
                       <th className="text-right py-3 px-4">Price</th>
                       <th className="text-center py-3 px-4">Qty</th>
@@ -362,7 +362,7 @@ const TreeMasonInventoryPage: React.FC = () => {
                           <Badge variant="outline">{product.category}</Badge>
                         </td>
                         <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                        <td className="py-3 px-4 text-center">{product.potency}</td>
+                        <td className="py-3 px-4 text-center">{product.strength}</td>
                         <td className="py-3 px-4 text-center">
                           {product.type && (
                             <Badge className={getTypeBadgeClass(product.type)}>
@@ -419,4 +419,4 @@ const TreeMasonInventoryPage: React.FC = () => {
   );
 };
 
-export default TreeMasonInventoryPage;
+export default SpecialtyInventoryPage;

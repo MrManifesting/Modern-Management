@@ -23,7 +23,7 @@ import ShopifyReportsPage from "@/pages/shopify-reports";
 import ShopifyImportPage from "@/pages/shopify-import";
 import AccessibilityGuide from "@/pages/accessibility-guide";
 import ProductsInventoryPage from "@/pages/products-inventory";
-import TreeMasonInventoryPage from "@/pages/tree-mason-inventory";
+import SpecialtyProductsPage from "@/pages/specialty-products";
 import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
 import BulkBreakdownPage from "@/pages/bulk-breakdown";
@@ -40,7 +40,7 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/inventory" component={Inventory} />
       <ProtectedRoute path="/inventory/products" component={ProductsInventoryPage} />
-      <ProtectedRoute path="/inventory/tree-mason" component={TreeMasonInventoryPage} />
+      <ProtectedRoute path="/inventory/specialty-products" component={SpecialtyProductsPage} />
       <ProtectedRoute path="/inventory/package" component={PackageInventoryPage} />
       <ProtectedRoute path="/marketplace" component={Marketplace} />
       <ProtectedRoute path="/scanner" component={Scanner} />
