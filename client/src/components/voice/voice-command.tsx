@@ -329,7 +329,7 @@ export function VoiceCommand() {
           'items': '/inventory',
           'products': '/inventory',
           'gold standard inventory': '/inventory/gold-standard',
-          'tree mason': '/inventory/tree-mason',
+          'specialty products': '/inventory/specialty-products',
           'package inventory': '/inventory/package',
           'thca flower': '/inventory/thca-flower',
           'thca': '/inventory/thca-flower',
