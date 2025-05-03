@@ -3,39 +3,39 @@
 @tailwind utilities;
 
 :root {
-  /* Light mode - Black, Gold, and Green theme */
+  /* Light mode - Blue and Purple theme */
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
-  --muted: 45 54% 90%;
+  --muted: 220 20% 90%;
   --muted-foreground: 0 0% 30%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 0%;
   --card: 0 0% 98%;
   --card-foreground: 0 0% 0%;
-  --border: 45 54% 80%;
-  --input: 45 54% 85%;
-  --primary: 45 80% 50%;       /* Gold */
-  --primary-foreground: 0 0% 0%;
-  --secondary: 120 75% 30%;    /* Green (adjusted from image) */
+  --border: 220 20% 80%;
+  --input: 220 20% 85%;
+  --primary: 220 80% 50%;      /* Blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 260 70% 50%;    /* Purple */
   --secondary-foreground: 0 0% 100%;
-  --accent: 45 100% 60%;       /* Brighter Gold */
-  --accent-foreground: 0 0% 0%;
+  --accent: 230 90% 60%;       /* Bright Blue */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 45 80% 50%;          /* Gold */
+  --ring: 220 80% 50%;         /* Blue */
   --radius: 0.5rem;
   
-  /* Gold Standard Colors - Based on shared gold standard image */
-  --gold: 45 90% 52%;          /* Vibrant gold from image */
-  --gold-light: 45 85% 75%;
-  --gold-dark: 43 60% 42%;     /* Darker gold for hover states */
-  --gold-foreground: 0 0% 0%;
+  /* Blue/Purple theme colors */
+  --blue: 220 90% 50%;         /* Vibrant blue */
+  --blue-light: 220 85% 75%;
+  --blue-dark: 220 60% 40%;    /* Darker blue for hover states */
+  --blue-foreground: 0 0% 100%;
   
-  /* Cannabis green color from the image */
-  --cannabis-green: 120 80% 30%;
+  /* Secondary purple color */
+  --purple: 260 70% 50%;
   
-  /* Premium background gold - for banners and important sections */
-  --premium-gold: 45 90% 52%;
+  /* Premium background gradient - for banners and important sections */
+  --premium-gradient: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 70%, 55%));
   
   /* Safe padding for mobile devices with notches/home indicators */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -45,7 +45,7 @@
 }
 
 .dark {
-  /* Dark mode - Black, Gold, and Green theme */
+  /* Dark mode - Blue and Purple theme */
   --background: 0 0% 5%;        /* Pure black */
   --foreground: 0 0% 98%;
   --muted: 0 0% 15%;
@@ -54,29 +54,29 @@
   --popover-foreground: 0 0% 98%;
   --card: 0 0% 10%;
   --card-foreground: 0 0% 98%;
-  --border: 45 40% 25%;
+  --border: 220 40% 25%;
   --input: 0 0% 15%;
-  --primary: 45 90% 52%;        /* Gold from image */
-  --primary-foreground: 0 0% 0%;
-  --secondary: 120 75% 30%;     /* Green (adjusted from image) */
+  --primary: 220 90% 50%;       /* Blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 260 70% 50%;     /* Purple */
   --secondary-foreground: 0 0% 100%;
-  --accent: 45 100% 60%;        /* Brighter Gold */
-  --accent-foreground: 0 0% 0%;
+  --accent: 230 90% 60%;        /* Bright Blue */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 45 90% 52%;           /* Gold from image */
+  --ring: 220 90% 50%;          /* Blue */
   
-  /* Gold Standard Colors - Same as in light mode for consistency */
-  --gold: 45 90% 52%;           /* Vibrant gold from image */
-  --gold-light: 45 85% 75%;
-  --gold-dark: 43 60% 42%;     /* Darker gold for hover states */
-  --gold-foreground: 0 0% 0%;
+  /* Blue/Purple theme colors - Same as in light mode for consistency */
+  --blue: 220 90% 50%;          /* Vibrant blue */
+  --blue-light: 220 85% 75%;
+  --blue-dark: 220 60% 40%;     /* Darker blue for hover states */
+  --blue-foreground: 0 0% 100%;
   
-  /* Cannabis green color from the image */
-  --cannabis-green: 120 80% 30%;
+  /* Secondary purple color */
+  --purple: 260 70% 50%;
   
-  /* Premium background gold - for banners and important sections */
-  --premium-gold: 45 90% 52%;
+  /* Premium background gradient - for banners and important sections */
+  --premium-gradient: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 70%, 55%));
 }
 
 @layer base {
@@ -176,8 +176,18 @@
 }
 
 /* Blue/Purple gradient text */
-.gradient-text {
+.gradient-text,
+.blue-gradient-text {
   background: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 80%, 65%), hsl(220, 80%, 55%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* Gold gradient text - keeping for reference during transition */
+.gold-gradient-text {
+  background: linear-gradient(to right, hsl(45, 90%, 52%), hsl(45, 100%, 60%), hsl(45, 90%, 52%));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

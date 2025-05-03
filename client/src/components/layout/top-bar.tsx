@@ -103,7 +103,7 @@ export default function TopBar({
             size="sm"
             className={`lg:hidden ${
               isCustomTheme 
-                ? 'text-gold border-gold/30 hover:bg-gold/10' 
+                ? 'text-blue-500 border-blue-500/30 hover:bg-blue-500/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
             aria-label="Toggle sidebar"
@@ -117,7 +117,7 @@ export default function TopBar({
             onClick={toggleSidebar}
             className={`rounded-md p-2 hidden lg:block ${
               isCustomTheme 
-                ? 'text-gold hover:bg-gold/10' 
+                ? 'text-blue-500 hover:bg-blue-500/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
             aria-label="Toggle sidebar"
@@ -144,15 +144,15 @@ export default function TopBar({
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
-          {/* Gold theme toggle */}
+          {/* Theme toggle */}
           <button
             onClick={toggleTheme}
             className={`rounded-full p-2 hidden sm:flex ${
               isCustomTheme 
-                ? 'bg-gold/20 text-gold hover:bg-gold/30' 
+                ? 'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30' 
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
-            aria-label="Toggle gold theme"
+            aria-label="Toggle custom theme"
           >
             <Sparkles className="h-5 w-5" />
           </button>
@@ -172,12 +172,12 @@ export default function TopBar({
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 sm:pr-4 text-sm focus:outline-none ${
                 isCustomTheme 
-                  ? 'bg-black border border-gold/50 text-gray-100 focus:border-gold focus:ring-1 focus:ring-gold placeholder-gray-500'
+                  ? 'bg-white border border-blue-500/50 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500 dark:bg-gray-800 dark:text-white'
                   : 'border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white'
               }`}
             />
             <div className="absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 pointer-events-none">
-              <Search className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isCustomTheme ? 'text-gold/50' : 'text-gray-400'}`} />
+              <Search className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isCustomTheme ? 'text-blue-500/70' : 'text-gray-400'}`} />
             </div>
           </div>
           
@@ -187,7 +187,7 @@ export default function TopBar({
             size="icon"
             className={`sm:hidden p-1.5 ${
               isCustomTheme 
-                ? 'text-gold hover:bg-gold/10' 
+                ? 'text-blue-500 hover:bg-blue-500/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
             onClick={() => alert('Mobile search coming soon')}
@@ -202,7 +202,7 @@ export default function TopBar({
                 variant="ghost"
                 className={`flex items-center gap-2 ${
                   isCustomTheme
-                    ? 'text-gold hover:bg-gold/10'
+                    ? 'text-blue-500 hover:bg-blue-500/10'
                     : 'text-gray-700 dark:text-gray-300'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function TopBar({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={
               isCustomTheme 
-                ? 'bg-black border border-gold/50 text-gold' 
+                ? 'bg-white border border-blue-500/50 text-blue-700 dark:bg-gray-800 dark:text-blue-400' 
                 : ''
             }>
               {user ? (
@@ -226,7 +226,7 @@ export default function TopBar({
                         : user.username}
                     </div>
                     <div className="text-xs opacity-75">{user.email}</div>
-                    <div className="text-xs mt-1 capitalize bg-gold/20 rounded-full px-2 py-0.5 inline-block">
+                    <div className="text-xs mt-1 capitalize bg-blue-500/20 rounded-full px-2 py-0.5 inline-block">
                       {user.role}
                     </div>
                   </div>
@@ -255,7 +255,7 @@ export default function TopBar({
             onClick={() => setShowAddItemModal(true)}
             className={`flex items-center ${
               isCustomTheme
-                ? 'bg-gold hover:bg-gold-dark text-black'
+                ? 'bg-blue-500 hover:bg-blue-600 text-white'
                 : ''
             }`}
           >
