@@ -22,8 +22,7 @@ import ShopifySyncPage from "@/pages/shopify-sync";
 import ShopifyReportsPage from "@/pages/shopify-reports";
 import ShopifyImportPage from "@/pages/shopify-import";
 import AccessibilityGuide from "@/pages/accessibility-guide";
-import THCaFlowerInventoryPage from "@/pages/thca-flower-inventory";
-import GoldStandardInventoryPage from "@/pages/gold-standard-inventory";
+import ProductsInventoryPage from "@/pages/products-inventory";
 import TreeMasonInventoryPage from "@/pages/tree-mason-inventory";
 import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
@@ -40,8 +39,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/inventory" component={Inventory} />
-      <ProtectedRoute path="/inventory/thca-flower" component={THCaFlowerInventoryPage} />
-      <ProtectedRoute path="/inventory/gold-standard" component={GoldStandardInventoryPage} />
+      <ProtectedRoute path="/inventory/products" component={ProductsInventoryPage} />
       <ProtectedRoute path="/inventory/tree-mason" component={TreeMasonInventoryPage} />
       <ProtectedRoute path="/inventory/package" component={PackageInventoryPage} />
       <ProtectedRoute path="/marketplace" component={Marketplace} />
