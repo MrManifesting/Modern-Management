@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMarketplace } from "@/hooks/use-marketplace";
+import { MarketplaceConnectionWizard } from "@/components/marketplace/marketplace-connection-wizard";
 import { 
   Card, 
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle 
+  CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -18,129 +21,175 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import { Item } from "@shared/schema";
-import { FileSpreadsheet, Download } from "lucide-react";
+import { 
+  FileSpreadsheet, 
+  Download, 
+  Plus, 
+  Store, 
+  RefreshCw, 
+  CheckCircle2, 
+  ShoppingCart,
+  AlertCircle
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarketplaceWithUI } from "@/lib/types";
 
 export default function Marketplace() {
-  const { toast } = useToast();
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [selectedMarketplaces, setSelectedMarketplaces] = useState<string[]>([]);
-
-  // Fetch items and marketplaces
-  const { data: items = [], isLoading: isLoadingItems } = useQuery({
-    queryKey: ['/api/items'],
-  });
-
-  const { data: marketplaces = [], isLoading: isLoadingMarketplaces } = useQuery({
-    queryKey: ['/api/marketplaces'],
-  });
-
-  // Generate CSV export mutation
-  const exportMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/export-csv", {
-        items: selectedItems,
-        marketplaces: selectedMarketplaces,
-      });
-      
-      // Create and download CSV file
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `marketplace-listings-${Date.now()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        return true;
-      }
-      
-      throw new Error("Failed to generate CSV");
-    },
-    onSuccess: () => {
-      toast({
-        title: "CSV exported successfully",
-        description: "Your marketplace listings have been exported as CSV.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Export failed",
-        description: "Failed to export listings as CSV. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Toggle item selection
-  const toggleItem = (id: number) => {
-    setSelectedItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
-    );
-  };
-
-  // Toggle all items
-  const toggleAllItems = () => {
-    if (selectedItems.length === items.length) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(items.map((item: Item) => item.id));
-    }
-  };
-
-  // Toggle marketplace selection
-  const toggleMarketplace = (name: string) => {
-    setSelectedMarketplaces(prev => 
-      prev.includes(name) 
-        ? prev.filter(item => item !== name)
-        : [...prev, name]
-    );
-  };
-
-  // Toggle all marketplaces (only Website and Shopify)
-  const toggleAllMarketplaces = () => {
-    const filteredMarketplaces = marketplaces.filter(
-      (m: any) => m.name === "Website" || m.name === "Shopify"
-    );
-    
-    if (selectedMarketplaces.length === filteredMarketplaces.length) {
-      setSelectedMarketplaces([]);
-    } else {
-      setSelectedMarketplaces(filteredMarketplaces.map((m: any) => m.name));
-    }
-  };
-
-  // Handle CSV export
-  const handleExport = () => {
-    if (selectedItems.length === 0) {
-      toast({
-        title: "No items selected",
-        description: "Please select at least one item to export.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (selectedMarketplaces.length === 0) {
-      toast({
-        title: "No marketplaces selected",
-        description: "Please select at least one marketplace to export to.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    exportMutation.mutate();
-  };
+  const { 
+    marketplaces, 
+    isLoading: isLoadingMarketplaces,
+    refetch,
+    selectedItems,
+    selectedMarketplaces,
+    toggleItemSelection,
+    toggleAllItems,
+    toggleMarketplaceSelection,
+    toggleAllMarketplaces,
+    generateCSV,
+    isExporting
+  } = useMarketplace();
+  
+  const [activeTab, setActiveTab] = useState("connected");
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  
+  // For demo purposes - normally would be fetched from the API
+  const items = [
+    { id: 1, name: "Wireless Headphones", category: "Electronics", basePrice: 149.99, status: "listed" },
+    { id: 2, name: "Smart Watch", category: "Electronics", basePrice: 249.99, status: "sold" },
+    { id: 3, name: "Desk Lamp", category: "Home Goods", basePrice: 39.99, status: "draft" },
+    { id: 4, name: "Yoga Mat", category: "Sporting Goods", basePrice: 29.99, status: "listed" },
+    { id: 5, name: "Coffee Maker", category: "Kitchen", basePrice: 89.99, status: "listed" },
+  ];
+  
+  const isLoadingItems = false;
+  
+  const connectedMarketplaces = marketplaces.filter(m => m.isConnected);
+  const availableMarketplaces = marketplaces.filter(m => !m.isConnected);
 
   return (
     <div className="space-y-6">
+      {/* Marketplaces Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <CardTitle>Marketplaces</CardTitle>
+              <CardDescription>
+                Connect and manage your online marketplace integrations
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsWizardOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Marketplace
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="connected" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="connected">
+                Connected
+                {connectedMarketplaces.length > 0 && (
+                  <Badge className="ml-2 bg-blue-500" variant="secondary">
+                    {connectedMarketplaces.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="available">
+                Available
+                {availableMarketplaces.length > 0 && (
+                  <Badge className="ml-2" variant="outline">
+                    {availableMarketplaces.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Connected Marketplaces */}
+            <TabsContent value="connected">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {isLoadingMarketplaces ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i} className="h-[180px] animate-pulse">
+                      <CardHeader className="pb-2">
+                        <div className="h-6 w-32 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-10 w-10 bg-gray-200 rounded-full mx-auto"></div>
+                      </CardContent>
+                      <CardFooter>
+                        <div className="h-9 w-full bg-gray-200 rounded"></div>
+                      </CardFooter>
+                    </Card>
+                  ))
+                ) : connectedMarketplaces.length > 0 ? (
+                  connectedMarketplaces.map((marketplace) => (
+                    <MarketplaceCard 
+                      key={marketplace.id} 
+                      marketplace={marketplace} 
+                      isConnected={true} 
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full flex flex-col items-center justify-center p-8 text-center border rounded-lg border-dashed">
+                    <Store className="h-12 w-12 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Connected Marketplaces</h3>
+                    <p className="text-gray-500 max-w-md mb-4">
+                      Connect to online marketplaces to synchronize your inventory and manage your listings in one place.
+                    </p>
+                    <Button onClick={() => setActiveTab("available")}>
+                      Browse Available Marketplaces
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            {/* Available Marketplaces */}
+            <TabsContent value="available">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {isLoadingMarketplaces ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i} className="h-[180px] animate-pulse">
+                      <CardHeader className="pb-2">
+                        <div className="h-6 w-32 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-10 w-10 bg-gray-200 rounded-full mx-auto"></div>
+                      </CardContent>
+                      <CardFooter>
+                        <div className="h-9 w-full bg-gray-200 rounded"></div>
+                      </CardFooter>
+                    </Card>
+                  ))
+                ) : availableMarketplaces.length > 0 ? (
+                  availableMarketplaces.map((marketplace) => (
+                    <MarketplaceCard 
+                      key={marketplace.id} 
+                      marketplace={marketplace} 
+                      isConnected={false}
+                      onConnect={() => setIsWizardOpen(true)}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full flex flex-col items-center justify-center p-8 text-center border rounded-lg border-dashed">
+                    <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">All Marketplaces Connected!</h3>
+                    <p className="text-gray-500 max-w-md">
+                      You've connected all available marketplaces. Your inventory is ready to be synchronized.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Export Section */}
       <Card>
         <CardHeader>
           <CardTitle>Marketplace Export</CardTitle>
@@ -172,20 +221,15 @@ export default function Marketplace() {
                         id="all-marketplaces"
                         checked={
                           selectedMarketplaces.length === 
-                          marketplaces.filter((m: any) => 
-                            m.name === "Website" || m.name === "Shopify"
-                          ).length
+                          connectedMarketplaces.length && 
+                          connectedMarketplaces.length > 0
                         }
                         onCheckedChange={toggleAllMarketplaces}
                       />
                       <Label htmlFor="all-marketplaces">All Marketplaces</Label>
                     </div>
                     
-                    {marketplaces
-                      .filter((marketplace: any) => 
-                        marketplace.name === "Website" || marketplace.name === "Shopify"
-                      )
-                      .map((marketplace: any) => (
+                    {connectedMarketplaces.map((marketplace) => (
                       <div 
                         key={marketplace.id} 
                         className="flex items-center space-x-2 ml-4"
@@ -193,18 +237,20 @@ export default function Marketplace() {
                         <Checkbox
                           id={`marketplace-${marketplace.id}`}
                           checked={selectedMarketplaces.includes(marketplace.name)}
-                          onCheckedChange={() => toggleMarketplace(marketplace.name)}
-                          disabled={!marketplace.isConnected}
+                          onCheckedChange={() => toggleMarketplaceSelection(marketplace.name)}
                         />
-                        <Label 
-                          htmlFor={`marketplace-${marketplace.id}`}
-                          className={!marketplace.isConnected ? "text-gray-400" : ""}
-                        >
+                        <Label htmlFor={`marketplace-${marketplace.id}`}>
                           {marketplace.name}
-                          {!marketplace.isConnected && " (Not connected)"}
                         </Label>
                       </div>
                     ))}
+                    
+                    {connectedMarketplaces.length === 0 && (
+                      <div className="text-sm text-gray-500 pt-2">
+                        <AlertCircle className="h-4 w-4 inline mr-2" />
+                        No connected marketplaces. Please connect a marketplace first.
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -220,7 +266,7 @@ export default function Marketplace() {
                   <Label>CSV Format</Label>
                   <div className="flex justify-between items-center p-2 rounded-md border">
                     <div className="flex items-center space-x-2">
-                      <FileSpreadsheet className="h-5 w-5 text-primary-500" />
+                      <FileSpreadsheet className="h-5 w-5 text-blue-500" />
                       <span className="text-sm font-medium">Standard CSV</span>
                     </div>
                     <Button variant="outline" size="sm" disabled>
@@ -231,16 +277,16 @@ export default function Marketplace() {
                 
                 <div className="pt-4">
                   <Button
-                    onClick={handleExport}
+                    onClick={generateCSV}
                     disabled={
-                      exportMutation.isPending || 
+                      isExporting || 
                       selectedItems.length === 0 || 
                       selectedMarketplaces.length === 0
                     }
                     className="w-full"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    {exportMutation.isPending ? "Generating..." : "Generate & Download CSV"}
+                    {isExporting ? "Generating..." : "Generate & Download CSV"}
                   </Button>
                 </div>
               </CardContent>
@@ -263,7 +309,7 @@ export default function Marketplace() {
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedItems.length === items.length && items.length > 0}
-                          onCheckedChange={toggleAllItems}
+                          onCheckedChange={() => toggleAllItems(items.map(item => item.id))}
                           disabled={isLoadingItems}
                         />
                       </TableHead>
@@ -295,17 +341,17 @@ export default function Marketplace() {
                         </TableRow>
                       ))
                     ) : items.length > 0 ? (
-                      items.map((item: Item) => (
+                      items.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>
                             <Checkbox
                               checked={selectedItems.includes(item.id)}
-                              onCheckedChange={() => toggleItem(item.id)}
+                              onCheckedChange={() => toggleItemSelection(item.id)}
                             />
                           </TableCell>
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.category}</TableCell>
-                          <TableCell>${item.price.toFixed(2)}</TableCell>
+                          <TableCell>${item.basePrice.toFixed(2)}</TableCell>
                           <TableCell>
                             <span className={`text-xs font-medium rounded-full px-2 py-1 ${
                               item.status === "listed" 
@@ -333,6 +379,57 @@ export default function Marketplace() {
           </Card>
         </CardContent>
       </Card>
+      
+      {/* Marketplace Connection Wizard */}
+      <MarketplaceConnectionWizard 
+        open={isWizardOpen} 
+        onOpenChange={setIsWizardOpen} 
+      />
     </div>
+  );
+}
+
+// Marketplace Card Component
+function MarketplaceCard({ 
+  marketplace, 
+  isConnected = false,
+  onConnect
+}: { 
+  marketplace: MarketplaceWithUI, 
+  isConnected?: boolean,
+  onConnect?: () => void
+}) {
+  return (
+    <Card className={`border overflow-hidden ${marketplace.bgColor}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg flex items-center gap-2">
+          {marketplace.name}
+          {isConnected && (
+            <Badge className={marketplace.badgeClass}>Connected</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          {marketplace.description || `Connect to ${marketplace.name}`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="h-24 flex items-center justify-center">
+        <img
+          src={marketplace.logo}
+          alt={`${marketplace.name} logo`}
+          className="max-h-16 max-w-[80%] object-contain"
+        />
+      </CardContent>
+      <CardFooter className="pt-1">
+        {isConnected ? (
+          <Button variant="outline" className="w-full">
+            <ShoppingCart className="h-4 w-4 mr-1" /> Manage Products
+          </Button>
+        ) : (
+          <Button variant="default" className="w-full" onClick={onConnect}>
+            <Plus className="h-4 w-4 mr-1" /> Connect
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 }
