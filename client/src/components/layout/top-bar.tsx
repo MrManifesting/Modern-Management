@@ -18,14 +18,14 @@ import {
 type TopBarProps = {
   toggleSidebar: () => void;
   pageTitle: string;
-  isGoldTheme?: boolean;
+  isCustomTheme?: boolean;
   toggleTheme?: () => void;
 };
 
 export default function TopBar({ 
   toggleSidebar, 
   pageTitle,
-  isGoldTheme = true,
+  isCustomTheme = true,
   toggleTheme = () => {}
 }: TopBarProps) {
   const [location, navigate] = useLocation();
@@ -84,15 +84,15 @@ export default function TopBar({
       case "/employees":
         return "Manage employee accounts and permissions";
       default:
-        return "Welcome to Gold-Standard-Inventory";
+        return "Welcome to Inventory Pro";
     }
   };
 
   return (
     <>
       <header className={`flex h-16 items-center justify-between border-b px-3 sm:px-4 md:px-6 sticky top-0 z-30 ${
-        isGoldTheme 
-          ? 'bg-black border-gold/30 text-gold' 
+        isCustomTheme 
+          ? 'bg-white border-blue-300/30 text-blue-600 dark:bg-gray-900 dark:border-blue-700/30 dark:text-blue-400' 
           : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
       }`}>
         <div className="flex items-center gap-1">
@@ -102,7 +102,7 @@ export default function TopBar({
             variant="outline"
             size="sm"
             className={`lg:hidden ${
-              isGoldTheme 
+              isCustomTheme 
                 ? 'text-gold border-gold/30 hover:bg-gold/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
@@ -116,7 +116,7 @@ export default function TopBar({
           <button
             onClick={toggleSidebar}
             className={`rounded-md p-2 hidden lg:block ${
-              isGoldTheme 
+              isCustomTheme 
                 ? 'text-gold hover:bg-gold/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
@@ -127,14 +127,14 @@ export default function TopBar({
           
           <div className="ml-2 sm:ml-4">
             <h1 className={`text-lg sm:text-xl font-semibold truncate max-w-[150px] sm:max-w-none ${
-              isGoldTheme 
-                ? 'gold-gradient-text' 
+              isCustomTheme 
+                ? 'blue-gradient-text' 
                 : 'text-gray-800 dark:text-gray-100'
             }`}>
               {pageTitle}
             </h1>
             <p className={`text-xs sm:text-sm hidden sm:block ${
-              isGoldTheme 
+              isCustomTheme 
                 ? 'text-gray-300' 
                 : 'text-gray-600 dark:text-gray-400'
             }`}>
@@ -148,7 +148,7 @@ export default function TopBar({
           <button
             onClick={toggleTheme}
             className={`rounded-full p-2 hidden sm:flex ${
-              isGoldTheme 
+              isCustomTheme 
                 ? 'bg-gold/20 text-gold hover:bg-gold/30' 
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
@@ -158,10 +158,10 @@ export default function TopBar({
           </button>
           
           {/* Dark mode toggle */}
-          {!isGoldTheme && <ThemeToggle />}
+          {!isCustomTheme && <ThemeToggle />}
           
           {/* Notifications */}
-          <NotificationsDropdown isGoldTheme={isGoldTheme} />
+          <NotificationsDropdown isCustomTheme={isCustomTheme} />
 
           {/* Search - not shown on very small screens */}
           <div className="relative hidden sm:block">
@@ -171,13 +171,13 @@ export default function TopBar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 sm:pr-4 text-sm focus:outline-none ${
-                isGoldTheme 
+                isCustomTheme 
                   ? 'bg-black border border-gold/50 text-gray-100 focus:border-gold focus:ring-1 focus:ring-gold placeholder-gray-500'
                   : 'border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white'
               }`}
             />
             <div className="absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 pointer-events-none">
-              <Search className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isGoldTheme ? 'text-gold/50' : 'text-gray-400'}`} />
+              <Search className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isCustomTheme ? 'text-gold/50' : 'text-gray-400'}`} />
             </div>
           </div>
           
@@ -186,7 +186,7 @@ export default function TopBar({
             variant="ghost"
             size="icon"
             className={`sm:hidden p-1.5 ${
-              isGoldTheme 
+              isCustomTheme 
                 ? 'text-gold hover:bg-gold/10' 
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
             }`}
@@ -201,7 +201,7 @@ export default function TopBar({
               <Button
                 variant="ghost"
                 className={`flex items-center gap-2 ${
-                  isGoldTheme
+                  isCustomTheme
                     ? 'text-gold hover:bg-gold/10'
                     : 'text-gray-700 dark:text-gray-300'
                 }`}
@@ -213,7 +213,7 @@ export default function TopBar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={
-              isGoldTheme 
+              isCustomTheme 
                 ? 'bg-black border border-gold/50 text-gold' 
                 : ''
             }>
@@ -254,7 +254,7 @@ export default function TopBar({
           <Button
             onClick={() => setShowAddItemModal(true)}
             className={`flex items-center ${
-              isGoldTheme
+              isCustomTheme
                 ? 'bg-gold hover:bg-gold-dark text-black'
                 : ''
             }`}

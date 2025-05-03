@@ -13,7 +13,7 @@ const sampleNotifications = [
   {
     id: 1,
     title: 'Low Stock Alert',
-    message: 'THCA Flower - Gorilla Glue is running low on stock.',
+    message: 'Product "Premium Widget XL" is running low on stock.',
     timestamp: new Date(Date.now() - 3600000 * 2),
     read: false,
     type: 'alert'
@@ -21,7 +21,7 @@ const sampleNotifications = [
   {
     id: 2,
     title: 'New Sale',
-    message: 'New order #12345 has been placed on Shopify.',
+    message: 'New order #12345 has been placed on your marketplace.',
     timestamp: new Date(Date.now() - 3600000 * 5),
     read: false,
     type: 'info'
@@ -29,7 +29,7 @@ const sampleNotifications = [
   {
     id: 3,
     title: 'Inventory Updated',
-    message: 'Gold Standard - Wedding Cake quantity has been updated.',
+    message: 'Product "Deluxe Package" quantity has been updated.',
     timestamp: new Date(Date.now() - 3600000 * 24),
     read: false,
     type: 'success'
@@ -37,10 +37,10 @@ const sampleNotifications = [
 ];
 
 interface NotificationsDropdownProps {
-  isGoldTheme?: boolean;
+  isCustomTheme?: boolean;
 }
 
-export default function NotificationsDropdown({ isGoldTheme = false }: NotificationsDropdownProps) {
+export default function NotificationsDropdown({ isCustomTheme = false }: NotificationsDropdownProps) {
   const [notifications, setNotifications] = useState(sampleNotifications);
   const [open, setOpen] = useState(false);
   
@@ -78,7 +78,7 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
     let bgColor = '';
     let borderColor = '';
     
-    if (isGoldTheme) {
+    if (isCustomTheme) {
       if (type === 'alert') {
         bgColor = read ? 'bg-red-900/20' : 'bg-red-900/30';
         borderColor = 'border-l-red-600';
@@ -86,8 +86,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
         bgColor = read ? 'bg-green-900/20' : 'bg-green-900/30';
         borderColor = 'border-l-green-600';
       } else {
-        bgColor = read ? 'bg-gold/10' : 'bg-gold/20';
-        borderColor = 'border-l-gold';
+        bgColor = read ? 'bg-blue-500/10' : 'bg-blue-500/20';
+        borderColor = 'border-l-blue-500';
       }
     } else {
       if (type === 'alert') {
@@ -111,8 +111,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
         <div className="relative">
           <button 
             className={`rounded-full p-2 ${
-              isGoldTheme 
-                ? 'bg-gold/20 text-gold hover:bg-gold/30' 
+              isCustomTheme 
+                ? 'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30' 
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
             aria-label="Notifications"
@@ -121,8 +121,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
           </button>
           {unreadCount > 0 && (
             <div className={`absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center ${
-              isGoldTheme 
-                ? 'bg-gold text-black' 
+              isCustomTheme 
+                ? 'bg-purple-500 text-white' 
                 : 'bg-primary-500 text-white'
             }`}>
               {unreadCount}
@@ -132,8 +132,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" className={`w-80 p-0 ${
-        isGoldTheme
-          ? 'bg-black border border-gold/50 text-gold'
+        isCustomTheme
+          ? 'bg-white dark:bg-gray-900 border border-blue-300/50 dark:border-blue-700/50'
           : ''
       }`}>
         <div className="flex items-center justify-between p-3 border-b">
@@ -143,7 +143,7 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
               variant="ghost" 
               size="sm" 
               onClick={markAllAsRead}
-              className={isGoldTheme ? 'text-gold hover:text-gold/80 hover:bg-gold/20' : ''}
+              className={isCustomTheme ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-500/10' : ''}
             >
               Mark all as read
             </Button>
@@ -169,8 +169,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
                       <div className="flex justify-between">
                         <h4 className={`text-sm font-medium ${
                           notification.read 
-                            ? (isGoldTheme ? 'text-gold/80' : 'text-gray-600 dark:text-gray-400') 
-                            : (isGoldTheme ? 'text-gold' : 'text-gray-900 dark:text-gray-100')
+                            ? (isCustomTheme ? 'text-blue-500/80' : 'text-gray-600 dark:text-gray-400') 
+                            : (isCustomTheme ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100')
                         }`}>
                           {notification.title}
                         </h4>
@@ -180,8 +180,8 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
                       </div>
                       <p className={`text-xs mt-1 ${
                         notification.read 
-                          ? (isGoldTheme ? 'text-gray-400' : 'text-gray-500 dark:text-gray-500') 
-                          : (isGoldTheme ? 'text-gray-300' : 'text-gray-700 dark:text-gray-300')
+                          ? (isCustomTheme ? 'text-gray-500' : 'text-gray-500 dark:text-gray-500') 
+                          : (isCustomTheme ? 'text-gray-700' : 'text-gray-700 dark:text-gray-300')
                       }`}>
                         {notification.message}
                       </p>
@@ -192,7 +192,7 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
                         deleteNotification(notification.id);
                       }}
                       className={`absolute top-2 right-2 opacity-60 hover:opacity-100 ${
-                        isGoldTheme ? 'text-gold' : 'text-gray-500 dark:text-gray-400'
+                        isCustomTheme ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       <X className="h-3 w-3" />
@@ -213,7 +213,7 @@ export default function NotificationsDropdown({ isGoldTheme = false }: Notificat
             variant="ghost" 
             size="sm" 
             className={`text-xs w-full ${
-              isGoldTheme ? 'text-gold hover:bg-gold/20' : ''
+              isCustomTheme ? 'text-blue-500 hover:bg-blue-500/10' : ''
             }`}
             onClick={() => setOpen(false)}
           >
