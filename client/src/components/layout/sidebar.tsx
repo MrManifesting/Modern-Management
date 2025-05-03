@@ -80,9 +80,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
           className: "inventory-link gold-brand",
         },
         {
-          title: "Tree Mason",
-          path: "/inventory/tree-mason",
-          className: "inventory-link tree-mason-brand",
+          title: "Specialty Products",
+          path: "/inventory/specialty-products",
+          className: "inventory-link specialty-brand",
         },
         {
           title: "Package Inventory",
@@ -188,7 +188,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       {/* Logo and Brand */}
       <div className="flex h-16 items-center justify-center border-b border-gold/30 px-4">
         <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
-          <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-gold to-gold-dark p-1.5 text-black">
+          <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 text-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6"
@@ -205,7 +205,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold gold-gradient-text">Gold-Standard</span>
+            <span className="text-lg font-semibold blue-gradient-text">Inventory Pro</span>
           )}
         </div>
       </div>

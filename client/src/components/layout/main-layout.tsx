@@ -37,7 +37,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       case "/employees":
         return "Employee Management";
       default:
-        return "Gold-Standard-Inventory";
+        return "Inventory Pro";
     }
   };
 
