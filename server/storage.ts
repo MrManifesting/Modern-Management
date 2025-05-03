@@ -4,7 +4,7 @@ import {
   Sale, InsertSale, ReportParams, SalesReport, TimeSeriesData,
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
-  ItemType, BreakdownStatus,
+  ItemType, ProcessingStatus, ItemCondition,
   User, InsertUser,
   
   // Import schema tables for Drizzle
@@ -921,7 +921,7 @@ export class MemStorage implements IStorage {
   
   async getWaitingItems(): Promise<Item[]> {
     return Array.from(this.items.values()).filter(item => 
-      item.itemType === ItemType.BULK && item.breakdownStatus === BreakdownStatus.WAITING);
+      item.itemType === ItemType.BUNDLE && item.processingStatus === ProcessingStatus.WAITING);
   }
   
   // Product Breakdown methods

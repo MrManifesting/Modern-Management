@@ -31,15 +31,23 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 // Enums
 export const ItemType = {
   REGULAR: 'regular',
-  BULK: 'bulk',
-  BREAKDOWN: 'breakdown'
+  BUNDLE: 'bundle',
+  COMPONENT: 'component'
 } as const;
 
-export const BreakdownStatus = {
+export const ProcessingStatus = {
   NONE: 'none',
   WAITING: 'waiting',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed'
+} as const;
+
+export const ItemCondition = {
+  NEW: 'new',
+  LIKE_NEW: 'like_new',
+  GOOD: 'good',
+  FAIR: 'fair',
+  POOR: 'poor'
 } as const;
 
 // Item Schema
@@ -47,35 +55,63 @@ export const items = pgTable("items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: doublePrecision("price").notNull(),
-  category: text("category").notNull(),
-  condition: text("condition").notNull(),
   sku: text("sku").notNull(), // Unique Stock Keeping Unit
+  
+  // Pricing information
+  costPrice: doublePrecision("cost_price").notNull().default(0), // What we paid for it
+  basePrice: doublePrecision("base_price").notNull(), // MSRP
+  salePrice: doublePrecision("sale_price"), // Special sale price if applicable
+  wholesalePrice: doublePrecision("wholesale_price"), // Price for wholesale customers
+  
+  // Categorization
+  category: text("category").notNull(),
+  subcategory: text("subcategory"),
+  brand: text("brand"),
+  condition: text("condition").notNull().default(ItemCondition.NEW),
+  
+  // Inventory management
   quantity: integer("quantity").notNull().default(1), // Current inventory quantity
   lowStockThreshold: integer("low_stock_threshold").default(5), // Threshold for low stock alerts
   reorderPoint: integer("reorder_point").default(3), // When to reorder
   reorderQuantity: integer("reorder_quantity").default(10), // How many to reorder
   stockAlerts: boolean("stock_alerts").default(true), // Whether to send alerts
   lastRestockDate: timestamp("last_restock_date"), // When the item was last restocked
+  
+  // Product identification
   barcode: text("barcode"), // Store barcode data (can be UPC, EAN, etc.)
   qrCode: text("qr_code"), // Store QR code data
-  status: text("status").notNull().default("draft"), // draft, listed, sold
+  mpn: text("mpn"), // Manufacturer Part Number
+  gtin: text("gtin"), // Global Trade Item Number
+  
+  // Status and metadata
+  status: text("status").notNull().default("draft"), // draft, active, archived, discontinued
+  visibility: text("visibility").notNull().default("visible"), // visible, hidden
+  featured: boolean("featured").default(false), // Featured product 
+  
+  // Media and content
   images: json("images").notNull().default([]), // Array of image URLs
+  videos: json("videos").default([]), // Array of video URLs
+  documents: json("documents").default([]), // Manuals, specifications, etc.
+  
+  // Attributes and tagging
   tags: json("tags").notNull().default([]), // Array of tags
-  marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers (shopify, website, etc)
+  attributes: json("attributes").notNull().default({}), // Product-specific attributes (color, size, etc.)
+  dimensions: json("dimensions").default({}), // Product dimensions (length, width, height)
+  
+  // Marketplace integration
+  marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers
   syncedToMarketplaces: json("synced_to_marketplaces").notNull().default([]), // Which marketplaces this is synced to
-  attributes: json("attributes").notNull().default({}), // Product-specific attributes (e.g., cannabis strain data)
-  externalUrl: text("external_url"), // URL to external resource (e.g., COA document)
-  shopifyId: text("shopify_id"), // Shopify product ID for integration
+  marketplaceIds: json("marketplace_ids").default({}), // IDs in different marketplaces {shopify: "123", ebay: "456"}
   
-  // Fields for bulk product tracking
-  itemType: text("item_type").notNull().default(ItemType.REGULAR), // regular, bulk, breakdown
-  weight: doublePrecision("weight"), // Weight in grams
+  // Fields for bundling and kitting
+  itemType: text("item_type").notNull().default(ItemType.REGULAR), // regular, bundle, component
+  weight: doublePrecision("weight"), // Weight for shipping
   weightUnit: text("weight_unit").default("g"), // g, oz, lb, kg
-  breakdownStatus: text("breakdown_status").notNull().default(BreakdownStatus.NONE), // none, waiting, in_progress, completed
-  sourceItemId: integer("source_item_id"), // Reference to parent bulk item if this is a breakdown product
-  breakdownPlan: json("breakdown_plan").default([]), // Array of planned breakdown products
+  processingStatus: text("processing_status").notNull().default(ProcessingStatus.NONE), // none, waiting, in_progress, completed
+  sourceItemId: integer("source_item_id"), // Reference to parent item if this is a component
+  bundlePlan: json("bundle_plan").default([]), // Array of planned component items
   
+  // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -319,11 +355,11 @@ export const insertInventoryActionSchema = createInsertSchema(inventoryActions).
 export type InventoryAction = typeof inventoryActions.$inferSelect;
 export type InsertInventoryAction = z.infer<typeof insertInventoryActionSchema>;
 
-// Product Breakdown Schema
+// Product Processing Schema (renamed from Product Breakdown)
 export const productBreakdowns = pgTable("product_breakdowns", {
   id: serial("id").primaryKey(),
   bulkItemId: integer("bulk_item_id").notNull(), // Reference to the bulk item
-  status: text("status").notNull().default(BreakdownStatus.WAITING), // waiting, in_progress, completed
+  status: text("status").notNull().default(ProcessingStatus.WAITING), // waiting, in_progress, completed
   employeeId: integer("employee_id"), // Employee who initiated or completed the breakdown
   targetProducts: json("target_products").notNull().default([]), // Array of planned breakdown products
   completedProducts: json("completed_products").notNull().default([]), // Array of created breakdown products
@@ -340,7 +376,7 @@ export const insertBreakdownSchema = createInsertSchema(productBreakdowns).omit(
 export type ProductBreakdown = typeof productBreakdowns.$inferSelect;
 export type InsertProductBreakdown = z.infer<typeof insertBreakdownSchema>;
 
-// Breakdown target product schema
+// Component target product schema (renamed from Breakdown target)
 export const breakdownTargetSchema = z.object({
   name: z.string(),
   weight: z.number(),
@@ -348,7 +384,7 @@ export const breakdownTargetSchema = z.object({
   quantity: z.number().int().positive(),
   sku: z.string().optional(),
   price: z.number().positive(),
-  status: z.string().default(BreakdownStatus.WAITING),
+  status: z.string().default(ProcessingStatus.WAITING),
   resultItemId: z.number().optional(), // ID of the created item when completed
 });
 
