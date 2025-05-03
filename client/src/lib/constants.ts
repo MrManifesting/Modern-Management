@@ -50,30 +50,48 @@ export const MARKETPLACE_PLATFORM_DETAILS = [
     name: "eBay", 
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/2560px-EBay_logo.svg.png",
     bgColor: "bg-blue-50",
-    badgeClass: "marketplace-badge-ebay"
+    badgeClass: "bg-blue-500 text-white",
+    description: "Sell on one of the world's largest marketplaces with millions of active users."
   },
   { 
     name: "Etsy", 
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Etsy_logo.svg/2560px-Etsy_logo.svg.png",
-    bgColor: "bg-purple-50",
-    badgeClass: "marketplace-badge-etsy"
+    bgColor: "bg-orange-50",
+    badgeClass: "bg-orange-500 text-white",
+    description: "Perfect for handmade, vintage items, and craft supplies."
   },
   { 
     name: "Amazon", 
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/2560px-Amazon_logo.svg.png",
-    bgColor: "bg-red-50",
-    badgeClass: "marketplace-badge-amazon"
+    bgColor: "bg-amber-50",
+    badgeClass: "bg-amber-500 text-white",
+    description: "Reach millions of Prime members and Amazon customers worldwide."
   },
   { 
     name: "Shopify", 
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Shopify_logo_2018.svg/2560px-Shopify_logo_2018.svg.png",
-    bgColor: "bg-gray-50",
-    badgeClass: "marketplace-badge-shopify"
+    bgColor: "bg-green-50",
+    badgeClass: "bg-green-500 text-white",
+    description: "Sync with your Shopify store to manage your own branded e-commerce presence."
   },
+  {
+    name: "Woo Commerce",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/WooCommerce_logo.svg/1200px-WooCommerce_logo.svg.png",
+    bgColor: "bg-purple-50",
+    badgeClass: "bg-purple-500 text-white",
+    description: "Connect your WordPress WooCommerce store for seamless inventory management."
+  },
+  {
+    name: "Magento",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Magento_Logo.svg/1280px-Magento_Logo.svg.png",
+    bgColor: "bg-pink-50",
+    badgeClass: "bg-pink-500 text-white",
+    description: "Enterprise-level e-commerce platform for businesses with complex requirements."
+  }
 ];
 
 // Simple marketplace platform names (for form selects)
-export const MARKETPLACE_PLATFORMS = ["eBay", "Etsy", "Amazon", "Shopify", "Poshmark", "Mercari", "Facebook Marketplace", "Craigslist", "In-Store", "Other"];
+export const MARKETPLACE_PLATFORMS = MARKETPLACE_PLATFORM_DETAILS.map(platform => platform.name);
 
 // Status badge classes
 export const STATUS_BADGE_CLASSES = {
