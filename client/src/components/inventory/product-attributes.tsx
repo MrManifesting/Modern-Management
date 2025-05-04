@@ -1,5 +1,5 @@
 import React from 'react';
-import StrainSelector from './strain-selector';
+import VariantSelector from './variant-selector';
 import TierSelector from './tier-selector';
 import SizeSelector from './size-selector';
 import { 
@@ -63,7 +63,7 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-gold">Variant</FormLabel>
-                  <StrainSelector
+                  <VariantSelector
                     value={field.value}
                     onChange={field.onChange}
                     formField
@@ -75,7 +75,7 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
           ) : (
             <div className="space-y-2">
               <label className="text-sm font-medium text-gold">Variant</label>
-              <StrainSelector
+              <VariantSelector
                 value={initialValues?.variant}
                 onChange={(value) => handleChange('variant', value)}
               />
@@ -209,14 +209,14 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
                 </div>
               )}
 
-              {/* Total Potency Percentage */}
+              {/* Total Strength Percentage */}
               {form ? (
                 <FormField
                   control={form.control}
                   name={fieldName('totalPotency')}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gold">Total Potency %</FormLabel>
+                      <FormLabel className="text-gold">Total Strength %</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -226,7 +226,7 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
                         />
                       </FormControl>
                       <FormDescription className="text-gray-400 text-xs">
-                        Combined potency of all active ingredients
+                        Combined strength of all active ingredients
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -234,7 +234,7 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
                 />
               ) : (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gold">Total Potency %</label>
+                  <label className="text-sm font-medium text-gold">Total Strength %</label>
                   <Input
                     value={initialValues?.totalPotency || ''}
                     onChange={(e) => handleChange('totalPotency', e.target.value)}
@@ -242,7 +242,7 @@ const ProductAttributes: React.FC<ProductAttributesProps> = ({
                     placeholder="e.g. 28.5"
                     className="bg-black/60 border-gold/30"
                   />
-                  <p className="text-gray-400 text-xs">Combined potency of all active ingredients</p>
+                  <p className="text-gray-400 text-xs">Combined strength of all active ingredients</p>
                 </div>
               )}
             </>
