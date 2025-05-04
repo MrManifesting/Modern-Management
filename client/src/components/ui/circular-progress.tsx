@@ -3,56 +3,49 @@ import { cn } from '@/lib/utils';
 
 interface CircularProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: number;
-  strokeWidth?: number;
+  thickness?: number;
   color?: string;
-  secondaryColor?: string;
 }
 
 export function CircularProgress({
   size = 24,
-  strokeWidth = 2,
+  thickness = 3.6,
+  color,
   className,
-  color = "currentColor",
-  secondaryColor = "transparent",
   ...props
 }: CircularProgressProps) {
+  const radius = (size - thickness) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = 0.75 * circumference;
+
   return (
     <div
-      className={cn("animate-spin", className)}
-      role="status"
-      aria-label="Loading"
-      style={{ 
-        width: size, 
-        height: size,
-      }}
+      className={cn(
+        'inline-flex items-center justify-center animate-spin',
+        className
+      )}
+      role="progressbar"
+      style={{ width: size, height: size }}
       {...props}
     >
-      <svg 
-        viewBox="0 0 24 24" 
-        style={{ width: '100%', height: '100%' }}
+      <svg
+        className="animate-spin"
+        viewBox={`${size / 2} ${size / 2} ${size} ${size}`}
+        style={{ width: size, height: size }}
       >
         <circle
-          cx="12"
-          cy="12"
-          r="10"
-          stroke={secondaryColor}
-          strokeWidth={strokeWidth}
+          className={color || 'text-primary'}
+          cx={size}
+          cy={size}
+          r={radius}
           fill="none"
-        />
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          fill="none"
+          strokeWidth={thickness}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          strokeDasharray="62.83"
-          strokeDashoffset="12.57"
-          transform="rotate(-90 12 12)"
+          style={{ color: 'currentColor' }}
         />
       </svg>
-      <span className="sr-only">Loading...</span>
     </div>
   );
 }
