@@ -14,6 +14,7 @@ import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
 import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
+import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
