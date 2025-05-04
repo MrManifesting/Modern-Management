@@ -13,6 +13,7 @@ import {
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
 import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
+import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
