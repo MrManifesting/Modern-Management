@@ -185,6 +185,15 @@
   display: inline-block;
 }
 
+/* Primary gradient text - blue/purple theme */
+.primary-gradient-text {
+  background: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 80%, 65%), hsl(220, 80%, 55%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
 /* Gold gradient text - keeping for reference during transition */
 .gold-gradient-text {
   background: linear-gradient(to right, hsl(45, 90%, 52%), hsl(45, 100%, 60%), hsl(45, 90%, 52%));

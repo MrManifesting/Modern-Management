@@ -235,9 +235,9 @@ const InventoryProPage: React.FC = () => {
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">Gold Standard Investment Group</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold primary-gradient-text">Inventory Pro</h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Manage your Gold Standard Investment Group products and inventory levels
+                Manage your products and inventory levels
               </p>
             </div>
             
@@ -289,9 +289,9 @@ const InventoryProPage: React.FC = () => {
 
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-xl gold-gradient-text">Product Inventory</CardTitle>
+            <CardTitle className="text-xl primary-gradient-text">Product Inventory</CardTitle>
             <CardDescription>
-              Manage your Gold Standard Investment Group product catalog
+              Manage your product catalog
             </CardDescription>
             <div className="flex flex-col gap-4 mt-4">
               <div className="relative flex-1">
