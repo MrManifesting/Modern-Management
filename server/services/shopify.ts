@@ -35,9 +35,46 @@ interface ShopifyProduct {
 }
 
 let pushToShopifyEnabled = false;
+
+// Function to get Shopify store name in correct format
+function getShopifyStoreName() {
+  const storeUrl = process.env.SHOPIFY_STORE || '';
+  
+  // If empty, return empty string
+  if (!storeUrl) return '';
+  
+  // Remove any protocol prefixes (http://, https://)
+  let storeName = storeUrl.replace(/^https?:\/\//, '');
+  
+  // Remove admin.shopify.com/store/ prefix if present
+  if (storeName.includes('admin.shopify.com/store/')) {
+    const storeNameMatch = storeName.match(/admin\.shopify\.com\/store\/([^\/]+)/);
+    if (storeNameMatch && storeNameMatch[1]) {
+      storeName = storeNameMatch[1];
+    }
+  }
+  
+  // Remove trailing slashes if present
+  storeName = storeName.replace(/\/+$/, '');
+  
+  // Ensure it ends with .myshopify.com
+  if (!storeName.endsWith('.myshopify.com')) {
+    // Make sure we don't have store.myshopify.com/something.myshopify.com
+    if (storeName.includes('.myshopify.com/')) {
+      storeName = storeName.substring(0, storeName.indexOf('.myshopify.com/') + '.myshopify.com'.length);
+    } 
+    // If it's just a store name without any domain
+    else if (!storeName.includes('.')) {
+      storeName = `${storeName}.myshopify.com`;
+    }
+  }
+  
+  return storeName;
+}
+
 // Using credentials from environment variables
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const SHOPIFY_STORE = getShopifyStoreName();
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
 
 // Log the credentials for debugging
 console.log("Using Shopify credentials:", SHOPIFY_STORE, SHOPIFY_ACCESS_TOKEN ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
