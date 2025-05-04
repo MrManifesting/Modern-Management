@@ -328,7 +328,7 @@ export function VoiceCommand() {
           'inventory': '/inventory',
           'items': '/inventory',
           'products': '/inventory',
-          'gold standard inventory': '/inventory/gold-standard',
+          'inventory pro': '/inventory',
           'specialty products': '/inventory/specialty-products',
           'package inventory': '/inventory/package',
           'thca flower': '/inventory/thca-flower',

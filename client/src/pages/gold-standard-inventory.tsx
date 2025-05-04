@@ -29,8 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 
-// Define the Gold Standard Investment Group product interface
-interface GoldStandardProduct {
+// Define the inventory product interface
+interface InventoryProduct {
   id?: number;
   name: string;
   category: string;
@@ -42,43 +42,43 @@ interface GoldStandardProduct {
   barcode?: string;
   quantity: number;
   status?: string;
-  potency?: string;
+  strength?: string;
   volume?: string;
   description?: string;
   imageUrl?: string;
 }
 
 // Mock data for demonstration
-const mockGoldProducts: GoldStandardProduct[] = [
+const mockProducts: InventoryProduct[] = [
   {
     id: 1,
-    name: "Full Spectrum CBD Oil",
-    category: "Tinctures",
-    subcategory: "Full Spectrum",
+    name: "Full Spectrum Oil",
+    category: "Supplements",
+    subcategory: "Oils",
     price: 59.99,
     retailPrice: 59.99,
     wholesalePrice: 29.99,
-    sku: "GS-FS-1000",
+    sku: "IP-FS-1000",
     quantity: 25,
-    potency: "1000mg",
+    strength: "1000mg",
     volume: "30ml",
     status: "In Stock",
-    description: "Premium full spectrum CBD oil tincture"
+    description: "Premium full spectrum oil supplement"
   },
   {
     id: 2,
-    name: "CBD Gummies",
-    category: "Edibles",
+    name: "Vitamin Gummies",
+    category: "Supplements",
     subcategory: "Gummies",
     price: 39.99,
     retailPrice: 39.99,
     wholesalePrice: 19.99,
-    sku: "GS-GUM-500",
+    sku: "IP-GUM-500",
     quantity: 42,
-    potency: "500mg",
+    strength: "500mg",
     volume: "30 count",
     status: "In Stock",
-    description: "Delicious CBD-infused gummies, 25mg per piece"
+    description: "Delicious vitamin-infused gummies, 25mg per piece"
   },
   {
     id: 3,
@@ -88,42 +88,42 @@ const mockGoldProducts: GoldStandardProduct[] = [
     price: 49.99,
     retailPrice: 49.99,
     wholesalePrice: 24.99,
-    sku: "GS-TOP-MRC",
+    sku: "IP-TOP-MRC",
     quantity: 18,
-    potency: "750mg",
+    strength: "750mg",
     volume: "4oz",
     status: "Low Stock",
-    description: "Soothing CBD cream for muscle relief"
+    description: "Soothing cream for muscle relief"
   },
   {
     id: 4,
-    name: "CBD Pet Treats",
+    name: "Pet Treats",
     category: "Pet",
     subcategory: "Treats",
     price: 29.99,
     retailPrice: 29.99,
     wholesalePrice: 14.99,
-    sku: "GS-PET-TRT",
+    sku: "IP-PET-TRT",
     quantity: 36,
-    potency: "300mg",
+    strength: "300mg",
     volume: "30 count",
     status: "In Stock",
-    description: "CBD-infused treats for pets"
+    description: "Nutritious treats for pets"
   },
   {
     id: 5,
-    name: "Broad Spectrum CBD Softgels",
+    name: "Supplement Softgels",
     category: "Capsules",
     subcategory: "Softgels",
     price: 54.99,
     retailPrice: 54.99,
     wholesalePrice: 27.49,
-    sku: "GS-BS-SGC",
+    sku: "IP-BS-SGC",
     quantity: 22,
-    potency: "900mg",
+    strength: "900mg",
     volume: "30 count",
     status: "In Stock",
-    description: "Easy-to-swallow CBD softgels"
+    description: "Easy-to-swallow softgels"
   }
 ];
 
@@ -138,8 +138,8 @@ const categories = [
   "Bundles"
 ];
 
-const GoldStandardInventoryPage: React.FC = () => {
-  const [products, setProducts] = useState<GoldStandardProduct[]>(mockGoldProducts);
+const InventoryProPage: React.FC = () => {
+  const [products, setProducts] = useState<InventoryProduct[]>(mockProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -186,8 +186,8 @@ const GoldStandardInventoryPage: React.FC = () => {
   };
 
   // Render mobile product card
-  const renderMobileProductCard = (product: GoldStandardProduct) => (
-    <Card key={product.id} className="mb-4 border-gold/20">
+  const renderMobileProductCard = (product: InventoryProduct) => (
+    <Card key={product.id} className="mb-4 border-primary/20">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
@@ -204,7 +204,7 @@ const GoldStandardInventoryPage: React.FC = () => {
       <CardContent className="pt-0">
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div>
-            <span className="text-muted-foreground">Potency:</span> {product.potency}
+            <span className="text-muted-foreground">Strength:</span> {product.strength}
           </div>
           <div>
             <span className="text-muted-foreground">SKU:</span> <span className="font-mono">{product.sku}</span>
