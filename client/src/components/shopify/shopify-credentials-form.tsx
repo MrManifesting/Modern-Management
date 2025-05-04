@@ -141,7 +141,7 @@ export default function ShopifyCredentialsForm() {
     <Card className="border-blue-500/30 bg-gradient-to-b from-background to-muted/30 shadow-md">
       <CardHeader className="border-b border-blue-500/20 bg-gradient-to-r from-background to-background/80">
         <div className="flex items-center gap-2">
-          <KeyIcon className="h-5 w-5 text-blue-500" />
+          <Key className="h-5 w-5 text-blue-500" />
           <CardTitle className="text-blue-500">Shopify API Credentials</CardTitle>
         </div>
         <CardDescription className="text-muted-foreground">
@@ -159,7 +159,7 @@ export default function ShopifyCredentialsForm() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="shopifyStore" className="text-foreground flex items-center gap-2">
-                  <StoreIcon className="h-4 w-4 text-blue-500" />
+                  <Store className="h-4 w-4 text-blue-500" />
                   Shopify Store Name
                 </Label>
                 <Input
@@ -177,7 +177,7 @@ export default function ShopifyCredentialsForm() {
               
               <div className="space-y-2">
                 <Label htmlFor="shopifyAccessToken" className="text-foreground flex items-center gap-2">
-                  <KeyIcon className="h-4 w-4 text-blue-500" />
+                  <Key className="h-4 w-4 text-blue-500" />
                   Shopify Access Token
                 </Label>
                 <Input
@@ -197,7 +197,7 @@ export default function ShopifyCredentialsForm() {
             
             {success && (
               <Alert className="border-green-500/30 bg-green-500/10">
-                <CheckIcon className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-green-500" />
                 <AlertTitle className="text-green-500">Credentials Updated</AlertTitle>
                 <AlertDescription className="text-muted-foreground">
                   Your Shopify API credentials have been updated successfully.
@@ -225,12 +225,12 @@ export default function ShopifyCredentialsForm() {
         >
           {saving ? (
             <>
-              <ReloadIcon className="h-4 w-4 mr-2 animate-spin" />
+              <Loader className="h-4 w-4 mr-2 animate-spin" />
               Saving...
             </>
           ) : (
             <>
-              <CheckIcon className="h-4 w-4 mr-2" />
+              <Check className="h-4 w-4 mr-2" />
               Save Credentials
             </>
           )}
