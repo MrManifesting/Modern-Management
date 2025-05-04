@@ -45,10 +45,21 @@ export function registerShopifyCredentialsRoutes(app: Express, storage: IStorage
         });
       }
 
-      // Clean up store URL (remove protocol if present)
-      const cleanedStoreUrl = shopifyStore.replace(/^https?:\/\//, '');
+      // Clean up and format the store URL properly
+      let cleanedStoreUrl = shopifyStore.replace(/^https?:\/\//, '');
       
-      // Validate store URL format
+      // Remove admin.shopify.com/store/ prefix if present
+      cleanedStoreUrl = cleanedStoreUrl.replace(/^admin\.shopify\.com\/store\//, '');
+      
+      // Add .myshopify.com suffix if not present
+      if (!cleanedStoreUrl.endsWith('.myshopify.com')) {
+        // Check if it's just a store name without domain
+        if (!cleanedStoreUrl.includes('.')) {
+          cleanedStoreUrl = `${cleanedStoreUrl}.myshopify.com`;
+        }
+      }
+      
+      // Validate final store URL format
       if (!cleanedStoreUrl.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/)) {
         return res.status(400).json({
           success: false,
