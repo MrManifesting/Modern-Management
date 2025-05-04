@@ -3,14 +3,8 @@
  */
 import { Request, Response, Express } from 'express';
 import { IStorage } from './storage';
-import { 
-  testMarketplaceConnection, 
-  isMarketplaceConfigured,
-  prepareItemForMarketplace,
-  pushItemToMarketplace,
-  syncProductsFromMarketplace
-} from './services/marketplace';
-import { getOperationsLog, clearOperationsLog } from './services/marketplace-logger';
+import { MarketplaceService } from './services/marketplace';
+import { MarketplaceLogger } from './services/marketplace-logger';
 import { insertMarketplaceSchema } from '@shared/schema';
 import { z } from 'zod';
 
@@ -184,8 +178,15 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         isConnected: false
       };
 
-      const result = await testMarketplaceConnection(testMarketplace);
-      res.json(result);
+      // Create a marketplace service instance
+      const marketplaceService = new MarketplaceService(testMarketplace);
+      const result = await marketplaceService.testConnection();
+      
+      res.json({
+        connected: result.success,
+        name: testMarketplace.name,
+        message: result.message
+      });
     } catch (error) {
       console.error("Error testing marketplace connection:", error);
       res.status(500).json({ 
@@ -217,8 +218,15 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         marketplace.credentials = req.body.credentials;
       }
 
-      const result = await testMarketplaceConnection(marketplace);
-      res.json(result);
+      // Create a marketplace service instance
+      const marketplaceService = new MarketplaceService(marketplace);
+      const result = await marketplaceService.testConnection();
+      
+      res.json({
+        connected: result.success,
+        name: marketplace.name,
+        message: result.message
+      });
     } catch (error) {
       console.error(`Error testing marketplace connection ${req.params.id}:`, error);
       res.status(500).json({ 
@@ -245,8 +253,9 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       }
 
       // Test connection before marking as connected
-      const testResult = await testMarketplaceConnection(marketplace);
-      if (!testResult.connected) {
+      const marketplaceService = new MarketplaceService(marketplace);
+      const testResult = await marketplaceService.testConnection();
+      if (!testResult.success) {
         return res.status(400).json({
           error: "Cannot connect to marketplace",
           message: testResult.message
@@ -315,9 +324,13 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const log = getOperationsLog(id, limit);
+      // Use the MarketplaceLogger class to get logs
+      const log = await MarketplaceLogger.getLog(id);
       
-      res.json(log);
+      // Limit the results if needed
+      const limitedLog = limit < log.length ? log.slice(0, limit) : log;
+      
+      res.json(limitedLog);
     } catch (error) {
       console.error(`Error fetching operations log for marketplace ${req.params.id}:`, error);
       res.status(500).json({ error: "Failed to fetch operations log" });
@@ -339,7 +352,8 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      const success = clearOperationsLog(id);
+      // Use the MarketplaceLogger class to clear logs
+      const success = await MarketplaceLogger.clearLog(id);
       
       res.json({
         success,
