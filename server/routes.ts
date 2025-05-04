@@ -3077,6 +3077,9 @@ ${topCustomersCsv}`;
   // Register Shopify credentials routes
   registerShopifyCredentialsRoutes(app, storage);
   
+  // Register marketplace routes for multi-marketplace support
+  registerMarketplaceRoutes(app, storage);
+  
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
 
