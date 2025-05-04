@@ -1,7 +1,7 @@
 import React from 'react';
 import StrainSelector from './strain-selector';
 import TierSelector from './tier-selector';
-import WeightSelector from './weight-selector';
+import SizeSelector from './size-selector';
 import { 
   FormField,
   FormItem,
@@ -118,7 +118,7 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-gold">Package Size</FormLabel>
-                    <WeightSelector
+                    <SizeSelector
                       value={field.value}
                       onChange={field.onChange}
                       brand={brand}
@@ -131,7 +131,7 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
             ) : (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gold">Package Size</label>
-                <WeightSelector
+                <SizeSelector
                   value={initialValues?.packageSize}
                   onChange={(value) => handleChange('packageSize', value)}
                   brand={brand}

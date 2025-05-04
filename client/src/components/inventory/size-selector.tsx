@@ -108,7 +108,7 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          {weightOptions.map(option => (
+          {sizeOptions.map(option => (
             <SelectItem 
               key={option.value} 
               value={option.value}
@@ -128,4 +128,4 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({
   ) : renderSelect();
 };
 
-export default WeightSelector;
+export default SizeSelector;
