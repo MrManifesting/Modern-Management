@@ -305,16 +305,12 @@
   color: hsl(260, 70%, 65%) !important;
 }
 
-.tree-mason-brand {
-  color: hsl(115, 50%, 40%) !important;
+.primary-brand {
+  color: hsl(220, 90%, 50%) !important;
 }
 
 .package-brand {
-  color: hsl(45, 100%, 60%) !important;
-}
-
-.gold-brand {
-  color: hsl(45, 90%, 55%) !important;
+  color: hsl(230, 90%, 60%) !important;
 }
 
 /* Status badges */

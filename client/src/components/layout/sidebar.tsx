@@ -160,8 +160,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
       ref={sidebarRef}
       className={cn(
         "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r shadow-sm overflow-y-auto",
-        // New black-gold theme with translucent background
-        "bg-black/95 border-gold/30", 
+        // Blue/purple dark theme with translucent background
+        "bg-black/95 border-primary/30", 
         expanded ? "translate-x-0 w-64" : "translate-x-[-100%] w-64 lg:w-20 lg:translate-x-0",
         // Add padding to prevent content from being hidden under iOS Safari's bottom navigation bar
         "pb-safe-bottom"
@@ -170,7 +170,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       {/* Close button for mobile */}
       {expanded && (
         <button 
-          className="lg:hidden absolute top-4 right-4 z-50 text-gold rounded-full p-1 hover:bg-gold/10"
+          className="lg:hidden absolute top-4 right-4 z-50 text-primary rounded-full p-1 hover:bg-primary/10"
           onClick={() => {
             const closeEvent = new CustomEvent('closeSidebar');
             window.dispatchEvent(closeEvent);
@@ -181,7 +181,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       )}
 
       {/* Logo and Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-gold/30 px-4">
+      <div className="flex h-16 items-center justify-center border-b border-primary/30 px-4">
         <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
           <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 text-white">
             <svg
@@ -200,7 +200,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold blue-gradient-text">Inventory Pro</span>
+            <span className="text-lg font-semibold primary-gradient-text">Inventory Pro</span>
           )}
         </div>
       </div>
@@ -214,10 +214,10 @@ export default function Sidebar({ expanded }: SidebarProps) {
               className={cn(
                 "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
                 location === item.path || (item.subItems && item.subItems.some(subItem => location === subItem.path))
-                  ? "bg-gold/20 text-gold border-l-2 border-gold"
+                  ? "bg-primary/20 text-primary border-l-2 border-primary"
                   : item.highlight 
-                    ? "text-white bg-gradient-to-r from-gold/20 to-transparent border-l-2 border-gold/80 font-medium"
-                    : "text-gray-300 hover:bg-black/50 hover:text-gold hover:border-l-2 hover:border-gold/50"
+                    ? "text-white bg-gradient-to-r from-primary/20 to-transparent border-l-2 border-primary/80 font-medium"
+                    : "text-gray-300 hover:bg-black/50 hover:text-primary hover:border-l-2 hover:border-primary/50"
               )}
             >
               {item.icon}
@@ -235,8 +235,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
                       "flex items-center space-x-2 rounded-lg px-2 py-1 text-sm transition-all",
                       subItem.className,
                       location === subItem.path
-                        ? "bg-gold/10 text-gold border-l border-gold"
-                        : "text-gray-400 hover:bg-black/30 hover:text-gold hover:border-l hover:border-gold/50"
+                        ? "bg-primary/10 text-primary border-l border-primary"
+                        : "text-gray-400 hover:bg-black/30 hover:text-primary hover:border-l hover:border-primary/50"
                     )}
                   >
                     <span>•</span>
@@ -250,9 +250,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
       </nav>
 
       {/* User Menu */}
-      <div className="mt-auto border-t border-gold/30 p-4">
+      <div className="mt-auto border-t border-primary/30 p-4">
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-gold text-black flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
             <span className="text-sm font-medium">
               {user ? (user.firstName?.charAt(0) || user.username.charAt(0)).toUpperCase() : '?'}
             </span>
@@ -264,7 +264,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
                   ? `${user.firstName} ${user.lastName}` 
                   : user.username}
               </p>
-              <p className="text-xs text-gold/70">{user.email || ''}</p>
+              <p className="text-xs text-primary/70">{user.email || ''}</p>
             </div>
           )}
         </div>
