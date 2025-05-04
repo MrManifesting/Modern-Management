@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Layers,
   Database,
-  Trash2
+  Trash2,
+  ShoppingBag
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -92,16 +93,31 @@ export default function Sidebar({ expanded }: SidebarProps) {
       ]
     },
     {
-      title: "Shopify Sync",
-      icon: <RefreshCw className="h-5 w-5" />,
-      path: "/shopify-sync",
-    },
-    // Import option has been moved to a dedicated page
-    // and is now accessed via the Shopify Sync page
-    {
-      title: "Shopify Reports",
-      icon: <BarChart3 className="h-5 w-5 text-gold-400" />,
-      path: "/shopify-reports",
+      title: "Marketplaces",
+      icon: <Package className="h-5 w-5" />,
+      path: "/marketplace",
+      subItems: [
+        {
+          title: "Marketplace",
+          path: "/marketplace",
+          className: "inventory-link primary-brand",
+        },
+        {
+          title: "Connect & Manage",
+          path: "/marketplace-management",
+          className: "inventory-link specialty-brand",
+        },
+        {
+          title: "Shopify Sync",
+          path: "/shopify-sync",
+          className: "inventory-link package-brand",
+        },
+        {
+          title: "Shopify Reports",
+          path: "/shopify-reports",
+          className: "inventory-link package-brand",
+        }
+      ]
     },
     {
       title: "Scanner",
