@@ -11,34 +11,33 @@ const DemoDataCreator: React.FC = () => {
   // Mutation for creating demo data
   const createDemoDataMutation = useMutation({
     mutationFn: async () => {
-      // Create a THCa Flower sample
-      const thcaFlowerSample = {
-        name: "Wedding Cake - Top Shelf",
+      // Create a Premium Oil sample
+      const premiumOilSample = {
+        name: "Full Spectrum Oil - Premium",
         status: "in-stock",
-        description: "Top shelf Wedding Cake THCa flower, indoor grown. High terpene profile with sweet vanilla notes.",
-        price: 129.99,
+        description: "Premium grade Full Spectrum Oil with vanilla flavor. High quality ingredients and great reviews.",
+        price: 89.99,
         quantity: 45,
-        sku: "GS-WEDCAK-TS-14G",
-        category: "THCa Flower",
+        sku: "IP-FSOIL-P-30ML",
+        category: "Supplements",
         condition: "New",
         images: [],
-        tags: ["thca", "flower", "indoor", "top-shelf"],
-        barcode: "GSB1234567",
+        tags: ["oil", "premium", "full-spectrum", "top-seller"],
+        barcode: "IP1234567",
         lowStockThreshold: 10,
         marketplace: [],
         syncedToMarketplaces: [],
         aiEnhanced: true,
-        aiTags: ["wedding cake", "top shelf", "indica", "vanilla"],
-        seoTitle: "Premium Wedding Cake THCa Flower | Gold Standard CBD",
+        aiTags: ["full spectrum", "premium", "oil", "vanilla"],
+        seoTitle: "Premium Full Spectrum Oil 30ml | Inventory Pro",
         attributes: {
-          brand: "Gold Standard",
-          tier: "Top Shelf",
-          strain: "Wedding Cake",
-          thcaPercentage: "26.8",
-          cbdPercentage: "0.1",
-          packageSize: "14g",
-          totalCost: 65.00,
-          weight: 14
+          brand: "Inventory Pro",
+          tier: "Premium",
+          variant: "Vanilla",
+          strengthPercentage: "5.0",
+          packageSize: "30ml",
+          totalCost: 45.00,
+          weight: 30
         }
       };
       
@@ -47,7 +46,7 @@ const DemoDataCreator: React.FC = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(thcaFlowerSample)
+        body: JSON.stringify(premiumOilSample)
       }).then(res => res.json());
     },
     onSuccess: () => {
@@ -76,7 +75,7 @@ const DemoDataCreator: React.FC = () => {
         variant="outline" 
         onClick={handleCreateDemoData}
         disabled={createDemoDataMutation.isPending}
-        className="border-gold/30 text-gold hover:bg-gold/10"
+        className="border-primary/30 text-primary hover:bg-primary/10"
       >
         {createDemoDataMutation.isPending ? (
           <>
