@@ -46,21 +46,40 @@ export function registerShopifyCredentialsRoutes(app: Express, storage: IStorage
       }
 
       // Clean up and format the store URL properly
-      let cleanedStoreUrl = shopifyStore.replace(/^https?:\/\//, '');
+      let cleanedStoreUrl = shopifyStore.trim();
       
-      // Remove admin.shopify.com/store/ prefix if present
-      cleanedStoreUrl = cleanedStoreUrl.replace(/^admin\.shopify\.com\/store\//, '');
+      // Remove any protocol prefixes (http://, https://)
+      cleanedStoreUrl = cleanedStoreUrl.replace(/^https?:\/\//, '');
+      
+      // Handle admin.shopify.com/store/ format
+      if (cleanedStoreUrl.includes('admin.shopify.com/store/')) {
+        const storeNameMatch = cleanedStoreUrl.match(/admin\.shopify\.com\/store\/([^\/\s]+)/);
+        if (storeNameMatch && storeNameMatch[1]) {
+          cleanedStoreUrl = storeNameMatch[1];
+        }
+      }
+      
+      // Remove any trailing slashes or paths
+      if (cleanedStoreUrl.includes('/')) {
+        cleanedStoreUrl = cleanedStoreUrl.split('/')[0];
+      }
       
       // Add .myshopify.com suffix if not present
       if (!cleanedStoreUrl.endsWith('.myshopify.com')) {
-        // Check if it's just a store name without domain
+        // If it's just a store name without any domain
         if (!cleanedStoreUrl.includes('.')) {
           cleanedStoreUrl = `${cleanedStoreUrl}.myshopify.com`;
         }
       }
       
-      // Validate final store URL format
+      // Debug the store URL formatting
+      console.log(`Original store URL: "${shopifyStore}"`);
+      console.log(`Cleaned store URL: "${cleanedStoreUrl}"`);
+      
+      // Validate final store URL format with a more lenient regex
+      // Allow domains that end with .myshopify.com
       if (!cleanedStoreUrl.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/)) {
+        console.log(`Store URL validation failed for: "${cleanedStoreUrl}"`);
         return res.status(400).json({
           success: false,
           message: "Invalid Shopify store URL format. Expected format: your-store.myshopify.com"
