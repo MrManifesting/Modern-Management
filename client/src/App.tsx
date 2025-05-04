@@ -10,6 +10,7 @@ import MainLayout from "@/components/layout/main-layout";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Marketplace from "@/pages/marketplace";
+import MarketplaceManagement from "@/pages/marketplace-management";
 import Scanner from "@/pages/scanner";
 import Sales from "@/pages/sales";
 import Reports from "@/pages/reports";
@@ -43,6 +44,7 @@ function Router() {
       <ProtectedRoute path="/inventory/specialty-products" component={SpecialtyProductsPage} />
       <ProtectedRoute path="/inventory/package" component={PackageInventoryPage} />
       <ProtectedRoute path="/marketplace" component={Marketplace} />
+      <ProtectedRoute path="/marketplace-management" component={MarketplaceManagement} />
       <ProtectedRoute path="/scanner" component={Scanner} />
       <ProtectedRoute path="/sales" component={Sales} />
       <ProtectedRoute path="/reports" component={Reports} />

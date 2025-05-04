@@ -1,491 +1,480 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  CardFooter 
+import { useForm } from 'react-hook-form';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Loader, Check, Key, Store, ShoppingBag, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequestSimple } from "@/lib/queryClient";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
+import {
   Select,
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import {
+  ShoppingBag,
+  ShoppingCart,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react";
+import { SiShopify, SiEtsy, SiWoocommerce, SiAmazon, SiEbay } from "react-icons/si";
 
-export type MarketplaceType = 'shopify' | 'etsy' | 'amazon' | 'ebay' | 'woocommerce' | 'general';
+// Marketplace types with their icons and fields
+const MARKETPLACE_TYPES = [
+  {
+    id: 'shopify',
+    name: 'Shopify',
+    icon: SiShopify,
+    color: '#96bf48',
+    fields: ['storeUrl', 'apiKey', 'apiSecret'],
+    helpText: 'Connect your Shopify store to synchronize products, inventory, and orders.'
+  },
+  {
+    id: 'etsy',
+    name: 'Etsy',
+    icon: SiEtsy,
+    color: '#f45800',
+    fields: ['apiKey', 'apiSecret'],
+    helpText: 'Connect your Etsy shop to manage listings and process orders.'
+  },
+  {
+    id: 'woocommerce',
+    name: 'WooCommerce',
+    icon: SiWoocommerce,
+    color: '#7f54b3',
+    fields: ['storeUrl', 'apiKey', 'apiSecret'],
+    helpText: 'Connect your WooCommerce store to synchronize with your WordPress site.'
+  },
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    icon: SiAmazon,
+    color: '#ff9900',
+    fields: ['apiKey', 'apiSecret'],
+    helpText: 'Connect your Amazon seller account to manage inventory and fulfill orders.'
+  },
+  {
+    id: 'ebay',
+    name: 'eBay',
+    icon: SiEbay,
+    color: '#e53238',
+    fields: ['apiKey', 'apiSecret', 'apiEndpoint'],
+    helpText: 'Connect your eBay seller account to list products and track sales.'
+  }
+];
 
-type MarketplaceCredentials = {
+// Interface for the form data
+interface MarketplaceFormData {
   name: string;
-  type: MarketplaceType;
-  storeUrl: string;
-  apiKey: string;
-  apiSecret?: string;
-  apiEndpoint?: string;
-};
+  type: string;
+  credentials: {
+    storeUrl?: string;
+    apiKey?: string;
+    apiSecret?: string;
+    apiEndpoint?: string;
+  };
+}
 
 interface MarketplaceCredentialsFormProps {
   marketplaceId?: number;
-  onSaved?: (id: number) => void;
+  onSaved: (id: number) => void;
 }
 
 export default function MarketplaceCredentialsForm({ marketplaceId, onSaved }: MarketplaceCredentialsFormProps) {
-  const [credentials, setCredentials] = useState<MarketplaceCredentials>({
-    name: '',
-    type: 'general',
-    storeUrl: '',
-    apiKey: '',
-    apiSecret: '',
-    apiEndpoint: '',
-  });
-  
-  const [loading, setLoading] = useState(marketplaceId ? true : false);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [selectedType, setSelectedType] = useState<string>(MARKETPLACE_TYPES[0].id);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Fetch current credentials if editing an existing marketplace
-  useEffect(() => {
-    if (marketplaceId) {
-      fetchCredentials();
-    }
-  }, [marketplaceId]);
-  
-  const fetchCredentials = async () => {
-    setLoading(true);
-    try {
-      const result = await apiRequestSimple<{
-        id: number;
-        name: string;
-        type: MarketplaceType;
-        storeUrl: string;
-        apiKey: string;
-        apiSecret?: string;
-        apiEndpoint?: string;
-      }>(`/api/marketplaces/${marketplaceId}`);
-      
-      setCredentials({
-        name: result.name || '',
-        type: result.type || 'general',
-        storeUrl: result.storeUrl || '',
-        apiKey: result.apiKey || '',
-        apiSecret: result.apiSecret || '',
-        apiEndpoint: result.apiEndpoint || '',
-      });
-    } catch (error) {
-      console.error("Failed to fetch marketplace credentials:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch current marketplace credentials.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setSuccess(false); // Reset success status on changes
-  };
-  
-  const handleSelectChange = (name: string) => (value: string) => {
-    setCredentials((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setSuccess(false);
-  };
-  
-  const saveCredentials = async () => {
-    setSaving(true);
-    setSuccess(false);
-    
-    try {
-      const endpoint = marketplaceId 
-        ? `/api/marketplaces/${marketplaceId}` 
-        : '/api/marketplaces';
-      
-      const method = marketplaceId ? 'PATCH' : 'POST';
-      
-      const result = await apiRequestSimple<{
-        success: boolean;
-        message: string;
-        marketplace: { id: number }
-      }>(endpoint, {
-        method,
-        body: JSON.stringify({
-          name: credentials.name,
-          type: credentials.type,
-          credentials: {
-            storeUrl: credentials.storeUrl,
-            apiKey: credentials.apiKey,
-            apiSecret: credentials.apiSecret,
-            apiEndpoint: credentials.apiEndpoint,
-          },
-          storeUrl: credentials.storeUrl,
-          apiEndpoint: credentials.apiEndpoint,
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      setSuccess(true);
-      toast({
-        title: `Marketplace ${marketplaceId ? 'Updated' : 'Created'}`,
-        description: `${credentials.name} has been ${marketplaceId ? 'updated' : 'added'} successfully.`,
-      });
-      
-      // Call the callback if provided
-      if (onSaved && result.marketplace?.id) {
-        onSaved(result.marketplace.id);
+  // Define the form
+  const form = useForm<MarketplaceFormData>({
+    defaultValues: {
+      name: '',
+      type: MARKETPLACE_TYPES[0].id,
+      credentials: {
+        storeUrl: '',
+        apiKey: '',
+        apiSecret: '',
+        apiEndpoint: '',
       }
-      
-      // Test connection with new credentials after a short delay
-      setTimeout(() => {
-        testConnection();
-      }, 1000);
-    } catch (error) {
-      console.error(`Failed to ${marketplaceId ? 'update' : 'create'} marketplace:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${marketplaceId ? 'update' : 'create'} marketplace.`,
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
     }
-  };
-  
-  const testConnection = async () => {
-    if (!credentials.name || !credentials.type) {
-      toast({
-        title: "Validation Error",
-        description: "Marketplace name and type are required.",
-        variant: "destructive",
+  });
+
+  // Fetch marketplace details if editing
+  const { data: marketplaceData, isLoading: isLoadingMarketplace } = useQuery({
+    queryKey: ['/api/marketplaces', marketplaceId],
+    queryFn: () => apiRequest<any>(`/api/marketplaces/${marketplaceId}`),
+    enabled: !!marketplaceId,
+  });
+
+  // Update form values when marketplace data loads
+  useEffect(() => {
+    if (marketplaceData) {
+      form.reset({
+        name: marketplaceData.name,
+        type: marketplaceData.type,
+        credentials: marketplaceData.credentials || {},
       });
-      return;
-    }
-    
-    try {
-      const endpoint = marketplaceId 
-        ? `/api/marketplaces/${marketplaceId}/test` 
-        : '/api/marketplaces/test';
       
-      const result = await apiRequestSimple<{
-        connected: boolean;
-        name: string;
-        message: string;
-      }>(endpoint, {
+      setSelectedType(marketplaceData.type);
+    }
+  }, [marketplaceData, form]);
+
+  // Create new marketplace
+  const createMarketplaceMutation = useMutation({
+    mutationFn: (data: MarketplaceFormData) => 
+      apiRequest<{id: number}>('/api/marketplaces', {
         method: 'POST',
-        body: JSON.stringify({
-          type: credentials.type,
-          credentials: {
-            storeUrl: credentials.storeUrl,
-            apiKey: credentials.apiKey,
-            apiSecret: credentials.apiSecret,
-            apiEndpoint: credentials.apiEndpoint,
-          }
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (response) => {
+      toast({
+        title: "Marketplace Added",
+        description: "Your marketplace has been added successfully.",
       });
+      onSaved(response.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Add Marketplace",
+        description: "An error occurred while adding the marketplace.",
+        variant: "destructive",
+      });
+      console.error("Error adding marketplace:", error);
+    }
+  });
+
+  // Update existing marketplace
+  const updateMarketplaceMutation = useMutation({
+    mutationFn: (data: MarketplaceFormData) => 
+      apiRequest<{id: number}>(`/api/marketplaces/${marketplaceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (response) => {
+      toast({
+        title: "Marketplace Updated",
+        description: "Your marketplace settings have been updated successfully.",
+      });
+      onSaved(response.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update Marketplace",
+        description: "An error occurred while updating the marketplace.",
+        variant: "destructive",
+      });
+      console.error("Error updating marketplace:", error);
+    }
+  });
+
+  // Test connection
+  const testConnection = async (formData: MarketplaceFormData) => {
+    setIsTestingConnection(true);
+    try {
+      let result;
       
+      if (marketplaceId) {
+        // Test existing marketplace connection
+        result = await apiRequestSimple(`/api/marketplaces/${marketplaceId}/test`, {
+          method: 'POST'
+        });
+      } else {
+        // Test connection with form data
+        result = await apiRequestSimple('/api/marketplaces/test', {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        });
+      }
+
       if (result.connected) {
         toast({
           title: "Connection Successful",
-          description: `Successfully connected to ${result.name || credentials.name}`,
+          description: result.message || "Successfully connected to marketplace",
         });
       } else {
         toast({
           title: "Connection Failed",
-          description: result.message || `Failed to connect to ${credentials.name}.`,
+          description: result.message || "Failed to connect to marketplace",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Failed to test connection:", error);
       toast({
-        title: "Connection Test Failed",
-        description: "An error occurred while testing the connection.",
+        title: "Test Failed",
+        description: "An error occurred while testing the connection",
         variant: "destructive",
       });
+      console.error("Error testing connection:", error);
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
-  // Get marketplace-specific help text
-  const getCredentialHelp = () => {
-    switch(credentials.type) {
-      case 'shopify':
-        return {
-          apiTitle: 'Shopify Access Token',
-          apiHelp: 'Admin API access token with necessary permissions for inventory management',
-          urlHelp: (
-            <>
-              <p>Enter your Shopify store URL in any of these formats:</p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li>your-store.myshopify.com</li>
-                <li>https://your-store.myshopify.com</li>
-                <li>https://admin.shopify.com/store/your-store</li>
-              </ul>
-            </>
-          )
-        };
-      case 'etsy':
-        return {
-          apiTitle: 'Etsy API Key',
-          apiHelp: 'The API key from your Etsy Developer account',
-          secretRequired: true,
-          secretTitle: 'Etsy API Secret',
-          secretHelp: 'The API secret from your Etsy Developer account',
-          urlHelp: 'Your Etsy shop URL (e.g., https://www.etsy.com/shop/yourshopname)'
-        };
-      case 'woocommerce':
-        return {
-          apiTitle: 'WooCommerce Consumer Key',
-          apiHelp: 'The consumer key from your WooCommerce API settings',
-          secretRequired: true,
-          secretTitle: 'WooCommerce Consumer Secret',
-          secretHelp: 'The consumer secret from your WooCommerce API settings',
-          urlHelp: 'Your WordPress site URL (e.g., https://yourdomain.com)'
-        };
-      case 'amazon':
-        return {
-          apiTitle: 'Amazon Seller ID',
-          apiHelp: 'Your Amazon Seller ID',
-          secretRequired: true,
-          secretTitle: 'Amazon MWS Auth Token',
-          secretHelp: 'Your Amazon MWS Authentication Token',
-          urlHelp: 'The Amazon marketplace URL (e.g., https://sellercentral.amazon.com)'
-        };
-      case 'ebay':
-        return {
-          apiTitle: 'eBay Client ID',
-          apiHelp: 'Your eBay Developer Application Client ID',
-          secretRequired: true,
-          secretTitle: 'eBay Client Secret',
-          secretHelp: 'Your eBay Developer Application Client Secret',
-          urlHelp: 'The eBay site URL (e.g., https://www.ebay.com)'
-        };
-      default:
-        return {
-          apiTitle: 'API Key',
-          apiHelp: 'API key for this marketplace',
-          secretRequired: false,
-          secretTitle: 'API Secret',
-          secretHelp: 'API secret for this marketplace (if needed)',
-          urlHelp: 'The URL of your store on this marketplace'
-        };
+  // Submit form handler
+  const onSubmit = (data: MarketplaceFormData) => {
+    if (marketplaceId) {
+      updateMarketplaceMutation.mutate(data);
+    } else {
+      createMarketplaceMutation.mutate(data);
     }
   };
-  
-  const help = getCredentialHelp();
-  
-  return (
-    <Card className="border-blue-500/30 bg-gradient-to-b from-background to-muted/30 shadow-md">
-      <CardHeader className="border-b border-blue-500/20 bg-gradient-to-r from-background to-background/80">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="h-5 w-5 text-blue-500" />
-          <CardTitle className="text-blue-500">
-            {marketplaceId ? 'Edit Marketplace' : 'Add New Marketplace'}
+
+  // Get current marketplace type information
+  const getCurrentTypeInfo = () => {
+    return MARKETPLACE_TYPES.find(type => type.id === selectedType) || MARKETPLACE_TYPES[0];
+  };
+
+  // Handle marketplace type change
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    form.setValue('type', value);
+  };
+
+  // Loading state
+  if (marketplaceId && isLoadingMarketplace) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
+            Loading Marketplace...
           </CardTitle>
-        </div>
-        <CardDescription className="text-muted-foreground">
-          {marketplaceId 
-            ? 'Update your marketplace connection details' 
-            : 'Connect to a new sales channel or marketplace'}
+        </CardHeader>
+        <CardContent className="py-10">
+          <div className="flex justify-center">
+            <CircularProgress size={40} className="text-blue-600" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentType = getCurrentTypeInfo();
+  const IconComponent = currentType.icon;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-blue-600" />
+          {marketplaceId ? 'Edit Marketplace' : 'Add New Marketplace'}
+        </CardTitle>
+        <CardDescription>
+          Connect your online store to synchronize inventory, orders, and products
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="pt-6 space-y-6">
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader className="h-6 w-6 animate-spin text-blue-500" />
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-foreground flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-blue-500" />
-                  Marketplace Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="My Store"
-                  value={credentials.name}
-                  onChange={handleInputChange}
-                  className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  A friendly name to identify this marketplace
-                </p>
-              </div>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Marketplace Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="My Store" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A friendly name to identify this marketplace
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Marketplace Type</FormLabel>
+                  <Select
+                    onValueChange={handleTypeChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select marketplace type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {MARKETPLACE_TYPES.map((type) => (
+                        <SelectItem key={type.id} value={type.id} className="flex items-center">
+                          <div className="flex items-center">
+                            <type.icon className="mr-2 h-4 w-4" style={{ color: type.color }} />
+                            {type.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="flex items-center mt-2">
+                    <IconComponent className="mr-2 h-5 w-5" style={{ color: currentType.color }} />
+                    {currentType.helpText}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <h3 className="text-lg font-medium flex items-center mb-2">
+                <IconComponent className="mr-2 h-5 w-5" style={{ color: currentType.color }} />
+                {currentType.name} Connection Details
+              </h3>
+              <Separator className="mb-4" />
               
-              <div className="space-y-2">
-                <Label htmlFor="type" className="text-foreground flex items-center gap-2">
-                  <Store className="h-4 w-4 text-blue-500" />
-                  Marketplace Type
-                </Label>
-                <Select 
-                  value={credentials.type} 
-                  onValueChange={handleSelectChange('type')}
+              {currentType.fields.includes('storeUrl') && (
+                <FormField
+                  control={form.control}
+                  name="credentials.storeUrl"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormLabel>Store URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://your-store.myshopify.com" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The URL of your {currentType.name} store
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {currentType.fields.includes('apiKey') && (
+                <FormField
+                  control={form.control}
+                  name="credentials.apiKey"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormLabel>API Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your API Key" type="password" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The API key for your {currentType.name} account
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {currentType.fields.includes('apiSecret') && (
+                <FormField
+                  control={form.control}
+                  name="credentials.apiSecret"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormLabel>API Secret</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your API Secret" type="password" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The API secret for your {currentType.name} account
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {currentType.fields.includes('apiEndpoint') && (
+                <FormField
+                  control={form.control}
+                  name="credentials.apiEndpoint"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormLabel>API Endpoint</FormLabel>
+                      <FormControl>
+                        <Input placeholder="API Endpoint URL" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The API endpoint for {currentType.name} integration
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <div className="flex items-center space-x-2 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => testConnection(form.getValues())}
+                  disabled={isTestingConnection}
                 >
-                  <SelectTrigger id="type" className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50">
-                    <SelectValue placeholder="Select marketplace type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="shopify">Shopify</SelectItem>
-                    <SelectItem value="etsy">Etsy</SelectItem>
-                    <SelectItem value="amazon">Amazon</SelectItem>
-                    <SelectItem value="ebay">eBay</SelectItem>
-                    <SelectItem value="woocommerce">WooCommerce</SelectItem>
-                    <SelectItem value="general">Other Marketplace</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  The type of marketplace or e-commerce platform
-                </p>
+                  {isTestingConnection ? (
+                    <>
+                      <CircularProgress size={16} className="mr-2" />
+                      Testing Connection...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
+                
+                <a 
+                  href={`https://${currentType.id}.com/admin/apps`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <ExternalLink className="mr-1 h-3 w-3" />
+                  Get API credentials
+                </a>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="storeUrl" className="text-foreground flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4 text-blue-500" />
-                  Store URL
-                </Label>
-                <Input
-                  id="storeUrl"
-                  name="storeUrl"
-                  placeholder="https://your-store.com"
-                  value={credentials.storeUrl}
-                  onChange={handleInputChange}
-                  className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
-                />
-                <div className="text-xs text-muted-foreground space-y-1">
-                  {help.urlHelp}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="apiKey" className="text-foreground flex items-center gap-2">
-                  <Key className="h-4 w-4 text-blue-500" />
-                  {help.apiTitle}
-                </Label>
-                <Input
-                  id="apiKey"
-                  name="apiKey"
-                  type="password"
-                  placeholder={`Enter your ${help.apiTitle}`}
-                  value={credentials.apiKey}
-                  onChange={handleInputChange}
-                  className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {help.apiHelp}
-                </p>
-              </div>
-              
-              {help.secretRequired && (
-                <div className="space-y-2">
-                  <Label htmlFor="apiSecret" className="text-foreground flex items-center gap-2">
-                    <Key className="h-4 w-4 text-blue-500" />
-                    {help.secretTitle}
-                  </Label>
-                  <Input
-                    id="apiSecret"
-                    name="apiSecret"
-                    type="password"
-                    placeholder={`Enter your ${help.secretTitle}`}
-                    value={credentials.apiSecret}
-                    onChange={handleInputChange}
-                    className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {help.secretHelp}
-                  </p>
-                </div>
-              )}
-              
-              {credentials.type === 'general' && (
-                <div className="space-y-2">
-                  <Label htmlFor="apiEndpoint" className="text-foreground flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4 text-blue-500" />
-                    API Endpoint
-                  </Label>
-                  <Input
-                    id="apiEndpoint"
-                    name="apiEndpoint"
-                    placeholder="https://api.example.com/v1"
-                    value={credentials.apiEndpoint}
-                    onChange={handleInputChange}
-                    className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The base API endpoint URL for this marketplace (if applicable)
-                  </p>
-                </div>
-              )}
             </div>
-            
-            {success && (
-              <Alert className="border-green-500/30 bg-green-500/10">
-                <Check className="h-4 w-4 text-green-500" />
-                <AlertTitle className="text-green-500">
-                  {marketplaceId ? 'Marketplace Updated' : 'Marketplace Added'}
-                </AlertTitle>
-                <AlertDescription className="text-muted-foreground">
-                  {`Your ${credentials.type} marketplace "${credentials.name}" has been ${marketplaceId ? 'updated' : 'added'} successfully.`}
-                </AlertDescription>
-              </Alert>
-            )}
-          </>
-        )}
+
+            <CardFooter className="px-0 pb-0 pt-6">
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={createMarketplaceMutation.isPending || updateMarketplaceMutation.isPending}
+              >
+                {(createMarketplaceMutation.isPending || updateMarketplaceMutation.isPending) ? (
+                  <>
+                    <CircularProgress size={16} className="mr-2" />
+                    {marketplaceId ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>{marketplaceId ? 'Update Marketplace' : 'Add Marketplace'}</>
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
       </CardContent>
-      
-      <CardFooter className="border-t border-blue-500/20 pt-4 flex justify-between">
-        <Button 
-          variant="outline" 
-          className="border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
-          onClick={testConnection}
-          disabled={loading || saving}
-        >
-          Test Connection
-        </Button>
-        
-        <Button 
-          className="bg-blue-600 text-white hover:bg-blue-700"
-          onClick={saveCredentials}
-          disabled={loading || saving}
-        >
-          {saving ? (
-            <>
-              <Loader className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Check className="h-4 w-4 mr-2" />
-              {marketplaceId ? 'Update Marketplace' : 'Add Marketplace'}
-            </>
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
