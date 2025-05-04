@@ -578,12 +578,12 @@ export function VoiceCommand() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-lg border border-gold-500/20 bg-gradient-to-br from-background to-muted/30">
+    <Card className="w-full max-w-md shadow-lg border border-primary/20 bg-gradient-to-br from-background to-muted/30">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Mic className="h-5 w-5 text-gold-500" />
+              <Mic className="h-5 w-5 text-primary" />
               Voice Assistant
             </CardTitle>
             <CardDescription>
@@ -601,8 +601,7 @@ export function VoiceCommand() {
                       <Switch
                         checked={continuousMode}
                         onCheckedChange={setContinuousMode}
-                        size="sm"
-                        className="data-[state=checked]:bg-gold-500"
+                        className="data-[state=checked]:bg-primary"
                       />
                     </div>
                   </TooltipTrigger>
@@ -647,7 +646,7 @@ export function VoiceCommand() {
           <div className="relative mb-2 border rounded-md p-2 bg-card/50">
             <div className="absolute right-2 top-2">
               {processing ? (
-                <Loader className="h-3 w-3 animate-spin text-gold-500" />
+                <Loader className="h-3 w-3 animate-spin text-primary" />
               ) : isListening ? (
                 <div className="flex items-center space-x-1">
                   <div className="w-1 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -666,9 +665,9 @@ export function VoiceCommand() {
         {!isListening && lastExecutedCommand && (
           <div className="mb-2">
             <div className="flex items-center justify-between mb-1">
-              <Badge variant="outline" className="bg-gold-500/10">Last command</Badge>
+              <Badge variant="outline" className="bg-primary/10">Last command</Badge>
               {activeTrigger && (
-                <Badge className="bg-gold-500 text-background">{activeTrigger}</Badge>
+                <Badge className="bg-primary text-background">{activeTrigger}</Badge>
               )}
             </div>
             <div className="border rounded-md p-2 bg-card/50">
@@ -691,23 +690,23 @@ export function VoiceCommand() {
               <CollapsibleContent>
                 <div className="grid grid-cols-2 gap-1 mt-1">
                   <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
-                    <Package className="h-3 w-3 text-gold-500" />
+                    <Package className="h-3 w-3 text-primary" />
                     <span className="text-xs">Add new item</span>
                   </div>
                   <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
-                    <Printer className="h-3 w-3 text-gold-500" />
+                    <Printer className="h-3 w-3 text-primary" />
                     <span className="text-xs">Print label</span>
                   </div>
                   <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
-                    <ArrowRightLeft className="h-3 w-3 text-gold-500" />
+                    <ArrowRightLeft className="h-3 w-3 text-primary" />
                     <span className="text-xs">Transfer</span>
                   </div>
                   <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
-                    <Search className="h-3 w-3 text-gold-500" />
+                    <Search className="h-3 w-3 text-primary" />
                     <span className="text-xs">Search items</span>
                   </div>
                   <div className="flex items-center gap-1 p-1 rounded-md border bg-card/50">
-                    <Play className="h-3 w-3 text-gold-500" />
+                    <Play className="h-3 w-3 text-primary" />
                     <span className="text-xs">Navigate to...</span>
                   </div>
                 </div>
@@ -717,7 +716,7 @@ export function VoiceCommand() {
           
           {/* Command examples */}
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>"Add new item Blue Dream flower"</p>
+            <p>"Add new item Full Spectrum Oil"</p>
             <p>"Navigate to inventory"</p>
             <p>"Print barcode for item 123"</p>
           </div>
