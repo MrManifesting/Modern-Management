@@ -15,28 +15,28 @@ import { UseFormReturn } from 'react-hook-form';
 import { Card, CardContent } from '@/components/ui/card';
 // We're using a standard grid instead of importing the Grid component
 
-interface CannabisProductAttributesProps {
+interface ProductAttributesProps {
   form?: UseFormReturn<any>;
   formPrefix?: string;
   showPercentages?: boolean;
-  showWeights?: boolean;
-  brand?: 'goldStandard' | 'treeMason' | 'common' | 'bulk';
+  showSizes?: boolean;
+  brand?: 'inventoryPro' | 'premium' | 'common' | 'bulk';
   onAttributeChange?: (field: string, value: any) => void;
   initialValues?: {
-    strain?: string;
+    variant?: string;
     tier?: string;
     packageSize?: string;
-    thcaPercentage?: string;
-    cbdPercentage?: string;
-    totalTerpenes?: string;
+    strengthA?: string;
+    strengthB?: string;
+    totalPotency?: string;
   };
 }
 
-const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
+const ProductAttributes: React.FC<ProductAttributesProps> = ({
   form,
   formPrefix = 'attributes',
   showPercentages = true,
-  showWeights = true,
+  showSizes = true,
   brand = 'common',
   onAttributeChange,
   initialValues
@@ -55,14 +55,14 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
     <Card className="border-gold/30 bg-black/40">
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Strain Selection */}
+          {/* Variant Selection */}
           {form ? (
             <FormField
               control={form.control}
-              name={fieldName('strain')}
+              name={fieldName('variant')}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gold">Strain</FormLabel>
+                  <FormLabel className="text-gold">Variant</FormLabel>
                   <StrainSelector
                     value={field.value}
                     onChange={field.onChange}
@@ -74,10 +74,10 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
             />
           ) : (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gold">Strain</label>
+              <label className="text-sm font-medium text-gold">Variant</label>
               <StrainSelector
-                value={initialValues?.strain}
-                onChange={(value) => handleChange('strain', value)}
+                value={initialValues?.variant}
+                onChange={(value) => handleChange('variant', value)}
               />
             </div>
           )}
@@ -109,8 +109,8 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
             </div>
           )}
 
-          {/* Package Size/Weight Selection */}
-          {showWeights && (
+          {/* Package Size Selection */}
+          {showSizes && (
             form ? (
               <FormField
                 control={form.control}
@@ -140,17 +140,17 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
             )
           )}
 
-          {/* Cannabinoid Percentages */}
+          {/* Product Potency Percentages */}
           {showPercentages && (
             <>
-              {/* THCa Percentage */}
+              {/* Primary Strength Percentage */}
               {form ? (
                 <FormField
                   control={form.control}
-                  name={fieldName('thcaPercentage')}
+                  name={fieldName('strengthA')}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gold">THCa %</FormLabel>
+                      <FormLabel className="text-gold">Primary Strength %</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -165,10 +165,10 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 />
               ) : (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gold">THCa %</label>
+                  <label className="text-sm font-medium text-gold">Primary Strength %</label>
                   <Input
-                    value={initialValues?.thcaPercentage || ''}
-                    onChange={(e) => handleChange('thcaPercentage', e.target.value)}
+                    value={initialValues?.strengthA || ''}
+                    onChange={(e) => handleChange('strengthA', e.target.value)}
                     type="text"
                     placeholder="e.g. 24.5"
                     className="bg-black/60 border-gold/30"
@@ -176,14 +176,14 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 </div>
               )}
 
-              {/* CBD Percentage */}
+              {/* Secondary Strength Percentage */}
               {form ? (
                 <FormField
                   control={form.control}
-                  name={fieldName('cbdPercentage')}
+                  name={fieldName('strengthB')}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gold">CBD %</FormLabel>
+                      <FormLabel className="text-gold">Secondary Strength %</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -198,10 +198,10 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 />
               ) : (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gold">CBD %</label>
+                  <label className="text-sm font-medium text-gold">Secondary Strength %</label>
                   <Input
-                    value={initialValues?.cbdPercentage || ''}
-                    onChange={(e) => handleChange('cbdPercentage', e.target.value)}
+                    value={initialValues?.strengthB || ''}
+                    onChange={(e) => handleChange('strengthB', e.target.value)}
                     type="text"
                     placeholder="e.g. 0.1"
                     className="bg-black/60 border-gold/30"
@@ -209,24 +209,24 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 </div>
               )}
 
-              {/* Total Terpenes Percentage */}
+              {/* Total Potency Percentage */}
               {form ? (
                 <FormField
                   control={form.control}
-                  name={fieldName('totalTerpenes')}
+                  name={fieldName('totalPotency')}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gold">Total Terpenes %</FormLabel>
+                      <FormLabel className="text-gold">Total Potency %</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="text"
-                          placeholder="e.g. 3.2"
+                          placeholder="e.g. 28.5"
                           className="bg-black/60 border-gold/30"
                         />
                       </FormControl>
                       <FormDescription className="text-gray-400 text-xs">
-                        Total terpene profile percentage
+                        Combined potency of all active ingredients
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -234,15 +234,15 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
                 />
               ) : (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gold">Total Terpenes %</label>
+                  <label className="text-sm font-medium text-gold">Total Potency %</label>
                   <Input
-                    value={initialValues?.totalTerpenes || ''}
-                    onChange={(e) => handleChange('totalTerpenes', e.target.value)}
+                    value={initialValues?.totalPotency || ''}
+                    onChange={(e) => handleChange('totalPotency', e.target.value)}
                     type="text"
-                    placeholder="e.g. 3.2"
+                    placeholder="e.g. 28.5"
                     className="bg-black/60 border-gold/30"
                   />
-                  <p className="text-gray-400 text-xs">Total terpene profile percentage</p>
+                  <p className="text-gray-400 text-xs">Combined potency of all active ingredients</p>
                 </div>
               )}
             </>
@@ -253,4 +253,4 @@ const CannabisProductAttributes: React.FC<CannabisProductAttributesProps> = ({
   );
 };
 
-export default CannabisProductAttributes;
+export default ProductAttributes;
