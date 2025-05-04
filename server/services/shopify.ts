@@ -72,12 +72,22 @@ function getShopifyStoreName() {
   return storeName;
 }
 
-// Using credentials from environment variables
-const SHOPIFY_STORE = getShopifyStoreName();
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
+// Function to get the current shopify credentials
+function getShopifyCredentials() {
+  // Get fresh values from environment variables
+  const storeUrl = getShopifyStoreName(); 
+  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+  
+  return {
+    storeUrl,
+    accessToken
+  };
+}
 
-// Log the credentials for debugging
-console.log("Using Shopify credentials:", SHOPIFY_STORE, SHOPIFY_ACCESS_TOKEN ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
+// Initial log of credentials for debugging
+const initialCredentials = getShopifyCredentials();
+console.log("Initial Shopify credentials:", initialCredentials.storeUrl, 
+  initialCredentials.accessToken ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
 
 /**
  * Checks if the Shopify integration is properly configured with API credentials
