@@ -1,361 +1,393 @@
-/**
- * Shopify Integration Service
- * 
- * This service handles integration with the Shopify API for inventory synchronization,
- * product management, and order tracking.
- */
+import { Item } from "@shared/schema";
+import { MarketplaceService, MarketplaceProduct, MarketplaceTestResult, MarketplacePushResult } from "../marketplace";
+import { generateSku } from '../sku-generator';
+import { IStorage } from '../../storage';
 
-import { Item, Marketplace } from "@shared/schema";
-import { log } from "../../vite";
-
+// Shopify-specific interface for credentials
 interface ShopifyCredentials {
-  apiKey: string;
-  apiSecret: string;
-  accessToken: string;
-  shopUrl: string;
+  storeUrl: string;
+  apiKey: string; // Access token for Shopify API
 }
 
-interface ShopifyProduct {
-  id: string;
+// Shopify-specific interface for products
+interface ShopifyApiProduct {
+  id?: number;
   title: string;
   body_html: string;
   vendor: string;
   product_type: string;
   status: string;
   variants: Array<{
-    id: string;
-    product_id: string;
-    title: string;
     price: string;
     sku: string;
-    position: number;
     inventory_quantity: number;
     inventory_management: string;
-    barcode: string;
+    option1?: string;
+    option2?: string;
+    option3?: string;
+    barcode?: string;
   }>;
-  images: Array<{
-    id: string;
-    product_id: string;
-    position: number;
+  options?: Array<{
+    name: string;
+    values: string[];
+  }>;
+  images?: Array<{
     src: string;
+    alt?: string;
   }>;
+  tags?: string;
 }
 
 /**
- * Convert an MrManifestlister item to a Shopify product
+ * Function to get Shopify store name in correct format
  */
-export function convertItemToShopifyProduct(item: Item): any {
-  // Determine if this is a draft or active product
-  const status = item.status === 'listed' ? 'active' : 'draft';
+function formatShopifyStoreUrl(storeUrl: string): string {
+  if (!storeUrl) return '';
   
-  // Create Shopify product payload
+  // Remove any protocol prefixes (http://, https://)
+  let formattedUrl = storeUrl.replace(/^https?:\/\//, '');
+  
+  // Remove admin.shopify.com/store/ prefix if present
+  if (formattedUrl.includes('admin.shopify.com/store/')) {
+    const storeNameMatch = formattedUrl.match(/admin\.shopify\.com\/store\/([^\/]+)/);
+    if (storeNameMatch && storeNameMatch[1]) {
+      formattedUrl = storeNameMatch[1];
+    }
+  }
+  
+  // Remove trailing slashes if present
+  formattedUrl = formattedUrl.replace(/\/+$/, '');
+  
+  // Ensure it ends with .myshopify.com
+  if (!formattedUrl.endsWith('.myshopify.com')) {
+    // Make sure we don't have store.myshopify.com/something.myshopify.com
+    if (formattedUrl.includes('.myshopify.com/')) {
+      formattedUrl = formattedUrl.substring(0, formattedUrl.indexOf('.myshopify.com/') + '.myshopify.com'.length);
+    } 
+    // If it's just a store name without any domain
+    else if (!formattedUrl.includes('.')) {
+      formattedUrl = `${formattedUrl}.myshopify.com`;
+    }
+  }
+  
+  return formattedUrl;
+}
+
+/**
+ * Convert from generic MarketplaceProduct to Shopify's API format
+ */
+function convertToShopifyProduct(product: MarketplaceProduct): ShopifyApiProduct {
   return {
-    product: {
-      title: item.seoTitle || item.name,
-      body_html: item.seoDescription || item.description,
-      vendor: "MrManifestlister",
-      product_type: item.category,
-      status: status,
-      variants: [
-        {
-          price: item.price.toString(),
-          sku: item.sku,
-          barcode: item.barcode || "",
-          inventory_management: "shopify",
-          inventory_quantity: item.quantity,
-          taxable: true,
-          weight: 0, // Default weight - would need to be part of the item schema
-          weight_unit: "lb",
-          requires_shipping: true
+    id: typeof product.id === 'number' ? product.id : undefined,
+    title: product.title,
+    body_html: product.description,
+    vendor: product.vendor || "Inventory Pro",
+    product_type: product.productType || "Other",
+    status: product.status,
+    variants: product.variants.map(variant => ({
+      price: variant.price,
+      sku: variant.sku,
+      inventory_quantity: variant.inventoryQuantity,
+      inventory_management: "shopify",
+      barcode: variant.barcode,
+      option1: variant.options?.option1,
+      option2: variant.options?.option2,
+      option3: variant.options?.option3
+    })),
+    images: product.images,
+    tags: product.tags?.join(', ')
+  };
+}
+
+/**
+ * Convert from Shopify's API format to generic MarketplaceProduct
+ */
+function convertFromShopifyProduct(product: ShopifyApiProduct): MarketplaceProduct {
+  return {
+    id: product.id,
+    title: product.title,
+    description: product.body_html,
+    vendor: product.vendor,
+    productType: product.product_type,
+    status: product.status,
+    variants: product.variants.map(variant => ({
+      price: variant.price,
+      sku: variant.sku,
+      inventoryQuantity: variant.inventory_quantity,
+      barcode: variant.barcode,
+      options: {
+        option1: variant.option1,
+        option2: variant.option2,
+        option3: variant.option3
+      }
+    })),
+    images: product.images,
+    tags: product.tags ? product.tags.split(', ') : []
+  };
+}
+
+/**
+ * Shopify marketplace service implementation
+ */
+export const shopifyService: MarketplaceService = {
+  /**
+   * Test the connection to Shopify
+   */
+  async testConnection(credentials: ShopifyCredentials): Promise<MarketplaceTestResult> {
+    try {
+      const storeUrl = formatShopifyStoreUrl(credentials.storeUrl);
+      const accessToken = credentials.apiKey;
+      
+      if (!storeUrl || !accessToken) {
+        return { 
+          connected: false, 
+          name: '',
+          message: 'Shopify API credentials are not configured correctly.' 
+        };
+      }
+      
+      // Make a simple API call to test authentication
+      const apiUrl = `https://${storeUrl}/admin/api/2023-10/shop.json`;
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
         }
-      ],
-      images: ((item.images || []) as string[]).map((imageUrl, index) => ({
-        position: index + 1,
-        src: imageUrl,
-        alt: `${item.name} - Image ${index + 1}`
-      }))
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to connect to Shopify API: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return { 
+        connected: true, 
+        name: data.shop.name,
+        message: `Successfully connected to ${data.shop.name}.` 
+      };
+    } catch (error) {
+      console.error('Shopify connection test failed:', error);
+      return { 
+        connected: false, 
+        name: '',
+        message: error instanceof Error ? error.message : 'Unknown error testing Shopify connection' 
+      };
     }
-  };
-}
-
-/**
- * Convert a Shopify product to MrManifestlister item format
- */
-export function convertShopifyProductToItem(shopifyProduct: ShopifyProduct): Partial<Item> {
-  const mainVariant = shopifyProduct.variants[0] || {};
+  },
   
-  return {
-    name: shopifyProduct.title,
-    description: shopifyProduct.body_html.replace(/<[^>]*>?/gm, ''), // Strip HTML
-    price: parseFloat(mainVariant.price || '0'),
-    category: shopifyProduct.product_type || 'Uncategorized',
-    condition: 'New', // Default - Shopify doesn't have a direct equivalent
-    sku: mainVariant.sku,
-    barcode: mainVariant.barcode || null,
-    quantity: mainVariant.inventory_quantity || 0,
-    status: shopifyProduct.status === 'active' ? 'listed' : 'draft',
-    images: shopifyProduct.images.map(img => img.src),
-    seoTitle: shopifyProduct.title,
-    seoDescription: shopifyProduct.body_html.replace(/<[^>]*>?/gm, ''), // Strip HTML
-  };
-}
-
-/**
- * Create or update a product in Shopify
- */
-export async function syncItemToShopify(item: Item, marketplace: Marketplace): Promise<boolean> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    if (!credentials || !credentials.accessToken || !credentials.shopUrl) {
-      throw new Error("Missing Shopify credentials");
+  /**
+   * Prepare an item for Shopify's format
+   */
+  prepareItemForPush(item: Item): MarketplaceProduct {
+    // Use the safer SKU generator that doesn't make API calls
+    let sku = item.sku;
+    
+    if (!sku) {
+      // Generate a SKU without making API calls
+      sku = generateSku(item);
     }
     
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    const apiUrl = `https://${shopUrl}/admin/api/2023-07/products.json`;
+    // Build the main product
+    const product: MarketplaceProduct = {
+      id: item.marketplaceIds?.shopify,
+      title: item.name,
+      description: item.description || '',
+      vendor: item.brand || "Inventory Pro",
+      productType: item.category || "Other",
+      status: item.status === 'active' ? 'active' : 'draft',
+      variants: [{
+        price: item.basePrice.toString(),
+        sku: sku,
+        inventoryQuantity: item.quantity,
+        barcode: item.barcode || undefined
+      }],
+      tags: item.tags as string[]
+    };
     
-    const productData = convertItemToShopifyProduct(item);
+    // Add image if available
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      product.images = item.images.map((img: any) => ({
+        src: img.url || img,
+        alt: item.name
+      }));
+    }
     
-    // First check if the product already exists by SKU
-    const existingProduct = await findProductBySku(item.sku, marketplace);
+    // Add tags from attributes
+    if (item.attributes && typeof item.attributes === 'object') {
+      const attributeTags = Object.entries(item.attributes)
+        .map(([key, value]) => `${key}:${value}`);
+      
+      if (product.tags) {
+        product.tags.push(...attributeTags);
+      } else {
+        product.tags = attributeTags;
+      }
+    }
     
-    if (existingProduct) {
-      // Update existing product
-      const updateUrl = `https://${shopUrl}/admin/api/2023-07/products/${existingProduct.id}.json`;
-      await fetch(updateUrl, {
-        method: 'PUT',
+    return product;
+  },
+  
+  /**
+   * Push a product to Shopify
+   */
+  async pushItemToMarketplace(
+    product: MarketplaceProduct, 
+    credentials: ShopifyCredentials
+  ): Promise<MarketplacePushResult> {
+    try {
+      const storeUrl = formatShopifyStoreUrl(credentials.storeUrl);
+      const accessToken = credentials.apiKey;
+      
+      if (!storeUrl || !accessToken) {
+        return { 
+          success: false,
+          message: 'Shopify API credentials are not configured correctly.'
+        };
+      }
+      
+      // Convert to Shopify's format
+      const shopifyProduct = convertToShopifyProduct(product);
+      
+      const method = shopifyProduct.id ? 'PUT' : 'POST';
+      const url = shopifyProduct.id 
+        ? `https://${storeUrl}/admin/api/2023-10/products/${shopifyProduct.id}.json` 
+        : `https://${storeUrl}/admin/api/2023-10/products.json`;
+      
+      const response = await fetch(url, {
+        method,
         headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': credentials.accessToken
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(productData)
+        body: JSON.stringify({ product: shopifyProduct })
       });
-      log(`Updated product ${item.name} (${item.sku}) in Shopify`, 'shopify');
-    } else {
-      // Create new product
-      await fetch(apiUrl, {
-        method: 'POST',
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Shopify API error (${response.status}): ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      return {
+        success: true,
+        productId: data.product.id,
+        message: `Product successfully ${shopifyProduct.id ? 'updated' : 'created'} in Shopify.`
+      };
+    } catch (error) {
+      console.error('Failed to push product to Shopify:', error);
+      return { 
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error pushing to Shopify'
+      };
+    }
+  },
+  
+  /**
+   * Fetch products from Shopify
+   */
+  async fetchProducts(credentials: ShopifyCredentials): Promise<MarketplaceProduct[]> {
+    try {
+      const storeUrl = formatShopifyStoreUrl(credentials.storeUrl);
+      const accessToken = credentials.apiKey;
+      
+      if (!storeUrl || !accessToken) {
+        throw new Error("Shopify API credentials are not configured correctly.");
+      }
+      
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': credentials.accessToken
-        },
-        body: JSON.stringify(productData)
+          "X-Shopify-Access-Token": accessToken,
+          "Content-Type": "application/json"
+        }
       });
-      log(`Created product ${item.name} (${item.sku}) in Shopify`, 'shopify');
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error syncing to Shopify:', error);
-    return false;
-  }
-}
-
-/**
- * Find a product in Shopify by SKU
- */
-export async function findProductBySku(sku: string, marketplace: Marketplace): Promise<ShopifyProduct | null> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    if (!credentials || !credentials.accessToken || !credentials.shopUrl) {
-      throw new Error("Missing Shopify credentials");
-    }
-    
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    const apiUrl = `https://${shopUrl}/admin/api/2023-07/products.json?query=sku:${sku}`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products from Shopify: ${response.statusText}`);
       }
-    });
-    
-    const data = await response.json();
-    
-    if (data.products && data.products.length > 0) {
-      return data.products[0];
+      
+      const data = await response.json();
+      return data.products.map(convertFromShopifyProduct);
+    } catch (error) {
+      console.error("Error fetching products from Shopify:", error);
+      throw error;
     }
-    
-    return null;
-  } catch (error) {
-    console.error('Error finding product in Shopify:', error);
-    return null;
-  }
-}
-
-/**
- * Delete a product from Shopify
- */
-export async function deleteProductFromShopify(item: Item, marketplace: Marketplace): Promise<boolean> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    if (!credentials || !credentials.accessToken || !credentials.shopUrl) {
-      throw new Error("Missing Shopify credentials");
-    }
-    
-    // First find the product by SKU to get the Shopify product ID
-    const existingProduct = await findProductBySku(item.sku, marketplace);
-    
-    if (!existingProduct) {
-      return false; // Product doesn't exist in Shopify
-    }
-    
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    const apiUrl = `https://${shopUrl}/admin/api/2023-07/products/${existingProduct.id}.json`;
-    
-    await fetch(apiUrl, {
-      method: 'DELETE',
-      headers: {
-        'X-Shopify-Access-Token': credentials.accessToken
+  },
+  
+  /**
+   * Sync products from Shopify to local inventory
+   */
+  async syncProductsFromMarketplace(
+    credentials: ShopifyCredentials,
+    storage: IStorage
+  ): Promise<{
+    imported: number;
+    updated: number;
+    total: number;
+    errors: string[];
+  }> {
+    try {
+      const products = await this.fetchProducts(credentials);
+      const existingItems = await storage.getItems();
+      
+      const result = {
+        imported: 0,
+        updated: 0,
+        total: products.length,
+        errors: [] as string[]
+      };
+      
+      for (const product of products) {
+        try {
+          // Check if the product already exists in our system by Shopify ID
+          const existingItem = existingItems.find(item => {
+            return item.marketplaceIds && 
+                   item.marketplaceIds.shopify && 
+                   item.marketplaceIds.shopify.toString() === product.id?.toString();
+          });
+          
+          // Map product to our schema
+          const productData = {
+            name: product.title,
+            description: product.description || "",
+            basePrice: parseFloat(product.variants[0]?.price || "0"),
+            quantity: product.variants[0]?.inventoryQuantity || 0,
+            category: product.productType || "uncategorized",
+            status: product.status || "draft",
+            sku: product.variants[0]?.sku || "",
+            barcode: product.variants[0]?.barcode || "",
+            tags: product.tags || [],
+            images: product.images?.map(img => img.src) || [],
+            marketplaceIds: {
+              shopify: product.id
+            },
+            syncedToMarketplaces: ["shopify"],
+            attributes: {
+              vendor: product.vendor
+            }
+          };
+          
+          if (existingItem) {
+            // Update existing item
+            await storage.updateItem(existingItem.id, productData);
+            result.updated++;
+          } else {
+            // Create new item
+            await storage.createItem(productData);
+            result.imported++;
+          }
+        } catch (error) {
+          console.error(`Error processing Shopify product ${product.title}:`, error);
+          result.errors.push(`Failed to process "${product.title}": ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
-    });
-    
-    log(`Deleted product ${item.name} (${item.sku}) from Shopify`, 'shopify');
-    return true;
-  } catch (error) {
-    console.error('Error deleting product from Shopify:', error);
-    return false;
-  }
-}
-
-/**
- * Sync inventory quantity from MrManifestlister to Shopify
- */
-export async function syncInventoryToShopify(item: Item, marketplace: Marketplace): Promise<boolean> {
-  try {
-    const existingProduct = await findProductBySku(item.sku, marketplace);
-    
-    if (!existingProduct || !existingProduct.variants || existingProduct.variants.length === 0) {
-      return false;
+      
+      return result;
+    } catch (error) {
+      console.error("Failed to sync products from Shopify:", error);
+      throw error;
     }
-    
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    
-    // Get the inventory item ID for the variant
-    const variantId = existingProduct.variants[0].id;
-    const inventoryItemResponse = await fetch(`https://${shopUrl}/admin/api/2023-07/variants/${variantId}.json`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
-      }
-    });
-    
-    const variantData = await inventoryItemResponse.json();
-    const inventoryItemId = variantData.variant.inventory_item_id;
-    
-    // Update inventory level
-    const inventoryLevelUrl = `https://${shopUrl}/admin/api/2023-07/inventory_levels/set.json`;
-    await fetch(inventoryLevelUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
-      },
-      body: JSON.stringify({
-        location_id: await getFirstLocationId(marketplace),
-        inventory_item_id: inventoryItemId,
-        available: item.quantity
-      })
-    });
-    
-    log(`Updated inventory for ${item.name} (${item.sku}) in Shopify to ${item.quantity}`, 'shopify');
-    return true;
-  } catch (error) {
-    console.error('Error syncing inventory to Shopify:', error);
-    return false;
   }
-}
-
-/**
- * Get the first location ID from the Shopify store
- */
-async function getFirstLocationId(marketplace: Marketplace): Promise<string> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    
-    const response = await fetch(`https://${shopUrl}/admin/api/2023-07/locations.json`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
-      }
-    });
-    
-    const data = await response.json();
-    
-    if (data.locations && data.locations.length > 0) {
-      return data.locations[0].id;
-    }
-    
-    throw new Error('No locations found in Shopify store');
-  } catch (error) {
-    console.error('Error getting Shopify location ID:', error);
-    throw error;
-  }
-}
-
-/**
- * Test the Shopify connection
- */
-export async function testShopifyConnection(marketplace: Marketplace): Promise<boolean> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    if (!credentials || !credentials.accessToken || !credentials.shopUrl) {
-      return false;
-    }
-    
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    const apiUrl = `https://${shopUrl}/admin/api/2023-07/shop.json`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
-      }
-    });
-    
-    return response.ok;
-  } catch (error) {
-    console.error('Error testing Shopify connection:', error);
-    return false;
-  }
-}
-
-/**
- * Import products from Shopify
- */
-export async function importProductsFromShopify(marketplace: Marketplace): Promise<Partial<Item>[]> {
-  try {
-    const credentials = marketplace.credentials as unknown as ShopifyCredentials;
-    if (!credentials || !credentials.accessToken || !credentials.shopUrl) {
-      throw new Error("Missing Shopify credentials");
-    }
-    
-    const shopUrl = credentials.shopUrl.replace(/https?:\/\//, '').replace(/\/$/, '');
-    const apiUrl = `https://${shopUrl}/admin/api/2023-07/products.json?limit=50`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': credentials.accessToken
-      }
-    });
-    
-    const data = await response.json();
-    
-    if (!data.products || !Array.isArray(data.products)) {
-      return [];
-    }
-    
-    return data.products.map((product: ShopifyProduct) => convertShopifyProductToItem(product));
-  } catch (error) {
-    console.error('Error importing products from Shopify:', error);
-    return [];
-  }
-}
+};
