@@ -10,38 +10,38 @@ import {
 } from "@/components/ui/select";
 import { FormControl } from '@/components/ui/form';
 
-// Define cannabis package weight/size options by brand
-export const WEIGHT_OPTIONS = {
+// Define product package size options by brand
+export const SIZE_OPTIONS = {
   // Common sizes across all brands
   common: [
-    { value: "3.5g", label: "3.5g (Eighth)" },
-    { value: "7g", label: "7g (Quarter)" },
-    { value: "14g", label: "14g (Half Ounce)" },
-    { value: "28g", label: "28g (Ounce)" }
+    { value: "30ml", label: "30ml (1 oz)" },
+    { value: "60ml", label: "60ml (2 oz)" },
+    { value: "120ml", label: "120ml (4 oz)" },
+    { value: "240ml", label: "240ml (8 oz)" }
   ],
-  // Gold Standard specific sizes
-  goldStandard: [
-    { value: "7g", label: "7g (Quarter)" },
-    { value: "14g", label: "14g (Half Ounce)" }
+  // InventoryPro specific sizes
+  inventoryPro: [
+    { value: "60ml", label: "60ml (2 oz)" },
+    { value: "120ml", label: "120ml (4 oz)" }
   ],
-  // Tree Mason specific sizes
-  treeMason: [
-    { value: "3.5g", label: "3.5g (Eighth)" },
-    { value: "7g", label: "7g (Quarter)" },
-    { value: "14g", label: "14g (Half Ounce)" }
+  // Premium specific sizes
+  premium: [
+    { value: "30ml", label: "30ml (1 oz)" },
+    { value: "60ml", label: "60ml (2 oz)" },
+    { value: "120ml", label: "120ml (4 oz)" }
   ],
   // Bulk options
   bulk: [
-    { value: "28g", label: "28g (Ounce)" },
-    { value: "4oz", label: "4oz (Quarter Pound)" },
-    { value: "8oz", label: "8oz (Half Pound)" },
-    { value: "16oz", label: "16oz (Pound)" }
+    { value: "240ml", label: "240ml (8 oz)" },
+    { value: "500ml", label: "500ml (16.9 oz)" },
+    { value: "1000ml", label: "1000ml (1 liter)" },
+    { value: "4000ml", label: "4000ml (1 gallon)" }
   ]
 };
 
-type BrandType = 'common' | 'goldStandard' | 'treeMason' | 'bulk';
+type BrandType = 'common' | 'inventoryPro' | 'premium' | 'bulk';
 
-interface WeightSelectorProps {
+interface SizeSelectorProps {
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -53,7 +53,7 @@ interface WeightSelectorProps {
   formField?: boolean;
 }
 
-const WeightSelector: React.FC<WeightSelectorProps> = ({
+const SizeSelector: React.FC<SizeSelectorProps> = ({
   value,
   onChange,
   placeholder = "Select package size",
@@ -64,18 +64,18 @@ const WeightSelector: React.FC<WeightSelectorProps> = ({
   className,
   formField = false
 }) => {
-  // Get weight options based on brand(s)
-  const getWeightOptions = () => {
+  // Get size options based on brand(s)
+  const getSizeOptions = () => {
     let options: { value: string; label: string }[] = [];
     
     if (Array.isArray(brand)) {
       // If multiple brands are specified, combine their options
       brand.forEach(b => {
-        options = [...options, ...WEIGHT_OPTIONS[b]];
+        options = [...options, ...SIZE_OPTIONS[b]];
       });
     } else {
       // Single brand
-      options = [...WEIGHT_OPTIONS[brand]];
+      options = [...SIZE_OPTIONS[brand]];
     }
     
     // Add custom options
@@ -90,7 +90,7 @@ const WeightSelector: React.FC<WeightSelectorProps> = ({
     });
   };
 
-  const weightOptions = getWeightOptions();
+  const sizeOptions = getSizeOptions();
 
   // Handler for the select change event
   const handleChange = (newValue: string) => {

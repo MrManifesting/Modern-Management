@@ -149,7 +149,7 @@ export class MemStorage implements IStorage {
       username: "admin",
       // Hash of "admin123"
       password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818",
-      email: "admin@goldstandardcbd.com",
+      email: "admin@inventorypro.com",
       firstName: "Admin",
       lastName: "User",
       role: "admin",
@@ -1208,7 +1208,7 @@ export class DatabaseStorage implements IStorage {
       username: "admin",
       // Hash of "admin123"
       password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818",
-      email: "admin@goldstandardcbd.com",
+      email: "admin@inventorypro.com",
       firstName: "Admin",
       lastName: "User",
       role: "admin",
