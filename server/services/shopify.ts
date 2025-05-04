@@ -93,7 +93,8 @@ console.log("Initial Shopify credentials:", initialCredentials.storeUrl,
  * Checks if the Shopify integration is properly configured with API credentials
  */
 export async function isShopifyConfigured(): Promise<boolean> {
-  return !!(SHOPIFY_STORE && SHOPIFY_ACCESS_TOKEN);
+  const credentials = getShopifyCredentials();
+  return !!(credentials.storeUrl && credentials.accessToken);
 }
 
 /**
@@ -126,7 +127,10 @@ export function getPushStatus(): { pushEnabled: boolean, message: string } {
  */
 export async function testConnection(): Promise<{ connected: boolean, store: string, message: string }> {
   try {
-    if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
+    // Get fresh credentials
+    const credentials = getShopifyCredentials();
+    
+    if (!credentials.storeUrl || !credentials.accessToken) {
       return { 
         connected: false, 
         store: '',
@@ -136,12 +140,12 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
     
     // Make a simple API call to test authentication
     // Ensure the store URL doesn't include the protocol
-    const storeUrl = SHOPIFY_STORE.replace(/^https?:\/\//, '');
+    const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '');
     
     // Debug output
     console.log("Connecting to Shopify with:");
     console.log(`Store URL: ${storeUrl}`);
-    console.log(`Access Token: ${SHOPIFY_ACCESS_TOKEN.substring(0, 4)}...`);
+    console.log(`Access Token: ${credentials.accessToken.substring(0, 4)}...`);
     
     // Construct the API URL, ensuring it's properly formatted
     const apiUrl = `https://${storeUrl}/admin/api/2023-10/shop.json`;
@@ -149,7 +153,7 @@ export async function testConnection(): Promise<{ connected: boolean, store: str
     
     const response = await fetch(apiUrl, {
       headers: {
-        'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+        'X-Shopify-Access-Token': credentials.accessToken,
         'Content-Type': 'application/json'
       }
     });
@@ -196,7 +200,7 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
   const product: ShopifyProduct = {
     title: item.name,
     body_html: `<p>${item.description || ''}</p>`,
-    vendor: "Gold Standard CBD",
+    vendor: "Inventory Pro",
     product_type: item.category || "Other",
     status: item.status === 'active' ? 'active' : 'draft',
     variants: [{
