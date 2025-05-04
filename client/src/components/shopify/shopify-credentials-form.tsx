@@ -160,7 +160,7 @@ export default function ShopifyCredentialsForm() {
               <div className="space-y-2">
                 <Label htmlFor="shopifyStore" className="text-foreground flex items-center gap-2">
                   <Store className="h-4 w-4 text-blue-500" />
-                  Shopify Store Name
+                  Shopify Store URL
                 </Label>
                 <Input
                   id="shopifyStore"
@@ -170,9 +170,15 @@ export default function ShopifyCredentialsForm() {
                   onChange={handleInputChange}
                   className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Enter your Shopify store domain (e.g., your-store.myshopify.com)
-                </p>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Enter your Shopify store URL in any of these formats:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    <li>your-store.myshopify.com</li>
+                    <li>https://your-store.myshopify.com</li>
+                    <li>https://admin.shopify.com/store/your-store</li>
+                    <li>your-store (will be converted to your-store.myshopify.com)</li>
+                  </ul>
+                </div>
               </div>
               
               <div className="space-y-2">

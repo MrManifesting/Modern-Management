@@ -51,7 +51,23 @@ export default function ShopifySettingsPage() {
         </TabsList>
         
         <TabsContent value="credentials">
-          <ShopifyCredentialsForm />
+          <div className="space-y-6">
+            <Alert className="border-blue-500/30 bg-blue-950/20 mb-4">
+              <KeyIcon className="h-4 w-4 text-blue-500" />
+              <AlertTitle className="text-blue-500">About Shopify Credentials</AlertTitle>
+              <AlertDescription>
+                <p>You'll need to provide your Shopify store URL and Admin API access token to connect your store.</p>
+                <p className="mt-2">To get your Shopify Admin API access token:</p>
+                <ol className="list-decimal pl-5 mt-1 space-y-1">
+                  <li>Go to your Shopify admin dashboard</li>
+                  <li>Navigate to Settings → Apps and sales channels → Develop apps</li>
+                  <li>Create a private app with "Read and write" permissions for Products, Orders, and Inventory</li>
+                  <li>Copy the Admin API access token provided</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+            <ShopifyCredentialsForm />
+          </div>
         </TabsContent>
         
         <TabsContent value="general">
