@@ -382,16 +382,20 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      // Check if marketplace is configured
-      if (!await isMarketplaceConfigured(marketplace)) {
+      // Create marketplace service
+      const marketplaceService = new MarketplaceService(marketplace);
+      
+      // Test connection first to make sure marketplace is accessible
+      const testResult = await marketplaceService.testConnection();
+      if (!testResult.success) {
         return res.status(400).json({ 
           error: "Marketplace not properly configured",
-          message: `${marketplace.name} credentials are incomplete or invalid`
+          message: testResult.message
         });
       }
 
       // Perform the sync
-      const result = await syncProductsFromMarketplace(marketplace, storage);
+      const result = await marketplaceService.syncProducts();
       
       // Update last sync date
       await storage.updateMarketplace(id, { 
@@ -448,20 +452,33 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       // Get push-enabled status from request (default to true)
       const pushEnabled = req.body.pushEnabled !== false;
 
+      // Create marketplace service
+      const marketplaceService = new MarketplaceService(marketplace);
+      
       // Push the item to the marketplace
-      const result = await pushItemToMarketplace(item, marketplace, pushEnabled);
+      const result = await marketplaceService.pushProduct(item);
       
       // If successful, update the item with the marketplace ID
-      if (result.success && result.productId) {
-        const marketplaceIds = item.marketplaceIds || {};
-        marketplaceIds[marketplace.type] = result.productId;
+      if (result.success && result.data?.shopifyProductId) {
+        // Initialize marketplace tracking properties if they don't exist
+        const marketplaceData = item.marketplace || {};
+        const marketplaceIds = marketplaceData.ids || {};
+        const syncedToMarketplaces = marketplaceData.syncedTo || [];
         
-        const syncedToMarketplaces = new Set(item.syncedToMarketplaces || []);
-        syncedToMarketplaces.add(marketplace.type);
+        // Add marketplace info
+        marketplaceIds[marketplace.type] = result.data.shopifyProductId;
         
+        // Use a Set to ensure we don't add duplicates, then convert back to array
+        const syncedSet = new Set([...syncedToMarketplaces, marketplace.type]);
+        
+        // Update the item with marketplace data
         await storage.updateItem(itemId, { 
-          marketplaceIds,
-          syncedToMarketplaces: Array.from(syncedToMarketplaces)
+          marketplace: {
+            ...marketplaceData,
+            ids: marketplaceIds,
+            syncedTo: Array.from(syncedSet),
+            lastSynced: new Date().toISOString()
+          }
         });
       }
       
@@ -504,27 +521,39 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      // Prepare the item for the marketplace to get a preview
-      const marketplaceProduct = prepareItemForMarketplace(item, marketplace);
+      // Create a marketplace service
+      const marketplaceService = new MarketplaceService(marketplace);
       
-      // Check if marketplace is configured
-      const isConfigured = await isMarketplaceConfigured(marketplace);
+      // First test connection to see if marketplace is accessible
+      const testResult = await marketplaceService.testConnection();
+      
+      // Prepare the item for the marketplace to get a preview
+      const prepareResult = await marketplaceService.prepareItemForPush(item);
+      const marketplaceProduct = prepareResult.data || {
+        title: item.name,
+        description: item.description,
+        variants: [{
+          sku: item.sku,
+          price: item.basePrice,
+          inventory_quantity: item.quantity
+        }]
+      };
       
       // Validate the item for the marketplace
       const errors: string[] = [];
       if (!item.name) errors.push('Item name is required');
       if (!item.basePrice) errors.push('Item price is required');
       if (item.quantity === undefined) errors.push('Item quantity is required');
-      if (!marketplaceProduct.variants[0].sku) errors.push('SKU is missing and could not be generated');
+      if (!item.sku) errors.push('SKU is required');
       
       res.json({
         item,
         marketplace,
         marketplaceProduct,
-        canPush: errors.length === 0 && isConfigured && marketplace.isConnected,
+        canPush: errors.length === 0 && testResult.success && marketplace.isConnected,
         errors,
         status: {
-          isMarketplaceConfigured: isConfigured,
+          isMarketplaceConfigured: testResult.success,
           isMarketplaceConnected: marketplace.isConnected,
           syncEnabled: marketplace.syncEnabled
         }
