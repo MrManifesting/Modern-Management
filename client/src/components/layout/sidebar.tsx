@@ -75,24 +75,19 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/inventory",
       subItems: [
         {
-          title: "Gold Standard Investment Group",
-          path: "/inventory/gold-standard",
-          className: "inventory-link gold-brand",
+          title: "Main Inventory",
+          path: "/inventory",
+          className: "inventory-link primary-brand",
         },
         {
-          title: "Specialty Products",
-          path: "/inventory/specialty-products",
+          title: "Product Categories",
+          path: "/inventory/products",
           className: "inventory-link specialty-brand",
         },
         {
           title: "Package Inventory",
           path: "/inventory/package",
           className: "inventory-link package-brand",
-        },
-        {
-          title: "THCa Flower",
-          path: "/inventory/thca-flower",
-          className: "inventory-link",
         }
       ]
     },
