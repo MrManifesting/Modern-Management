@@ -3073,6 +3073,9 @@ ${topCustomersCsv}`;
   // Register Shopify safety routes
   registerShopifySafetyRoutes(app, storage);
   
+  // Register Shopify credentials routes
+  registerShopifyCredentialsRoutes(app, storage);
+  
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
 
