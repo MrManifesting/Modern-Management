@@ -54,16 +54,16 @@ const PremiumProductInventoryPage = () => {
     }
   ];
 
-  const handleViewProduct = (product: THCaFlowerProduct) => {
+  const handleViewProduct = (product: PremiumProduct) => {
     setSelectedProduct(product);
     setDetailOpen(true);
   };
 
-  const handleEditProduct = (product: THCaFlowerProduct) => {
+  const handleEditProduct = (product: PremiumProduct) => {
     // In a real implementation, this would open an edit form
     toast({
       title: "Edit Feature",
-      description: `Editing product: ${product.strain}`,
+      description: `Editing product: ${product.name}`,
     });
   };
 
