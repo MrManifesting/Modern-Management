@@ -16,7 +16,9 @@ import {
   Layers,
   Database,
   Trash2,
-  ShoppingBag
+  ShoppingBag,
+  Share2,
+  QrCode
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -138,6 +140,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Reports",
       icon: <FileBarChart className="h-5 w-5" />,
       path: "/reports",
+    },
+    {
+      title: "Affiliate Program",
+      icon: <Share2 className="h-5 w-5" />,
+      path: "/affiliate-dashboard",
+      highlight: true,
     },
     {
       title: "Forecast",
