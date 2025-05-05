@@ -19,8 +19,16 @@ import { Request, Response } from "express";
 
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
 
+/**
+ * Checks if PayPal is properly configured with necessary credentials
+ * @returns boolean indicating if PayPal is configured
+ */
+const isConfigured = () => {
+  return !!(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET);
+};
+
 const getPayPalClient = () => {
-  if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+  if (!isConfigured()) {
     console.warn("PayPal credentials not found. PayPal integration will be disabled until credentials are provided.");
     return null;
   }
