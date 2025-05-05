@@ -5,6 +5,7 @@ import multer from "multer";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { analyzeImage, generateProductDescription } from "./services/openai";
+import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 import { 
   fetchShopifySalesReport, 
   fetchShopifyInventoryReport, 
@@ -3152,6 +3153,19 @@ ${topCustomersCsv}`;
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
+
+  // PayPal integration routes
+  app.get("/api/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+
+  app.post("/api/paypal/order", async (req, res) => {
+    await createPaypalOrder(req, res);
+  });
+
+  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
+    await capturePaypalOrder(req, res);
+  });
 
   const httpServer = createServer(app);
   return httpServer;
