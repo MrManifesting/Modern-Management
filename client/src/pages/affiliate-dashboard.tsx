@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QrCodeGenerator } from '@/components/affiliate/qr-code-generator';
 import { QrCodeList } from '@/components/affiliate/qr-code-list';
 import { AffiliateStats } from '@/components/affiliate/affiliate-stats';
+import { StripeConnect } from '@/components/affiliate/stripe-connect';
+import { PayoutDashboard } from '@/components/affiliate/payout-dashboard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, RefreshCwIcon } from 'lucide-react';
+import { Loader2, RefreshCwIcon, DollarSign, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AffiliateDashboard() {
@@ -142,10 +144,18 @@ export default function AffiliateDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="stats">Statistics</TabsTrigger>
           <TabsTrigger value="qrcodes">My QR Codes</TabsTrigger>
           <TabsTrigger value="generate">Generate QR Code</TabsTrigger>
+          <TabsTrigger value="payouts" className="flex items-center gap-1">
+            <DollarSign className="h-4 w-4" />
+            <span>Payouts</span>
+          </TabsTrigger>
+          <TabsTrigger value="payment-setup" className="flex items-center gap-1">
+            <CreditCard className="h-4 w-4" />
+            <span>Payment Setup</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="stats" className="mt-4">
@@ -173,6 +183,29 @@ export default function AffiliateDashboard() {
           <QrCodeGenerator
             affiliateId={affiliateId}
             onGenerate={handleQrCodeGenerated}
+          />
+        </TabsContent>
+        
+        <TabsContent value="payouts" className="mt-4">
+          <PayoutDashboard
+            affiliateId={affiliateId}
+            hasPayout={statsData?.pendingPayouts > 0}
+            stripeConnected={affiliate?.stripeOnboardingComplete}
+            onRequestPayout={() => setActiveTab('payment-setup')}
+          />
+        </TabsContent>
+        
+        <TabsContent value="payment-setup" className="mt-4">
+          <StripeConnect
+            affiliateId={affiliateId}
+            onAccountConnected={() => {
+              // Refresh affiliate data to get updated Stripe status
+              queryClient.invalidateQueries({ queryKey: ['/api/affiliates', affiliateId] });
+              toast({
+                title: "Payment Account Connected",
+                description: "Your payment account is now ready to receive payouts.",
+              });
+            }}
           />
         </TabsContent>
       </Tabs>
