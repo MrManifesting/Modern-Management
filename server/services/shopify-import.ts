@@ -175,7 +175,7 @@ export function determineProductAttributes(title: string, variant: string): {
   price: number;
 } {
   // Determine brand from the title
-  let brand = 'Gold Standard';
+  let brand = 'MrListerscurations';
   let prefix = 'GS'; // Default SKU prefix
   
   if (title.toUpperCase().includes('TREE MASON')) {
@@ -207,7 +207,7 @@ export function determineProductAttributes(title: string, variant: string): {
   } else if (title.toUpperCase().includes('TREE MASON')) {
     category = 'Tree Mason';
   } else if (title.toUpperCase().includes('GOLD STANDARD')) {
-    category = 'Gold Standard CBD';
+    category = 'MrListerscurations';
   }
   
   // Determine weight from variant
