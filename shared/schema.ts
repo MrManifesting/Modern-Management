@@ -161,8 +161,6 @@ export const insertMarketplaceSchema = createInsertSchema(marketplaces).omit({
 export type Marketplace = typeof marketplaces.$inferSelect;
 export type InsertMarketplace = z.infer<typeof insertMarketplaceSchema>;
 
-
-
 // CSV Export Schema
 export const csvExportSchema = z.object({
   marketplaces: z.array(z.string()).min(1, "Select at least one marketplace"),
@@ -170,6 +168,62 @@ export const csvExportSchema = z.object({
 });
 
 export type CSVExport = z.infer<typeof csvExportSchema>;
+
+// Affiliates Schema
+export const affiliates = pgTable("affiliates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  code: text("code").notNull().unique(), // Unique affiliate code
+  commissionRate: doublePrecision("commission_rate").notNull().default(0.04), // 4% default commission rate
+  status: text("status").notNull().default("active"), // active, inactive, suspended
+  paymentDetails: json("payment_details").notNull().default({}), // Payment method details
+  notes: text("notes"),
+  totalEarnings: doublePrecision("total_earnings").notNull().default(0),
+  totalSales: integer("total_sales").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAffiliateSchema = createInsertSchema(affiliates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalEarnings: true,
+  totalSales: true,
+});
+
+export type Affiliate = typeof affiliates.$inferSelect;
+export type InsertAffiliate = z.infer<typeof insertAffiliateSchema>;
+
+// QR Code Schema
+export const qrCodes = pgTable("qr_codes", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
+  code: text("code").notNull().unique(), // Unique tracking code
+  url: text("url").notNull(), // Target URL with affiliate tracking
+  type: text("type").notNull().default("affiliate"), // affiliate, product, campaign
+  title: text("title").notNull(), // Name/title for the QR code
+  description: text("description"),
+  imageUrl: text("image_url"), // URL to the generated QR code image
+  scans: integer("scans").notNull().default(0), // Number of scans/uses
+  conversions: integer("conversions").notNull().default(0), // Number of actual purchases
+  status: text("status").notNull().default("active"), // active, inactive
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  scans: true,
+  conversions: true,
+});
+
+export type QrCode = typeof qrCodes.$inferSelect;
+export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
 
 // Sales schema with affiliate tracking fields
 export const sales = pgTable("sales", {
@@ -207,6 +261,27 @@ export const saleFormSchema = insertSaleSchema.extend({
 export type Sale = typeof sales.$inferSelect;
 export type InsertSale = z.infer<typeof insertSaleSchema>;
 export type SaleForm = z.infer<typeof saleFormSchema>;
+
+// Affiliate Transactions Schema
+export const affiliateTransactions = pgTable("affiliate_transactions", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
+  saleId: integer("sale_id"), // Optional reference to the sale (if applicable)
+  transactionType: text("transaction_type").notNull(), // commission, payout, adjustment
+  amount: doublePrecision("amount").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"), // pending, processed, canceled
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAffiliateTransactionSchema = createInsertSchema(affiliateTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AffiliateTransaction = typeof affiliateTransactions.$inferSelect;
+export type InsertAffiliateTransaction = z.infer<typeof insertAffiliateTransactionSchema>;
 
 // Analytics Report Schema
 export const reportSchema = z.object({
@@ -427,87 +502,13 @@ export const itemsRelations = relations(items, ({ many, one }) => ({
   }),
 }));
 
-// Note: sales table already defined above
+export const salesRelations = relations(sales, ({ one }) => ({
+  item: one(items, {
+    fields: [sales.itemId],
+    references: [items.id],
+  }),
+}));
 
-// Employee relations
-// Affiliates Schema
-export const affiliates = pgTable("affiliates", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  code: text("code").notNull().unique(), // Unique affiliate code
-  commissionRate: doublePrecision("commission_rate").notNull().default(0.04), // 4% default commission rate
-  status: text("status").notNull().default("active"), // active, inactive, suspended
-  paymentDetails: json("payment_details").notNull().default({}), // Payment method details
-  notes: text("notes"),
-  totalEarnings: doublePrecision("total_earnings").notNull().default(0),
-  totalSales: integer("total_sales").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertAffiliateSchema = createInsertSchema(affiliates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  totalEarnings: true,
-  totalSales: true,
-});
-
-export type Affiliate = typeof affiliates.$inferSelect;
-export type InsertAffiliate = z.infer<typeof insertAffiliateSchema>;
-
-// Affiliate Transactions Schema
-export const affiliateTransactions = pgTable("affiliate_transactions", {
-  id: serial("id").primaryKey(),
-  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
-  saleId: integer("sale_id"), // Optional reference to the sale (if applicable)
-  transactionType: text("transaction_type").notNull(), // commission, payout, adjustment
-  amount: doublePrecision("amount").notNull(),
-  description: text("description"),
-  status: text("status").notNull().default("pending"), // pending, processed, canceled
-  processedAt: timestamp("processed_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const insertAffiliateTransactionSchema = createInsertSchema(affiliateTransactions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type AffiliateTransaction = typeof affiliateTransactions.$inferSelect;
-export type InsertAffiliateTransaction = z.infer<typeof insertAffiliateTransactionSchema>;
-
-// QR Code Schema
-export const qrCodes = pgTable("qr_codes", {
-  id: serial("id").primaryKey(),
-  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
-  code: text("code").notNull().unique(), // Unique tracking code
-  url: text("url").notNull(), // Target URL with affiliate tracking
-  type: text("type").notNull().default("affiliate"), // affiliate, product, campaign
-  title: text("title").notNull(), // Name/title for the QR code
-  description: text("description"),
-  imageUrl: text("image_url"), // URL to the generated QR code image
-  scans: integer("scans").notNull().default(0), // Number of scans/uses
-  conversions: integer("conversions").notNull().default(0), // Number of actual purchases
-  status: text("status").notNull().default("active"), // active, inactive
-  expiresAt: timestamp("expires_at"), // Optional expiration date
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  scans: true,
-  conversions: true,
-});
-
-export type QrCode = typeof qrCodes.$inferSelect;
-export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
-
-// Define relationships for affiliates
 export const affiliatesRelations = relations(affiliates, ({ many }) => ({
   transactions: many(affiliateTransactions),
   qrCodes: many(qrCodes),
@@ -530,8 +531,6 @@ export const qrCodesRelations = relations(qrCodes, ({ one }) => ({
     references: [affiliates.id],
   }),
 }));
-
-// Note: salesRelations is already defined above, no need to redefine it
 
 export const employeesRelations = relations(employees, ({ many }) => ({
   inventoryActions: many(inventoryActions),
