@@ -2,21 +2,21 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
-interface CannabisMascotLoaderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface InventoryLoaderProps extends React.HTMLAttributes<HTMLDivElement> {
   text?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'leaf' | 'bud';
+  variant?: 'default' | 'boxes' | 'shipping';
   bounce?: boolean;
 }
 
-export function CannabisMascotLoader({
+export function InventoryLoader({
   text = 'Loading...',
   size = 'md',
   variant = 'default',
   bounce = true,
   className,
   ...props
-}: CannabisMascotLoaderProps) {
+}: InventoryLoaderProps) {
   const sizeClasses = {
     sm: 'h-24 w-24',
     md: 'h-32 w-32',
@@ -39,13 +39,13 @@ export function CannabisMascotLoader({
         )}
       >
         {variant === 'default' && (
-          <DefaultMascot />
+          <DefaultInventoryIcon />
         )}
-        {variant === 'leaf' && (
-          <LeafMascot />
+        {variant === 'boxes' && (
+          <BoxesIcon />
         )}
-        {variant === 'bud' && (
-          <BudMascot />
+        {variant === 'shipping' && (
+          <ShippingIcon />
         )}
       </div>
       <div className="flex items-center text-gold font-medium">
@@ -56,7 +56,7 @@ export function CannabisMascotLoader({
   );
 }
 
-function DefaultMascot() {
+function DefaultInventoryIcon() {
   return (
     <svg
       viewBox="0 0 120 120"
@@ -64,64 +64,35 @@ function DefaultMascot() {
       xmlns="http://www.w3.org/2000/svg"
       className="h-full w-full"
     >
-      {/* Body */}
-      <circle cx="60" cy="60" r="50" fill="#4F7942" />
+      {/* Main circle background */}
+      <circle cx="60" cy="60" r="50" fill="#3B82F6" />
       
-      {/* Face */}
-      <circle cx="60" cy="60" r="35" fill="#65A765" />
+      {/* Box body */}
+      <rect x="30" y="40" width="60" height="50" rx="2" fill="#60A5FA" />
       
-      {/* Eyes */}
-      <circle cx="45" cy="50" r="5" fill="#FFF" />
-      <circle cx="75" cy="50" r="5" fill="#FFF" />
-      <circle cx="45" cy="50" r="2" fill="#000" />
-      <circle cx="75" cy="50" r="2" fill="#000" />
-      
-      {/* Smile */}
+      {/* Box lid */}
       <path
-        d="M45 70 Q60 85 75 70"
-        stroke="#FFF"
-        strokeWidth="3"
-        strokeLinecap="round"
+        d="M25 40 L60 25 L95 40 L60 55 Z"
+        fill="#93C5FD"
       />
       
-      {/* Cannabis Leaves */}
-      <path
-        d="M60 10 C50 25 40 15 35 5 C45 15 55 15 60 10 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-      />
-      <path
-        d="M100 40 C80 45 80 30 85 15 C85 30 95 40 100 40 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-        style={{ animationDelay: '0.2s' }}
-      />
-      <path
-        d="M20 40 C40 45 40 30 35 15 C35 30 25 40 20 40 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-        style={{ animationDelay: '0.4s' }}
-      />
-      <path
-        d="M90 90 C75 80 85 70 100 70 C85 75 80 85 90 90 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-        style={{ animationDelay: '0.6s' }}
-      />
-      <path
-        d="M30 90 C45 80 35 70 20 70 C35 75 40 85 30 90 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-        style={{ animationDelay: '0.8s' }}
-      />
+      {/* Box bottom details */}
+      <rect x="35" y="70" width="50" height="5" fill="#2563EB" />
+      <rect x="35" y="80" width="50" height="5" fill="#2563EB" />
       
-      {/* Gold "glint" accent */}
+      {/* Inventory items */}
+      <rect x="40" y="50" width="10" height="10" rx="1" fill="#FFD700" className="animate-inventory-float" />
+      <rect x="55" y="45" width="10" height="10" rx="1" fill="#FFD700" className="animate-inventory-float" style={{ animationDelay: '0.3s' }} />
+      <rect x="70" y="50" width="10" height="10" rx="1" fill="#FFD700" className="animate-inventory-float" style={{ animationDelay: '0.6s' }} />
+      
+      {/* Gold accents */}
       <circle cx="40" cy="45" r="2" fill="#FFD700" className="animate-gold-shimmer" />
+      <circle cx="80" cy="45" r="2" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '0.5s' }} />
     </svg>
   );
 }
 
-function LeafMascot() {
+function BoxesIcon() {
   return (
     <svg
       viewBox="0 0 120 120"
@@ -129,42 +100,23 @@ function LeafMascot() {
       xmlns="http://www.w3.org/2000/svg"
       className="h-full w-full"
     >
-      {/* Main leaf */}
-      <path
-        d="M60 10 C80 30 90 70 60 110 C30 70 40 30 60 10 Z"
-        fill="#4F7942"
-      />
+      {/* Main circle background */}
+      <circle cx="60" cy="60" r="50" fill="#3B82F6" />
       
-      {/* Leaf veins */}
-      <path
-        d="M60 10 L60 110"
-        stroke="#65A765"
-        strokeWidth="2"
-      />
-      <path
-        d="M60 40 C50 50 45 70 50 90"
-        stroke="#65A765"
-        strokeWidth="2"
-      />
-      <path
-        d="M60 40 C70 50 75 70 70 90"
-        stroke="#65A765"
-        strokeWidth="2"
-      />
+      {/* Stack of boxes */}
+      <rect x="25" y="65" width="40" height="30" rx="2" fill="#60A5FA" />
+      <rect x="35" y="45" width="40" height="30" rx="2" fill="#93C5FD" />
+      <rect x="55" y="60" width="40" height="30" rx="2" fill="#2563EB" />
       
-      {/* Face */}
-      <circle cx="50" cy="60" r="5" fill="#FFF" />
-      <circle cx="70" cy="60" r="5" fill="#FFF" />
-      <circle cx="50" cy="60" r="2" fill="#000" />
-      <circle cx="70" cy="60" r="2" fill="#000" />
+      {/* Box details */}
+      <rect x="30" y="75" width="30" height="3" fill="#1D4ED8" />
+      <rect x="30" y="82" width="20" height="3" fill="#1D4ED8" />
       
-      {/* Smile */}
-      <path
-        d="M50 75 Q60 85 70 75"
-        stroke="#FFF"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <rect x="40" y="55" width="30" height="3" fill="#1D4ED8" />
+      <rect x="40" y="62" width="20" height="3" fill="#1D4ED8" />
+      
+      <rect x="60" y="70" width="30" height="3" fill="#BFDBFE" />
+      <rect x="60" y="77" width="20" height="3" fill="#BFDBFE" />
       
       {/* Gold "shimmer" accents */}
       <circle cx="60" cy="30" r="2" fill="#FFD700" className="animate-gold-shimmer" />
@@ -174,7 +126,7 @@ function LeafMascot() {
   );
 }
 
-function BudMascot() {
+function ShippingIcon() {
   return (
     <svg
       viewBox="0 0 120 120"
@@ -182,75 +134,38 @@ function BudMascot() {
       xmlns="http://www.w3.org/2000/svg"
       className="h-full w-full"
     >
-      {/* Bud base */}
-      <ellipse cx="60" cy="60" rx="35" ry="40" fill="#65A765" />
+      {/* Main circle background */}
+      <circle cx="60" cy="60" r="50" fill="#3B82F6" />
       
-      {/* Bud petals/layers */}
-      <path
-        d="M60 20 C75 35 75 85 60 100 C45 85 45 35 60 20 Z"
-        fill="#4F7942"
-      />
-      <path
-        d="M30 50 C50 45 70 75 90 70 C70 75 50 45 30 50 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-      />
-      <path
-        d="M30 70 C50 75 70 45 90 50 C70 45 50 75 30 70 Z"
-        fill="#4F7942"
-        className="animate-cannabis-pulse"
-        style={{ animationDelay: '0.5s' }}
-      />
+      {/* Truck body */}
+      <rect x="15" y="65" width="60" height="25" rx="3" fill="#60A5FA" />
       
-      {/* Face */}
-      <circle cx="48" cy="55" r="5" fill="#FFF" />
-      <circle cx="72" cy="55" r="5" fill="#FFF" />
-      <circle cx="48" cy="55" r="2" fill="#000" />
-      <circle cx="72" cy="55" r="2" fill="#000" />
+      {/* Truck cabin */}
+      <rect x="75" y="70" width="25" height="20" rx="2" fill="#93C5FD" />
+      <rect x="75" y="60" width="25" height="10" rx="2" fill="#93C5FD" />
       
-      {/* Smile */}
-      <path
-        d="M48 70 Q60 80 72 70"
-        stroke="#FFF"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
+      {/* Wheels */}
+      <circle cx="30" cy="90" r="8" fill="#2563EB" />
+      <circle cx="30" cy="90" r="4" fill="#1D4ED8" />
+      <circle cx="80" cy="90" r="8" fill="#2563EB" />
+      <circle cx="80" cy="90" r="4" fill="#1D4ED8" />
       
-      {/* Orange hairs (pistils) */}
-      <path
-        d="M45 30 C40 25 35 28 30 25"
-        stroke="#FFA500"
-        strokeWidth="1.5"
-        className="animate-cannabis-float"
-      />
-      <path
-        d="M75 30 C80 25 85 28 90 25"
-        stroke="#FFA500"
-        strokeWidth="1.5"
-        className="animate-cannabis-float"
-        style={{ animationDelay: '0.2s' }}
-      />
-      <path
-        d="M85 60 C90 55 95 58 98 55"
-        stroke="#FFA500"
-        strokeWidth="1.5"
-        className="animate-cannabis-float"
-        style={{ animationDelay: '0.4s' }}
-      />
-      <path
-        d="M35 60 C30 55 25 58 22 55"
-        stroke="#FFA500"
-        strokeWidth="1.5"
-        className="animate-cannabis-float"
-        style={{ animationDelay: '0.6s' }}
-      />
+      {/* Windows */}
+      <rect x="80" y="65" width="15" height="8" rx="1" fill="#BFDBFE" />
       
-      {/* Gold "trichomes" accents */}
-      <circle cx="40" cy="40" r="1" fill="#FFD700" className="animate-gold-shimmer" />
-      <circle cx="80" cy="40" r="1" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '0.3s' }} />
-      <circle cx="50" cy="80" r="1" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '0.6s' }} />
-      <circle cx="70" cy="80" r="1" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '0.9s' }} />
-      <circle cx="60" cy="30" r="1" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '1.2s' }} />
+      {/* Truck details */}
+      <rect x="20" y="75" width="50" height="3" fill="#2563EB" />
+      <rect x="25" y="60" width="10" height="5" fill="#2563EB" />
+      
+      {/* Shipping box on truck */}
+      <rect x="30" y="50" width="25" height="15" rx="1" fill="#FFD700" className="animate-inventory-float" />
+      <rect x="35" y="55" width="15" height="2" fill="#F59E0B" />
+      <rect x="35" y="60" width="10" height="2" fill="#F59E0B" />
+      
+      {/* Gold accents */}
+      <circle cx="45" cy="40" r="2" fill="#FFD700" className="animate-gold-shimmer" />
+      <circle cx="65" cy="50" r="1.5" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '0.5s' }} />
+      <circle cx="90" cy="55" r="1.5" fill="#FFD700" className="animate-gold-shimmer" style={{ animationDelay: '1s' }} />
     </svg>
   );
 }
@@ -259,12 +174,12 @@ export function LoadingPage({
   variant = 'default',
   message = 'Loading...'
 }: {
-  variant?: 'default' | 'leaf' | 'bud';
+  variant?: 'default' | 'boxes' | 'shipping';
   message?: string;
 }) {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-black/95">
-      <CannabisMascotLoader 
+      <InventoryLoader 
         size="lg" 
         text={message} 
         variant={variant}
@@ -279,11 +194,11 @@ export function LoadingOverlay({
   variant = 'default'
 }: {
   message?: string;
-  variant?: 'default' | 'leaf' | 'bud';
+  variant?: 'default' | 'boxes' | 'shipping';
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <CannabisMascotLoader 
+      <InventoryLoader 
         text={message} 
         variant={variant}
         className="bg-black/80 p-8 rounded-lg shadow-xl border border-gold/20" 

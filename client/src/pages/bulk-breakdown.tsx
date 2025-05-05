@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CannabisMascotLoader, LoadingPage } from "@/components/ui/cannabis-loader";
+import { InventoryLoader, LoadingPage } from "@/components/ui/inventory-loader";
 import { AlertTriangle, CheckCircle, PlusSquare, Trash2, Package, Clipboard, ArrowRight, Layers, ArrowDownUp } from "lucide-react";
 
 type Item = {
