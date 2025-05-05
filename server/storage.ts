@@ -6,9 +6,12 @@ import {
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
   ItemType, ProcessingStatus, ItemCondition,
   User, InsertUser,
+  Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
+  AffiliateTransaction, InsertAffiliateTransaction,
   
   // Import schema tables for Drizzle
-  users, items, marketplaces, sales, employees, inventoryActions, productBreakdowns
+  users, items, marketplaces, sales, employees, inventoryActions, productBreakdowns,
+  affiliates, qrCodes, affiliateTransactions
 } from "@shared/schema";
 import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
@@ -90,6 +93,40 @@ export interface IStorage {
   // Bulk product management
   moveToBulkWaiting(bulkItemId: number, quantity: number, employeeId: number): Promise<Item | undefined>;
   createBreakdownProducts(breakdownId: number, targetProducts: BreakdownTarget[], employeeId: number): Promise<Item[]>;
+  
+  // Affiliate methods
+  getAllAffiliates(): Promise<Affiliate[]>;
+  getAffiliateById(id: number): Promise<Affiliate | undefined>;
+  getAffiliateByCode(code: string): Promise<Affiliate | undefined>;
+  createAffiliate(affiliate: InsertAffiliate): Promise<Affiliate>;
+  updateAffiliate(id: number, affiliate: Partial<InsertAffiliate>): Promise<Affiliate | undefined>;
+  deleteAffiliate(id: number): Promise<boolean>;
+  getAffiliateStats(id: number): Promise<{
+    totalSales: number;
+    totalEarnings: number;
+    pendingPayouts: number;
+    conversionRate: number;
+    recentTransactions: AffiliateTransaction[];
+  }>;
+  updateAffiliateEarnings(id: number, amount: number): Promise<Affiliate | undefined>;
+  
+  // QR Code methods
+  getQrCodes(): Promise<QrCode[]>;
+  getQrCodeById(id: number): Promise<QrCode | undefined>;
+  getQrCodeByCode(code: string): Promise<QrCode | undefined>;
+  getQrCodesByAffiliateId(affiliateId: number): Promise<QrCode[]>;
+  createQrCode(qrCode: InsertQrCode): Promise<QrCode>;
+  updateQrCode(id: number, qrCode: Partial<InsertQrCode>): Promise<QrCode | undefined>;
+  deleteQrCode(id: number): Promise<boolean>;
+  incrementQrCodeScans(id: number): Promise<QrCode | undefined>;
+  incrementQrCodeConversions(id: number): Promise<QrCode | undefined>;
+  
+  // Affiliate Transaction methods
+  getAffiliateTransactions(): Promise<AffiliateTransaction[]>;
+  getAffiliateTransactionsByAffiliateId(affiliateId: number): Promise<AffiliateTransaction[]>;
+  getAffiliateTransactionsBySaleId(saleId: number): Promise<AffiliateTransaction[]>;
+  createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction>;
+  updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined>;
 }
 
 // Memory storage implementation
@@ -1198,9 +1235,36 @@ export class DatabaseStorage implements IStorage {
         // Initialize with a default admin employee
         await this.initializeEmployees();
       }
+      
+      // Check if there are any affiliates
+      const existingAffiliates = await db.select().from(affiliates);
+      
+      if (existingAffiliates.length === 0) {
+        // Initialize with a default test affiliate
+        await this.initializeAffiliates();
+      }
     } catch (error) {
       console.error("Failed to initialize data:", error);
     }
+  }
+  
+  private async initializeAffiliates() {
+    // Create a default test affiliate
+    const defaultAffiliate: InsertAffiliate = {
+      name: "Test Affiliate",
+      email: "affiliate@example.com",
+      code: "TESTAFFILIATE",
+      commissionRate: 0.04, // 4% commission
+      status: "active",
+      paymentDetails: { 
+        method: "paypal",
+        email: "affiliate@example.com"
+      },
+      notes: "This is a test affiliate account."
+    };
+    
+    await this.createAffiliate(defaultAffiliate);
+    console.log('Created default test affiliate');
   }
   
   private async initializeUsers() {
