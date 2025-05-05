@@ -1070,4 +1070,28 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       });
     }
   });
+
+  /**
+   * Check PayPal configuration status
+   */
+  app.get("/api/paypal/status", async (_req: Request, res: Response) => {
+    try {
+      // Check if PayPal is configured
+      const isConfigured = paypalService.isConfigured();
+      
+      res.json({
+        success: true,
+        data: {
+          isConfigured,
+          // We will add more details here when we implement the full PayPal integration
+        }
+      });
+    } catch (error) {
+      console.error("Error checking PayPal status:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error checking PayPal configuration status"
+      });
+    }
+  });
 }

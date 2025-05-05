@@ -39,20 +39,20 @@ export function PaymentConnect({ affiliateId, onAccountConnected }: PaymentConne
   const checkPayPalStatus = async () => {
     try {
       setLoading(true);
-      // We could add a real endpoint here to check PayPal status
-      // For now, we'll use a simulated status
       
-      // Check if the PayPal environment variables are set
+      // Check if PayPal is configured on the server
       const response = await apiRequest(
         "GET",
-        `/api/paypal/setup`
+        `/api/paypal/status`
       );
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.data.isConfigured) {
+        // In a real implementation with proper PayPal OAuth integration,
+        // we would fetch the user's PayPal account details here
         setPaypalStatus({ 
           isConfigured: true,
-          email: "affiliate@example.com" // In a real app, this would come from the backend
+          email: "affiliate@example.com" // This would come from the PayPal OAuth response
         });
       } else {
         setPaypalStatus({ isConfigured: false });
