@@ -791,6 +791,45 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
   });
 
   /**
+   * Get affiliate transactions
+   */
+  app.get("/api/affiliates/:id/transactions", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      
+      if (isNaN(affiliateId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(affiliateId);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Get transactions for the affiliate
+      const transactions = await storage.getAffiliateTransactionsByAffiliateId(affiliateId);
+      
+      res.json({
+        success: true,
+        data: transactions
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate transactions:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching affiliate transactions"
+      });
+    }
+  });
+
+  /**
    * Get affiliate statistics
    */
   app.get("/api/affiliates/:id/stats", async (req: Request, res: Response) => {

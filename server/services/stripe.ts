@@ -1,73 +1,60 @@
 /**
- * Stripe service for processing payments and affiliate payouts
+ * Stripe service for managing affiliate payments
  */
 import Stripe from "stripe";
+import { z } from "zod";
 
+// Initialize Stripe with API key
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required environment variable: STRIPE_SECRET_KEY');
+  console.warn("STRIPE_SECRET_KEY not found. Stripe integration will not work.");
 }
 
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
+// Initialize Stripe with API key if available
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) 
+  : null;
 
 /**
- * Create a Stripe customer
- * 
- * @param email Customer email
- * @param name Customer name
- * @param metadata Additional metadata
- * @returns The created Stripe customer
+ * Check if Stripe is configured
  */
-export async function createCustomer(email: string, name: string, metadata: any = {}) {
-  try {
-    const customer = await stripe.customers.create({
-      email,
-      name,
-      metadata
-    });
-    
-    return customer;
-  } catch (error) {
-    console.error("Error creating Stripe customer:", error);
-    throw error;
-  }
+function isStripeConfigured(): boolean {
+  return !!stripe;
 }
 
 /**
- * Create a Stripe account for an affiliate
+ * Create a Stripe Connect account for an affiliate
  * 
  * @param email Affiliate email
  * @param name Affiliate name
  * @param metadata Additional metadata
- * @returns The created Stripe connected account
+ * @returns The created account
  */
-export async function createConnectedAccount(email: string, name: string, metadata: any = {}) {
+async function createConnectedAccount(
+  email: string,
+  name: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.Account> {
+  if (!stripe) throw new Error("Stripe not configured");
+
   try {
-    // Create a connected account (for an affiliate)
+    // Create a Standard Connect account
     const account = await stripe.accounts.create({
-      type: 'express',
+      type: "express",
       email,
-      metadata: {
-        ...metadata,
-        name
+      business_type: "individual",
+      business_profile: {
+        name,
+        url: "https://inventorypro.com",
       },
       capabilities: {
         transfers: { requested: true },
-        card_payments: { requested: true },
-        us_bank_account_ach_payments: { requested: true }
       },
-      business_type: 'individual',
-      business_profile: {
-        name: `${name} - Affiliate`,
-        url: process.env.BASE_URL || 'https://inventorypro.app'
-      }
+      metadata,
     });
-    
+
     return account;
   } catch (error) {
-    console.error("Error creating Stripe connected account:", error);
+    console.error("Error creating Stripe account:", error);
     throw error;
   }
 }
@@ -75,106 +62,137 @@ export async function createConnectedAccount(email: string, name: string, metada
 /**
  * Create an account link for onboarding
  * 
- * @param accountId The Stripe account ID
- * @returns An account link for onboarding
+ * @param accountId Stripe account ID
+ * @param refreshUrl URL to redirect if onboarding is interrupted
+ * @param returnUrl URL to redirect when onboarding is complete
+ * @returns Account link
  */
-export async function createAccountLink(accountId: string, refreshUrl: string, returnUrl: string) {
+async function createAccountLink(
+  accountId: string,
+  refreshUrl: string,
+  returnUrl: string
+): Promise<Stripe.AccountLink> {
+  if (!stripe) throw new Error("Stripe not configured");
+
   try {
+    // Create an account link for the user to onboard
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl,
       return_url: returnUrl,
-      type: 'account_onboarding'
+      type: "account_onboarding",
     });
-    
+
     return accountLink;
   } catch (error) {
-    console.error("Error creating Stripe account link:", error);
+    console.error("Error creating account link:", error);
     throw error;
   }
 }
 
 /**
- * Create a payout to an affiliate
+ * Check if an account is ready for payouts
  * 
- * @param amount The amount to pay out (in dollars)
- * @param accountId The Stripe account ID of the recipient
- * @param metadata Additional metadata
- * @returns The created transfer
+ * @param accountId Stripe account ID
+ * @returns True if the account is ready for payouts
  */
-export async function createPayout(amount: number, accountId: string, metadata: any = {}) {
+async function isAccountReadyForPayouts(accountId: string): Promise<boolean> {
+  if (!stripe) throw new Error("Stripe not configured");
+
   try {
+    const account = await stripe.accounts.retrieve(accountId);
+    
+    // Check if the account is fully onboarded
+    const isDetailsSubmitted = account.details_submitted;
+    const isChargesEnabled = account.charges_enabled;
+    const isPayoutsEnabled = account.payouts_enabled;
+    
+    return isDetailsSubmitted && isChargesEnabled && isPayoutsEnabled;
+  } catch (error) {
+    console.error("Error checking account status:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create a login link for the Stripe Connect dashboard
+ * 
+ * @param accountId Stripe account ID
+ * @returns Login link
+ */
+async function createLoginLink(accountId: string): Promise<Stripe.LoginLink> {
+  if (!stripe) throw new Error("Stripe not configured");
+
+  try {
+    const loginLink = await stripe.accounts.createLoginLink(accountId);
+    return loginLink;
+  } catch (error) {
+    console.error("Error creating login link:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create a payout (transfer) to a connected account
+ * 
+ * @param amount Amount to pay out in dollars
+ * @param destinationAccountId Destination Stripe account ID
+ * @param metadata Additional metadata
+ * @returns Transfer object
+ */
+async function createPayout(
+  amount: number,
+  destinationAccountId: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.Transfer> {
+  if (!stripe) throw new Error("Stripe not configured");
+
+  try {
+    // Convert amount to cents for Stripe
+    const amountInCents = Math.round(amount * 100);
+    
     // Create a transfer to the connected account
-    // Amount is in cents, so multiply by 100
     const transfer = await stripe.transfers.create({
-      amount: Math.round(amount * 100),
-      currency: 'usd',
-      destination: accountId,
-      metadata
+      amount: amountInCents,
+      currency: "usd",
+      destination: destinationAccountId,
+      metadata,
     });
     
     return transfer;
   } catch (error) {
-    console.error("Error creating Stripe payout:", error);
+    console.error("Error creating payout:", error);
     throw error;
   }
 }
 
 /**
- * Get account details
+ * Create a payment with affiliate tracking
  * 
- * @param accountId The Stripe account ID
- * @returns The account details
- */
-export async function getAccountDetails(accountId: string) {
-  try {
-    const account = await stripe.accounts.retrieve(accountId);
-    return account;
-  } catch (error) {
-    console.error("Error retrieving Stripe account:", error);
-    throw error;
-  }
-}
-
-/**
- * Check if an account is fully onboarded and ready to receive payments
- * 
- * @param accountId The Stripe account ID
- * @returns Whether the account is ready to receive payouts
- */
-export async function isAccountReadyForPayouts(accountId: string) {
-  try {
-    const account = await stripe.accounts.retrieve(accountId);
-    
-    // Check if the account is active and charges_enabled is true
-    return account.charges_enabled && account.payouts_enabled;
-  } catch (error) {
-    console.error("Error checking account readiness:", error);
-    return false;
-  }
-}
-
-/**
- * Create a payment for a purchase with affiliate tracking
- * 
- * @param amount The payment amount (in dollars)
- * @param currency The currency code (e.g., 'usd')
+ * @param amount Amount in dollars
+ * @param currency Currency code (e.g., "usd")
  * @param customerEmail Customer email
- * @param metadata Additional metadata for tracking
- * @returns The created payment intent
+ * @param metadata Additional metadata for affiliate tracking
+ * @returns PaymentIntent object
  */
-export async function createPaymentWithAffiliateTracking(
-  amount: number, 
-  currency: string = 'usd',
+async function createPaymentWithAffiliateTracking(
+  amount: number,
+  currency: string,
   customerEmail: string,
-  metadata: any = {}
-) {
+  metadata?: Record<string, any>
+): Promise<Stripe.PaymentIntent> {
+  if (!stripe) throw new Error("Stripe not configured");
+
   try {
+    // Convert amount to cents for Stripe
+    const amountInCents = Math.round(amount * 100);
+    
+    // Create a payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: amountInCents,
       currency,
       receipt_email: customerEmail,
-      metadata
+      metadata,
     });
     
     return paymentIntent;
@@ -185,74 +203,63 @@ export async function createPaymentWithAffiliateTracking(
 }
 
 /**
- * Confirm payment and apply affiliate commission
+ * Confirm a payment and apply a commission to an affiliate
+ * Typically called by a webhook after payment confirmation
  * 
- * @param paymentIntentId The payment intent ID
- * @param affiliateAccountId The affiliate's Stripe account ID
- * @param commissionRate The commission rate (e.g., 0.04 for 4%)
- * @returns The updated payment intent and transfer for the commission
+ * @param paymentIntentId PaymentIntent ID
+ * @param affiliateAccountId Affiliate's Stripe account ID
+ * @param commissionRate Commission rate (e.g., 0.04 for 4%)
+ * @returns Transfer object for the commission payment
  */
-export async function confirmPaymentAndApplyCommission(
+async function confirmPaymentAndApplyCommission(
   paymentIntentId: string,
   affiliateAccountId: string,
   commissionRate: number = 0.04
-) {
+): Promise<Stripe.Transfer> {
+  if (!stripe) throw new Error("Stripe not configured");
+
   try {
     // Retrieve the payment intent
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     
+    // Verify the payment was successful
     if (paymentIntent.status !== 'succeeded') {
-      throw new Error('Payment has not succeeded yet');
+      throw new Error(`Payment ${paymentIntentId} has not been succeeded. Status: ${paymentIntent.status}`);
     }
     
-    // Calculate commission amount (Stripe amounts are in cents)
-    const paymentAmount = paymentIntent.amount;
-    const commissionAmount = Math.round(paymentAmount * commissionRate);
+    // Calculate commission amount
+    const amount = paymentIntent.amount;
+    const commissionAmount = Math.round(amount * commissionRate);
     
     // Create a transfer to the affiliate
     const transfer = await stripe.transfers.create({
       amount: commissionAmount,
       currency: paymentIntent.currency,
       destination: affiliateAccountId,
-      source_transaction: paymentIntent.latest_charge as string,
+      source_transaction: paymentIntent.charges?.data[0]?.id,
       metadata: {
         payment_intent_id: paymentIntentId,
         commission_rate: commissionRate.toString(),
-        type: 'affiliate_commission'
-      }
+        affiliate_account_id: affiliateAccountId,
+        ...paymentIntent.metadata
+      },
     });
     
-    return { paymentIntent, transfer };
+    return transfer;
   } catch (error) {
     console.error("Error confirming payment and applying commission:", error);
     throw error;
   }
 }
 
-/**
- * Create a login link for a connected account
- * 
- * @param accountId The Stripe account ID
- * @returns A login link for the connected account dashboard
- */
-export async function createLoginLink(accountId: string) {
-  try {
-    const loginLink = await stripe.accounts.createLoginLink(accountId);
-    return loginLink;
-  } catch (error) {
-    console.error("Error creating login link:", error);
-    throw error;
-  }
-}
-
+// Export all functions
 export default {
-  createCustomer,
+  isStripeConfigured,
   createConnectedAccount,
   createAccountLink,
-  createPayout,
-  getAccountDetails,
   isAccountReadyForPayouts,
+  createLoginLink,
+  createPayout,
   createPaymentWithAffiliateTracking,
-  confirmPaymentAndApplyCommission,
-  createLoginLink
+  confirmPaymentAndApplyCommission
 };
