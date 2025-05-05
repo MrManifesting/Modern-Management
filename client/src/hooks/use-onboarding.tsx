@@ -23,7 +23,7 @@ const isFirstVisit = (): boolean => {
 const defaultSteps: OnboardingStep[] = [
   {
     target: 'body',
-    content: 'Welcome to the Gold Standard Investment Group Inventory Management System! Let me show you around.',
+    content: 'Welcome to the Inventory Pro Management System! Let me show you around.',
     placement: 'center',
     disableBeacon: true,
     hideCloseButton: true,
@@ -45,8 +45,8 @@ const defaultSteps: OnboardingStep[] = [
     spotlightClicks: true,
   },
   {
-    target: '.shopify-link',
-    content: 'Connect with Shopify to synchronize your inventory across platforms.',
+    target: '.marketplace-link',
+    content: 'Connect to marketplaces like Shopify to synchronize your inventory across platforms.',
     placement: 'right',
   },
   {

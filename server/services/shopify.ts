@@ -200,7 +200,7 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
   const product: ShopifyProduct = {
     title: item.name,
     body_html: `<p>${item.description || ''}</p>`,
-    vendor: "MrListerscurations",
+    vendor: "Inventory Pro",
     product_type: item.category || "Other",
     status: item.status === 'active' ? 'active' : 'draft',
     variants: [{
