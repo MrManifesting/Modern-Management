@@ -20,13 +20,17 @@ interface QrCode {
   id: number;
   code: string;
   title: string;
-  description: string;
-  imageUrl: string;
+  description: string | null;
+  imageUrl: string | null;
   url: string;
-  scanCount: number;
-  conversionCount: number;
+  scans: number;
+  conversions: number;
   createdAt: string;
   lastScannedAt: string | null;
+  status: string;
+  type: string;
+  affiliateId: number;
+  expiresAt: string | null;
 }
 
 interface QrCodeListProps {
@@ -123,8 +127,8 @@ export function QrCodeList({ affiliateId, qrCodes, onDelete, onRefresh }: QrCode
               <TableRow key={qrCode.id}>
                 <TableCell className="font-medium">{qrCode.title}</TableCell>
                 <TableCell className="font-mono text-xs">{qrCode.code}</TableCell>
-                <TableCell className="text-center">{qrCode.scanCount}</TableCell>
-                <TableCell className="text-center">{qrCode.conversionCount}</TableCell>
+                <TableCell className="text-center">{qrCode.scans}</TableCell>
+                <TableCell className="text-center">{qrCode.conversions}</TableCell>
                 <TableCell className="text-center text-sm">
                   {formatDistanceToNow(new Date(qrCode.createdAt), { addSuffix: true })}
                 </TableCell>

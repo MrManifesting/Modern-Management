@@ -216,6 +216,7 @@ export const qrCodes = pgTable("qr_codes", {
   scans: integer("scans").notNull().default(0), // Number of scans/uses
   conversions: integer("conversions").notNull().default(0), // Number of actual purchases
   status: text("status").notNull().default("active"), // active, inactive
+  lastScannedAt: timestamp("last_scanned_at"), // When the QR code was last scanned
   expiresAt: timestamp("expires_at"), // Optional expiration date
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
