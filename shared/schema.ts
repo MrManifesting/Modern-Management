@@ -181,6 +181,13 @@ export const affiliates = pgTable("affiliates", {
   notes: text("notes"),
   totalEarnings: doublePrecision("total_earnings").notNull().default(0),
   totalSales: integer("total_sales").notNull().default(0),
+  // Stripe integration fields
+  stripeAccountId: text("stripe_account_id"), // Stripe Connect account ID
+  stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID
+  stripeOnboardingComplete: boolean("stripe_onboarding_complete").default(false), // Whether Stripe onboarding is complete
+  payoutSchedule: text("payout_schedule").default("monthly"), // daily, weekly, biweekly, monthly
+  lastPayoutDate: timestamp("last_payout_date"), // When the affiliate was last paid out
+  pendingPayout: doublePrecision("pending_payout").notNull().default(0), // Amount awaiting payout
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -271,6 +278,11 @@ export const affiliateTransactions = pgTable("affiliate_transactions", {
   amount: doublePrecision("amount").notNull(),
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, processed, canceled
+  // Stripe integration fields
+  stripeTransferId: text("stripe_transfer_id"), // Stripe transfer ID for payouts
+  stripePaymentIntentId: text("stripe_payment_intent_id"), // Stripe payment intent ID for sales
+  payoutBatchId: text("payout_batch_id"), // For grouping transactions in the same payout batch
+  feeAmount: doublePrecision("fee_amount").default(0), // Any fees charged by payment processor
   processedAt: timestamp("processed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
