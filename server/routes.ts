@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
-// OpenAI import removed per requirements
+import { analyzeImage, generateProductDescription } from "./services/openai";
 import { 
   fetchShopifySalesReport, 
   fetchShopifyInventoryReport, 
@@ -838,9 +838,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Analysis Route
-  // AI analyze-image route removed per requirements
+  app.post("/api/analyze-image", upload.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image provided" });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured",
+          message: "Please configure OpenAI API key in your environment variables" 
+        });
+      }
+
+      // Convert the file buffer to base64
+      const base64Image = req.file.buffer.toString('base64');
+      
+      // Analyze the image with OpenAI
+      const analysis = await analyzeImage(base64Image);
+      
+      res.json({ 
+        success: true, 
+        analysis,
+        message: "Image analyzed successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error analyzing image:", error);
+      res.status(500).json({ 
+        error: "Error analyzing image", 
+        message: error.message 
+      });
+    }
+  });
   
-  // SEO Content Generation Route removed per requirements
+  // SEO Content Generation Route
+  app.post("/api/generate-product-description", async (req: Request, res: Response) => {
+    try {
+      const { productName, category, existingDescription, imageAnalysis } = req.body;
+      
+      if (!productName || !category) {
+        return res.status(400).json({ error: "Product name and category are required" });
+      }
+      
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured",
+          message: "Please configure OpenAI API key in your environment variables" 
+        });
+      }
+      
+      const description = await generateProductDescription(
+        productName,
+        category,
+        existingDescription || "",
+        imageAnalysis || ""
+      );
+      
+      res.json({ 
+        success: true, 
+        description,
+        message: "Product description generated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error generating product description:", error);
+      res.status(500).json({ 
+        error: "Error generating product description", 
+        message: error.message 
+      });
+    }
+  });
 
   // CSV Export Route - Supports both POST and GET
   app.post("/api/export-csv", async (req: Request, res: Response) => {
