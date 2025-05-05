@@ -86,7 +86,7 @@ function getShopifyCredentials() {
 
 // Initial log of credentials for debugging
 const initialCredentials = getShopifyCredentials();
-console.log("Initial Shopify credentials:", initialCredentials.storeUrl, 
+console.log("Shopify store connection:", initialCredentials.storeUrl, 
   initialCredentials.accessToken ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
 
 /**
