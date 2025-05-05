@@ -7,6 +7,7 @@ import { z } from "zod";
 import qrcode from "qrcode";
 import { generateUniqueCode } from "./services/codes";
 import stripeService from "./services/stripe";
+import paypalService from "./paypal";
 import { 
   insertAffiliateSchema, 
   insertQrCodeSchema, 
