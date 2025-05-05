@@ -38,6 +38,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Image Optimization";
       case "/employees":
         return "Employee Management";
+      case "/affiliate-dashboard":
+        return "Affiliate Program";
       default:
         return "Inventory Pro";
     }
