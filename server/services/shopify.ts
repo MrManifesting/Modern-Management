@@ -84,10 +84,18 @@ function getShopifyCredentials() {
   };
 }
 
+// Log credentials during initialization to ensure we're using the latest values
+function logShopifyCredentials() {
+  const credentials = getShopifyCredentials();
+  console.log("Shopify store connection:", credentials.storeUrl, 
+    credentials.accessToken ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
+}
+
 // Initial log of credentials for debugging
-const initialCredentials = getShopifyCredentials();
-console.log("Shopify store connection:", initialCredentials.storeUrl, 
-  initialCredentials.accessToken ? "[TOKEN PRESENT]" : "[TOKEN MISSING]");
+logShopifyCredentials();
+
+// Re-log credentials after a slight delay to ensure environment variables are loaded
+setTimeout(logShopifyCredentials, 1000);
 
 /**
  * Checks if the Shopify integration is properly configured with API credentials
