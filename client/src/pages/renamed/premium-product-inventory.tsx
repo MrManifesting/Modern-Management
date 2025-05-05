@@ -3,10 +3,10 @@ import { Helmet } from 'react-helmet';
 import { Button } from '@/components/ui/button';
 import { Plus, DownloadCloud, UploadCloud, FileSpreadsheet } from 'lucide-react';
 import { 
-  THCaFlowerInventoryTable, 
-  THCaFlowerProduct 
-} from '@/components/inventory/thca-flower-inventory-table';
-import { THCaFlowerDetail } from '@/components/inventory/thca-flower-detail';
+  PremiumProductInventoryTable, 
+  PremiumProduct 
+} from '@/components/inventory/renamed/premium-product-inventory-table';
+import { PremiumProductDetail } from '@/components/inventory/renamed/premium-product-detail';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,8 @@ import { toast } from '@/hooks/use-toast';
 import { OnboardingTour } from '@/components/onboarding';
 import { OnboardingStep } from '@/hooks/use-onboarding';
 
-const THCaFlowerInventoryPage = () => {
-  const [selectedProduct, setSelectedProduct] = useState<THCaFlowerProduct | null>(null);
+const PremiumProductInventoryPage = () => {
+  const [selectedProduct, setSelectedProduct] = useState<PremiumProduct | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<number | null>(null);
