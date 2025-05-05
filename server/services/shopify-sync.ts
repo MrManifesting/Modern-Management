@@ -309,7 +309,7 @@ export async function createShopifyProduct(
     const productData = {
       title: inventoryItem.name,
       body_html: inventoryItem.description || '',
-      vendor: 'Gold Standard CBD',
+      vendor: 'MrListerscurations',
       product_type: inventoryItem.category || 'CBD',
       variants: [
         {
