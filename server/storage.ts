@@ -138,6 +138,9 @@ export class MemStorage implements IStorage {
   private inventoryActions: Map<number, InventoryAction>;
   private productBreakdowns: Map<number, ProductBreakdown>;
   private users: Map<number, User>;
+  private affiliates: Map<number, Affiliate>;
+  private qrCodes: Map<number, QrCode>;
+  private affiliateTransactions: Map<number, AffiliateTransaction>;
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
@@ -145,6 +148,9 @@ export class MemStorage implements IStorage {
   private inventoryActionCurrentId: number;
   private breakdownCurrentId: number;
   private userCurrentId: number;
+  private affiliateCurrentId: number;
+  private qrCodeCurrentId: number;
+  private affiliateTransactionCurrentId: number;
   
   // Session store for authentication
   sessionStore: any;
@@ -157,6 +163,9 @@ export class MemStorage implements IStorage {
     this.inventoryActions = new Map();
     this.productBreakdowns = new Map();
     this.users = new Map();
+    this.affiliates = new Map();
+    this.qrCodes = new Map();
+    this.affiliateTransactions = new Map();
     this.itemCurrentId = 1;
     this.marketplaceCurrentId = 1;
     this.salesCurrentId = 1;
@@ -164,6 +173,9 @@ export class MemStorage implements IStorage {
     this.inventoryActionCurrentId = 1;
     this.breakdownCurrentId = 1;
     this.userCurrentId = 1;
+    this.affiliateCurrentId = 1;
+    this.qrCodeCurrentId = 1;
+    this.affiliateTransactionCurrentId = 1;
     
     // Create in-memory session store
     const MemoryStore = memoryStoreModule(session);
@@ -179,6 +191,26 @@ export class MemStorage implements IStorage {
     
     // Initialize with a default admin user
     this.initializeUsers();
+    
+    // Initialize with a default test affiliate
+    this.initializeAffiliates();
+  }
+  
+  private initializeAffiliates() {
+    const defaultAffiliate: InsertAffiliate = {
+      name: "Test Affiliate",
+      email: "affiliate@example.com",
+      code: "TESTAFFILIATE",
+      commissionRate: 0.04, // 4% commission
+      status: "active",
+      paymentDetails: { 
+        method: "paypal",
+        email: "affiliate@example.com"
+      },
+      notes: "This is a test affiliate account."
+    };
+    
+    this.createAffiliate(defaultAffiliate);
   }
   
   private initializeUsers() {
@@ -2156,6 +2188,209 @@ export class DatabaseStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+  
+  // Affiliate methods
+  async getAllAffiliates(): Promise<Affiliate[]> {
+    return await db.select().from(affiliates);
+  }
+  
+  async getAffiliateById(id: number): Promise<Affiliate | undefined> {
+    const [affiliate] = await db.select().from(affiliates).where(eq(affiliates.id, id));
+    return affiliate;
+  }
+  
+  async getAffiliateByCode(code: string): Promise<Affiliate | undefined> {
+    const [affiliate] = await db.select().from(affiliates).where(eq(affiliates.code, code));
+    return affiliate;
+  }
+  
+  async createAffiliate(affiliate: InsertAffiliate): Promise<Affiliate> {
+    const [newAffiliate] = await db.insert(affiliates).values(affiliate).returning();
+    return newAffiliate;
+  }
+  
+  async updateAffiliate(id: number, affiliate: Partial<InsertAffiliate>): Promise<Affiliate | undefined> {
+    const now = new Date();
+    const [updatedAffiliate] = await db
+      .update(affiliates)
+      .set({ ...affiliate, updatedAt: now })
+      .where(eq(affiliates.id, id))
+      .returning();
+    
+    return updatedAffiliate;
+  }
+  
+  async deleteAffiliate(id: number): Promise<boolean> {
+    const result = await db.delete(affiliates).where(eq(affiliates.id, id));
+    return result.rowCount > 0;
+  }
+  
+  async getAffiliateStats(id: number): Promise<{
+    totalSales: number;
+    totalEarnings: number;
+    pendingPayouts: number;
+    conversionRate: number;
+    recentTransactions: AffiliateTransaction[];
+  }> {
+    // Get all QR codes for this affiliate
+    const affiliateQrCodes = await this.getQrCodesByAffiliateId(id);
+    
+    // Calculate total scans across all QR codes
+    const totalScans = affiliateQrCodes.reduce((sum, qr) => sum + qr.scanCount, 0);
+    
+    // Calculate total conversions across all QR codes
+    const totalConversions = affiliateQrCodes.reduce((sum, qr) => sum + qr.conversionCount, 0);
+    
+    // Get all transactions for this affiliate
+    const allTransactions = await this.getAffiliateTransactionsByAffiliateId(id);
+    
+    // Calculate total earnings
+    const totalEarnings = allTransactions.reduce((sum, tx) => 
+      tx.transactionType === 'commission' ? sum + tx.amount : sum, 0);
+    
+    // Calculate pending payouts (transactions with status 'pending')
+    const pendingPayouts = allTransactions
+      .filter(tx => tx.status === 'pending')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    
+    // Calculate conversion rate (handle divide by zero)
+    const conversionRate = totalScans > 0 ? totalConversions / totalScans : 0;
+    
+    // Get recent transactions (last 10)
+    const recentTransactions = allTransactions
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10);
+    
+    return {
+      totalSales: totalConversions,
+      totalEarnings,
+      pendingPayouts,
+      conversionRate,
+      recentTransactions
+    };
+  }
+  
+  async updateAffiliateEarnings(id: number, amount: number): Promise<Affiliate | undefined> {
+    const affiliate = await this.getAffiliateById(id);
+    if (!affiliate) return undefined;
+    
+    const currentTotalSales = affiliate.totalSales || 0;
+    const currentTotalEarnings = affiliate.totalEarnings || 0;
+    
+    return this.updateAffiliate(id, {
+      totalSales: currentTotalSales + 1,
+      totalEarnings: currentTotalEarnings + amount
+    });
+  }
+  
+  // QR Code methods
+  async getQrCodes(): Promise<QrCode[]> {
+    return await db.select().from(qrCodes);
+  }
+  
+  async getQrCodeById(id: number): Promise<QrCode | undefined> {
+    const [qrCode] = await db.select().from(qrCodes).where(eq(qrCodes.id, id));
+    return qrCode;
+  }
+  
+  async getQrCodeByCode(code: string): Promise<QrCode | undefined> {
+    const [qrCode] = await db.select().from(qrCodes).where(eq(qrCodes.code, code));
+    return qrCode;
+  }
+  
+  async getQrCodesByAffiliateId(affiliateId: number): Promise<QrCode[]> {
+    return await db.select().from(qrCodes).where(eq(qrCodes.affiliateId, affiliateId));
+  }
+  
+  async createQrCode(qrCode: InsertQrCode): Promise<QrCode> {
+    const [newQrCode] = await db.insert(qrCodes).values(qrCode).returning();
+    return newQrCode;
+  }
+  
+  async updateQrCode(id: number, qrCode: Partial<InsertQrCode>): Promise<QrCode | undefined> {
+    const now = new Date();
+    const [updatedQrCode] = await db
+      .update(qrCodes)
+      .set({ ...qrCode, updatedAt: now })
+      .where(eq(qrCodes.id, id))
+      .returning();
+    
+    return updatedQrCode;
+  }
+  
+  async deleteQrCode(id: number): Promise<boolean> {
+    const result = await db.delete(qrCodes).where(eq(qrCodes.id, id));
+    return result.rowCount > 0;
+  }
+  
+  async incrementQrCodeScans(id: number): Promise<QrCode | undefined> {
+    const qrCode = await this.getQrCodeById(id);
+    if (!qrCode) return undefined;
+    
+    const [updatedQrCode] = await db
+      .update(qrCodes)
+      .set({ 
+        scanCount: qrCode.scanCount + 1,
+        lastScannedAt: new Date()
+      })
+      .where(eq(qrCodes.id, id))
+      .returning();
+    
+    return updatedQrCode;
+  }
+  
+  async incrementQrCodeConversions(id: number): Promise<QrCode | undefined> {
+    const qrCode = await this.getQrCodeById(id);
+    if (!qrCode) return undefined;
+    
+    const [updatedQrCode] = await db
+      .update(qrCodes)
+      .set({ 
+        conversionCount: qrCode.conversionCount + 1,
+        lastConversionAt: new Date()
+      })
+      .where(eq(qrCodes.id, id))
+      .returning();
+    
+    return updatedQrCode;
+  }
+  
+  // Affiliate Transaction methods
+  async getAffiliateTransactions(): Promise<AffiliateTransaction[]> {
+    return await db.select().from(affiliateTransactions);
+  }
+  
+  async getAffiliateTransactionsByAffiliateId(affiliateId: number): Promise<AffiliateTransaction[]> {
+    return await db.select()
+      .from(affiliateTransactions)
+      .where(eq(affiliateTransactions.affiliateId, affiliateId));
+  }
+  
+  async getAffiliateTransactionsBySaleId(saleId: number): Promise<AffiliateTransaction[]> {
+    return await db.select()
+      .from(affiliateTransactions)
+      .where(eq(affiliateTransactions.saleId, saleId));
+  }
+  
+  async createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction> {
+    const [newTransaction] = await db.insert(affiliateTransactions).values(transaction).returning();
+    return newTransaction;
+  }
+  
+  async updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined> {
+    const now = new Date();
+    const [updatedTransaction] = await db
+      .update(affiliateTransactions)
+      .set({ 
+        status, 
+        updatedAt: now,
+        processedAt: status === 'processed' ? now : null
+      })
+      .where(eq(affiliateTransactions.id, id))
+      .returning();
+    
+    return updatedTransaction;
   }
 }
 
