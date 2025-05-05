@@ -843,4 +843,4 @@ export const PremiumProductInventoryTable: React.FC<PremiumProductInventoryTable
   );
 };
 
-export default THCaFlowerInventoryTable;
+export default PremiumProductInventoryTable;

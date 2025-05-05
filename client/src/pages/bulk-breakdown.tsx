@@ -256,7 +256,7 @@ export default function BulkBreakdownPage() {
   };
   
   if (isLoadingItems || isLoadingWaiting || isLoadingBreakdown || isLoadingProductBreakdowns) {
-    return <LoadingPage message="Loading inventory data..." variant="bud" />;
+    return <LoadingPage message="Loading inventory data..." variant="boxes" />;
   }
   
   return (
@@ -575,7 +575,7 @@ export default function BulkBreakdownPage() {
               }
             >
               {moveToBulkWaitingMutation.isPending ? (
-                <CannabisMascotLoader size="sm" variant="leaf" />
+                <InventoryLoader size="sm" variant="boxes" />
               ) : (
                 'Move to Waiting'
               )}
@@ -736,7 +736,7 @@ export default function BulkBreakdownPage() {
               disabled={breakdownTargets.length === 0 || createBreakdownProductsMutation.isPending}
             >
               {createBreakdownProductsMutation.isPending ? (
-                <CannabisMascotLoader size="sm" variant="bud" />
+                <InventoryLoader size="sm" variant="shipping" />
               ) : (
                 'Create Products'
               )}
