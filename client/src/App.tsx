@@ -29,6 +29,7 @@ import PackageInventoryPage from "@/pages/package-inventory";
 import MediaManagerPage from "@/pages/media-manager";
 import BulkBreakdownPage from "@/pages/bulk-breakdown";
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
+import AffiliateDashboard from "@/pages/affiliate-dashboard";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 
@@ -60,6 +61,7 @@ function Router() {
       <ProtectedRoute path="/media-manager" component={MediaManagerPage} />
       <ProtectedRoute path="/bulk-breakdown" component={BulkBreakdownPage} />
       <ProtectedRoute path="/database-cleanup" component={DatabaseCleanupPage} />
+      <ProtectedRoute path="/affiliate-dashboard" component={AffiliateDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

@@ -15,6 +15,7 @@ import { registerCleanupRoutes } from "./routes-cleanup";
 import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
+import { registerAffiliateRoutes } from "./routes-affiliate";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -3145,6 +3146,9 @@ ${topCustomersCsv}`;
   
   // Register marketplace routes for multi-marketplace support
   registerMarketplaceRoutes(app, storage);
+  
+  // Register affiliate routes
+  registerAffiliateRoutes(app, storage);
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
