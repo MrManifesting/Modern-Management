@@ -3,11 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QrCodeGenerator } from '@/components/affiliate/qr-code-generator';
 import { QrCodeList } from '@/components/affiliate/qr-code-list';
 import { AffiliateStats } from '@/components/affiliate/affiliate-stats';
-import { StripeConnect } from '@/components/affiliate/stripe-connect';
+import { PaymentConnect } from '@/components/affiliate/payment-connect';
 import { PayoutDashboard } from '@/components/affiliate/payout-dashboard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, RefreshCwIcon, DollarSign, CreditCard } from 'lucide-react';
+import { Loader2, RefreshCwIcon, DollarSign, CreditCard, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AffiliateDashboard() {
@@ -196,10 +196,10 @@ export default function AffiliateDashboard() {
         </TabsContent>
         
         <TabsContent value="payment-setup" className="mt-4">
-          <StripeConnect
+          <PaymentConnect
             affiliateId={affiliateId}
             onAccountConnected={() => {
-              // Refresh affiliate data to get updated Stripe status
+              // Refresh affiliate data to get updated payment status
               queryClient.invalidateQueries({ queryKey: ['/api/affiliates', affiliateId] });
               toast({
                 title: "Payment Account Connected",
