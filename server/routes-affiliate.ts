@@ -6,6 +6,7 @@ import type { IStorage } from "./storage";
 import { z } from "zod";
 import qrcode from "qrcode";
 import { generateUniqueCode } from "./services/codes";
+import stripeService from "./services/stripe";
 import { 
   insertAffiliateSchema, 
   insertQrCodeSchema, 
@@ -40,6 +41,430 @@ async function generateQRCodeDataURL(url: string): Promise<string> {
  * Register affiliate routes
  */
 export function registerAffiliateRoutes(app: Express, storage: IStorage) {
+  /**
+   * Create a Stripe Connect account for an affiliate
+   */
+  app.post("/api/affiliates/:id/stripe-account", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(id);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Check if the affiliate already has a Stripe account
+      if (affiliate.stripeAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Affiliate already has a Stripe account"
+        });
+      }
+      
+      // Create a Stripe Connect account for the affiliate
+      const account = await stripeService.createConnectedAccount(
+        affiliate.email, 
+        affiliate.name,
+        { affiliate_id: affiliate.id }
+      );
+      
+      // Update the affiliate with the Stripe account ID
+      const updatedAffiliate = await storage.updateAffiliate(id, {
+        stripeAccountId: account.id
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          affiliate: updatedAffiliate,
+          accountId: account.id
+        }
+      });
+    } catch (error) {
+      console.error("Error creating Stripe account:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error creating Stripe account"
+      });
+    }
+  });
+  
+  /**
+   * Generate an onboarding link for a Stripe Connect account
+   */
+  app.post("/api/affiliates/:id/onboarding-link", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(id);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Check if the affiliate has a Stripe account
+      if (!affiliate.stripeAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Affiliate does not have a Stripe account"
+        });
+      }
+      
+      // Generate return URLs
+      const baseUrl = process.env.BASE_URL || `http://${req.headers.host}`;
+      const refreshUrl = `${baseUrl}/affiliates/${id}/setup?refresh=true`;
+      const returnUrl = `${baseUrl}/affiliates/${id}/setup?success=true`;
+      
+      // Create an account link for onboarding
+      const accountLink = await stripeService.createAccountLink(
+        affiliate.stripeAccountId,
+        refreshUrl,
+        returnUrl
+      );
+      
+      res.json({
+        success: true,
+        data: {
+          url: accountLink.url
+        }
+      });
+    } catch (error) {
+      console.error("Error generating onboarding link:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error generating onboarding link"
+      });
+    }
+  });
+  
+  /**
+   * Check the status of a Stripe Connect account
+   */
+  app.get("/api/affiliates/:id/stripe-status", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(id);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Check if the affiliate has a Stripe account
+      if (!affiliate.stripeAccountId) {
+        return res.json({
+          success: true,
+          data: {
+            hasStripeAccount: false
+          }
+        });
+      }
+      
+      // Check if the account is ready for payouts
+      const isReady = await stripeService.isAccountReadyForPayouts(affiliate.stripeAccountId);
+      
+      // Update onboarding status if needed
+      if (isReady && !affiliate.stripeOnboardingComplete) {
+        await storage.updateAffiliate(id, {
+          stripeOnboardingComplete: true
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          hasStripeAccount: true,
+          isOnboardingComplete: isReady
+        }
+      });
+    } catch (error) {
+      console.error("Error checking Stripe status:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error checking Stripe status"
+      });
+    }
+  });
+  
+  /**
+   * Process a payout to an affiliate
+   */
+  app.post("/api/affiliates/:id/payout", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { amount } = req.body;
+      
+      if (isNaN(id) || !amount) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID or missing amount"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(id);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Check if the affiliate has a Stripe account and is ready for payouts
+      if (!affiliate.stripeAccountId || !affiliate.stripeOnboardingComplete) {
+        return res.status(400).json({
+          success: false,
+          message: "Affiliate is not ready to receive payouts"
+        });
+      }
+      
+      // Ensure the affiliate has enough pending balance
+      if (affiliate.pendingPayout < amount) {
+        return res.status(400).json({
+          success: false,
+          message: "Insufficient pending balance for payout"
+        });
+      }
+      
+      // Process the payout via Stripe
+      const transfer = await stripeService.createPayout(
+        amount, 
+        affiliate.stripeAccountId,
+        {
+          affiliate_id: affiliate.id,
+          payout_type: "manual"
+        }
+      );
+      
+      // Create a transaction record
+      const transactionData = {
+        affiliateId: affiliate.id,
+        transactionType: 'payout',
+        amount: amount,
+        stripeTransferId: transfer.id,
+        description: `Manual payout to affiliate`,
+        status: 'processed',
+        processedAt: new Date()
+      };
+      
+      const transaction = await storage.createAffiliateTransaction(transactionData);
+      
+      // Update the affiliate's pending payout amount
+      await storage.updateAffiliate(id, {
+        pendingPayout: affiliate.pendingPayout - amount,
+        lastPayoutDate: new Date()
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          transaction,
+          transfer
+        }
+      });
+    } catch (error) {
+      console.error("Error processing payout:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error processing payout"
+      });
+    }
+  });
+  
+  /**
+   * Generate a login link for Stripe Connect dashboard
+   */
+  app.get("/api/affiliates/:id/stripe-login", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+      
+      const affiliate = await storage.getAffiliateById(id);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Check if the affiliate has a Stripe account
+      if (!affiliate.stripeAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Affiliate does not have a Stripe account"
+        });
+      }
+      
+      // Generate a login link
+      const loginLink = await stripeService.createLoginLink(affiliate.stripeAccountId);
+      
+      res.json({
+        success: true,
+        data: {
+          url: loginLink.url
+        }
+      });
+    } catch (error) {
+      console.error("Error generating login link:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error generating login link"
+      });
+    }
+  });
+  
+  /**
+   * Process automated payouts for affiliates
+   */
+  app.post("/api/affiliates/process-scheduled-payouts", async (req: Request, res: Response) => {
+    try {
+      const { scheduleType } = req.body;
+      
+      if (!scheduleType) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing schedule type"
+        });
+      }
+      
+      // Get all active affiliates with the specified payout schedule
+      const affiliates = await storage.getAllAffiliates();
+      const eligibleAffiliates = affiliates.filter(affiliate => 
+        affiliate.status === 'active' && 
+        affiliate.stripeAccountId && 
+        affiliate.stripeOnboardingComplete &&
+        affiliate.payoutSchedule === scheduleType &&
+        affiliate.pendingPayout > 0
+      );
+      
+      if (eligibleAffiliates.length === 0) {
+        return res.json({
+          success: true,
+          message: "No eligible affiliates found for payout",
+          data: {
+            processedCount: 0,
+            totalAmount: 0
+          }
+        });
+      }
+      
+      // Generate a batch ID for this payout run
+      const batchId = `batch-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      let processedCount = 0;
+      let totalAmount = 0;
+      
+      // Process payouts for each eligible affiliate
+      const payoutResults = await Promise.all(
+        eligibleAffiliates.map(async (affiliate) => {
+          try {
+            // Process the payout via Stripe
+            const transfer = await stripeService.createPayout(
+              affiliate.pendingPayout, 
+              affiliate.stripeAccountId,
+              {
+                affiliate_id: affiliate.id,
+                payout_type: "scheduled",
+                batch_id: batchId
+              }
+            );
+            
+            // Create a transaction record
+            const transactionData = {
+              affiliateId: affiliate.id,
+              transactionType: 'payout',
+              amount: affiliate.pendingPayout,
+              stripeTransferId: transfer.id,
+              payoutBatchId: batchId,
+              description: `Scheduled ${scheduleType} payout`,
+              status: 'processed',
+              processedAt: new Date()
+            };
+            
+            const transaction = await storage.createAffiliateTransaction(transactionData);
+            
+            // Update the affiliate's pending payout amount
+            await storage.updateAffiliate(affiliate.id, {
+              pendingPayout: 0,
+              lastPayoutDate: new Date()
+            });
+            
+            processedCount++;
+            totalAmount += affiliate.pendingPayout;
+            
+            return {
+              affiliateId: affiliate.id,
+              amount: affiliate.pendingPayout,
+              transactionId: transaction.id,
+              transferId: transfer.id,
+              success: true
+            };
+          } catch (error) {
+            console.error(`Error processing payout for affiliate ${affiliate.id}:`, error);
+            return {
+              affiliateId: affiliate.id,
+              amount: affiliate.pendingPayout,
+              success: false,
+              error: error.message
+            };
+          }
+        })
+      );
+      
+      res.json({
+        success: true,
+        data: {
+          batchId,
+          processedCount,
+          totalAmount,
+          results: payoutResults
+        }
+      });
+    } catch (error) {
+      console.error("Error processing scheduled payouts:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error processing scheduled payouts"
+      });
+    }
+  });
   /**
    * Get all affiliates
    */
@@ -486,7 +911,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
   app.post("/api/qrcodes/:code/conversion", async (req: Request, res: Response) => {
     try {
       const code = req.params.code;
-      const { saleId, amount } = req.body;
+      const { saleId, amount, customerEmail, orderDetails } = req.body;
       
       if (!saleId || !amount) {
         return res.status(400).json({
@@ -521,8 +946,45 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       
       // Update QR code conversion count
       await storage.updateQrCode(qrCode.id, {
-        conversionCount: qrCode.conversionCount + 1
+        conversions: (qrCode.conversions || 0) + 1
       });
+      
+      // Create a payment with Stripe if the affiliate has a Stripe account
+      let stripePaymentIntentId = null;
+      
+      if (affiliate.stripeAccountId && affiliate.stripeOnboardingComplete) {
+        try {
+          // Create a payment with affiliate tracking metadata
+          const paymentIntent = await stripeService.createPaymentWithAffiliateTracking(
+            saleAmount,
+            'usd',
+            customerEmail || 'customer@example.com',
+            {
+              affiliate_id: affiliate.id,
+              affiliate_code: affiliate.code,
+              qr_code: qrCode.code,
+              sale_id: saleId,
+              commission_rate: affiliate.commissionRate,
+              commission_amount: commissionAmount
+            }
+          );
+          
+          stripePaymentIntentId = paymentIntent.id;
+          
+          // If the affiliate has a Stripe account, we can automatically apply the commission
+          if (affiliate.stripeAccountId && affiliate.stripeOnboardingComplete) {
+            // This would usually happen on a webhook, but for demonstration we're doing it inline
+            // await stripeService.confirmPaymentAndApplyCommission(
+            //   paymentIntent.id,
+            //   affiliate.stripeAccountId,
+            //   affiliate.commissionRate
+            // );
+          }
+        } catch (stripeError) {
+          console.error("Error creating Stripe payment:", stripeError);
+          // Continue execution even if Stripe fails - we'll still create a local record
+        }
+      }
       
       // Create affiliate transaction
       const transactionData = {
@@ -531,15 +993,26 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         transactionType: 'commission',
         amount: commissionAmount,
         description: `Commission for sale #${saleId}`,
-        status: 'pending'
+        status: 'pending',
+        stripePaymentIntentId
       };
+      
+      // Update the affiliate's pending payout amount
+      await storage.updateAffiliate(affiliate.id, {
+        pendingPayout: (affiliate.pendingPayout || 0) + commissionAmount,
+        totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
+        totalSales: (affiliate.totalSales || 0) + 1
+      });
       
       const validatedData = insertAffiliateTransactionSchema.parse(transactionData);
       const transaction = await storage.createAffiliateTransaction(validatedData);
       
       res.status(201).json({
         success: true,
-        data: transaction
+        data: {
+          transaction,
+          stripePaymentIntentId
+        }
       });
     } catch (error) {
       console.error("Error recording conversion:", error);
