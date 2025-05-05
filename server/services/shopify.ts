@@ -38,7 +38,8 @@ let pushToShopifyEnabled = false;
 
 // Function to get Shopify store name in correct format
 function getShopifyStoreName() {
-  const storeUrl = process.env.SHOPIFY_STORE || '';
+  // Force use of the new store name
+  const storeUrl = 'mrlisterscurations.myshopify.com';
   
   // If empty, return empty string
   if (!storeUrl) return '';

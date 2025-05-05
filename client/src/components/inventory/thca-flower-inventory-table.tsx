@@ -625,9 +625,9 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
   return (
     <Card className="shadow-md">
       <CardHeader>
-        <CardTitle className="text-2xl gold-gradient-text">THCa Flower Inventory</CardTitle>
+        <CardTitle className="text-2xl gold-gradient-text">Premium Products Inventory</CardTitle>
         <CardDescription>
-          Manage your THCa flower inventory, pricing tiers, and stock levels
+          Manage your premium product inventory, pricing tiers, and stock levels
         </CardDescription>
         <div className="flex flex-col gap-4 mt-4">
           <div className="relative flex-1">
