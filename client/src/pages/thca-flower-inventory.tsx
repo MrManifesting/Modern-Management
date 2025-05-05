@@ -85,7 +85,7 @@ const THCaFlowerInventoryPage = () => {
   return (
     <>
       <Helmet>
-        <title>THCa Flower Inventory | Gold Standard CBD</title>
+        <title>Premium Products Inventory | Inventory Pro</title>
       </Helmet>
 
       {/* Onboarding tour */}
