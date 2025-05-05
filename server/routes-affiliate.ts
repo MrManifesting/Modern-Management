@@ -860,8 +860,8 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       const transactions = await storage.getAffiliateTransactionsByAffiliateId(affiliateId);
       
       // Calculate total scans and conversions
-      const totalScans = qrCodes.reduce((total, qrCode) => total + qrCode.scanCount, 0);
-      const totalConversions = qrCodes.reduce((total, qrCode) => total + qrCode.conversionCount, 0);
+      const totalScans = qrCodes.reduce((total, qrCode) => total + qrCode.scans, 0);
+      const totalConversions = qrCodes.reduce((total, qrCode) => total + qrCode.conversions, 0);
       
       // Calculate conversion rate
       const conversionRate = totalScans > 0 ? totalConversions / totalScans : 0;
@@ -921,7 +921,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       
       // Increment scan count
       await storage.updateQrCode(qrCode.id, {
-        scanCount: qrCode.scanCount + 1,
+        scans: qrCode.scans + 1,
         lastScannedAt: new Date()
       });
       

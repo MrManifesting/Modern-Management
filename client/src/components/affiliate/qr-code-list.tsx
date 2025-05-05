@@ -167,10 +167,10 @@ export function QrCodeList({ affiliateId, qrCodes, onDelete, onRefresh }: QrCode
                           </div>
                           <div className="mt-4 text-sm flex gap-8">
                             <div>
-                              <strong>Scans:</strong> {qrCode.scanCount}
+                              <strong>Scans:</strong> {qrCode.scans}
                             </div>
                             <div>
-                              <strong>Conversions:</strong> {qrCode.conversionCount}
+                              <strong>Conversions:</strong> {qrCode.conversions}
                             </div>
                           </div>
                           {qrCode.lastScannedAt && (
