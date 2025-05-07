@@ -693,7 +693,7 @@ export class MemStorage implements IStorage {
         
         const item = this.items.get(sale.itemId);
         if (item) {
-          const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
           existing.profit += profit;
         }
         
@@ -723,7 +723,7 @@ export class MemStorage implements IStorage {
         const revenue = sale.salePrice * sale.quantity;
         existing.revenue += revenue;
         
-        const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+        const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         existing.profit += profit;
         
         categoryData.set(category, existing);
@@ -771,7 +771,7 @@ export class MemStorage implements IStorage {
         
         const item = this.items.get(sale.itemId);
         if (item) {
-          const profit = (sale.salePrice - item.price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
           existing.profit += profit;
         }
         
