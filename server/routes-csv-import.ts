@@ -4,6 +4,9 @@
 import { Request, Response } from 'express';
 import { IStorage } from './storage';
 import multer from 'multer';
+import { isShopifyConfigured } from './services/shopify';
+import { getShopifyCredentials } from './services/shopify-auth';
+import { generateBarcodeData, generateQRCodeDataURL } from './services/barcode';
 import { ShopifyService } from './services/marketplaces/shopify';
 import { Item } from '@shared/schema';
 
@@ -141,40 +144,75 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
         }
       }
       
+      // Process barcodes and QR codes for the newly created items
+      for (let i = 0; i < importedItems.length; i++) {
+        try {
+          const item = importedItems[i];
+          
+          // Generate barcode data
+          const barcode = generateBarcodeData(item.sku);
+          
+          // Generate QR code URL for the item
+          const qrCode = await generateQRCodeDataURL(item);
+          
+          // Update the item with barcode and QR code
+          await storage.updateItem(item.id, {
+            barcode,
+            qrCode
+          });
+          
+          // Update our local copy for marketplace synchronization
+          importedItems[i] = await storage.getItem(item.id) || item;
+        } catch (err) {
+          console.error(`Error generating barcode/QR code for item ${importedItems[i].id}:`, err);
+        }
+      }
+      
       // Check if we need to sync with Shopify
       const syncWithShopify = req.body.syncWithShopify === 'true' || req.body.syncWithShopify === true;
       let syncResults = { success: 0, failures: 0 };
       
       if (syncWithShopify && importedItems.length > 0) {
-        // Get Shopify credentials
-        const shopifyCredentials = await storage.getShopifyCredentials();
+        // Check if Shopify is configured
+        const shopifyConfigured = await isShopifyConfigured();
         
-        if (shopifyCredentials && shopifyCredentials.store && shopifyCredentials.accessToken) {
-          // Create Shopify service
-          const shopifyService = createShopifyService({
-            shopName: shopifyCredentials.store,
-            accessToken: shopifyCredentials.accessToken,
-          });
+        if (shopifyConfigured) {
+          console.log(`Syncing ${importedItems.length} imported items with Shopify through existing service`);
           
-          console.log(`Syncing ${importedItems.length} imported items with Shopify`);
-          
-          // Push items to Shopify
+          // Use the existing Shopify service through the prepareItemForShopify and pushItemToShopify functions
           for (const item of importedItems) {
             try {
-              const result = await shopifyService.createProduct(item);
-              if (result.success) {
-                syncResults.success++;
-                // Update the item with Shopify ID
-                await storage.updateItem(item.id, {
-                  shopifyId: result.id,
-                  shopifySyncStatus: "synced",
-                  marketplace: [
-                    ...(item.marketplace || []),
-                    { name: 'Shopify', isListed: true }
-                  ]
+              // Get Shopify credentials from the auth service
+              const credentials = await getShopifyCredentials();
+              
+              if (credentials && credentials.accessToken && credentials.storeUrl) {
+                // Create a Shopify service instance
+                const shopifyService = new ShopifyService({
+                  shopName: credentials.storeUrl,
+                  accessToken: credentials.accessToken,
                 });
+                
+                // Use the service to create the product
+                const result = await shopifyService.createProduct(item);
+                
+                if (result.success) {
+                  syncResults.success++;
+                  
+                  // Update the item with Shopify product ID and add marketplace entry
+                  await storage.updateItem(item.id, {
+                    shopifySyncStatus: "synced",
+                    marketplace: [
+                      ...(item.marketplace || []),
+                      { name: 'Shopify', isListed: true }
+                    ]
+                  });
+                } else {
+                  syncResults.failures++;
+                  console.error(`Failed to push item ${item.sku} to Shopify: ${result.message || 'Unknown error'}`);
+                }
               } else {
                 syncResults.failures++;
+                console.error(`Shopify credentials not available for item ${item.sku}`);
               }
             } catch (err) {
               console.error(`Error syncing item ${item.id} to Shopify:`, err);
@@ -182,7 +220,7 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
             }
           }
         } else {
-          console.warn("Shopify sync requested but credentials not available");
+          console.warn("Shopify sync requested but Shopify is not configured");
         }
       }
       
