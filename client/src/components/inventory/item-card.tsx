@@ -180,7 +180,7 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <div className="flex justify-between">
             <h3 className="font-medium text-gray-800">{item.name}</h3>
             <span className="font-semibold text-primary-600">
-              ${item.price.toFixed(2)}
+              ${item.basePrice?.toFixed(2) || (item.salePrice?.toFixed(2)) || '0.00'}
             </span>
           </div>
           <p className="mt-1 text-sm text-gray-600 line-clamp-1">
