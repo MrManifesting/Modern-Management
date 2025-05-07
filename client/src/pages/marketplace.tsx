@@ -32,7 +32,10 @@ export default function MarketplacePage() {
   // Fetch connected marketplaces
   const { data: marketplaces, isLoading } = useQuery({
     queryKey: ['/api/marketplaces'],
-    queryFn: () => apiRequest<any[]>('/api/marketplaces'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/marketplaces');
+      return await response.json();
+    },
   });
 
   const connectedMarketplaces = marketplaces?.filter(m => m.isConnected) || [];

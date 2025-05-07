@@ -25,20 +25,22 @@ export class MarketplaceService {
     
     try {
       // Create the appropriate service based on marketplace type
-      switch (marketplace.type) {
-        case 'shopify':
-          const credentials = marketplace.credentials as Record<string, string>;
-          this.service = new ShopifyService(
-            credentials.shopName, 
-            credentials.apiKey, 
-            credentials.apiSecret
-          );
-          break;
-          
-        // Add other marketplace implementations here
-        
-        default:
-          throw new Error(`Unsupported marketplace type: ${marketplace.type}`);
+      const type = (marketplace.type || '').toLowerCase();
+      
+      // Special handling for Shopify - it could be under 'shopify' or 'general' type
+      // with Shopify-specific credentials
+      if (type === 'shopify' || 
+          (type === 'general' && marketplace.name.toLowerCase().includes('shopify'))) {
+        const credentials = marketplace.credentials as Record<string, string>;
+        this.service = new ShopifyService(
+          credentials.shopName || credentials.storeUrl || 'simplifiedcurations.myshopify.com', 
+          credentials.apiKey || credentials.accessToken, 
+          credentials.apiSecret || ''
+        );
+      }
+      // Add other marketplace implementations here
+      else {
+        throw new Error(`Unsupported marketplace type: ${marketplace.type}`);
       }
     } catch (error) {
       console.error(`Error initializing marketplace service for ${marketplace.name}:`, error);
