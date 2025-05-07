@@ -1070,13 +1070,10 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       
       // Update the affiliate's earnings and sales stats separately
       try {
-        await storage.db.update(affiliates)
-          .set({
-            totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
-            totalSales: (affiliate.totalSales || 0) + 1
-          })
-          .where(eq(affiliates.id, affiliate.id))
-          .execute();
+        await storage.updateAffiliateStats(affiliate.id, {
+          totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
+          totalSales: (affiliate.totalSales || 0) + 1
+        });
       } catch (updateError) {
         console.error("Error updating affiliate statistics:", updateError);
         // Continue execution even if stats update fails - this is not critical
