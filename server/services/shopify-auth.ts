@@ -10,16 +10,22 @@ import { createMockShopifyClient, getMockShopInfo } from '../shopify-mock';
 // Function to get Shopify store name in correct format
 export function getShopifyStoreName() {
   const storeUrl = process.env.SHOPIFY_STORE || '';
+  log(`Original store URL from env: "${storeUrl}"`, 'shopify-details');
   
   // If empty, return empty string
   if (!storeUrl) return '';
   
-  // Remove any protocol prefixes (http://, https://)
-  let storeName = storeUrl.replace(/^https?:\/\//, '');
+  // Remove any protocol prefixes (http://, https://) - handle both cases
+  let storeName = storeUrl.replace(/^https?:\/\//i, '').replace(/^HTTPS?:\/\//i, '');
+  
+  // Also remove www. prefix if present
+  storeName = storeName.replace(/^www\./i, '');
+  
+  log(`After protocol removal: "${storeName}"`, 'shopify-details');
   
   // Remove admin.shopify.com/store/ prefix if present
-  if (storeName.includes('admin.shopify.com/store/')) {
-    const storeNameMatch = storeName.match(/admin\.shopify\.com\/store\/([^\/]+)/);
+  if (storeName.toLowerCase().includes('admin.shopify.com/store/')) {
+    const storeNameMatch = storeName.match(/admin\.shopify\.com\/store\/([^\/]+)/i);
     if (storeNameMatch && storeNameMatch[1]) {
       storeName = storeNameMatch[1];
     }
@@ -29,10 +35,11 @@ export function getShopifyStoreName() {
   storeName = storeName.replace(/\/+$/, '');
   
   // Ensure it ends with .myshopify.com
-  if (!storeName.endsWith('.myshopify.com')) {
+  if (!storeName.toLowerCase().endsWith('.myshopify.com')) {
     // Make sure we don't have store.myshopify.com/something.myshopify.com
-    if (storeName.includes('.myshopify.com/')) {
-      storeName = storeName.substring(0, storeName.indexOf('.myshopify.com/') + '.myshopify.com'.length);
+    if (storeName.toLowerCase().includes('.myshopify.com/')) {
+      const myshopifyIndex = storeName.toLowerCase().indexOf('.myshopify.com/');
+      storeName = storeName.substring(0, myshopifyIndex + '.myshopify.com'.length);
     } 
     // If it's just a store name without any domain
     else if (!storeName.includes('.')) {
