@@ -4,7 +4,10 @@ import {
   UploadCloud, 
   DownloadCloud, 
   FileSpreadsheet, 
-  Filter
+  Filter,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +20,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -28,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import ItemFormComponent from '@/components/inventory/item-form';
 
 // Define the Product interface
 interface Product {
@@ -144,6 +158,7 @@ const ProductsInventoryPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productIdToDelete, setProductIdToDelete] = useState<number | null>(null);
+  const { toast } = useToast();
 
   // Format price
   const formatPrice = (price: number) => {
@@ -220,8 +235,91 @@ const ProductsInventoryPage: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2 mt-4">
-          <Button size="sm" variant="outline" className="flex-1">View</Button>
-          <Button size="sm" variant="outline" className="flex-1">Edit</Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="flex-1">
+                <Eye className="h-3 w-3 mr-1" />
+                View
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{product.name}</DialogTitle>
+                <DialogDescription>
+                  Product details
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                  <p>{product.category}</p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
+                  <p>{product.subcategory}</p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
+                  <p className="font-mono">{product.sku}</p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
+                  <p>{product.size || "N/A"}</p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
+                  <p>{formatPrice(product.price)}</p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
+                  <p>{product.quantity}</p>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                  <p>{product.description || "No description available"}</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="flex-1">
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Edit Product</DialogTitle>
+                <DialogDescription>
+                  Make changes to the product information
+                </DialogDescription>
+              </DialogHeader>
+              <ItemFormComponent 
+                isEditing={true}
+                defaultValues={{
+                  name: product.name,
+                  description: product.description || "",
+                  basePrice: product.price,
+                  category: product.category,
+                  condition: "Used",
+                  status: product.status || "draft",
+                  images: product.imageUrl ? [product.imageUrl] : [],
+                  tags: [],
+                  marketplace: [],
+                }}
+                onSubmit={(data) => {
+                  console.log('Form data:', data);
+                  // TODO: Implement actual product update with API
+                  toast({
+                    title: "Product updated",
+                    description: "The product has been updated successfully."
+                  });
+                }}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>
@@ -518,8 +616,108 @@ const ProductsInventoryPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex justify-center gap-2">
-                                <Button size="sm" variant="outline">View</Button>
-                                <Button size="sm" variant="outline">Edit</Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      View
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{product.name}</DialogTitle>
+                                      <DialogDescription>
+                                        Product details
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-2 gap-4 py-4">
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                                        <p>{product.category}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
+                                        <p>{product.subcategory}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
+                                        <p className="font-mono">{product.sku}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
+                                        <p>{product.size || "N/A"}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
+                                        <p>{formatPrice(product.price)}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Retail Price</h4>
+                                        <p>{formatPrice(product.retailPrice)}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Wholesale Price</h4>
+                                        <p>{formatPrice(product.wholesalePrice)}</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
+                                        <p>{product.quantity}</p>
+                                      </div>
+                                      <div className="space-y-1 col-span-2">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                        <p>{product.description || "No description available"}</p>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <Edit className="h-3 w-3 mr-1" />
+                                      Edit
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                      <DialogTitle>Edit Product</DialogTitle>
+                                      <DialogDescription>
+                                        Make changes to the product information
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <ItemFormComponent 
+                                      isEditing={true}
+                                      defaultValues={{
+                                        name: product.name,
+                                        description: product.description || "",
+                                        basePrice: product.price,
+                                        category: product.category,
+                                        condition: "Used",
+                                        status: product.status || "draft",
+                                        images: product.imageUrl ? [product.imageUrl] : [],
+                                        tags: [],
+                                        marketplace: [],
+                                      }}
+                                      onSubmit={(data) => {
+                                        console.log('Form data:', data);
+                                        // TODO: Implement actual product update with API
+                                        toast({
+                                          title: "Product updated",
+                                          description: "The product has been updated successfully."
+                                        });
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                                
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteClick(product.id || 0)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
                             </td>
                           </tr>
