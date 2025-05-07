@@ -120,7 +120,8 @@ export async function createShopifyClient() {
         shop: {
           get: async () => {
             // Implement direct HTTPS request to simplifiedcurations API
-            const https = require('https');
+            // Using dynamic import instead of require
+            const https = await import('https');
             
             return new Promise((resolve, reject) => {
               const req = https.request({
