@@ -42,6 +42,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/inventory" component={Inventory} />
+      <ProtectedRoute path="/products-inventory" component={ProductsInventoryPage} />
       <ProtectedRoute path="/inventory/products" component={ProductsInventoryPage} />
       <ProtectedRoute path="/inventory/specialty-products" component={SpecialtyProductsPage} />
       <ProtectedRoute path="/inventory/package" component={PackageInventoryPage} />
