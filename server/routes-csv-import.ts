@@ -186,6 +186,10 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
               const credentials = await getShopifyCredentials();
               
               if (credentials && credentials.accessToken && credentials.storeUrl) {
+                // Log the Shopify credentials details (safely)
+                console.log(`Using Shopify credentials for store: ${credentials.storeUrl}`);
+                console.log(`Creating Shopify service for item: ${item.name} (${item.sku})`);
+                
                 // Create a Shopify service instance
                 const shopifyService = new ShopifyService({
                   shopName: credentials.storeUrl,
@@ -193,7 +197,9 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
                 });
                 
                 // Use the service to create the product
+                console.log(`Pushing item ${item.id} (${item.sku}) to Shopify...`);
                 const result = await shopifyService.createProduct(item);
+                console.log(`Shopify push result for item ${item.sku}: ${result.success ? 'Success' : 'Failed'}, ID: ${result.id || 'none'}`);
                 
                 if (result.success) {
                   syncResults.success++;
