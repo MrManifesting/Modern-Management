@@ -27,6 +27,10 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       cleanUrl = `${cleanUrl}.myshopify.com`;
     }
     
+    // Check if this is a Storefront API token
+    const isStorefrontToken = accessToken.startsWith('shpat_');
+    log(`Token type: ${isStorefrontToken ? 'Storefront API' : 'Admin API'}`, 'shopify-direct');
+    
     // Special handling for simplifiedcurations.myshopify.com
     const isSimplifiedCurations = cleanUrl.includes('simplifiedcurations.myshopify.com');
     if (isSimplifiedCurations) {
@@ -34,17 +38,32 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       // For simplifiedcurations, we'll use a direct approach that bypasses most of the checks
       // since we know precisely which endpoint works
       
+      // Select appropriate endpoint based on token type
+      const apiPath = isStorefrontToken
+        ? '/api/2023-10/shop.json'  // Storefront API
+        : '/admin/api/2023-10/shop.json'; // Admin API
+      
+      // Set appropriate headers based on token type
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (isStorefrontToken) {
+        headers['X-Shopify-Storefront-Access-Token'] = accessToken;
+      } else {
+        headers['X-Shopify-Access-Token'] = accessToken;
+      }
+      
+      log(`Making API request to: ${cleanUrl}${apiPath} with token type: ${isStorefrontToken ? 'Storefront' : 'Admin'}`, 'shopify-direct');
+      
       // Use a direct HTTPS request to a known working endpoint
       const apiReq = https.request({
         hostname: 'simplifiedcurations.myshopify.com',
         port: 443,
-        path: '/admin/api/2023-10/shop.json',
+        path: apiPath,
         method: 'GET',
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers,
         timeout: 30000 // Extended timeout
       }, (apiRes) => {
         log(`Direct API call to simplifiedcurations - Status: ${apiRes.statusCode}`, 'shopify-direct');
@@ -188,16 +207,24 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
           const variant = variants[index];
           log(`Trying API endpoint: ${variant.hostname}${variant.path}`, 'shopify-direct');
           
+          // Set appropriate headers based on token type
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          };
+          
+          if (isStorefrontToken) {
+            headers['X-Shopify-Storefront-Access-Token'] = accessToken;
+          } else {
+            headers['X-Shopify-Access-Token'] = accessToken;
+          }
+          
           const apiReq = https.request({
             hostname: variant.hostname,
             port: 443,
             path: variant.path,
             method: 'GET',
-            headers: {
-              'X-Shopify-Access-Token': accessToken,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
+            headers,
             timeout: 10000
           }, (apiRes) => {
             log(`API endpoint ${variant.hostname}${variant.path} - Status: ${apiRes.statusCode}`, 'shopify-direct');
@@ -233,16 +260,24 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
                         (variant.path.includes('/admin/api/') && 
                          (variant.path.includes('/shop.json') || variant.path.includes('/graphql.json')))) {
                       // Try the redirected location
+                      // Set appropriate headers for redirect based on token type
+                      const redirectHeaders: Record<string, string> = {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                      };
+                      
+                      if (isStorefrontToken) {
+                        redirectHeaders['X-Shopify-Storefront-Access-Token'] = accessToken;
+                      } else {
+                        redirectHeaders['X-Shopify-Access-Token'] = accessToken;
+                      }
+                      
                       const redirectReq = https.request({
                         hostname: redirectUrl.hostname,
                         port: 443,
                         path: redirectUrl.pathname + redirectUrl.search,
                         method: 'GET',
-                        headers: {
-                          'X-Shopify-Access-Token': accessToken,
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json'
-                        },
+                        headers: redirectHeaders,
                         timeout: 10000
                       }, (redirectRes) => {
                         log(`Redirect API call ${redirectUrl.hostname}${redirectUrl.pathname} - Status: ${redirectRes.statusCode}`, 'shopify-direct');

@@ -115,25 +115,119 @@ export async function createShopifyClient() {
       // This will bypass the redirect issues by making direct HTTPS requests
       // with specific API endpoints
       
+      // Check if the token is a Storefront Access Token (starts with shpat_)
+      const isStorefrontToken = credentials.accessToken.startsWith('shpat_');
+      
+      log(`Token type: ${isStorefrontToken ? 'Storefront API' : 'Admin API'}`, 'shopify-details');
+      
       // Create a custom API client that makes direct HTTPS requests to avoid redirect issues
       shopify = {
         shop: {
           get: async () => {
-            // Implement direct HTTPS request to simplifiedcurations API
             // Using dynamic import instead of require
             const https = await import('https');
             
             return new Promise((resolve, reject) => {
+              // Use appropriate endpoint based on token type
+              const apiPath = isStorefrontToken 
+                ? '/api/2023-10/shop.json'  // Storefront API 
+                : '/admin/api/2023-10/shop.json'; // Admin API
+              
+              const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              };
+              
+              // Add the appropriate header based on token type
+              if (isStorefrontToken) {
+                headers['X-Shopify-Storefront-Access-Token'] = credentials.accessToken;
+              } else {
+                headers['X-Shopify-Access-Token'] = credentials.accessToken;
+              }
+              
+              log(`Making API request to: ${cleanShopUrl}${apiPath} with token type: ${isStorefrontToken ? 'Storefront' : 'Admin'}`, 'shopify-details');
+              
+              // Try different endpoints if using a Storefront token
+              if (isStorefrontToken) {
+                // Use the GraphQL endpoint for Storefront API
+                const graphqlPath = '/api/2023-10/graphql.json';
+                const graphqlQuery = JSON.stringify({
+                  query: `{
+                    shop {
+                      name
+                      primaryDomain {
+                        url
+                        host
+                      }
+                    }
+                  }`
+                });
+                
+                log(`Using GraphQL endpoint for Storefront API: ${cleanShopUrl}${graphqlPath}`, 'shopify-details');
+                
+                const graphqlReq = https.request({
+                  hostname: cleanShopUrl,
+                  port: 443, 
+                  path: graphqlPath,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Shopify-Storefront-Access-Token': credentials.accessToken,
+                    'Content-Length': Buffer.byteLength(graphqlQuery)
+                  },
+                  timeout: 30000
+                }, (res) => {
+                  let data = '';
+                  
+                  res.on('data', (chunk) => {
+                    data += chunk;
+                  });
+                  
+                  res.on('end', () => {
+                    if (res.statusCode === 200) {
+                      try {
+                        const response = JSON.parse(data);
+                        if (response.data && response.data.shop) {
+                          // Extract info from GraphQL response
+                          const shop = {
+                            name: response.data.shop.name,
+                            domain: response.data.shop.primaryDomain.host,
+                            email: 'storefront@api.access', // Placeholder
+                            country_name: 'Unknown' // Placeholder
+                          };
+                          resolve(shop);
+                        } else {
+                          reject(new Error(`Invalid GraphQL response: ${data}`));
+                        }
+                      } catch (error: any) {
+                        reject(new Error(`Failed to parse shop data: ${error.message}`));
+                      }
+                    } else if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+                      // Handle redirect
+                      const location = res.headers.location;
+                      reject(new Error(`Redirect received to: ${location}`));
+                    } else {
+                      reject(new Error(`API responded with status code ${res.statusCode}: ${data}`));
+                    }
+                  });
+                });
+                
+                graphqlReq.on('error', (error) => {
+                  reject(error);
+                });
+                
+                graphqlReq.write(graphqlQuery);
+                graphqlReq.end();
+                return;
+              }
+              
               const req = https.request({
-                hostname: 'simplifiedcurations.myshopify.com',
+                hostname: cleanShopUrl,
                 port: 443,
-                path: '/admin/api/2023-10/shop.json',
+                path: apiPath,
                 method: 'GET',
-                headers: {
-                  'X-Shopify-Access-Token': credentials.accessToken,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
+                headers,
                 timeout: 60000
               }, (res) => {
                 let data = '';
