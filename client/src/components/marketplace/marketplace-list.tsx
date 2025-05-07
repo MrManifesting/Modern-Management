@@ -230,12 +230,6 @@ export default function MarketplaceList() {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Connected Marketplaces</h2>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Marketplace
-            </Button>
-          </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
@@ -284,14 +278,17 @@ export default function MarketplaceList() {
                   </p>
                 </CardContent>
                 <CardFooter className="border-t border-gray-800 pt-4">
-                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full" onClick={() => setEditMarketplace({ type })}>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Connect
-                      </Button>
-                    </DialogTrigger>
-                  </Dialog>
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => {
+                      setEditMarketplace({ type });
+                      setIsAddDialogOpen(true);
+                    }}
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Connect
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -427,14 +424,13 @@ export default function MarketplaceList() {
                 <p className="text-sm text-center text-muted-foreground mb-4">
                   Connect a new sales channel to expand your reach
                 </p>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Marketplace
-                    </Button>
-                  </DialogTrigger>
-                </Dialog>
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setIsAddDialogOpen(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Marketplace
+                </Button>
               </CardContent>
             </Card>
           </div>
