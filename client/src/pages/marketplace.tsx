@@ -42,7 +42,6 @@ export default function MarketplacePage() {
   const hasConnectedMarketplaces = connectedMarketplaces.length > 0;
 
   return (
-    <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -139,8 +138,13 @@ export default function MarketplacePage() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-400">Status</span>
-                          <Badge className="bg-green-900/30 text-green-400 hover:bg-green-900/50">
-                            Connected
+                          <Badge 
+                            className={marketplace.isConnected 
+                              ? "bg-green-900/30 text-green-400 hover:bg-green-900/50"
+                              : "bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50"
+                            }
+                          >
+                            {marketplace.isConnected ? "Connected" : "Configured"}
                           </Badge>
                         </div>
                         <div className="flex justify-between items-center">
@@ -221,6 +225,5 @@ export default function MarketplacePage() {
           </div>
         )}
       </div>
-    </MainLayout>
   );
 }
