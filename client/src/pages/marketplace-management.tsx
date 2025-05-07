@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import MainLayout from '@/components/layout/main-layout';
 import { 
@@ -80,7 +80,7 @@ export default function MarketplaceManagement() {
   });
   
   // Sync with URL parameter
-  React.useEffect(() => {
+  useEffect(() => {
     if (marketplaceIdFromUrl && marketplaceData) {
       setSelectedMarketplace(marketplaceData);
       setActiveTab('marketplace-edit');
