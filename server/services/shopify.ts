@@ -1,4 +1,4 @@
-import { Item } from "@shared/schema";
+import { Item, ItemType, BreakdownStatus } from "@shared/schema";
 import { 
   logShopifyOperation, 
   isOperationAllowed, 
@@ -22,6 +22,8 @@ interface ShopifyProduct {
     option2?: string;
     option3?: string;
     barcode?: string;
+    weight?: number;
+    weight_unit?: string;
   }>;
   options?: Array<{
     name: string;
@@ -213,7 +215,7 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
     product_type: item.category || "Other",
     status: item.status === 'active' ? 'active' : 'draft',
     variants: [{
-      price: item.price.toString(),
+      price: item.basePrice.toString(), // Using basePrice instead of price
       sku: sku,
       inventory_quantity: item.quantity,
       inventory_management: "shopify",
@@ -221,13 +223,40 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
     }],
     options: []
   };
+  
+  // Add weight if available
+  if (item.weight && item.weightUnit) {
+    product.variants[0].weight = item.weight;
+    product.variants[0].weight_unit = item.weightUnit === 'lb' ? 'lb' : 
+                                     (item.weightUnit === 'oz' ? 'oz' : 
+                                     (item.weightUnit === 'kg' ? 'kg' : 'g'));
+  }
 
   // Add image if available
-  if (item.images && item.images.length > 0) {
-    product.images = item.images.map(img => ({
-      src: img.url,
-      alt: item.name
-    }));
+  if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+    // Handle different image formats
+    const imageArray = item.images.map(img => {
+      // If the image is already a URL string
+      if (typeof img === 'string') {
+        return {
+          src: img,
+          alt: item.name
+        };
+      }
+      // If it's an object with a url property
+      else if (img && typeof img === 'object' && 'url' in img) {
+        return {
+          src: img.url,
+          alt: item.name
+        };
+      }
+      // Default case
+      return null;
+    }).filter(Boolean); // Remove nulls
+    
+    if (imageArray.length > 0) {
+      product.images = imageArray;
+    }
   }
 
   // Add tags
@@ -474,10 +503,10 @@ export async function syncProductsFromShopify(storage: any): Promise<{
         );
         
         // Map Shopify product to our schema
-        const productData = {
+        const productData: any = {
           name: product.title,
           description: product.body_html || "",
-          price: parseFloat(product.variants[0]?.price || "0"),
+          basePrice: parseFloat(product.variants[0]?.price || "0"),
           quantity: parseInt(product.variants[0]?.inventory_quantity?.toString() || "0"),
           category: product.product_type || "uncategorized",
           condition: "new",
@@ -486,12 +515,27 @@ export async function syncProductsFromShopify(storage: any): Promise<{
           barcode: product.variants[0]?.barcode || "",
           shopifyId: product.id?.toString(),
           tags: product.tags ? product.tags.split(", ") : [],
-          images: product.images?.map(img => img.src) || [],
+          images: product.images?.map((img: any) => img.src) || [],
           marketplace: ["shopify"],
+          itemType: ItemType.REGULAR, // Default to regular item
           attributes: {
             vendor: product.vendor
           }
         };
+        
+        // Add weight information if available
+        if (product.variants[0]?.weight) {
+          productData.weight = parseFloat(product.variants[0].weight.toString());
+          productData.weightUnit = product.variants[0].weight_unit || 'g';
+          
+          // Check if this is a bulk item based on weight
+          if (productData.weight >= 1 && 
+              (productData.weightUnit === 'lb' || 
+               (productData.weightUnit === 'kg' && productData.weight >= 0.45))) {
+            productData.itemType = ItemType.BULK;
+            productData.breakdownStatus = BreakdownStatus.BULK;
+          }
+        }
         
         if (existingItem) {
           // Update existing item
