@@ -29,9 +29,9 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       // Group items by strain+price combination
       allItems.forEach((item: Item) => {
         // Skip items without condition (strain) or price
-        if (!item.condition || !item.price) return;
+        if (!item.condition || !item.basePrice) return;
         
-        const key = `${item.condition.trim().toLowerCase()}_${item.price}`;
+        const key = `${item.condition.trim().toLowerCase()}_${item.basePrice}`;
         const existingItems = duplicateMap.get(key) || [];
         existingItems.push(item);
         duplicateMap.set(key, existingItems);
@@ -59,7 +59,7 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
           // Add to duplicates list
           duplicateGroups.push({
             strain: keepItem.condition,
-            price: keepItem.price,
+            price: keepItem.basePrice,
             keepId: keepItem.id,
             deleteIds,
             count: items.length
@@ -74,7 +74,7 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       if (totalDuplicates === 0) {
         return res.status(200).json({ 
           success: true, 
-          message: "No duplicate items found with matching strain and price" 
+          message: "No duplicate items found with matching strain and basePrice" 
         });
       }
       
@@ -87,16 +87,16 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       
       return res.status(200).json({
         success: true,
-        message: `Successfully removed ${totalDuplicates} duplicate items across ${duplicateGroups.length} strain+price combinations`,
+        message: `Successfully removed ${totalDuplicates} duplicate items across ${duplicateGroups.length} strain+basePrice combinations`,
         removed: totalDuplicates,
         duplicateGroups
       });
       
     } catch (error) {
-      console.error("Error removing strain+price duplicates:", error);
+      console.error("Error removing strain+basePrice duplicates:", error);
       return res.status(500).json({ 
         success: false, 
-        message: "Error removing duplicate items by strain and price", 
+        message: "Error removing duplicate items by strain and basePrice", 
         error: (error as Error).message 
       });
     }
@@ -303,16 +303,16 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       // Get all items
       const items = await storage.getItems();
       
-      // Filter items with both price = 0 and quantity = 0
+      // Filter items with both basePrice = 0 and quantity = 0
       const itemsToDelete = items.filter((item: Item) => 
-        item.price === 0 && item.quantity === 0
+        item.basePrice === 0 && item.quantity === 0
       );
       
       // Nothing to delete
       if (itemsToDelete.length === 0) {
         return res.status(200).json({
           success: true,
-          message: "No items found with both zero price and zero quantity",
+          message: "No items found with both zero basePrice and zero quantity",
           deletedCount: 0
         });
       }
@@ -324,7 +324,7 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
       
       return res.status(200).json({
         success: true, 
-        message: `Successfully removed ${itemsToDelete.length} items with zero price and zero quantity`,
+        message: `Successfully removed ${itemsToDelete.length} items with zero basePrice and zero quantity`,
         deletedCount: itemsToDelete.length,
         items: itemsToDelete.map(item => ({
           id: item.id,
