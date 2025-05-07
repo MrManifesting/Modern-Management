@@ -198,25 +198,50 @@ export class MemStorage implements IStorage {
     return this.affiliates.delete(id);
   }
 
-  async updateAffiliateStats(id: number, earnings: number, salesCount: number): Promise<Affiliate | undefined> {
+  async updateAffiliateStats(id: number, stats: { totalEarnings?: number, totalSales?: number }): Promise<boolean> {
     const affiliate = this.affiliates.get(id);
     if (!affiliate) {
-      return undefined;
+      return false;
     }
     
     const updatedAffiliate: Affiliate = {
       ...affiliate,
-      totalEarnings: affiliate.totalEarnings + earnings,
-      totalSales: affiliate.totalSales + salesCount,
-      pendingPayout: affiliate.pendingPayout + earnings,
+      totalEarnings: stats.totalEarnings !== undefined ? affiliate.totalEarnings + stats.totalEarnings : affiliate.totalEarnings,
+      totalSales: stats.totalSales !== undefined ? affiliate.totalSales + stats.totalSales : affiliate.totalSales,
+      pendingPayout: stats.totalEarnings !== undefined ? affiliate.pendingPayout + stats.totalEarnings : affiliate.pendingPayout,
       updatedAt: new Date()
     };
     
     this.affiliates.set(id, updatedAffiliate);
-    return updatedAffiliate;
+    return true;
+  }
+  
+  async getAffiliateStats(id: number): Promise<Affiliate | undefined> {
+    return this.affiliates.get(id);
+  }
+  
+  async updateAffiliateEarnings(id: number, amount: number): Promise<boolean> {
+    const affiliate = this.affiliates.get(id);
+    if (!affiliate) {
+      return false;
+    }
+    
+    const updatedAffiliate: Affiliate = {
+      ...affiliate,
+      totalEarnings: affiliate.totalEarnings + amount,
+      pendingPayout: affiliate.pendingPayout + amount,
+      updatedAt: new Date()
+    };
+    
+    this.affiliates.set(id, updatedAffiliate);
+    return true;
   }
 
   async getAllQrCodes(): Promise<QrCode[]> {
+    return Array.from(this.qrCodes.values());
+  }
+  
+  async getQrCodes(): Promise<QrCode[]> {
     return Array.from(this.qrCodes.values());
   }
 
@@ -309,6 +334,10 @@ export class MemStorage implements IStorage {
   async getAllAffiliateTransactions(): Promise<AffiliateTransaction[]> {
     return Array.from(this.affiliateTransactions.values());
   }
+  
+  async getAffiliateTransactions(): Promise<AffiliateTransaction[]> {
+    return Array.from(this.affiliateTransactions.values());
+  }
 
   async getAffiliateTransactionById(id: number): Promise<AffiliateTransaction | undefined> {
     return this.affiliateTransactions.get(id);
@@ -320,9 +349,9 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getAffiliateTransactionsBySaleId(saleId: string): Promise<AffiliateTransaction[]> {
+  async getAffiliateTransactionsBySaleId(saleId: number): Promise<AffiliateTransaction[]> {
     return Array.from(this.affiliateTransactions.values()).filter(
-      transaction => transaction.saleId === saleId
+      transaction => transaction.saleId === String(saleId)
     );
   }
 
@@ -332,7 +361,15 @@ export class MemStorage implements IStorage {
     const newTransaction: AffiliateTransaction = {
       ...transaction,
       id,
-      createdAt: now
+      createdAt: now,
+      status: transaction.status || 'pending',
+      description: transaction.description || null,
+      saleId: transaction.saleId || null,
+      stripeTransferId: transaction.stripeTransferId || null,
+      paypalPayoutId: transaction.paypalPayoutId || null,
+      paypalOrderId: transaction.paypalOrderId || null,
+      paypalCaptureId: transaction.paypalCaptureId || null,
+      processedAt: transaction.processedAt || null
     };
     
     this.affiliateTransactions.set(id, newTransaction);
@@ -998,7 +1035,8 @@ export class MemStorage implements IStorage {
             label: key,
             sales: data.sales,
             revenue: data.revenue,
-            profit: data.profit
+            profit: data.profit,
+            isForecasted: false
           };
         });
     }
