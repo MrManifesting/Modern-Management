@@ -79,9 +79,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
-            <MainLayout>
-              <Router />
-            </MainLayout>
+            <Router />
             {/* Global application onboarding components - only show one to avoid duplicates */}
             <OnboardingTour />
             {/* WelcomeBanner removed to prevent duplicate tours */}
