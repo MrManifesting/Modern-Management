@@ -238,7 +238,7 @@ export async function createShopifyClient() {
               }
               
               // For Admin API, use REST endpoint
-                const apiPath = '/admin/api/2023-10/shop.json';
+              const apiPath = '/admin/api/2023-10/shop.json';
               
               const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ export async function createShopifyClient() {
                     try {
                       const shop = JSON.parse(data).shop;
                       resolve(shop);
-                    } catch (error) {
+                    } catch (error: any) {
                       reject(new Error(`Failed to parse shop data: ${error.message}`));
                     }
                   } else {
@@ -397,7 +397,7 @@ export async function createShopifyClient() {
     // Verify connection is working by making a simple API call
     try {
       log('Attempting to connect to Shopify API...', 'shopify');
-      const shopInfo = await shopify.shop.get();
+      const shopInfo = await shopify.shop.get() as any;
       log(`Successfully connected to Shopify store: ${shopInfo.name}`, 'shopify');
       
       return {
@@ -500,16 +500,19 @@ export async function testShopifyConnection() {
     // Fall back to standard client if direct check fails
     const { shopify, shopInfo, isMock } = await createShopifyClient();
     
+    // Cast to any to avoid TypeScript issues
+    const typedShopInfo = shopInfo as any;
+    
     return {
       connected: true,
-      store: shopInfo.name,
-      domain: shopInfo.domain,
-      email: shopInfo.email,
-      country: shopInfo.country_name,
+      store: typedShopInfo.name,
+      domain: typedShopInfo.domain,
+      email: typedShopInfo.email,
+      country: typedShopInfo.country_name,
       isMock: !!isMock,
       message: isMock 
-        ? `Using mock Shopify data for development (${shopInfo.name})` 
-        : `Successfully connected to ${shopInfo.name}`
+        ? `Using mock Shopify data for development (${typedShopInfo.name})` 
+        : `Successfully connected to ${typedShopInfo.name}`
     };
   } catch (error: any) {
     log(`Shopify connection test failed: ${error.message}`, 'shopify');
