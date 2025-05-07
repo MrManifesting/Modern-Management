@@ -661,90 +661,24 @@ const ProductsInventoryPage: React.FC = () => {
                     </TabsContent>
                     
                     <TabsContent value="shopify" className="mt-0">
-                      <form 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const formData = new FormData(e.target as HTMLFormElement);
-                          const fileInput = document.getElementById('shopify-csv-file') as HTMLInputElement;
-                          
-                          if (fileInput?.files?.length === 0) {
-                            toast({
-                              title: "No file selected",
-                              description: "Please select a CSV file to import",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          formData.append('file', fileInput.files![0]);
-                          
-                          toast({
-                            title: "Import started",
-                            description: "Importing from Shopify CSV format...",
-                          });
-                          
-                          apiRequest('POST', '/api/items/import-shopify', formData, false)
-                            .then(res => res.json())
-                            .then(data => {
-                              if (data.success) {
-                                toast({
-                                  title: "Import successful",
-                                  description: `Imported ${data.imported || 0} items from Shopify CSV.`
-                                });
-                                refetchItems();
-                              } else {
-                                toast({
-                                  title: "Import failed",
-                                  description: data.message || "Failed to import Shopify CSV",
-                                  variant: "destructive"
-                                });
-                              }
-                            })
-                            .catch(err => {
-                              console.error("Shopify CSV import error:", err);
-                              toast({
-                                title: "Import error",
-                                description: "There was an error importing the Shopify CSV file",
-                                variant: "destructive"
-                              });
-                            });
-                        }}
-                      >
-                        <div className="py-4">
-                          <div className="space-y-4">
-                            <div>
-                              <h3 className="font-medium mb-2">Shopify CSV Format</h3>
-                              <div className="text-sm text-muted-foreground space-y-1 mb-4">
-                                <p>1. Export your inventory from Shopify admin panel</p>
-                                <p>2. Select the CSV file using the uploader below</p>
-                                <p>3. Click "Import Shopify Inventory" to start the import process</p>
-                                <p>4. The importer will automatically extract product details and quantities</p>
-                              </div>
-                              <div className="flex items-center justify-center w-full">
-                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
-                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                    <UploadCloud className="w-8 h-8 mb-3 text-gray-400" />
-                                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                                      <span className="font-semibold">Click to upload</span> or drag and drop
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Shopify CSV Export (MAX. 10MB)</p>
-                                  </div>
-                                  <input 
-                                    id="shopify-csv-file" 
-                                    name="file" 
-                                    type="file" 
-                                    className="hidden" 
-                                    accept=".csv" 
-                                  />
-                                </label>
-                              </div>
+                      <div className="py-4">
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="font-medium mb-2">Shopify Import</h3>
+                            <div className="text-sm text-muted-foreground space-y-1 mb-4">
+                              <p>For importing Shopify inventory, please use our dedicated Shopify Import tool.</p>
+                              <p>This specialized tool ensures proper data handling and synchronization with your Shopify store.</p>
+                            </div>
+                            <div className="flex items-center justify-center w-full mt-6">
+                              <Link href="/shopify-import" className="w-full">
+                                <Button className="w-full gap-2 bg-gradient-to-r from-blue-500/80 to-purple-500/80 hover:from-blue-600 hover:to-purple-600">
+                                  <ShoppingBag className="h-4 w-4" /> Go to Shopify Import
+                                </Button>
+                              </Link>
                             </div>
                           </div>
                         </div>
-                        <DialogFooter>
-                          <Button type="submit">Import Shopify Inventory</Button>
-                        </DialogFooter>
-                      </form>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </DialogContent>
