@@ -95,7 +95,7 @@ export async function createShopifyClient() {
     log(`Token length: ${credentials.accessToken?.length || 0}`, 'shopify-details');
     
     // Log more diagnostics before creating the shopify client
-    log(`Attempting to connect with shopName: "${cleanShopUrl}" and API version: "2023-04"`, 'shopify-debug');
+    log(`Attempting to connect with shopName: "${cleanShopUrl}" and API version: "2023-10"`, 'shopify-debug');
     
     // Create the Shopify client with a direct approach
     // For simplifiedcurations.myshopify.com, we need to handle it specially
@@ -104,22 +104,35 @@ export async function createShopifyClient() {
     
     log(`Creating Shopify client with special handling for simplifiedcurations: ${isSimplifiedCurations}`, 'shopify');
     
-    const shopify = new Shopify({
-      shopName: cleanShopUrl,
-      accessToken: credentials.accessToken,
-      apiVersion: '2023-10', // Using a more recent API version
-      autoLimit: true,
-      timeout: 30000, // Increased timeout to 30 seconds
-      maxRetries: 0,   // Disable retries to prevent redirect loops
-      // For simplifiedcurations, set a different base URL to avoid redirect issues
-      ...(isSimplifiedCurations ? {
-        apiUrl: 'https://simplifiedcurations.myshopify.com/admin/api',
-        maxRetries: 0, // Explicitly disable retries for this store
-        // Try to disable any redirect following
-        followRedirects: false,
-        timeout: 60000 // Extended timeout for this specific store
-      } : {})
-    });
+    // For simplifiedcurations store, we need to use a completely different approach
+    // because it might use a different pattern or have specific redirect rules
+    let shopify;
+    
+    if (isSimplifiedCurations) {
+      log('Using special connection method for simplifiedcurations store', 'shopify');
+      
+      // Try using the store subdomain directly in a different format
+      // This approach avoids many of the redirect issues
+      shopify = new Shopify({
+        shopName: 'simplifiedcurations',  // Use just the subdomain part
+        accessToken: credentials.accessToken,
+        apiVersion: '2023-10',
+        autoLimit: false,  // Disable autolimit which can cause issues
+        timeout: 60000,    // Extended timeout
+        maxRetries: 0      // No retries to avoid redirect loops
+        // We'll rely on the HTTP client's default behavior for redirects
+      });
+    } else {
+      // Standard approach for other stores
+      shopify = new Shopify({
+        shopName: cleanShopUrl,
+        accessToken: credentials.accessToken,
+        apiVersion: '2023-10',
+        autoLimit: true,
+        timeout: 30000,
+        maxRetries: 0
+      });
+    }
     
     // Verify connection is working by making a simple API call
     try {
