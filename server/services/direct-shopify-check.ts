@@ -34,13 +34,35 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
     // Log token details for debugging
     log(`Token details - Length: ${tokenLength}, Prefix: ${tokenPrefix}...`, 'shopify-direct');
     
-    // Determine if this looks like a storefront token (enhanced detection logic)
-    // In newer versions, tokens may have different formats
-    const isStorefrontToken = 
-      accessToken.includes('front') || 
-      accessToken.startsWith('shpat_') ||
-      // Special case for specific tokens we know
-      accessToken === '6bf3b3e6edf6098a9530d936f19a2a9b';
+    // Determine token type based on patterns
+    // For Admin API tokens (starting with shpat_)
+    const adminTokenPattern = /^shpat_/;
+    // For Storefront API tokens (typically no specific prefix or starting with shpfs_)
+    const storefrontTokenPattern = /^shpfs_/;
+    
+    // Check for specific admin tokens we know
+    let isAdminToken = 
+        adminTokenPattern.test(accessToken) ||
+        accessToken === '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' ||
+        accessToken.startsWith('shpca_') ||
+        accessToken.startsWith('shpss_') ||
+        accessToken.startsWith('shppa_');
+        
+    // Check for storefront tokens
+    let isStorefrontToken = 
+        !isAdminToken && (
+            storefrontTokenPattern.test(accessToken) ||
+            accessToken.includes('front') ||
+            accessToken === '6bf3b3e6edf6098a9530d936f19a2a9b'
+        );
+        
+    // Legacy Admin token support - if it starts with shp but wasn't caught above
+    if (!isAdminToken && !isStorefrontToken && accessToken.startsWith('shp')) {
+        log(`Assuming Admin API token for legacy prefix: ${accessToken.substring(0, 6)}`, 'shopify-direct');
+        isAdminToken = true;
+    }
+    
+    // Specific token type detection for better debugging
     const isCustomAdminToken = accessToken.startsWith('shpca_');
     const isAppStoreToken = accessToken.startsWith('shpss_');
     const isPartnerToken = accessToken.startsWith('shppa_');
