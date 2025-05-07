@@ -255,19 +255,145 @@ const ProductsInventoryPage: React.FC = () => {
             
             {/* Desktop: Show all actions */}
             <div className="hidden md:flex flex-wrap gap-2">
-              <Button className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                Add Product
-              </Button>
-              <Button variant="outline" className="gap-1.5">
-                <UploadCloud className="h-4 w-4" />
-                Import CSV
-              </Button>
-              <Button variant="outline" className="gap-1.5">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="gap-1.5">
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl">
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogDescription>
+                      Create a new product in your inventory
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ItemFormComponent 
+                    onSubmit={(data) => {
+                      console.log('Form data:', data);
+                      // TODO: Implement actual product creation with API
+                      toast({
+                        title: "Product created",
+                        description: "The product has been added to your inventory."
+                      });
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+              
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-1.5">
+                    <UploadCloud className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Products from CSV</DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV file to import multiple products at once
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <UploadCloud className="w-8 h-8 mb-3 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">CSV, XLS, XLSX (MAX. 10MB)</p>
+                        </div>
+                        <input id="dropzone-file" type="file" className="hidden" accept=".csv,.xls,.xlsx" onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            toast({
+                              title: "File selected",
+                              description: `Selected file: ${e.target.files[0].name}`
+                            });
+                            // TODO: Implement CSV import functionality
+                          }
+                        }} />
+                      </label>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Import</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={() => {
+                  // Create CSV content
+                  if (filteredProducts.length === 0) {
+                    toast({
+                      title: "No products to export",
+                      description: "There are no products matching your current filters to export.",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
+                  // Prepare CSV headers and rows
+                  const headers = [
+                    "ID", "Name", "Category", "SKU", "Size", "Price", "Quantity", "Status"
+                  ];
+                  
+                  const rows = filteredProducts.map(product => [
+                    product.id,
+                    product.name,
+                    product.category,
+                    product.sku,
+                    product.size || "",
+                    product.price,
+                    product.quantity,
+                    product.status
+                  ]);
+                  
+                  // Combine headers and rows
+                  const csvContent = [
+                    headers.join(","),
+                    ...rows.map(row => row.join(","))
+                  ].join("\n");
+                  
+                  // Create a blob and download link
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.setAttribute('href', url);
+                  link.setAttribute('download', 'inventory-export.csv');
+                  document.body.appendChild(link);
+                  link.click();
+                  
+                  // Clean up
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                  
+                  toast({
+                    title: "Export successful",
+                    description: `Exported ${filteredProducts.length} products to CSV.`
+                  });
+                }}
+              >
                 <DownloadCloud className="h-4 w-4" />
                 Export
               </Button>
-              <Button variant="outline" className="gap-1.5">
+              
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={() => {
+                  // Navigate to a printable catalog view
+                  toast({
+                    title: "Catalog feature",
+                    description: "This feature to generate a printable product catalog will be available soon."
+                  });
+                }}
+              >
                 <FileSpreadsheet className="h-4 w-4" />
                 Catalog
               </Button>
