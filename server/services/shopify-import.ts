@@ -294,134 +294,226 @@ export async function importShopifyCSV(
   generateBarcodeData: (sku: string) => string,
   generateQRCodeDataURL: (item: Item) => Promise<string>
 ): Promise<ImportResult> {
-  const { headers, rows } = parseCSV(csvContent);
+  console.log("Starting Shopify CSV import process...");
   
-  if (headers.length === 0 || rows.length === 0) {
-    return {
-      success: false,
-      items: [],
-      errors: [{ row: 0, reason: "Empty or invalid CSV file" }],
-      message: "The uploaded file is empty or has an invalid format"
-    };
-  }
-  
-  const format = determineCSVFormat(headers);
-  
-  if (format === 'unknown') {
-    return {
-      success: false,
-      items: [],
-      errors: [{ row: 0, reason: "Unrecognized CSV format" }],
-      message: "The CSV format is not recognized as a valid Shopify export. Please use the 'Products' or 'Inventory' export from Shopify."
-    };
-  }
-  
-  const importedItems: Item[] = [];
-  const errors: {row: number; reason: string}[] = [];
-  const processedHandles = new Set<string>();
-  
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-    const row = rows[rowIndex];
-    try {
-      // Skip rows with insufficient data
-      if (row.length < 5) {
-        errors.push({row: rowIndex + 2, reason: "Row has insufficient columns"});
-        continue;
-      }
-      
-      // Skip Printify items
-      if (row.some((cell: string) => cell.includes('Printify') || cell.includes('not stocked'))) {
-        errors.push({row: rowIndex + 2, reason: "Printify or not stocked items are skipped"});
-        continue;
-      }
-      
-      // Extract basic product info
-      const productInfo = extractProductInfo(row, headers, format, rowIndex + 2);
-      
-      if (productInfo.error) {
-        errors.push({row: rowIndex + 2, reason: productInfo.error});
-        continue;
-      }
-      
-      const { handle, title, quantity, variant } = productInfo;
-      
-      // Skip duplicate products (only take the first variant)
-      if (processedHandles.has(handle)) {
-        console.log(`Skipping duplicate handle: ${handle}`);
-        continue;
-      }
-      processedHandles.add(handle);
-      
-      // Determine product attributes
-      const attributes = determineProductAttributes(title, variant);
-      
-      // Generate SKU
-      const sku = generateSKU(attributes.prefix, handle);
-      
-      // Create description
-      const description = createDescription(title, attributes.tier);
-      
-      // Create item data
-      const itemData: InsertItem = {
-        name: title,
-        description: description,
-        basePrice: attributes.price || 0, // Set default price to 0 to prevent null violations
-        sku: sku,
-        quantity: quantity,
-        status: 'active',
-        category: attributes.category,
-        condition: 'Hybrid', // Use condition field for strain type
-        tags: ['cannabis', attributes.brand.toLowerCase().replace(/\s+/g, '-'), attributes.tier.toLowerCase().replace(/\s+/g, '-')],
-        images: [],
-        marketplace: [{
-          name: 'Shopify',
-          isListed: true
-        }],
-        aiEnhanced: false,
-        aiTags: [],
-        weight: attributes.weight,
+  try {
+    const { headers, rows } = parseCSV(csvContent);
+    console.log(`CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
+    
+    if (headers.length === 0 || rows.length === 0) {
+      console.log("Empty or invalid CSV file");
+      return {
+        success: false,
+        items: [],
+        errors: [{ row: 0, reason: "Empty or invalid CSV file" }],
+        message: "The uploaded file is empty or has an invalid format"
       };
-      
-      console.log(`Creating item: ${itemData.name} (${itemData.sku}), Qty: ${itemData.quantity}`);
-      
-      // Create item in storage
-      const createdItem = await storage.createItem(itemData);
-      
-      // Generate barcode and QR code
-      const barcode = generateBarcodeData(itemData.sku);
-      const qrCode = await generateQRCodeDataURL(createdItem);
-      
-      // Update with barcode and QR code
-      const updatedItem = await storage.updateItem(createdItem.id, { 
-        barcode, 
-        qrCode 
-      });
-      
-      if (updatedItem) {
-        importedItems.push(updatedItem);
-      }
-    } catch (importErr) {
-      console.error(`Error importing row ${rowIndex + 2}:`, importErr);
-      errors.push({
-        row: rowIndex + 2, 
-        reason: importErr instanceof Error ? importErr.message : "Unknown error"
-      });
     }
-  }
-  
-  if (importedItems.length === 0 && errors.length > 0) {
+    
+    const format = determineCSVFormat(headers);
+    console.log(`CSV format determined as: ${format}`);
+    
+    if (format === 'unknown') {
+      console.log("Unrecognized CSV format - headers:", headers);
+      return {
+        success: false,
+        items: [],
+        errors: [{ row: 0, reason: "Unrecognized CSV format" }],
+        message: "The CSV format is not recognized as a valid Shopify export. Please use the 'Products' or 'Inventory' export from Shopify."
+      };
+    }
+    
+    const importedItems: Item[] = [];
+    const errors: {row: number; reason: string}[] = [];
+    const processedHandles = new Set<string>();
+    let processed = 0;
+    let skipped = 0;
+    let succeeded = 0;
+    let failed = 0;
+    
+    console.log(`Processing ${rows.length} rows from Shopify CSV...`);
+    
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
+      processed++;
+      
+      try {
+        // Skip rows with insufficient data
+        if (row.length < 5) {
+          errors.push({row: rowIndex + 2, reason: "Row has insufficient columns"});
+          skipped++;
+          continue;
+        }
+        
+        // Skip Printify items
+        if (row.some((cell: string) => cell?.includes('Printify') || cell?.includes('not stocked'))) {
+          errors.push({row: rowIndex + 2, reason: "Printify or not stocked items are skipped"});
+          skipped++;
+          continue;
+        }
+        
+        // Extract basic product info
+        const productInfo = extractProductInfo(row, headers, format, rowIndex + 2);
+        
+        if (productInfo.error) {
+          errors.push({row: rowIndex + 2, reason: productInfo.error});
+          failed++;
+          continue;
+        }
+        
+        const { handle, title, quantity, variant } = productInfo;
+        
+        // Skip duplicate products (only take the first variant)
+        if (processedHandles.has(handle)) {
+          console.log(`Skipping duplicate handle: ${handle}`);
+          skipped++;
+          continue;
+        }
+        processedHandles.add(handle);
+        
+        // Determine product attributes
+        const attributes = determineProductAttributes(title, variant);
+        
+        // Generate SKU
+        const sku = generateSKU(attributes.prefix, handle);
+        
+        // Create description
+        const description = createDescription(title, attributes.tier);
+        
+        // Create item data
+        const itemData: InsertItem = {
+          name: title || 'Unnamed Product',
+          description: description || 'No description available',
+          basePrice: attributes.price || 0, // Set default price to 0 to prevent null violations
+          sku: sku,
+          quantity: quantity || 0,
+          status: 'active',
+          category: attributes.category || 'General',
+          condition: 'New', // Default condition
+          tags: ['imported', attributes.brand?.toLowerCase().replace(/\s+/g, '-') || 'no-brand', attributes.tier?.toLowerCase().replace(/\s+/g, '-') || 'standard'],
+          images: [],
+          marketplace: [{
+            name: 'Shopify',
+            isListed: true
+          }],
+          aiEnhanced: false,
+          aiTags: [],
+          weight: attributes.weight || null,
+        };
+        
+        console.log(`Creating item (${rowIndex + 1}/${rows.length}): ${itemData.name} (${itemData.sku}), Qty: ${itemData.quantity}`);
+        
+        // Check if the item already exists by SKU
+        const existingItem = await storage.getItemBySku(sku);
+        if (existingItem) {
+          console.log(`Item with SKU ${sku} already exists, updating instead of creating`);
+          // Update existing item
+          const updatedItem = await storage.updateItem(existingItem.id, {
+            ...itemData,
+            quantity: existingItem.quantity + (itemData.quantity || 0) // Add quantities
+          });
+          
+          if (updatedItem) {
+            importedItems.push(updatedItem);
+            succeeded++;
+          } else {
+            errors.push({row: rowIndex + 2, reason: "Failed to update existing item"});
+            failed++;
+          }
+          continue;
+        }
+        
+        // Create item in storage
+        const createdItem = await storage.createItem(itemData);
+        if (!createdItem) {
+          console.error(`Failed to create item: ${itemData.name} (${itemData.sku})`);
+          errors.push({row: rowIndex + 2, reason: "Failed to create item in database"});
+          failed++;
+          continue;
+        }
+        
+        // Generate barcode and QR code
+        let barcode = "";
+        let qrCode = "";
+        
+        try {
+          barcode = generateBarcodeData(itemData.sku);
+          qrCode = await generateQRCodeDataURL(createdItem);
+        } catch (codeErr) {
+          console.error("Error generating barcode/QR code:", codeErr);
+          // Don't fail the import just because of barcode generation
+          errors.push({
+            row: rowIndex + 2, 
+            reason: `Item created but barcode/QR generation failed: ${codeErr instanceof Error ? codeErr.message : "Unknown error"}`
+          });
+        }
+        
+        // Update with barcode and QR code if we have them
+        if (barcode || qrCode) {
+          const updateData: Partial<Item> = {};
+          if (barcode) updateData.barcode = barcode;
+          if (qrCode) updateData.qrCode = qrCode;
+          
+          try {
+            const updatedItem = await storage.updateItem(createdItem.id, updateData);
+            if (updatedItem) {
+              importedItems.push(updatedItem);
+              succeeded++;
+            } else {
+              // Item was created but update failed
+              importedItems.push(createdItem);
+              errors.push({row: rowIndex + 2, reason: "Item created but failed to update with barcode/QR code"});
+              succeeded++;
+            }
+          } catch (updateErr) {
+            // Item was created but update failed
+            importedItems.push(createdItem);
+            errors.push({
+              row: rowIndex + 2, 
+              reason: `Item created but failed to update with barcode/QR code: ${updateErr instanceof Error ? updateErr.message : "Unknown error"}`
+            });
+            succeeded++;
+          }
+        } else {
+          // No barcode/QR codes, but item was created successfully
+          importedItems.push(createdItem);
+          succeeded++;
+        }
+        
+      } catch (importErr) {
+        console.error(`Error importing row ${rowIndex + 2}:`, importErr);
+        errors.push({
+          row: rowIndex + 2, 
+          reason: importErr instanceof Error ? importErr.message : "Unknown error"
+        });
+        failed++;
+      }
+    }
+    
+    console.log(`Import complete - Processed: ${processed}, Succeeded: ${succeeded}, Failed: ${failed}, Skipped: ${skipped}`);
+    
+    if (importedItems.length === 0 && errors.length > 0) {
+      return {
+        success: false,
+        items: [],
+        errors: errors,
+        message: `Failed to import any items. All ${errors.length} rows had errors.`
+      };
+    }
+    
+    return {
+      success: true,
+      items: importedItems,
+      errors: errors,
+      message: `Successfully imported ${importedItems.length} items from Shopify. Processed ${processed} rows (${skipped} skipped, ${failed} failed).`
+    };
+  } catch (error) {
+    console.error("Critical error in importShopifyCSV:", error);
     return {
       success: false,
       items: [],
-      errors: errors,
-      message: `Failed to import any items. All ${errors.length} rows had errors.`
+      errors: [{ row: 0, reason: `Critical import error: ${error instanceof Error ? error.message : "Unknown error"}` }],
+      message: `CSV import failed with a critical error: ${error instanceof Error ? error.message : "Unknown error"}`
     };
   }
-  
-  return {
-    success: true,
-    items: importedItems,
-    errors: errors,
-    message: `Successfully imported ${importedItems.length} items from Shopify.`
-  };
 }
