@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryLoader, LoadingPage } from "@/components/ui/inventory-loader";
 import { AlertTriangle, CheckCircle, PlusSquare, Trash2, Package, Clipboard, ArrowRight, Layers, ArrowDownUp } from "lucide-react";
 
@@ -186,35 +187,72 @@ export default function BulkBreakdownPage() {
     const bulkItem = bulkItems?.find((item: Item) => item.id === selectedBreakdown.bulkItemId);
     if (!bulkItem) return;
     
-    // Determine smaller weight unit based on bulk item weight
+    // Standard weight variants that should be available for all products
+    // We'll determine the appropriate ones based on the bulk item's unit
+    const standardWeightVariants = {
+      g: [3.5, 7, 14, 28], // Common gram variants
+      oz: [0.125, 0.25, 0.5, 1], // Common ounce variants (1/8, 1/4, 1/2, 1)
+      lb: [0.25, 0.5, 1] // Common pound variants (1/4, 1/2, 1)
+    };
+    
+    // Default to smallest weight variant
     let smallerWeight = 0;
-    let smallerUnit = 'oz';
+    let smallerUnit = 'g';
     
     if (bulkItem.weight && bulkItem.weightUnit) {
-      // If it's pounds, convert to ounces for smaller units
+      // Convert weight unit to our standardized keys
+      let standardUnit = 'g';
       if (bulkItem.weightUnit.toLowerCase() === 'lb' || bulkItem.weightUnit.toLowerCase() === 'lbs') {
-        smallerWeight = 1; // Default to 1 oz
-        smallerUnit = 'oz';
-      } 
-      // If it's already ounces, use grams or partial ounces
-      else if (bulkItem.weightUnit.toLowerCase() === 'oz') {
-        smallerWeight = 3.5; // Default to eighth (3.5g)
-        smallerUnit = 'g';
+        standardUnit = 'lb';
+      } else if (bulkItem.weightUnit.toLowerCase() === 'oz') {
+        standardUnit = 'oz';
       }
-      // If it's grams, use smaller gram amounts
-      else if (bulkItem.weightUnit.toLowerCase() === 'g') {
-        smallerWeight = 1;
-        smallerUnit = 'g';
-      }
+      
+      // Select the smallest standard variant for that unit
+      smallerWeight = standardWeightVariants[standardUnit][0];
+      smallerUnit = standardUnit;
     }
     
-    // Set pricing based on a proportional weight basis
-    let proportionalPrice = bulkItem.price;
+    // Calculate proportional price based on weight conversion
+    let proportionalPrice = bulkItem.basePrice || 0;
+    let bulkWeight = bulkItem.weight || 0;
     
-    // Calculate proportional price if converting from lb to oz
-    if (bulkItem.weightUnit?.toLowerCase() === 'lb' || bulkItem.weightUnit?.toLowerCase() === 'lbs') {
-      // 1 oz is 1/16th of a pound
-      proportionalPrice = bulkItem.price / 16;
+    // Convert everything to grams for consistent calculation
+    const conversionRates = {
+      g: 1,
+      oz: 28.35, // 1 oz = 28.35g
+      lb: 453.59 // 1 lb = 453.59g
+    };
+    
+    // Convert bulk item weight to grams
+    let bulkWeightInGrams = 0;
+    if (bulkItem.weightUnit) {
+      const unit = bulkItem.weightUnit.toLowerCase().replace('lbs', 'lb').replace('s', '');
+      const rate = conversionRates[unit as keyof typeof conversionRates] || 1;
+      bulkWeightInGrams = bulkWeight * rate;
+    }
+    
+    // Convert target weight to grams
+    let targetWeightInGrams = 0;
+    const targetUnit = smallerUnit.toLowerCase().replace('lbs', 'lb').replace('s', '');
+    const targetRate = conversionRates[targetUnit as keyof typeof conversionRates] || 1;
+    targetWeightInGrams = smallerWeight * targetRate;
+    
+    // Calculate price based on proportion
+    if (bulkWeightInGrams > 0 && targetWeightInGrams > 0) {
+      // Calculate weighted price with a slight markup for smaller quantities
+      const weightRatio = targetWeightInGrams / bulkWeightInGrams;
+      const baseProportionalPrice = proportionalPrice * weightRatio;
+      
+      // Add markup for smaller quantities (smaller weight = higher price per gram)
+      let markup = 1.0; // default no markup
+      if (targetWeightInGrams < 14 * conversionRates.g) { // Less than 14g
+        markup = 1.2; // 20% markup
+      } else if (targetWeightInGrams < 28 * conversionRates.g) { // Between 14g and 28g
+        markup = 1.1; // 10% markup
+      }
+      
+      proportionalPrice = baseProportionalPrice * markup;
     }
     
     const newTarget: BreakdownTarget = {
@@ -693,24 +731,137 @@ export default function BulkBreakdownPage() {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label htmlFor={`weight-${index}`}>Weight</Label>
-                              <Input
-                                id={`weight-${index}`}
-                                type="number"
-                                step="0.1"
-                                value={target.weight}
-                                onChange={(e) => handleUpdateBreakdownTarget(index, 'weight', e.target.value)}
-                                required
-                              />
+                              <Label htmlFor={`weightVariant-${index}`}>Weight Variant</Label>
+                              {(() => {
+                                const bulkItem = bulkItems?.find((item: Item) => 
+                                  item.id === selectedBreakdown?.bulkItemId
+                                );
+                                
+                                if (!bulkItem) return (
+                                  <Input
+                                    id={`weight-${index}`}
+                                    type="number"
+                                    step="0.1"
+                                    value={target.weight}
+                                    onChange={(e) => handleUpdateBreakdownTarget(index, 'weight', e.target.value)}
+                                    required
+                                  />
+                                );
+                                
+                                // Standard weight variants
+                                const standardWeightVariants = {
+                                  g: [3.5, 7, 14, 28],
+                                  oz: [0.125, 0.25, 0.5, 1],
+                                  lb: [0.25, 0.5, 1]
+                                };
+                                
+                                // Determine which unit we're using
+                                let unitKey = 'g';
+                                if (target.weightUnit.toLowerCase() === 'lb' || target.weightUnit.toLowerCase() === 'lbs') {
+                                  unitKey = 'lb';
+                                } else if (target.weightUnit.toLowerCase() === 'oz') {
+                                  unitKey = 'oz';
+                                }
+                                
+                                const variants = standardWeightVariants[unitKey as keyof typeof standardWeightVariants];
+                                
+                                return (
+                                  <Select 
+                                    value={target.weight.toString()}
+                                    onValueChange={(value) => {
+                                      // When changing weight, also recalculate price
+                                      const newWeight = parseFloat(value);
+                                      let newPrice = target.price;
+                                      
+                                      // If we have enough info, recalculate proportional price
+                                      if (bulkItem.weight && bulkItem.basePrice) {
+                                        const conversionRates = {
+                                          g: 1,
+                                          oz: 28.35,
+                                          lb: 453.59
+                                        };
+                                        
+                                        // Convert bulk item to grams
+                                        const unit = bulkItem.weightUnit?.toLowerCase().replace('lbs', 'lb').replace('s', '') || 'g';
+                                        const rate = conversionRates[unit as keyof typeof conversionRates] || 1;
+                                        const bulkWeightInGrams = bulkItem.weight * rate;
+                                        
+                                        // Convert new weight to grams
+                                        const targetRate = conversionRates[unitKey as keyof typeof conversionRates] || 1;
+                                        const targetWeightInGrams = newWeight * targetRate;
+                                        
+                                        // Calculate base proportional price
+                                        const weightRatio = targetWeightInGrams / bulkWeightInGrams;
+                                        const baseProportionalPrice = bulkItem.basePrice * weightRatio;
+                                        
+                                        // Apply markup for smaller quantities
+                                        let markup = 1.0;
+                                        if (targetWeightInGrams < 14 * conversionRates.g) {
+                                          markup = 1.2; // 20% markup
+                                        } else if (targetWeightInGrams < 28 * conversionRates.g) {
+                                          markup = 1.1; // 10% markup
+                                        }
+                                        
+                                        newPrice = baseProportionalPrice * markup;
+                                      }
+                                      
+                                      // Update both weight and price
+                                      const updatedTargets = [...breakdownTargets];
+                                      updatedTargets[index] = {
+                                        ...updatedTargets[index],
+                                        weight: newWeight,
+                                        price: newPrice
+                                      };
+                                      setBreakdownTargets(updatedTargets);
+                                    }}
+                                  >
+                                    <SelectTrigger id={`weight-${index}`}>
+                                      <SelectValue placeholder="Select weight" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {variants.map((variant) => (
+                                        <SelectItem key={variant} value={variant.toString()}>
+                                          {variant} {target.weightUnit}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
+                              })()}
                             </div>
                             <div className="space-y-1">
                               <Label htmlFor={`weightUnit-${index}`}>Weight Unit</Label>
-                              <Input
-                                id={`weightUnit-${index}`}
+                              <Select 
                                 value={target.weightUnit}
-                                onChange={(e) => handleUpdateBreakdownTarget(index, 'weightUnit', e.target.value)}
-                                required
-                              />
+                                onValueChange={(value) => {
+                                  // When changing unit, select an appropriate default weight for that unit
+                                  const standardWeightVariants = {
+                                    g: [3.5, 7, 14, 28],
+                                    oz: [0.125, 0.25, 0.5, 1],
+                                    lb: [0.25, 0.5, 1]
+                                  };
+                                  
+                                  const newWeight = standardWeightVariants[value as keyof typeof standardWeightVariants][0];
+                                  
+                                  // Update both unit and weight
+                                  const updatedTargets = [...breakdownTargets];
+                                  updatedTargets[index] = {
+                                    ...updatedTargets[index],
+                                    weightUnit: value,
+                                    weight: newWeight
+                                  };
+                                  setBreakdownTargets(updatedTargets);
+                                }}
+                              >
+                                <SelectTrigger id={`weightUnit-${index}`}>
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="g">g (grams)</SelectItem>
+                                  <SelectItem value="oz">oz (ounces)</SelectItem>
+                                  <SelectItem value="lb">lb (pounds)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
                         </div>
