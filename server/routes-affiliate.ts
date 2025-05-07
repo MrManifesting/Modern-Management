@@ -951,12 +951,12 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
   app.post("/api/qrcodes/:code/conversion", async (req: Request, res: Response) => {
     try {
       const code = req.params.code;
-      const { saleId, amount, customerEmail, orderDetails } = req.body;
+      const { paymentId, amount, paymentMethod, affiliateId } = req.body;
       
-      if (!saleId || !amount) {
+      if (!paymentId || !amount) {
         return res.status(400).json({
           success: false,
-          message: "Sale ID and amount are required"
+          message: "Payment ID and amount are required"
         });
       }
       
@@ -989,52 +989,62 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         conversions: (qrCode.conversions || 0) + 1
       });
       
-      // Create a payment with Stripe if the affiliate has a Stripe account
+      // Variable to store payment ID based on the payment method
       let stripePaymentIntentId = null;
+      let paypalOrderId = null;
       
-      if (affiliate.stripeAccountId && affiliate.stripeOnboardingComplete) {
+      // Handle Stripe payment
+      if (paymentMethod === 'stripe' && affiliate.stripeAccountId && affiliate.stripeOnboardingComplete) {
         try {
           // Create a payment with affiliate tracking metadata
           const paymentIntent = await stripeService.createPaymentWithAffiliateTracking(
             saleAmount,
             'usd',
-            customerEmail || 'customer@example.com',
+            'customer@example.com', // In a real app, we'd get this from the customer
             {
               affiliate_id: affiliate.id,
               affiliate_code: affiliate.code,
               qr_code: qrCode.code,
-              sale_id: saleId,
+              payment_id: paymentId,
               commission_rate: affiliate.commissionRate,
               commission_amount: commissionAmount
             }
           );
           
           stripePaymentIntentId = paymentIntent.id;
-          
-          // If the affiliate has a Stripe account, we can automatically apply the commission
-          if (affiliate.stripeAccountId && affiliate.stripeOnboardingComplete) {
-            // This would usually happen on a webhook, but for demonstration we're doing it inline
-            // await stripeService.confirmPaymentAndApplyCommission(
-            //   paymentIntent.id,
-            //   affiliate.stripeAccountId,
-            //   affiliate.commissionRate
-            // );
-          }
         } catch (stripeError) {
           console.error("Error creating Stripe payment:", stripeError);
           // Continue execution even if Stripe fails - we'll still create a local record
+        }
+      } 
+      // Handle PayPal payment
+      else if (paymentMethod === 'paypal' && paypalService.isConfigured()) {
+        try {
+          // Process the affiliate commission for the PayPal order
+          const commissionResult = await paypalService.processAffiliateCommission(
+            paymentId, 
+            affiliate.id,
+            affiliate.commissionRate
+          );
+          
+          paypalOrderId = paymentId;
+          console.log("PayPal commission processed:", commissionResult);
+        } catch (paypalError) {
+          console.error("Error processing PayPal commission:", paypalError);
+          // Continue execution even if PayPal fails - we'll still create a local record
         }
       }
       
       // Create affiliate transaction
       const transactionData = {
         affiliateId: affiliate.id,
-        saleId,
+        saleId: paymentId,
         transactionType: 'commission',
         amount: commissionAmount,
-        description: `Commission for sale #${saleId}`,
+        description: `Commission for ${paymentMethod} payment ${paymentId}`,
         status: 'pending',
-        stripePaymentIntentId
+        stripePaymentIntentId,
+        paypalOrderId
       };
       
       // Update the affiliate's pending payout amount
