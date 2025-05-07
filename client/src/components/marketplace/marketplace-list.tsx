@@ -59,14 +59,18 @@ export default function MarketplaceList() {
   // Fetch marketplaces
   const { data: marketplaces, isLoading, error } = useQuery({
     queryKey: ['/api/marketplaces'],
-    queryFn: () => apiRequest<any[]>('/api/marketplaces'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/marketplaces');
+      return response.json();
+    }
   });
 
   // Delete marketplace mutation
   const deleteMarketplaceMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/marketplaces/${id}`, {
-      method: 'DELETE'
-    }),
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/marketplaces/${id}`);
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Marketplace deleted",
@@ -88,16 +92,15 @@ export default function MarketplaceList() {
   const testConnection = async (marketplace: any) => {
     setIsTestingConnection(true);
     try {
-      const response = await apiRequest(`/api/marketplaces/${marketplace.id}/test`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/marketplaces/${marketplace.id}/test`);
+      const data = await response.json();
       
       toast({
-        title: response.success 
+        title: data.success 
           ? "Connection successful" 
           : "Connection failed",
-        description: response.message,
-        variant: response.success ? "default" : "destructive",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
       });
     } catch (error) {
       toast({
@@ -113,16 +116,16 @@ export default function MarketplaceList() {
   // Toggle connection
   const toggleConnection = async (marketplace: any) => {
     try {
-      const response = await apiRequest(`/api/marketplaces/${marketplace.id}/connect`, {
-        method: 'POST',
-        body: JSON.stringify({ connect: !marketplace.isConnected })
-      });
+      const response = await apiRequest('POST', `/api/marketplaces/${marketplace.id}/connect`, 
+        { connect: !marketplace.isConnected }
+      );
+      const data = await response.json();
       
       toast({
         title: marketplace.isConnected 
           ? "Marketplace disconnected" 
           : "Marketplace connected",
-        description: response.message || "Connection status updated successfully.",
+        description: data.message || "Connection status updated successfully.",
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/marketplaces'] });
@@ -138,15 +141,14 @@ export default function MarketplaceList() {
   // Toggle sync enabled
   const toggleSyncEnabled = async (marketplace: any) => {
     try {
-      const response = await apiRequest(`/api/marketplaces/${marketplace.id}/sync-toggle`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/marketplaces/${marketplace.id}/sync-toggle`);
+      const data = await response.json();
       
       toast({
         title: marketplace.syncEnabled 
           ? "Sync disabled" 
           : "Sync enabled",
-        description: response.message || "Sync settings updated successfully.",
+        description: data.message || "Sync settings updated successfully.",
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/marketplaces'] });
@@ -163,13 +165,12 @@ export default function MarketplaceList() {
   const syncProducts = async (marketplace: any) => {
     setIsSyncing(true);
     try {
-      const response = await apiRequest(`/api/marketplaces/${marketplace.id}/sync`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/marketplaces/${marketplace.id}/sync`);
+      const data = await response.json();
       
       toast({
         title: "Sync completed",
-        description: response.message || "Products have been synchronized successfully.",
+        description: data.message || "Products have been synchronized successfully.",
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/marketplaces'] });
