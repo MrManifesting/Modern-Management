@@ -924,7 +924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csvData = selectedItems.map(item => ({
         Title: item.name,
         Description: item.description,
-        Price: item.price.toString(),
+        Price: item.basePrice.toString(),
         Category: item.category,
         Condition: item.condition,
         Images: (item.images as string[]).join("|"),
@@ -970,7 +970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Name: item.name,
         Description: item.description || '',
         SKU: item.sku || '',
-        Price: item.price.toString(),
+        Price: item.basePrice.toString(),
         Category: item.category,
         Type: item.type || '',
         Strain: item.strain || '',
@@ -1005,7 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceSheetData = items.map(item => ({
         Name: item.name,
         SKU: item.sku || "",
-        RetailPrice: item.price.toString(),
+        RetailPrice: item.basePrice.toString(),
         WholesalePrice: item.wholesalePrice?.toString() || "",
         Category: item.category,
         Strain: item.strain || "",
@@ -1049,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           barcode: updatedItem.barcode,
           qrCode: updatedItem.qrCode,
           name: updatedItem.name,
-          price: updatedItem.price,
+          basePrice: updatedItem.basePrice,
           category: updatedItem.category,
           quantity: updatedItem.quantity
         });
@@ -1204,7 +1204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate estimated revenue (sum of all listed item prices)
       const revenue = items
         .filter(item => item.status === "listed")
-        .reduce((sum, item) => sum + item.price, 0);
+        .reduce((sum, item) => sum + item.basePrice, 0);
       
       res.json({
         inventory: {
@@ -1526,8 +1526,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'title': 'name',
         'product name': 'name',
         'description': 'description',
-        'price': 'price',
-        'cost': 'price',
+        'price': 'basePrice',
+        'cost': 'basePrice',
         'quantity': 'quantity',
         'qty': 'quantity',
         'stock': 'quantity',
@@ -1651,7 +1651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const item = {
                 name: title,
                 description: `${strain} - Premium Quality Cannabis - ${tier}`,
-                price: price,
+                basePrice: price,
                 sku: `THCA-${handle}`.toUpperCase(),
                 quantity: quantity,
                 status: 'active',
@@ -1732,7 +1732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const itemData: Record<string, any> = {
             name: row[fieldIndices['name']],
             description: fieldIndices['description'] !== undefined ? row[fieldIndices['description']] : '',
-            price: parseFloat(row[fieldIndices['price']]),
+            basePrice: parseFloat(row[fieldIndices['price']]),
             quantity: fieldIndices['quantity'] !== undefined ? parseInt(row[fieldIndices['quantity']]) : 1, // Default to 1 for stamps
             status: fieldIndices['status'] !== undefined ? row[fieldIndices['status']] : 'draft',
             category: isStampImport ? 'stamps' : (fieldIndices['category'] !== undefined ? row[fieldIndices['category']] : 'uncategorized'),
