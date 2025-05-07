@@ -8,10 +8,13 @@ import qrcode from "qrcode";
 import { generateUniqueCode } from "./services/codes";
 import stripeService from "./services/stripe";
 import paypalService from "./paypal";
+import { eq } from "drizzle-orm";
 import { 
   insertAffiliateSchema, 
   insertQrCodeSchema, 
-  insertAffiliateTransactionSchema 
+  insertAffiliateTransactionSchema,
+  affiliates,
+  qrCodes
 } from "@shared/schema";
 
 /**
@@ -920,10 +923,19 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       }
       
       // Increment scan count
+      // Use direct updates first for fields in the schema
       await storage.updateQrCode(qrCode.id, {
-        scans: (qrCode.scans || 0) + 1,
         lastScannedAt: new Date()
       });
+      
+      // For tracking counts, use separate query to increment the counter
+      try {
+        // Update scan count directly in the database
+        await storage.incrementQrCodeScans(qrCode.id);
+      } catch (error) {
+        console.error("Failed to increment scan count:", error);
+        // Continue execution even if this fails
+      }
       
       // Return success with affiliate info for redirect
       const affiliate = await storage.getAffiliateById(qrCode.affiliateId);
@@ -985,9 +997,13 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       const commissionAmount = saleAmount * affiliate.commissionRate;
       
       // Update QR code conversion count
-      await storage.updateQrCode(qrCode.id, {
-        conversions: (qrCode.conversions || 0) + 1
-      });
+      try {
+        // Use a separate method to increment conversions count
+        await storage.incrementQrCodeConversions(qrCode.id);
+      } catch (error) {
+        console.error("Failed to increment conversion count:", error);
+        // Continue execution even if this fails
+      }
       
       // Variable to store payment ID based on the payment method
       let stripePaymentIntentId = null;
