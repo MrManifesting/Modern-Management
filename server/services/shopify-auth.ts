@@ -746,7 +746,7 @@ import { testShopifyDirect } from './direct-shopify-check';
 // Test Shopify API connection and return detailed status
 export async function testShopifyConnection() {
   try {
-    const credentials = getShopifyCredentials();
+    const credentials = await getShopifyCredentials();
     
     // First try the direct HTTP check
     if (credentials.storeUrl && credentials.accessToken) {
