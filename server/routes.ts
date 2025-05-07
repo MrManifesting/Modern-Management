@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
-import { analyzeImage, generateProductDescription } from "./services/openai";
+import { analyzeProductImage, generateProductDescription } from "./services/openai";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 import { 
   fetchShopifySalesReport, 
@@ -858,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const base64Image = req.file.buffer.toString('base64');
       
       // Analyze the image with OpenAI
-      const analysis = await analyzeImage(base64Image);
+      const analysis = await analyzeProductImage(base64Image);
       
       res.json({ 
         success: true, 
@@ -890,11 +890,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Create an array of features from existing description or analysis if available
+      const features = [];
+      if (existingDescription) features.push(existingDescription);
+      if (imageAnalysis) features.push(imageAnalysis);
+      
       const description = await generateProductDescription(
         productName,
         category,
-        existingDescription || "",
-        imageAnalysis || ""
+        features
       );
       
       res.json({ 
