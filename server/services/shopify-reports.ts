@@ -1,8 +1,6 @@
 import Shopify from 'shopify-api-node';
-
-// Using fixed credentials from the user input for Shopify
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+import { createShopifyClient } from './shopify-auth';
+import { log } from '../vite';
 
 // Types for Shopify report data
 export interface ShopifyOrderReport {
@@ -333,65 +331,16 @@ export async function fetchShopifyCustomerReport(): Promise<ShopifyCustomerRepor
   }
 }
 
-// Function to get Shopify store name in correct format
-function getShopifyStoreName() {
-  const storeUrl = SHOPIFY_STORE || '';
-  
-  // If empty, return empty string
-  if (!storeUrl) return '';
-  
-  // Remove any protocol prefixes (http://, https://)
-  let storeName = storeUrl.replace(/^https?:\/\//, '');
-  
-  // Remove admin.shopify.com/store/ prefix if present
-  if (storeName.includes('admin.shopify.com/store/')) {
-    const storeNameMatch = storeName.match(/admin\.shopify\.com\/store\/([^\/]+)/);
-    if (storeNameMatch && storeNameMatch[1]) {
-      storeName = storeNameMatch[1];
-    }
-  }
-  
-  // Remove trailing slashes if present
-  storeName = storeName.replace(/\/+$/, '');
-  
-  // Ensure it ends with .myshopify.com
-  if (!storeName.endsWith('.myshopify.com')) {
-    // Make sure we don't have store.myshopify.com/something.myshopify.com
-    if (storeName.includes('.myshopify.com/')) {
-      storeName = storeName.substring(0, storeName.indexOf('.myshopify.com/') + '.myshopify.com'.length);
-    } 
-    // If it's just a store name without any domain
-    else if (!storeName.includes('.')) {
-      storeName = `${storeName}.myshopify.com`;
-    }
-  }
-  
-  return storeName;
-}
+// Using the new shopify-auth module instead
 
 // Helper function to get Shopify client
 async function getShopifyClient() {
-  if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN) {
-    throw new Error('Shopify credentials are not properly configured');
+  try {
+    const { shopify } = await createShopifyClient();
+    return { shopify };
+  } catch (error) {
+    log('Error getting Shopify client for reports:', 'shopify');
+    log(error instanceof Error ? error.message : 'Unknown error', 'shopify');
+    throw error;
   }
-  
-  // Use the store name formatter to ensure correct format
-  const formattedShopName = getShopifyStoreName();
-  
-  // Debug logging
-  console.log(`Creating Shopify client with shop name: ${formattedShopName}`);
-  
-  const shopify = new Shopify({
-    shopName: formattedShopName,
-    accessToken: SHOPIFY_ACCESS_TOKEN,
-    apiVersion: '2023-10'
-  });
-  
-  return { 
-    shopify, 
-    credentials: { 
-      shopName: formattedShopName, 
-      accessToken: SHOPIFY_ACCESS_TOKEN 
-    } 
-  };
 }
