@@ -132,12 +132,22 @@ export async function createShopifyClient() {
               // Define the helper function for Storefront API GraphQL first
               const useStorefrontGraphQL = () => {
                 const graphqlPath = '/api/2023-10/graphql.json';
-                const simpleQuery = JSON.stringify({
-                  query: `{ shop { name } }`
+                
+                // Try with a very simple query for the Storefront API
+                const storeFrontQuery = JSON.stringify({
+                  query: `{
+                    shop {
+                      name
+                      primaryDomain {
+                        url
+                        host
+                      }
+                    }
+                  }`
                 });
                 
                 log(`Using GraphQL endpoint for Storefront API: ${cleanShopUrl}${graphqlPath}`, 'shopify-details');
-                log(`Using simplified query: ${simpleQuery}`, 'shopify-details');
+                log(`Using query: ${storeFrontQuery}`, 'shopify-details');
                 log(`Token (first 10 chars): ${credentials.accessToken.substring(0, 10)}`, 'shopify-details');
                 
                 const graphqlReq = https.request({
@@ -149,7 +159,7 @@ export async function createShopifyClient() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-Shopify-Storefront-Access-Token': credentials.accessToken,
-                    'Content-Length': Buffer.byteLength(simpleQuery)
+                    'Content-Length': Buffer.byteLength(storeFrontQuery)
                   },
                   timeout: 30000
                 }, (res) => {
@@ -194,7 +204,7 @@ export async function createShopifyClient() {
                   reject(error);
                 });
                 
-                graphqlReq.write(simpleQuery);
+                graphqlReq.write(storeFrontQuery);
                 graphqlReq.end();
               }
               
@@ -299,7 +309,8 @@ export async function createShopifyClient() {
                   reject(error);
                 });
                 
-                graphqlReq.write(simpleQuery);
+                // Write the defined query we're using
+                graphqlReq.write(graphqlQuery);
                 graphqlReq.end();
                 return;
               }

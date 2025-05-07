@@ -58,12 +58,29 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       
       log(`Making API request to: ${cleanUrl}${apiPath} with token type: ${isStorefrontToken ? 'Storefront' : 'Admin'}`, 'shopify-direct');
       
+      // For Storefront API, we need to use POST method with a GraphQL query
+      const method = isStorefrontToken ? 'POST' : 'GET';
+      let body: string | undefined;
+      
+      if (isStorefrontToken) {
+        // For Storefront API tokens, we need to send a GraphQL query
+        body = JSON.stringify({
+          query: `{
+            shop {
+              name
+            }
+          }`
+        });
+        headers['Content-Length'] = Buffer.byteLength(body).toString();
+        log(`Using GraphQL body: ${body}`, 'shopify-direct');
+      }
+      
       // Use a direct HTTPS request to a known working endpoint
       const apiReq = https.request({
         hostname: 'simplifiedcurations.myshopify.com',
         port: 443,
         path: apiPath,
-        method: 'GET',
+        method: method,
         headers,
         timeout: 30000 // Extended timeout
       }, (apiRes) => {
@@ -121,6 +138,11 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
           isShopify: true
         });
       });
+      
+      // For POST requests with GraphQL queries, we need to write the body
+      if (method === 'POST' && body) {
+        apiReq.write(body);
+      }
       
       apiReq.end();
       return; // Exit early after special handling
