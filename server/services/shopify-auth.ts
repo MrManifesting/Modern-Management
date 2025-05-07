@@ -6,6 +6,7 @@
 import Shopify from 'shopify-api-node';
 import { log } from '../vite';
 import { createMockShopifyClient, getMockShopInfo } from '../shopify-mock';
+import https from 'https';
 
 // Function to get Shopify store name in correct format
 export function getShopifyStoreName() {
@@ -492,6 +493,132 @@ export async function createShopifyClient() {
           get: async () => ({}),
           count: async () => 100,
           list: async () => []
+        },
+        order: {
+          list: async (params: any = {}) => {
+            return new Promise((resolve, reject) => {
+              try {
+                log(`Fetching orders with params: ${JSON.stringify(params)}`, 'shopify-debug');
+                
+                // Implement direct order fetching using HTTPS
+                const apiPath = '/admin/api/2023-10/orders.json' + 
+                  (params.limit ? `?limit=${params.limit}` : '');
+                
+                log(`Orders API path: ${apiPath}`, 'shopify-debug');
+                
+                const req = https.request({
+                  hostname: cleanShopUrl,
+                  port: 443,
+                  path: apiPath,
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Shopify-Access-Token': credentials.accessToken
+                  },
+                  timeout: 30000
+                }, (res) => {
+                  let data = '';
+                  
+                  res.on('data', (chunk) => {
+                    data += chunk;
+                  });
+                  
+                  res.on('end', () => {
+                    if (res.statusCode === 200) {
+                      try {
+                        const ordersData = JSON.parse(data);
+                        log(`Successfully fetched ${ordersData.orders ? ordersData.orders.length : 0} orders`, 'shopify-debug');
+                        resolve(ordersData.orders || []);
+                      } catch (error: any) {
+                        reject(new Error(`Failed to parse orders data: ${error.message}`));
+                      }
+                    } else if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+                      // Handle redirect for orders
+                      const location = res.headers.location;
+                      log(`Orders API redirect received to: ${location}`, 'shopify-debug');
+                      
+                      if (location) {
+                        try {
+                          // Parse the redirect URL
+                          const redirectUrl = new URL(location);
+                          log(`Following orders API redirect to: ${redirectUrl.toString()}`, 'shopify-debug');
+                          
+                          // Make a new request to the redirect location
+                          const redirectReq = https.request({
+                            hostname: redirectUrl.hostname,
+                            port: 443,
+                            path: redirectUrl.pathname + redirectUrl.search,
+                            method: 'GET',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Accept': 'application/json',
+                              'X-Shopify-Access-Token': credentials.accessToken
+                            },
+                            timeout: 30000
+                          }, (redirectRes) => {
+                            let redirectData = '';
+                            
+                            redirectRes.on('data', (chunk) => {
+                              redirectData += chunk;
+                            });
+                            
+                            redirectRes.on('end', () => {
+                              log(`Redirect response status: ${redirectRes.statusCode}`, 'shopify-debug');
+                              if (redirectRes.statusCode === 200) {
+                                try {
+                                  const ordersResponse = JSON.parse(redirectData);
+                                  log(`Successfully retrieved ${ordersResponse.orders ? ordersResponse.orders.length : 0} orders from redirect`, 'shopify-debug');
+                                  resolve(ordersResponse.orders || []);
+                                } catch (error: any) {
+                                  reject(new Error(`Failed to parse orders data from redirect: ${error.message}`));
+                                }
+                              } else {
+                                reject(new Error(`Redirect API responded with status code ${redirectRes.statusCode}: ${redirectData}`));
+                              }
+                            });
+                          });
+                          
+                          redirectReq.on('error', (error) => {
+                            log(`Redirect request error: ${error.message}`, 'shopify-debug');
+                            reject(error);
+                          });
+                          
+                          redirectReq.end();
+                        } catch (error: any) {
+                          reject(new Error(`Failed to follow orders API redirect: ${error.message}`));
+                        }
+                      } else {
+                        reject(new Error(`Orders API redirect received but no location header`));
+                      }
+                    } else {
+                      reject(new Error(`Orders API responded with status code ${res.statusCode}: ${data}`));
+                    }
+                  });
+                });
+                
+                req.on('error', (error) => {
+                  log(`Error fetching orders: ${error.message}`, 'shopify-debug');
+                  reject(error);
+                });
+                
+                req.end();
+              } catch (error: any) {
+                log(`Exception in orders list: ${error.message}`, 'shopify-debug');
+                reject(error);
+              }
+            });
+          },
+          count: async () => {
+            return 0; // Implement count if needed
+          },
+          get: async (id: string) => {
+            return {}; // Implement single order fetch if needed
+          }
+        },
+        customer: {
+          list: async () => [],
+          count: async () => 0
         }
       };
     } else {
