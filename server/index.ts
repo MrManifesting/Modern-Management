@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { getMarketplaceScheduler } from "./services/marketplace-scheduler";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -67,4 +69,18 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+  
+  // Setup cleanup handler for graceful shutdown
+  const scheduler = getMarketplaceScheduler(storage);
+  
+  const cleanup = () => {
+    log("Server shutting down, cleaning up resources...", "server-shutdown");
+    scheduler.cleanup();
+    
+    process.exit(0);
+  };
+  
+  // Handle graceful shutdown
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
 })();
