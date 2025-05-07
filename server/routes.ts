@@ -454,13 +454,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
     try {
       const sku = req.params.sku;
-      const items = await storage.getItems();
-      const item = items.find(item => item.sku === sku);
+      console.log(`API request for item with SKU: ${sku}`);
+      
+      // Use the dedicated getItemBySku method for better performance and logging
+      const item = await storage.getItemBySku(sku);
       
       if (!item) {
+        console.log(`API: Item not found with SKU ${sku}`);
         return res.status(404).json({ error: "Item not found with the provided SKU" });
       }
       
+      console.log(`API: Successfully retrieved item with SKU ${sku}: ${item.name} (ID: ${item.id})`);
       res.json(item);
     } catch (error) {
       console.error("Error getting item by SKU:", error);
@@ -1180,18 +1184,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Universal barcode lookup if not updating inventory
       if (barcode) {
+        console.log(`Scanning barcode: ${barcode}`);
+        
         // First check if the barcode exists in our database as a barcode
         const items = await storage.getItems();
         let existingItem = items.find(item => item.barcode === barcode);
+        console.log(`Barcode lookup result: ${existingItem ? 'Found' : 'Not found'}`);
         
         // If not found by barcode, try to find it by SKU (since the barcode might be the SKU)
         if (!existingItem) {
-          existingItem = items.find(item => item.sku === barcode);
+          console.log(`Trying to find item by SKU: ${barcode}`);
+          existingItem = await storage.getItemBySku(barcode);
+          console.log(`SKU lookup result: ${existingItem ? 'Found' : 'Not found'}`);
         }
         
         // If not found by SKU, try to find it by name containing the code (more flexible search)
         if (!existingItem) {
+          console.log(`Trying to find item by name containing: ${barcode}`);
           existingItem = items.find(item => item.name && item.name.includes(barcode));
+          console.log(`Name lookup result: ${existingItem ? 'Found' : 'Not found'}`);
         }
         
         if (existingItem) {

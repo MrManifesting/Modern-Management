@@ -566,38 +566,113 @@ export class MemStorage implements IStorage {
   }
 
   async getItem(id: number): Promise<Item | undefined> {
-    return this.items.get(id);
+    try {
+      const item = this.items.get(id);
+      if (item) {
+        console.log(`Retrieved item by ID ${id}: ${item.name} (${item.sku})`);
+      } else {
+        console.log(`Item with ID ${id} not found in storage`);
+      }
+      return item;
+    } catch (error) {
+      console.error(`Error retrieving item ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async getItemBySku(sku: string): Promise<Item | undefined> {
+    try {
+      console.log(`Searching for item with SKU: ${sku}`);
+      const items = Array.from(this.items.values());
+      const item = items.find(item => item.sku === sku);
+      
+      if (item) {
+        console.log(`Found item by SKU ${sku}: ID=${item.id}, Name=${item.name}`);
+      } else {
+        console.log(`No item found with SKU ${sku}`);
+      }
+      
+      return item;
+    } catch (error) {
+      console.error(`Error retrieving item by SKU ${sku}:`, error);
+      return undefined;
+    }
   }
 
   async createItem(item: InsertItem): Promise<Item> {
-    const id = this.itemCurrentId++;
-    const now = new Date();
-    const newItem: Item = { 
-      ...item, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    };
-    
-    this.items.set(id, newItem);
-    return newItem;
+    try {
+      const id = this.itemCurrentId++;
+      const now = new Date();
+      const newItem: Item = { 
+        ...item, 
+        id, 
+        createdAt: now, 
+        updatedAt: now 
+      };
+      
+      // Log item creation
+      console.log(`Creating new item: ID=${id}, Name=${item.name}, SKU=${item.sku}`);
+      
+      // Ensure we're setting the item in persistent storage
+      this.items.set(id, newItem);
+      
+      // Verify the item was added correctly
+      const verifyItem = this.items.get(id);
+      if (!verifyItem) {
+        console.error(`Failed to verify item creation for item ID ${id}, not found after storing!`);
+      } else {
+        console.log(`Successfully created item ID=${id} in persistent storage`);
+      }
+      
+      return newItem;
+    } catch (error) {
+      console.error(`Error creating item ${item.name} (${item.sku}):`, error);
+      throw error;
+    }
   }
 
   async updateItem(id: number, item: Partial<InsertItem>): Promise<Item | undefined> {
-    const existingItem = this.items.get(id);
-    
-    if (!existingItem) {
-      return undefined;
+    try {
+      const existingItem = this.items.get(id);
+      
+      if (!existingItem) {
+        console.error(`Failed to update item ID ${id}: Item not found in storage`);
+        return undefined;
+      }
+      
+      console.log(`Updating item ID=${id}, Name=${existingItem.name}, SKU=${existingItem.sku}`);
+      
+      const updatedItem: Item = {
+        ...existingItem,
+        ...item,
+        updatedAt: new Date()
+      };
+      
+      // Save to persistent storage
+      this.items.set(id, updatedItem);
+      
+      // Verify the update
+      const verifyItem = this.items.get(id);
+      if (!verifyItem) {
+        console.error(`Failed to verify item update for item ID ${id}, not found after update!`);
+      } else {
+        // Check some key properties to ensure update was applied
+        const keysToCheck = ['name', 'sku', 'quantity', 'basePrice'];
+        const propertiesChanged = keysToCheck.some(key => 
+          key in item && (item as any)[key] !== (existingItem as any)[key]);
+          
+        if (propertiesChanged) {
+          console.log(`Successfully updated item ID=${id} with new values`);
+        } else if (Object.keys(item).length > 0) {
+          console.log(`Updated item ID=${id} with other properties: ${Object.keys(item).join(', ')}`);
+        }
+      }
+      
+      return updatedItem;
+    } catch (error) {
+      console.error(`Error updating item ID ${id}:`, error);
+      throw error;
     }
-    
-    const updatedItem: Item = {
-      ...existingItem,
-      ...item,
-      updatedAt: new Date()
-    };
-    
-    this.items.set(id, updatedItem);
-    return updatedItem;
   }
 
   async deleteItem(id: number): Promise<boolean> {
