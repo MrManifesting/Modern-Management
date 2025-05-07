@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'wouter';
 import { 
   Plus, 
   UploadCloud, 
@@ -11,7 +12,8 @@ import {
   ShoppingCart, 
   AlertTriangle,
   Check,
-  RefreshCw
+  RefreshCw,
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
