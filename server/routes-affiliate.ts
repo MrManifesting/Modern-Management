@@ -921,7 +921,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       
       // Increment scan count
       await storage.updateQrCode(qrCode.id, {
-        scans: qrCode.scans + 1,
+        scans: (qrCode.scans || 0) + 1,
         lastScannedAt: new Date()
       });
       
@@ -1077,6 +1077,56 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       res.status(500).json({
         success: false,
         message: "Error recording conversion"
+      });
+    }
+  });
+
+  /**
+   * Get QR code details by code
+   */
+  app.get("/api/qrcodes/:code", async (req: Request, res: Response) => {
+    try {
+      const code = req.params.code;
+      
+      // Get QR code by code
+      const qrCode = await storage.getQrCodeByCode(code);
+      
+      if (!qrCode) {
+        return res.status(404).json({
+          success: false,
+          message: "QR code not found"
+        });
+      }
+      
+      // Get affiliate info
+      const affiliate = await storage.getAffiliateById(qrCode.affiliateId);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          id: qrCode.id,
+          code: qrCode.code,
+          affiliateId: qrCode.affiliateId,
+          affiliateName: affiliate.name,
+          title: qrCode.title,
+          url: qrCode.url,
+          scans: qrCode.scans || 0,
+          conversions: qrCode.conversions || 0,
+          lastScannedAt: qrCode.lastScannedAt
+        }
+      });
+    } catch (error) {
+      console.error("Error getting QR code details:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error retrieving QR code details"
       });
     }
   });
