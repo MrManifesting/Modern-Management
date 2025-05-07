@@ -30,6 +30,7 @@ import MediaManagerPage from "@/pages/media-manager";
 import BulkBreakdownPage from "@/pages/bulk-breakdown";
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate-dashboard";
+import AiToolsPage from "@/pages/ai/tools";
 import AuthPage from "@/pages/auth-page";
 import QrScanPage from "@/pages/qr-scan";
 import NotFound from "@/pages/not-found";
@@ -64,6 +65,7 @@ function Router() {
       <ProtectedRoute path="/bulk-breakdown" component={BulkBreakdownPage} />
       <ProtectedRoute path="/database-cleanup" component={DatabaseCleanupPage} />
       <ProtectedRoute path="/affiliate-dashboard" component={AffiliateDashboard} />
+      <ProtectedRoute path="/ai-tools" component={AiToolsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/qr-scan" component={QrScanPage} />
       <Route component={NotFound} />
