@@ -188,8 +188,25 @@ export async function testShopifyConnection() {
           message: `Successfully connected to ${credentials.storeUrl} (verified via direct API check)`
         };
       } else {
+        // Return detailed error information about why the connection failed
         log(`Direct API check failed: ${directCheck.message}`, 'shopify');
-        // Fall through to standard client check
+        
+        if (directCheck.status === 401) {
+          return {
+            connected: false,
+            store: credentials.storeUrl,
+            isMock: false,
+            message: `Authentication failed. The access token is invalid or expired for ${credentials.storeUrl}. Please check your Shopify access token and ensure it has the correct permissions.`
+          };
+        } else if (directCheck.status === 403) {
+          return {
+            connected: false,
+            store: credentials.storeUrl,
+            isMock: false, 
+            message: `Access forbidden. Your access token may not have the required permissions for ${credentials.storeUrl}.`
+          };
+        }
+        // Fall through to standard client check for other error types
       }
     }
     
@@ -214,11 +231,11 @@ export async function testShopifyConnection() {
     
     // Provide more specific error messages based on common issues
     if (error.statusCode === 401) {
-      errorMessage = 'Authentication failed. Please check your Shopify access token.';
+      errorMessage = 'Authentication failed. Please check your Shopify access token. This often means the token is invalid or has expired. You may need to generate a new API token in your Shopify store settings.';
     } else if (error.statusCode === 404) {
       errorMessage = 'Store not found. Please check your Shopify store URL.';
     } else if (error.statusCode === 403) {
-      errorMessage = 'Access forbidden. Your access token may not have the required permissions.';
+      errorMessage = 'Access forbidden. Your access token may not have the required permissions. Check the API scopes in your Shopify admin.';
     } else if (error.statusCode === 429) {
       errorMessage = 'Rate limit exceeded. Please try again later.';
     } else if (error.code === 'ENOTFOUND') {
