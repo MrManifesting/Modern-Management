@@ -87,13 +87,16 @@ export async function createShopifyClient() {
     log(`Cleaned up shop URL: ${cleanShopUrl} (from ${credentials.storeUrl})`, 'shopify-details');
     log(`Token length: ${credentials.accessToken?.length || 0}`, 'shopify-details');
     
+    // Log more diagnostics before creating the shopify client
+    log(`Attempting to connect with shopName: "${cleanShopUrl}" and API version: "2023-04"`, 'shopify-debug');
+    
     // Create the Shopify client with a direct approach
     const shopify = new Shopify({
       shopName: cleanShopUrl,
       accessToken: credentials.accessToken,
       apiVersion: '2023-04', // Use a stable version
       autoLimit: true,
-      timeout: 10000, // 10 second timeout
+      timeout: 15000, // 15 second timeout
       maxRetries: 0    // Disable retries to prevent redirect loops
     });
     
@@ -109,15 +112,15 @@ export async function createShopifyClient() {
         credentials: { ...credentials, storeUrl: cleanShopUrl }, // use cleaned URL for future calls
         isMock: false
       };
-    } catch (apiError) {
-      log(`API call failed with error: ${apiError}`, 'shopify');
+    } catch (error: any) {
+      log(`API call failed with error: ${error}`, 'shopify');
       
       // If we get a 401, the token is invalid
-      if (apiError.statusCode === 401) {
+      if (error.statusCode === 401) {
         log('Authentication failed - invalid API token', 'shopify');
       } 
       // If we get redirects, there's an issue with the shop URL
-      else if (apiError.message && apiError.message.includes('Redirected')) {
+      else if (error.message && error.message.includes('Redirected')) {
         log(`Redirect issue with shop URL: ${cleanShopUrl}`, 'shopify');
       }
       
