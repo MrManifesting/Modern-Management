@@ -915,7 +915,8 @@ export class MemStorage implements IStorage {
           label: name,
           sales: data.sales,
           revenue: data.revenue,
-          profit: data.profit
+          profit: data.profit,
+          isForecasted: false
         };
       });
     } else if (groupBy === 'category') {
@@ -944,7 +945,8 @@ export class MemStorage implements IStorage {
           label: name,
           sales: data.sales,
           revenue: data.revenue,
-          profit: data.profit
+          profit: data.profit,
+          isForecasted: false
         };
       });
     } else {
