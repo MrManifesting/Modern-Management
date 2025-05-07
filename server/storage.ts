@@ -109,6 +109,7 @@ export interface IStorage {
     recentTransactions: AffiliateTransaction[];
   }>;
   updateAffiliateEarnings(id: number, amount: number): Promise<Affiliate | undefined>;
+  updateAffiliateStats(id: number, stats: { totalEarnings?: number; totalSales?: number }): Promise<boolean>;
   
   // QR Code methods
   getQrCodes(): Promise<QrCode[]>;
@@ -118,6 +119,8 @@ export interface IStorage {
   createQrCode(qrCode: InsertQrCode): Promise<QrCode>;
   updateQrCode(id: number, qrCode: Partial<InsertQrCode>): Promise<QrCode | undefined>;
   deleteQrCode(id: number): Promise<boolean>;
+  
+  // QR code tracking methods
   incrementQrCodeScans(id: number): Promise<QrCode | undefined>;
   incrementQrCodeConversions(id: number): Promise<QrCode | undefined>;
   
@@ -2331,7 +2334,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedQrCode] = await db
       .update(qrCodes)
       .set({ 
-        scanCount: qrCode.scanCount + 1,
+        scans: (qrCode.scans || 0) + 1,
         lastScannedAt: new Date()
       })
       .where(eq(qrCodes.id, id))
@@ -2347,8 +2350,9 @@ export class DatabaseStorage implements IStorage {
     const [updatedQrCode] = await db
       .update(qrCodes)
       .set({ 
-        conversionCount: qrCode.conversionCount + 1,
-        lastConversionAt: new Date()
+        conversions: (qrCode.conversions || 0) + 1,
+        // We don't have a lastConversionAt field, but we could update lastScannedAt
+        lastScannedAt: new Date()
       })
       .where(eq(qrCodes.id, id))
       .returning();
@@ -2391,6 +2395,31 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedTransaction;
+  }
+  
+  async updateAffiliateStats(id: number, stats: { totalEarnings?: number; totalSales?: number }): Promise<boolean> {
+    try {
+      const affiliate = await this.getAffiliateById(id);
+      if (!affiliate) return false;
+      
+      const result = await db
+        .update(affiliates)
+        .set({
+          totalEarnings: stats.totalEarnings !== undefined 
+            ? stats.totalEarnings 
+            : affiliate.totalEarnings || 0,
+          totalSales: stats.totalSales !== undefined 
+            ? stats.totalSales 
+            : affiliate.totalSales || 0
+        })
+        .where(eq(affiliates.id, id))
+        .execute();
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error updating affiliate stats:", error);
+      return false;
+    }
   }
 }
 
