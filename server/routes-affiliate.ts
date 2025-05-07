@@ -856,41 +856,8 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         });
       }
       
-      // Get QR codes for the affiliate
-      const qrCodes = await storage.getQrCodesByAffiliateId(affiliateId);
-      
-      // Get transactions for the affiliate
-      const transactions = await storage.getAffiliateTransactionsByAffiliateId(affiliateId);
-      
-      // Calculate total scans and conversions
-      const totalScans = qrCodes.reduce((total, qrCode) => total + qrCode.scans, 0);
-      const totalConversions = qrCodes.reduce((total, qrCode) => total + qrCode.conversions, 0);
-      
-      // Calculate conversion rate
-      const conversionRate = totalScans > 0 ? totalConversions / totalScans : 0;
-      
-      // Calculate earnings and pending payouts
-      const totalEarnings = transactions.reduce((total, transaction) => {
-        return total + transaction.amount;
-      }, 0);
-      
-      const pendingPayouts = transactions
-        .filter(transaction => transaction.status === 'pending')
-        .reduce((total, transaction) => total + transaction.amount, 0);
-      
-      // Get recent transactions (last 10)
-      const recentTransactions = transactions
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 10);
-      
-      // Compile statistics
-      const stats = {
-        totalSales: totalConversions,
-        totalEarnings,
-        pendingPayouts,
-        conversionRate,
-        recentTransactions
-      };
+      // Use the getAffiliateStats method which encapsulates all statistics fetching logic
+      const stats = await storage.getAffiliateStats(affiliateId);
       
       res.json({
         success: true,
@@ -922,15 +889,9 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         });
       }
       
-      // Increment scan count
-      // Use direct updates first for fields in the schema
-      await storage.updateQrCode(qrCode.id, {
-        lastScannedAt: new Date()
-      });
-      
-      // For tracking counts, use separate query to increment the counter
+      // Increment scan count and update last scanned timestamp
       try {
-        // Update scan count directly in the database
+        // Our incrementQrCodeScans method already updates the lastScannedAt field
         await storage.incrementQrCodeScans(qrCode.id);
       } catch (error) {
         console.error("Failed to increment scan count:", error);
