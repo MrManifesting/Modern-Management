@@ -365,7 +365,7 @@ export async function importShopifyCSV(
       const itemData: InsertItem = {
         name: title,
         description: description,
-        price: attributes.price,
+        basePrice: attributes.price || 0, // Set default price to 0 to prevent null violations
         sku: sku,
         quantity: quantity,
         status: 'active',
