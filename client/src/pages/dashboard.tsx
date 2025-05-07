@@ -29,7 +29,6 @@ export default function Dashboard() {
   
   const [qrUrl, setQrUrl] = useState("");
   const [showEmployeeQrDialog, setShowEmployeeQrDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
   const [isPrioritiesExpanded, setIsPrioritiesExpanded] = useState(true);
 
   // Generate QR code URL for employee app access
@@ -57,15 +56,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Department filter tabs */}
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mt-2">
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">All Departments</TabsTrigger>
-          <TabsTrigger value="marketing">Marketing</TabsTrigger>
-          <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Dashboard title */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+      </div>
       
       {/* Priority Section - Collapsible */}
       <Collapsible
@@ -92,9 +86,7 @@ export default function Dashboard() {
         </div>
         
         <CollapsibleContent className="mt-4">
-          {(activeTab === "all" || activeTab === "marketing" || activeTab === "fulfillment" || activeTab === "inventory") && (
-            <DepartmentPriorities />
-          )}
+          <DepartmentPriorities />
         </CollapsibleContent>
       </Collapsible>
 
