@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const itemData = {
         ...req.body,
         images: fileUrls,
-        price: parseFloat(req.body.price),
+        basePrice: parseFloat(req.body.basePrice),
         tags: req.body.tags ? JSON.parse(req.body.tags) : [],
         marketplace: req.body.marketplace ? JSON.parse(req.body.marketplace) : [],
       };
@@ -531,8 +531,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = { ...req.body };
       
       // Handle numeric values
-      if (updateData.price) {
-        updateData.price = parseFloat(updateData.price);
+      if (updateData.basePrice) {
+        updateData.basePrice = parseFloat(updateData.basePrice);
       }
       
       // Handle JSON fields
@@ -704,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sku: item.sku,
           category: item.category,
           quantity: item.quantity,
-          price: item.price
+          basePrice: item.basePrice
         },
         shopifyProduct: pushInfo.shopifyProduct,
         canPush: pushInfo.canPush,
@@ -1059,7 +1059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           barcode: item.barcode,
           qrCode: item.qrCode,
           name: item.name,
-          price: item.price,
+          basePrice: item.basePrice,
           category: item.category,
           quantity: item.quantity
         });
@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: updatedItem.name,
           sku: updatedItem.sku,
           quantity: updatedItem.quantity,
-          price: updatedItem.price,
+          basePrice: updatedItem.basePrice,
           action: action,
           shopifySyncResult
         });

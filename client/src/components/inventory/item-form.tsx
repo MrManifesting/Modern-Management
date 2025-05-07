@@ -45,7 +45,7 @@ export default function ItemFormComponent({
   defaultValues = {
     name: "",
     description: "",
-    price: 0,
+    basePrice: 0,
     category: "Electronics",
     condition: "Used",
     status: "draft",
@@ -209,7 +209,7 @@ export default function ItemFormComponent({
 
           <FormField
             control={form.control}
-            name="price"
+            name="basePrice"
             render={({ field }) => {
               return (
                 <FormItem>
