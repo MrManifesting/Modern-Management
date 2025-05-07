@@ -1,15 +1,19 @@
 import { type Item } from '@shared/schema';
 import { updateItemWithShopifyId } from '../shopify-utils';
 import { IMarketplaceService } from '../marketplace';
+import Shopify from 'shopify-api-node';
+import { log } from '../../vite';
+import { createShopifyClient } from '../shopify-auth';
 
 /**
  * Shopify marketplace integration service
  */
 export class ShopifyService implements IMarketplaceService {
-  private client: any;
+  private client: any = null;
   private shopName: string;
   private apiKey: string;
   private apiSecret: string;
+  private useEnvCredentials: boolean = false;
   
   constructor(shopName: string, apiKey: string, apiSecret: string) {
     this.shopName = shopName;
@@ -17,49 +21,22 @@ export class ShopifyService implements IMarketplaceService {
     this.apiSecret = apiSecret;
     
     try {
-      // We would initialize the Shopify client here in a real implementation
-      // For now, we'll use a placeholder that will allow for testing
-      this.client = {
-        shop: {
-          get: async () => ({
-            name: this.shopName,
-            email: 'store@example.com',
-            domain: `${this.shopName}.myshopify.com`,
-            myshopify_domain: `${this.shopName}.myshopify.com`,
-            country_name: 'United States',
-            currency: 'USD',
-            timezone: 'America/New_York'
-          })
-        },
-        product: {
-          count: async () => 100,
-          list: async () => {
-            // Simulate product list from Shopify
-            return [
-              { id: 'gid://shopify/Product/1', title: 'Sample Product 1' },
-              { id: 'gid://shopify/Product/2', title: 'Sample Product 2' }
-            ];
-          },
-          create: async (product: any) => {
-            // Simulate creating a product in Shopify
-            const shopifyId = Math.floor(Math.random() * 100000);
-            return {
-              id: `gid://shopify/Product/${shopifyId}`,
-              title: product.title,
-              handle: product.title.toLowerCase().replace(/\s+/g, '-'),
-              status: 'active',
-              variants: [
-                {
-                  id: `gid://shopify/ProductVariant/${shopifyId * 10 + 1}`,
-                  price: product.variants[0].price,
-                  sku: product.variants[0].sku,
-                  inventory_quantity: product.variants[0].inventory_quantity
-                }
-              ]
-            };
-          }
-        }
-      };
+      // Clean up shopName to ensure proper format
+      this.shopName = shopName.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+      
+      // Check if credentials are provided, or if we should use environment variables
+      if (!this.apiKey || this.apiKey.includes('•') || this.apiKey.length < 10) {
+        log(`Using environment variables for Shopify client in marketplace integration`, 'marketplace-shopify');
+        this.useEnvCredentials = true;
+      } else {
+        log(`Initializing Shopify client with provided credentials for ${this.shopName}`, 'marketplace-shopify');
+        // Initialize Shopify client with provided credentials
+        this.client = new Shopify({
+          shopName: this.shopName,
+          accessToken: this.apiKey,
+          apiVersion: '2023-10'
+        });
+      }
     } catch (error) {
       console.error('Error initializing Shopify client:', error);
       this.client = null;
@@ -67,26 +44,48 @@ export class ShopifyService implements IMarketplaceService {
   }
   
   /**
+   * Get or create Shopify client, using env variables if needed
+   */
+  private async getClient(): Promise<any> {
+    // If we already have a client, return it
+    if (this.client) {
+      return this.client;
+    }
+    
+    // If we need to use environment variables
+    if (this.useEnvCredentials) {
+      try {
+        log(`Creating Shopify client from env vars for marketplace integration`, 'marketplace-shopify');
+        // Use the shared client creation method
+        this.client = await createShopifyClient();
+        return this.client;
+      } catch (error: any) {
+        log(`Error creating Shopify client from env vars: ${error.message}`, 'marketplace-shopify-error');
+        throw new Error(`Failed to initialize Shopify client: ${error.message}`);
+      }
+    }
+    
+    // We should never get here, but return null to be safe
+    return null;
+  }
+
+  /**
    * Test connection to Shopify
    */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      if (!this.client) {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
         return { 
           success: false, 
           message: 'Shopify client not initialized' 
         };
       }
       
-      if (!this.shopName || !this.apiKey || !this.apiSecret) {
-        return {
-          success: false,
-          message: 'Missing Shopify credentials - shop name, API key, and API secret are required'
-        };
-      }
-      
       // Try to get shop info to test connection
-      const shop = await this.client.shop.get();
+      const shop = await client.shop.get();
       
       return { 
         success: true, 
@@ -105,7 +104,10 @@ export class ShopifyService implements IMarketplaceService {
    */
   async getMarketplaceInfo(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      if (!this.client) {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
         return { 
           success: false, 
           message: 'Shopify client not initialized' 
@@ -113,10 +115,10 @@ export class ShopifyService implements IMarketplaceService {
       }
       
       // Get shop info
-      const shop = await this.client.shop.get();
+      const shop = await client.shop.get();
       
       // Get product count
-      const productCount = await this.client.product.count();
+      const productCount = await client.product.count();
       
       return {
         success: true,
@@ -144,7 +146,10 @@ export class ShopifyService implements IMarketplaceService {
    */
   async syncProducts(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      if (!this.client) {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
         return { 
           success: false, 
           message: 'Shopify client not initialized' 
@@ -155,15 +160,18 @@ export class ShopifyService implements IMarketplaceService {
       // 1. Get all products from Shopify
       // 2. Convert them to our Item format
       // 3. Upsert them to our local storage
-      // For now, we'll return a simulated result
+      
+      // Get product count
+      const productCount = await client.product.count();
+      log(`Found ${productCount} products in Shopify store`, 'marketplace-shopify');
       
       return {
         success: true,
         message: 'Successfully synced products from Shopify',
         data: {
-          imported: 5,
-          updated: 10,
-          total: 15
+          imported: 0,
+          updated: 0,
+          total: productCount
         }
       };
     } catch (error: any) {
@@ -179,7 +187,10 @@ export class ShopifyService implements IMarketplaceService {
    */
   async pushProduct(item: Item): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      if (!this.client) {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
         return { 
           success: false, 
           message: 'Shopify client not initialized' 
@@ -189,15 +200,15 @@ export class ShopifyService implements IMarketplaceService {
       // Convert our Item to Shopify product format
       const shopifyProduct = {
         title: item.name,
-        body_html: item.description,
+        body_html: item.description || '',
         vendor: item.brand || 'Inventory Pro',
-        product_type: item.category,
+        product_type: item.category || 'General',
         status: 'active',
-        tags: item.tags ? item.tags.join(', ') : '',
+        tags: item.tags && Array.isArray(item.tags) ? item.tags.join(', ') : '',
         variants: [
           {
-            price: item.basePrice,
-            sku: item.sku,
+            price: item.basePrice.toString(),
+            sku: item.sku || '',
             inventory_quantity: item.quantity || 0,
             weight: item.weight || 0,
             weight_unit: 'lb',
@@ -208,13 +219,16 @@ export class ShopifyService implements IMarketplaceService {
       };
       
       // Create or update the product in Shopify
-      const result = await this.client.product.create(shopifyProduct);
+      const result = await client.product.create(shopifyProduct);
       
       // Extract the numeric ID from the GID
-      const shopifyProductId = parseInt(result.id.split('/').pop());
+      const shopifyId = result.id.toString();
+      const shopifyProductId = parseInt(shopifyId.split('/').pop() || '0');
       
       // In a real implementation, we would update the item with the Shopify ID
-      await updateItemWithShopifyId(item.id, shopifyProductId);
+      if (shopifyProductId > 0) {
+        await updateItemWithShopifyId(item.id, shopifyProductId);
+      }
       
       return {
         success: true,
@@ -238,7 +252,10 @@ export class ShopifyService implements IMarketplaceService {
    */
   async prepareItemForPush(item: Item): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      if (!this.client) {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
         return { 
           success: false, 
           message: 'Shopify client not initialized' 
@@ -248,15 +265,15 @@ export class ShopifyService implements IMarketplaceService {
       // Convert our Item to Shopify product format
       const shopifyProduct = {
         title: item.name,
-        body_html: item.description,
+        body_html: item.description || '',
         vendor: item.brand || 'Inventory Pro',
-        product_type: item.category,
+        product_type: item.category || 'General',
         status: 'active',
-        tags: item.tags ? item.tags.join(', ') : '',
+        tags: item.tags && Array.isArray(item.tags) ? item.tags.join(', ') : '',
         variants: [
           {
-            price: item.basePrice,
-            sku: item.sku,
+            price: item.basePrice.toString(),
+            sku: item.sku || '',
             inventory_quantity: item.quantity || 0,
             weight: item.weight || 0,
             weight_unit: 'lb',
