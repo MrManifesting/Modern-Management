@@ -115,10 +115,22 @@ export async function createShopifyClient() {
       // This will bypass the redirect issues by making direct HTTPS requests
       // with specific API endpoints
       
-      // Check if the token is a Storefront Access Token (starts with shpat_)
+      // Determine token type based on prefix
+      // shpat_ = Storefront API token (limited access)
+      // shpca_ = Custom App Admin API token (full access)
+      // shpss_ = App Store app token (full access)
+      // shppa_ = Partner API token
       const isStorefrontToken = credentials.accessToken.startsWith('shpat_');
+      const isCustomAdminToken = credentials.accessToken.startsWith('shpca_');
+      const isAppStoreToken = credentials.accessToken.startsWith('shpss_');
+      const isPartnerToken = credentials.accessToken.startsWith('shppa_');
       
-      log(`Token type: ${isStorefrontToken ? 'Storefront API' : 'Admin API'}`, 'shopify-details');
+      const tokenType = isStorefrontToken ? 'Storefront API' :
+                      isCustomAdminToken ? 'Custom App Admin API' :
+                      isAppStoreToken ? 'App Store Admin API' :
+                      isPartnerToken ? 'Partner API' : 'Unknown/Legacy API';
+      
+      log(`Token type: ${tokenType}`, 'shopify-details');
       
       // Create a custom API client that makes direct HTTPS requests to avoid redirect issues
       shopify = {
