@@ -274,14 +274,15 @@ export type SaleForm = z.infer<typeof saleFormSchema>;
 export const affiliateTransactions = pgTable("affiliate_transactions", {
   id: serial("id").primaryKey(),
   affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
-  saleId: integer("sale_id"), // Optional reference to the sale (if applicable)
+  saleId: text("sale_id"), // Reference to the sale ID (can be internal ID or from external payment provider)
   transactionType: text("transaction_type").notNull(), // commission, payout, adjustment
   amount: doublePrecision("amount").notNull(),
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, processed, canceled
-  // Stripe integration fields
+  // Payment integration fields
   stripeTransferId: text("stripe_transfer_id"), // Stripe transfer ID for payouts
   stripePaymentIntentId: text("stripe_payment_intent_id"), // Stripe payment intent ID for sales
+  paypalOrderId: text("paypal_order_id"), // PayPal order ID for sales processed through PayPal
   payoutBatchId: text("payout_batch_id"), // For grouping transactions in the same payout batch
   feeAmount: doublePrecision("fee_amount").default(0), // Any fees charged by payment processor
   processedAt: timestamp("processed_at"),
@@ -532,10 +533,7 @@ export const affiliateTransactionsRelations = relations(affiliateTransactions, (
     fields: [affiliateTransactions.affiliateId],
     references: [affiliates.id],
   }),
-  sale: one(sales, {
-    fields: [affiliateTransactions.saleId],
-    references: [sales.id],
-  }),
+  // We're no longer directly referencing sales as saleId is now a text field that can store external payment IDs
 }));
 
 export const qrCodesRelations = relations(qrCodes, ({ one }) => ({

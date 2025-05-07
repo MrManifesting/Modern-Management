@@ -1049,10 +1049,22 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       
       // Update the affiliate's pending payout amount
       await storage.updateAffiliate(affiliate.id, {
-        pendingPayout: (affiliate.pendingPayout || 0) + commissionAmount,
-        totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
-        totalSales: (affiliate.totalSales || 0) + 1
+        pendingPayout: (affiliate.pendingPayout || 0) + commissionAmount
       });
+      
+      // Update the affiliate's earnings and sales stats separately
+      try {
+        await storage.db.update(affiliates)
+          .set({
+            totalEarnings: (affiliate.totalEarnings || 0) + commissionAmount,
+            totalSales: (affiliate.totalSales || 0) + 1
+          })
+          .where(eq(affiliates.id, affiliate.id))
+          .execute();
+      } catch (updateError) {
+        console.error("Error updating affiliate statistics:", updateError);
+        // Continue execution even if stats update fails - this is not critical
+      }
       
       const validatedData = insertAffiliateTransactionSchema.parse(transactionData);
       const transaction = await storage.createAffiliateTransaction(validatedData);
