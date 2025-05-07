@@ -129,9 +129,82 @@ export async function createShopifyClient() {
             
             return new Promise((resolve, reject) => {
               // Use appropriate endpoint based on token type
-              const apiPath = isStorefrontToken 
-                ? '/api/2023-10/shop.json'  // Storefront API 
-                : '/admin/api/2023-10/shop.json'; // Admin API
+              // Define the helper function for Storefront API GraphQL first
+              const useStorefrontGraphQL = () => {
+                const graphqlPath = '/api/2023-10/graphql.json';
+                const simpleQuery = JSON.stringify({
+                  query: `{ shop { name } }`
+                });
+                
+                log(`Using GraphQL endpoint for Storefront API: ${cleanShopUrl}${graphqlPath}`, 'shopify-details');
+                log(`Using simplified query: ${simpleQuery}`, 'shopify-details');
+                log(`Token (first 10 chars): ${credentials.accessToken.substring(0, 10)}`, 'shopify-details');
+                
+                const graphqlReq = https.request({
+                  hostname: cleanShopUrl,
+                  port: 443, 
+                  path: graphqlPath,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Shopify-Storefront-Access-Token': credentials.accessToken,
+                    'Content-Length': Buffer.byteLength(simpleQuery)
+                  },
+                  timeout: 30000
+                }, (res) => {
+                  let data = '';
+                  
+                  res.on('data', (chunk) => {
+                    data += chunk;
+                  });
+                  
+                  res.on('end', () => {
+                    log(`GraphQL response (${res.statusCode}): ${data}`, 'shopify-details');
+                    
+                    if (res.statusCode === 200) {
+                      try {
+                        const response = JSON.parse(data);
+                        if (response.data && response.data.shop) {
+                          // Extract info from GraphQL response
+                          const shop = {
+                            name: response.data.shop.name,
+                            domain: cleanShopUrl,
+                            email: 'storefront@api.access', // Placeholder for Storefront API
+                            country_name: 'Unknown' // Placeholder for Storefront API
+                          };
+                          resolve(shop);
+                        } else {
+                          reject(new Error(`Invalid GraphQL response: ${data}`));
+                        }
+                      } catch (error: any) {
+                        reject(new Error(`Failed to parse shop data: ${error.message}`));
+                      }
+                    } else if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+                      // Handle redirect
+                      const location = res.headers.location;
+                      reject(new Error(`Redirect received to: ${location}`));
+                    } else {
+                      reject(new Error(`API responded with status code ${res.statusCode}: ${data}`));
+                    }
+                  });
+                });
+                
+                graphqlReq.on('error', (error) => {
+                  reject(error);
+                });
+                
+                graphqlReq.write(simpleQuery);
+                graphqlReq.end();
+              }
+              
+              // For Storefront API tokens, use GraphQL endpoint
+              if (isStorefrontToken) {
+                return useStorefrontGraphQL();
+              }
+              
+              // For Admin API, use REST endpoint
+              const apiPath = '/admin/api/2023-10/shop.json';
               
               const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -164,6 +237,15 @@ export async function createShopifyClient() {
                 });
                 
                 log(`Using GraphQL endpoint for Storefront API: ${cleanShopUrl}${graphqlPath}`, 'shopify-details');
+                log(`GraphQL Query: ${graphqlQuery}`, 'shopify-details');
+                log(`Token (first 10 chars): ${credentials.accessToken.substring(0, 10)}`, 'shopify-details');
+                
+                // Try with a very simple query first
+                const simpleQuery = JSON.stringify({
+                  query: `{ shop { name } }`
+                });
+                
+                log(`Using simplified query for troubleshooting: ${simpleQuery}`, 'shopify-details');
                 
                 const graphqlReq = https.request({
                   hostname: cleanShopUrl,
@@ -174,7 +256,7 @@ export async function createShopifyClient() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-Shopify-Storefront-Access-Token': credentials.accessToken,
-                    'Content-Length': Buffer.byteLength(graphqlQuery)
+                    'Content-Length': Buffer.byteLength(simpleQuery)
                   },
                   timeout: 30000
                 }, (res) => {
@@ -217,7 +299,7 @@ export async function createShopifyClient() {
                   reject(error);
                 });
                 
-                graphqlReq.write(graphqlQuery);
+                graphqlReq.write(simpleQuery);
                 graphqlReq.end();
                 return;
               }

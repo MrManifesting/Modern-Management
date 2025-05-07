@@ -72,9 +72,15 @@ export function registerShopifyCredentialsRoutes(app: Express, storage: IStorage
         }
       }
       
-      // Debug the store URL formatting
+      // Debug the store URL formatting and access token
       console.log(`Original store URL: "${shopifyStore}"`);
       console.log(`Cleaned store URL: "${cleanedStoreUrl}"`);
+      console.log(`Access token length: ${shopifyAccessToken.length}, first 5 chars: ${shopifyAccessToken.substring(0, 5)}`);
+      
+      // Check token type
+      const isStorefrontToken = shopifyAccessToken.startsWith('shpat_');
+      const isAdminToken = shopifyAccessToken.startsWith('shppa_');
+      console.log(`Token type: ${isStorefrontToken ? 'Storefront API' : (isAdminToken ? 'Admin API' : 'Unknown')}`);
       
       // Validate final store URL format with a more lenient regex
       // Allow domains that end with .myshopify.com
