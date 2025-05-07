@@ -476,14 +476,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return `https://storage.example.com/item-${Date.now()}-${index}.jpg`;
       }) || [];
       
+      // Debug the request body
+      console.log("Item creation request body:", JSON.stringify(req.body, null, 2));
+      
       // Prepare the item data
       const itemData = {
         ...req.body,
         images: fileUrls,
-        basePrice: parseFloat(req.body.basePrice),
-        tags: req.body.tags ? JSON.parse(req.body.tags) : [],
-        marketplace: req.body.marketplace ? JSON.parse(req.body.marketplace) : [],
+        basePrice: parseFloat(req.body.basePrice || 0),
+        quantity: parseInt(req.body.quantity || 1),
+        tags: req.body.tags ? (typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags) : [],
+        marketplace: req.body.marketplace ? (typeof req.body.marketplace === 'string' ? JSON.parse(req.body.marketplace) : req.body.marketplace) : [],
+        attributes: req.body.attributes ? (typeof req.body.attributes === 'string' ? JSON.parse(req.body.attributes) : req.body.attributes) : {},
       };
+      
+      // Ensure all required fields are strings
+      for (const field of ['name', 'description', 'category', 'condition']) {
+        if (itemData[field] === undefined || itemData[field] === null) {
+          itemData[field] = '';
+        }
+        // Convert to string explicitly if needed
+        itemData[field] = String(itemData[field]);
+      }
       
       // Generate SKU if not provided
       if (!itemData.sku) {
@@ -492,6 +506,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate barcode data
       itemData.barcode = generateBarcodeData(itemData.sku);
+      
+      console.log("Prepared item data:", JSON.stringify(itemData, null, 2));
       
       // Parse the data through Zod schema
       const parsedData = insertItemSchema.parse(itemData);
@@ -507,11 +523,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(updatedItem);
     } catch (error) {
+      // More detailed error logging
       if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ error: error.errors });
       }
       console.error("Failed to create item:", error);
-      res.status(500).json({ error: "Failed to create item" });
+      res.status(500).json({ error: "Failed to create item", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
