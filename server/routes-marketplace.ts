@@ -161,6 +161,10 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       if (!marketplace) {
         return res.status(404).json({ error: "Marketplace not found" });
       }
+      
+      // Cancel any scheduled sync operations first
+      log(`Cancelling scheduled syncs for marketplace ${marketplace.name} (ID: ${id})`, 'marketplace-sync');
+      scheduler.cancelMarketplaceSync(id);
 
       const success = await storage.deleteMarketplace(id);
       if (!success) {
@@ -422,13 +426,17 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         });
       }
 
-      // Perform the sync
-      const result = await marketplaceService.syncProducts();
+      // Perform the sync with the scheduler
+      log(`Manual sync triggered for marketplace ${marketplace.name} (ID: ${id})`, 'marketplace-sync');
+      const result = await scheduler.manualPullSync(id);
       
-      // Update last sync date
-      await storage.updateMarketplace(id, { 
-        lastSyncDate: new Date() 
-      });
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Failed to sync with marketplace",
+          message: result.message
+        });
+      }
       
       res.json({
         success: true,
@@ -521,6 +529,93 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
         error: "Failed to push item to marketplace",
         message: error instanceof Error ? error.message : "Unknown error during push"
       });
+    }
+  });
+
+  /**
+   * Manual push of inventory to marketplace
+   */
+  app.post("/api/marketplaces/:id/push-inventory", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      // Check if marketplace is connected
+      if (!marketplace.isConnected) {
+        return res.status(400).json({ 
+          error: "Marketplace not connected",
+          message: `${marketplace.name} is not connected`
+        });
+      }
+
+      // Perform the push with the scheduler
+      log(`Manual push triggered for marketplace ${marketplace.name} (ID: ${id})`, 'marketplace-sync');
+      const result = await scheduler.manualPushSync(id);
+      
+      res.json(result);
+    } catch (error) {
+      console.error(`Error pushing inventory to marketplace ${req.params.id}:`, error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to push inventory to marketplace",
+        message: error instanceof Error ? error.message : "Unknown error during push"
+      });
+    }
+  });
+
+  /**
+   * Update marketplace sync intervals
+   */
+  app.post("/api/marketplaces/:id/sync-intervals", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      const { syncPullInterval, syncPushInterval } = req.body;
+      
+      // Validate intervals
+      if (syncPullInterval !== undefined && (isNaN(syncPullInterval) || syncPullInterval < 1)) {
+        return res.status(400).json({ error: "Pull interval must be a positive number" });
+      }
+      
+      if (syncPushInterval !== undefined && (isNaN(syncPushInterval) || syncPushInterval < 1)) {
+        return res.status(400).json({ error: "Push interval must be a positive number" });
+      }
+
+      // Update the marketplace with new intervals
+      const updatedMarketplace = await storage.updateMarketplace(id, {
+        syncPullInterval,
+        syncPushInterval
+      });
+      
+      // Re-schedule the marketplace sync
+      if (updatedMarketplace && updatedMarketplace.syncEnabled) {
+        await scheduler.scheduleMarketplaceSync(updatedMarketplace);
+        log(`Updated sync intervals for ${updatedMarketplace.name}: pull=${syncPullInterval}min, push=${syncPushInterval}min`, 'marketplace-sync');
+      }
+      
+      res.json({
+        success: true,
+        message: "Sync intervals updated successfully",
+        marketplace: updatedMarketplace
+      });
+    } catch (error) {
+      console.error(`Error updating sync intervals for marketplace ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to update sync intervals" });
     }
   });
 
