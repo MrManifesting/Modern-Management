@@ -51,9 +51,64 @@ export function getShopifyStoreName() {
   return storeName;
 }
 
+// Cache for API credentials to prevent frequent DB queries
+let cachedCredentials: {
+  storeUrl: string;
+  accessToken: string;
+  storefrontToken: string;
+  timestamp: number;
+} | null = null;
+
 // Get the current Shopify API credentials
-export function getShopifyCredentials() {
-  // Get the admin token and storefront token from environment
+export async function getShopifyCredentials() {
+  // First check if we have cached credentials that are less than 10 minutes old
+  const now = Date.now();
+  if (cachedCredentials && (now - cachedCredentials.timestamp < 600000)) {
+    return {
+      storeUrl: cachedCredentials.storeUrl,
+      accessToken: cachedCredentials.accessToken,
+      storefrontToken: cachedCredentials.storefrontToken
+    };
+  }
+  
+  try {
+    // Try to get credentials from database via API
+    const credentialsResponse = await fetch('http://localhost:5000/api/shopify/credentials', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (credentialsResponse.ok) {
+      const credentials = await credentialsResponse.json();
+      
+      // Get the saved tokens from DB if available
+      const adminToken = credentials.shopifyAccessToken || process.env.SHOPIFY_ACCESS_TOKEN || '';
+      const storefrontToken = credentials.shopifyStorefrontToken || process.env.SHOPIFY_STOREFRONT_TOKEN || '';
+      const storeUrl = credentials.shopifyStore || getShopifyStoreName();
+      
+      // Cache the credentials
+      cachedCredentials = {
+        storeUrl,
+        accessToken: adminToken,
+        storefrontToken,
+        timestamp: now
+      };
+      
+      // Log token debugging info
+      log(`Admin token length: ${adminToken.length}`, 'shopify-debug');
+      log(`Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
+      
+      return {
+        storeUrl,
+        accessToken: adminToken,
+        storefrontToken
+      };
+    }
+  } catch (error) {
+    log(`Error fetching credentials from API: ${error}`, 'shopify-debug');
+  }
+  
+  // Fallback to environment variables if API fails
   const adminToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
   const storefrontToken = process.env.SHOPIFY_STOREFRONT_TOKEN || '';
   
@@ -72,7 +127,7 @@ export function getShopifyCredentials() {
 
 // Create a unified Shopify client for use throughout the application
 export async function createShopifyClient() {
-  const credentials = getShopifyCredentials();
+  const credentials = await getShopifyCredentials();
   
   // Check if we should use mock client - only if credentials are missing
   const useMock = !credentials.storeUrl || !credentials.accessToken;
