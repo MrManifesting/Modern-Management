@@ -27,9 +27,22 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       cleanUrl = `${cleanUrl}.myshopify.com`;
     }
     
-    // Check if this is a Storefront API token
+    // Determine token type based on prefix
+    // shpat_ = Storefront API token (limited access)
+    // shpca_ = Custom App Admin API token (full access)
+    // shpss_ = App Store app token (full access)
+    // shppa_ = Partner API token
     const isStorefrontToken = accessToken.startsWith('shpat_');
-    log(`Token type: ${isStorefrontToken ? 'Storefront API' : 'Admin API'}`, 'shopify-direct');
+    const isCustomAdminToken = accessToken.startsWith('shpca_');
+    const isAppStoreToken = accessToken.startsWith('shpss_');
+    const isPartnerToken = accessToken.startsWith('shppa_');
+    
+    const tokenType = isStorefrontToken ? 'Storefront API' :
+                    isCustomAdminToken ? 'Custom App Admin API' :
+                    isAppStoreToken ? 'App Store Admin API' :
+                    isPartnerToken ? 'Partner API' : 'Unknown/Legacy API';
+    
+    log(`Token type: ${tokenType}`, 'shopify-direct');
     
     // Special handling for simplifiedcurations.myshopify.com
     const isSimplifiedCurations = cleanUrl.includes('simplifiedcurations.myshopify.com');
@@ -56,7 +69,7 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
         headers['X-Shopify-Access-Token'] = accessToken;
       }
       
-      log(`Making API request to: ${cleanUrl}${apiPath} with token type: ${isStorefrontToken ? 'Storefront' : 'Admin'}`, 'shopify-direct');
+      log(`Making API request to: ${cleanUrl}${apiPath} with token type: ${tokenType}`, 'shopify-direct');
       
       // For Storefront API, we need to use POST method with a GraphQL query
       const method = isStorefrontToken ? 'POST' : 'GET';
