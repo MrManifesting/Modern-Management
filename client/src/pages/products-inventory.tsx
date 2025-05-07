@@ -437,6 +437,16 @@ const ProductsInventoryPage: React.FC = () => {
               />
             </DialogContent>
           </Dialog>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="flex-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+            onClick={() => handleDeleteClick(product.id || 0)}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Delete
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -760,17 +770,7 @@ const ProductsInventoryPage: React.FC = () => {
             </div>
           </div>
           
-          {/* Mobile: Extra actions in a second row, hidden on desktop */}
-          <div className="flex md:hidden gap-2 flex-wrap">
-            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
-              <DownloadCloud className="h-3 w-3" />
-              Export
-            </Button>
-            <Button variant="outline" className="gap-1 text-xs h-8 flex-1" size="sm">
-              <FileSpreadsheet className="h-3 w-3" />
-              Catalog
-            </Button>
-          </div>
+          {/* Removed duplicate Mobile Export/Catalog buttons - Using only desktop buttons */}
         </div>
 
         <Card className="shadow-md">
