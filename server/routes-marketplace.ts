@@ -5,13 +5,20 @@ import { Request, Response, Express } from 'express';
 import { IStorage } from './storage';
 import { MarketplaceService } from './services/marketplace';
 import { MarketplaceLogger } from './services/marketplace-logger';
+import { getMarketplaceScheduler } from './services/marketplace-scheduler';
 import { insertMarketplaceSchema } from '@shared/schema';
 import { z } from 'zod';
+import { log } from './vite';
 
 /**
  * Register marketplace routes
  */
 export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
+  // Initialize the marketplace scheduler
+  const scheduler = getMarketplaceScheduler(storage);
+  scheduler.initialize().catch(error => {
+    log(`Error initializing marketplace scheduler: ${error.message}`, 'marketplace-error');
+  });
   /**
    * Get all marketplaces
    */
@@ -117,6 +124,17 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       }
 
       const updatedMarketplace = await storage.updateMarketplace(id, validateResult.data);
+      
+      // If sync settings are updated, reschedule the marketplace
+      if (updatedMarketplace && (
+        'syncEnabled' in validateResult.data || 
+        'syncPullInterval' in validateResult.data || 
+        'syncPushInterval' in validateResult.data ||
+        'isSyncEnabled' in validateResult.data
+      )) {
+        await scheduler.scheduleMarketplaceSync(updatedMarketplace);
+        log(`Rescheduled marketplace sync for ${updatedMarketplace.name}`, 'marketplace-sync');
+      }
       
       res.json({
         success: true,
@@ -294,8 +312,18 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       // Update sync status (toggle)
       const syncEnabled = !marketplace.syncEnabled;
       const updatedMarketplace = await storage.updateMarketplace(id, { 
-        syncEnabled
+        syncEnabled,
+        isSyncEnabled: syncEnabled // Also update the alias field for clarity
       });
+      
+      // Adjust the scheduling based on the new sync status
+      if (syncEnabled) {
+        await scheduler.scheduleMarketplaceSync(updatedMarketplace);
+        log(`Scheduled marketplace sync for ${updatedMarketplace.name}`, 'marketplace-sync');
+      } else {
+        scheduler.cancelMarketplaceSync(id);
+        log(`Cancelled marketplace sync for ${updatedMarketplace.name}`, 'marketplace-sync');
+      }
       
       res.json({
         success: true,

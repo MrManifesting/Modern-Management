@@ -1697,6 +1697,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(marketplaces);
   }
   
+  async getAllMarketplaces(): Promise<Marketplace[]> {
+    return await db.select().from(marketplaces);
+  }
+  
   async getMarketplace(id: number): Promise<Marketplace | undefined> {
     const [marketplace] = await db.select().from(marketplaces).where(eq(marketplaces.id, id));
     return marketplace;
@@ -1732,6 +1736,61 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedMarketplace;
+  }
+  
+  async updateMarketplaceLastSync(id: number, date: Date): Promise<boolean> {
+    const now = new Date();
+    const result = await db
+      .update(marketplaces)
+      .set({ 
+        lastSyncDate: date, 
+        updatedAt: now 
+      })
+      .where(eq(marketplaces.id, id));
+    
+    return result.rowCount > 0;
+  }
+  
+  async updateMarketplaceLastPush(id: number, date: Date): Promise<boolean> {
+    const now = new Date();
+    const result = await db
+      .update(marketplaces)
+      .set({ 
+        lastPushDate: date, 
+        updatedAt: now 
+      })
+      .where(eq(marketplaces.id, id));
+    
+    return result.rowCount > 0;
+  }
+  
+  async getItemsForMarketplacePush(marketplaceId: number, limit: number = 50): Promise<Item[]> {
+    // Get all active items with non-zero quantity that haven't been pushed recently
+    // In real implementation, we'd need a join table to track item-marketplace relationships
+    // For simplicity here, we'll just return active items
+    return await db
+      .select()
+      .from(items)
+      .where(and(
+        eq(items.status, 'active'),
+        gt(items.quantity, 0),
+        eq(items.isHidden, false)
+      ))
+      .limit(limit);
+  }
+  
+  async updateItemLastPushed(itemId: number, marketplaceId: number, date: Date): Promise<boolean> {
+    // In real implementation, we'd update a join table to record the push date
+    // For simplicity here, we'll just update the item's updatedAt timestamp
+    const now = new Date();
+    const result = await db
+      .update(items)
+      .set({ 
+        updatedAt: now 
+      })
+      .where(eq(items.id, itemId));
+    
+    return result.rowCount > 0;
   }
   
   // Sales methods
