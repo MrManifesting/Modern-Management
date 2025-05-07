@@ -32,7 +32,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export const ItemType = {
   REGULAR: 'regular',
   BUNDLE: 'bundle',
-  COMPONENT: 'component'
+  COMPONENT: 'component',
+  BULK: 'bulk',
+  BREAKDOWN: 'breakdown'
 } as const;
 
 export const ProcessingStatus = {
@@ -40,6 +42,15 @@ export const ProcessingStatus = {
   WAITING: 'waiting',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed'
+} as const;
+
+export const BreakdownStatus = {
+  NONE: 'none',
+  WAITING: 'waiting',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  BREAKDOWN: 'breakdown',
+  BULK: 'bulk'  
 } as const;
 
 export const ItemCondition = {
@@ -108,8 +119,10 @@ export const items = pgTable("items", {
   weight: doublePrecision("weight"), // Weight for shipping
   weightUnit: text("weight_unit").default("g"), // g, oz, lb, kg
   processingStatus: text("processing_status").notNull().default(ProcessingStatus.NONE), // none, waiting, in_progress, completed
+  breakdownStatus: text("breakdown_status").default(BreakdownStatus.NONE), // Status for bulk/breakdown tracking
   sourceItemId: integer("source_item_id"), // Reference to parent item if this is a component
   bundlePlan: json("bundle_plan").default([]), // Array of planned component items
+  parentItemId: integer("parent_item_id"), // Reference to parent bulk item if this is a breakdown
   
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
