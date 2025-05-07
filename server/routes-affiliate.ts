@@ -1079,11 +1079,22 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       // Check if PayPal is configured
       const isConfigured = paypalService.isConfigured();
       
+      let environment = null;
+      if (isConfigured) {
+        // Determine if we're using sandbox or production environment
+        environment = process.env.NODE_ENV === "production" ? "production" : "sandbox";
+      }
+      
       res.json({
         success: true,
         data: {
           isConfigured,
-          // We will add more details here when we implement the full PayPal integration
+          environment,
+          clientIdPresent: !!process.env.PAYPAL_CLIENT_ID,
+          clientSecretPresent: !!process.env.PAYPAL_CLIENT_SECRET,
+          // Provide minimal info about testing status
+          status: isConfigured ? "ready" : "not_configured",
+          timestamp: new Date().toISOString()
         }
       });
     } catch (error) {
