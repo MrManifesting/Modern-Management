@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ItemForm, Item } from "@shared/schema";
 import ItemFormComponent from "@/components/inventory/item-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -103,8 +104,72 @@ export default function AddItemModal({
     return undefined;
   };
 
+  const [shopifySyncStatus, setShopifySyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [shopifySyncMessage, setShopifySyncMessage] = useState<string>('');
+  
   const handleSubmit = (data: ItemForm) => {
-    createMutation.mutate(data);
+    // Add the marketplace field if not present
+    if (!data.marketplace || !Array.isArray(data.marketplace)) {
+      data.marketplace = [];
+    }
+    
+    // Add shopify to marketplace list if not already there
+    if (!data.marketplace.includes('shopify')) {
+      data.marketplace.push('shopify');
+    }
+    
+    setShopifySyncStatus('syncing');
+    createMutation.mutate(data, {
+      onSuccess: async (newItem) => {
+        // After item is created/updated, attempt to sync with Shopify
+        try {
+          if (newItem && newItem.id) {
+            setShopifySyncStatus('syncing');
+            setShopifySyncMessage('Syncing with Shopify...');
+            
+            // Find the marketplace ID for Shopify
+            const marketplacesResponse = await apiRequest('GET', '/api/marketplaces');
+            const marketplaces = await marketplacesResponse.json();
+            const shopifyMarketplace = marketplaces.find((m: any) => 
+              m.type.toLowerCase() === 'shopify' && m.isConnected);
+            
+            if (shopifyMarketplace) {
+              // Push the item to Shopify
+              const pushResponse = await apiRequest('POST', 
+                `/api/items/${newItem.id}/push-to-marketplace/${shopifyMarketplace.id}`,
+                { pushEnabled: true }
+              );
+              const pushResult = await pushResponse.json();
+              
+              if (pushResult.success) {
+                setShopifySyncStatus('success');
+                setShopifySyncMessage('Successfully synced with Shopify');
+                toast({
+                  title: "Shopify Sync Successful",
+                  description: "Item has been pushed to Shopify",
+                  variant: "default"
+                });
+              } else {
+                setShopifySyncStatus('error');
+                setShopifySyncMessage(pushResult.message || 'Error syncing with Shopify');
+                toast({
+                  title: "Shopify Sync Warning",
+                  description: pushResult.message || "Item saved but not synced to Shopify",
+                  variant: "destructive"
+                });
+              }
+            } else {
+              setShopifySyncStatus('error');
+              setShopifySyncMessage('No connected Shopify marketplace found');
+            }
+          }
+        } catch (error) {
+          setShopifySyncStatus('error');
+          setShopifySyncMessage('Error connecting to Shopify');
+          console.error('Shopify sync error:', error);
+        }
+      }
+    });
   };
 
   // Reset form when modal is closed
