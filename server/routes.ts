@@ -391,7 +391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getItems();
       res.json(items);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch items" });
+      console.error("Error fetching items:", error);
+      res.status(500).json({ error: "Failed to fetch items", details: error.message });
     }
   });
 
@@ -1196,6 +1197,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       const marketplaces = await storage.getMarketplaces();
+      
+      console.log(`Retrieved ${items.length} items for stats calculation`);
       
       const totalItems = items.length;
       const listedItems = items.filter(item => item.status === "listed").length;
