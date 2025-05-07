@@ -153,9 +153,40 @@ export async function createShopifyClient() {
   }
 }
 
+import { testShopifyDirect } from './direct-shopify-check';
+
 // Test Shopify API connection and return detailed status
 export async function testShopifyConnection() {
   try {
+    const credentials = getShopifyCredentials();
+    
+    // First try the direct HTTP check
+    if (credentials.storeUrl && credentials.accessToken) {
+      log(`Attempting direct Shopify API check first for ${credentials.storeUrl}`, 'shopify');
+      
+      const directCheck = await testShopifyDirect(
+        credentials.storeUrl,
+        credentials.accessToken
+      );
+      
+      if (directCheck.accessible) {
+        log(`Direct API check succeeded: ${directCheck.message}`, 'shopify');
+        return {
+          connected: true,
+          store: credentials.storeUrl,
+          domain: credentials.storeUrl,
+          email: 'verified@connection.com', // Placeholder since we don't have full info
+          country: 'Unknown',
+          isMock: false,
+          message: `Successfully connected to ${credentials.storeUrl} (verified via direct API check)`
+        };
+      } else {
+        log(`Direct API check failed: ${directCheck.message}`, 'shopify');
+        // Fall through to standard client check
+      }
+    }
+    
+    // Fall back to standard client if direct check fails
     const { shopify, shopInfo, isMock } = await createShopifyClient();
     
     return {
