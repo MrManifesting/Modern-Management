@@ -72,45 +72,64 @@ export async function createShopifyClient() {
   }
   
   try {
-    log(`Creating Shopify client for store: ${credentials.storeUrl}`, 'shopify');
+    // Clean up the shop URL to ensure it's correctly formatted
+    // Remove https:// and make sure it follows Shopify's format
+    let cleanShopUrl = credentials.storeUrl;
+    cleanShopUrl = cleanShopUrl.replace(/^https?:\/\//, '');
+    cleanShopUrl = cleanShopUrl.replace(/\/$/, '');
     
-    // When creating the Shopify client, log detailed store information
-    log(`Creating Shopify client for "${credentials.storeUrl}" with token length ${credentials.accessToken?.length || 0}`, 'shopify-details');
+    // If the URL doesn't contain a dot, assume it's just the shop name and add .myshopify.com
+    if (!cleanShopUrl.includes('.')) {
+      cleanShopUrl = `${cleanShopUrl}.myshopify.com`;
+    }
     
-    // Create the Shopify client with extra logging to diagnose connection issues
-    log(`DEBUG - Shop name used: "${credentials.storeUrl}"`, 'shopify-debug');
-    log(`DEBUG - Token valid: ${!!credentials.accessToken}`, 'shopify-debug');
+    log(`Creating Shopify client for store: ${cleanShopUrl}`, 'shopify');
+    log(`Cleaned up shop URL: ${cleanShopUrl} (from ${credentials.storeUrl})`, 'shopify-details');
+    log(`Token length: ${credentials.accessToken?.length || 0}`, 'shopify-details');
     
-    // Try constructing the client with a different implementation
+    // Create the Shopify client with a direct approach
     const shopify = new Shopify({
-      shopName: credentials.storeUrl,
+      shopName: cleanShopUrl,
       accessToken: credentials.accessToken,
-      apiVersion: '2023-07', // Use a known stable version
+      apiVersion: '2023-04', // Use a stable version
       autoLimit: true,
-      timeout: 30000 // 30 seconds timeout
+      timeout: 10000, // 10 second timeout
+      maxRetries: 0    // Disable retries to prevent redirect loops
     });
     
     // Verify connection is working by making a simple API call
     try {
+      log('Attempting to connect to Shopify API...', 'shopify');
       const shopInfo = await shopify.shop.get();
       log(`Successfully connected to Shopify store: ${shopInfo.name}`, 'shopify');
       
       return {
         shopify,
         shopInfo,
-        credentials,
+        credentials: { ...credentials, storeUrl: cleanShopUrl }, // use cleaned URL for future calls
         isMock: false
       };
     } catch (apiError) {
-      log(`API call failed, falling back to mock: ${apiError}`, 'shopify');
+      log(`API call failed with error: ${apiError}`, 'shopify');
+      
+      // If we get a 401, the token is invalid
+      if (apiError.statusCode === 401) {
+        log('Authentication failed - invalid API token', 'shopify');
+      } 
+      // If we get redirects, there's an issue with the shop URL
+      else if (apiError.message && apiError.message.includes('Redirected')) {
+        log(`Redirect issue with shop URL: ${cleanShopUrl}`, 'shopify');
+      }
+      
       // Fall back to mock if API call fails
+      log('Falling back to mock Shopify client after API error', 'shopify');
       const mockShopify = createMockShopifyClient();
       const mockShopInfo = getMockShopInfo();
       
       return {
         shopify: mockShopify,
         shopInfo: mockShopInfo,
-        credentials,
+        credentials: { ...credentials, storeUrl: cleanShopUrl },
         isMock: true
       };
     }
