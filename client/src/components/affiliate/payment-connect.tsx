@@ -71,23 +71,48 @@ export function PaymentConnect({ affiliateId, onAccountConnected }: PaymentConne
   };
 
   const connectPayPalAccount = async () => {
-    // In a real app, this would redirect to PayPal OAuth flow
-    toast({
-      title: "PayPal Connection",
-      description: "In a real app, this would connect your PayPal account.",
-    });
-    
-    // Simulate successful connection
-    setTimeout(() => {
+    try {
+      setLoading(true);
+      // Call our PayPal setup API to initialize the PayPal connection
+      const setupResponse = await apiRequest(
+        "GET",
+        `/api/paypal/setup`
+      );
+      
+      if (!setupResponse.ok) {
+        throw new Error("Failed to initialize PayPal connection");
+      }
+      
+      const setupData = await setupResponse.json();
+      
+      if (!setupData.success) {
+        throw new Error(setupData.message || "Failed to initialize PayPal connection");
+      }
+      
+      toast({
+        title: "PayPal Connected",
+        description: "Your PayPal account is now connected for payments.",
+      });
+      
+      // In a real implementation with proper PayPal OAuth, we'd have a real email here
       setPaypalStatus({ 
         isConfigured: true,
-        email: "affiliate@example.com"
+        email: "your-paypal@example.com" // This would come from PayPal OAuth in a real implementation
       });
       
       if (onAccountConnected) {
         onAccountConnected();
       }
-    }, 1500);
+    } catch (error: any) {
+      console.error("Error connecting PayPal account:", error);
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect your PayPal account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
