@@ -74,11 +74,20 @@ export async function createShopifyClient() {
   try {
     log(`Creating Shopify client for store: ${credentials.storeUrl}`, 'shopify');
     
+    // When creating the Shopify client, log detailed store information
+    log(`Creating Shopify client for "${credentials.storeUrl}" with token length ${credentials.accessToken?.length || 0}`, 'shopify-details');
+    
+    // Create the Shopify client with extra logging to diagnose connection issues
+    log(`DEBUG - Shop name used: "${credentials.storeUrl}"`, 'shopify-debug');
+    log(`DEBUG - Token valid: ${!!credentials.accessToken}`, 'shopify-debug');
+    
+    // Try constructing the client with a different implementation
     const shopify = new Shopify({
       shopName: credentials.storeUrl,
       accessToken: credentials.accessToken,
-      apiVersion: '2023-10', // Use the latest stable version
-      autoLimit: true // Handle rate limiting automatically
+      apiVersion: '2023-07', // Use a known stable version
+      autoLimit: true,
+      timeout: 30000 // 30 seconds timeout
     });
     
     // Verify connection is working by making a simple API call
