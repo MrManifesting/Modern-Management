@@ -125,12 +125,14 @@ export async function createShopifyClient() {
       const isAppStoreToken = credentials.accessToken.startsWith('shpss_');
       const isPartnerToken = credentials.accessToken.startsWith('shppa_');
       
+      // While these prefixes do identify the token source, they don't necessarily limit permissions
+      // The actual permissions are determined by the scopes granted when the token was created
       const tokenType = isStorefrontToken ? 'Storefront API' :
-                      isCustomAdminToken ? 'Custom App Admin API' :
-                      isAppStoreToken ? 'App Store Admin API' :
-                      isPartnerToken ? 'Partner API' : 'Unknown/Legacy API';
+                       isCustomAdminToken ? 'Custom App Admin API' :
+                       isAppStoreToken ? 'App Store Admin API' :
+                       isPartnerToken ? 'Partner API' : 'Unknown/Legacy API';
       
-      log(`Token type: ${tokenType}`, 'shopify-details');
+      log(`Token type: ${tokenType} (prefix: ${credentials.accessToken.substring(0, 6)}...)`, 'shopify-details');
       
       // Create a custom API client that makes direct HTTPS requests to avoid redirect issues
       shopify = {
