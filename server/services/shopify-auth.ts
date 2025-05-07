@@ -52,9 +52,20 @@ export function getShopifyStoreName() {
 
 // Get the current Shopify API credentials
 export function getShopifyCredentials() {
+  // Get the admin token and storefront token from environment
+  const adminToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+  const storefrontToken = process.env.SHOPIFY_STOREFRONT_TOKEN || '';
+  
+  // Log token debugging info
+  log(`Admin token length: ${adminToken.length}`, 'shopify-debug');
+  log(`Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
+  
+  // For compatibility, continue using the SHOPIFY_ACCESS_TOKEN as the main token
+  // but also make the storefront token available when needed
   return {
     storeUrl: getShopifyStoreName(),
-    accessToken: process.env.SHOPIFY_ACCESS_TOKEN || ''
+    accessToken: adminToken,
+    storefrontToken: storefrontToken
   };
 }
 
@@ -251,7 +262,7 @@ export async function createShopifyClient() {
               
               // Add the appropriate header based on token type
               if (isStorefrontToken) {
-                headers['X-Shopify-Storefront-Access-Token'] = credentials.accessToken;
+                headers['X-Shopify-Storefront-Access-Token'] = credentials.storefrontToken || credentials.accessToken;
               } else {
                 headers['X-Shopify-Access-Token'] = credentials.accessToken;
               }
@@ -293,7 +304,7 @@ export async function createShopifyClient() {
                   headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-Shopify-Storefront-Access-Token': credentials.accessToken,
+                    'X-Shopify-Storefront-Access-Token': credentials.storefrontToken || credentials.accessToken,
                     'Content-Length': Buffer.byteLength(simpleQuery)
                   },
                   timeout: 30000
