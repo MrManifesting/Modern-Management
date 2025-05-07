@@ -284,7 +284,11 @@ export async function createShopifyClient() {
               }
               
               // For Admin API, use REST endpoint
+              // Make sure we have https:// prefix for the full URL
               const apiPath = '/admin/api/2023-10/shop.json';
+              
+              // Log the full URL we're trying to access
+              log(`Full URL for Admin API: https://${cleanShopUrl}${apiPath}`, 'shopify-debug');
               
               const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -406,6 +410,68 @@ export async function createShopifyClient() {
                       resolve(shop);
                     } catch (error: any) {
                       reject(new Error(`Failed to parse shop data: ${error.message}`));
+                    }
+                  } else if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+                    // Handle redirect for Admin API
+                    const location = res.headers.location;
+                    log(`Admin API redirect received to: ${location}`, 'shopify-debug');
+                    
+                    if (location) {
+                      try {
+                        // Parse the redirect URL
+                        const redirectUrl = new URL(location);
+                        log(`Following Admin API redirect to: ${redirectUrl.toString()}`, 'shopify-debug');
+                        
+                        // Make a new request to the redirect location
+                        const redirectReq = https.request({
+                          hostname: redirectUrl.hostname,
+                          port: 443,
+                          path: redirectUrl.pathname + redirectUrl.search,
+                          method: 'GET',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Shopify-Access-Token': credentials.accessToken
+                          },
+                          timeout: 30000
+                        }, (redirectRes) => {
+                          let redirectData = '';
+                          
+                          redirectRes.on('data', (chunk) => {
+                            redirectData += chunk;
+                          });
+                          
+                          redirectRes.on('end', () => {
+                            log(`Redirect response status: ${redirectRes.statusCode}`, 'shopify-debug');
+                            if (redirectRes.statusCode === 200) {
+                              try {
+                                const shopResponse = JSON.parse(redirectData);
+                                if (shopResponse.shop) {
+                                  log(`Successfully retrieved shop data from redirect`, 'shopify-debug');
+                                  resolve(shopResponse.shop);
+                                } else {
+                                  reject(new Error(`Redirect response missing shop data: ${redirectData}`));
+                                }
+                              } catch (error: any) {
+                                reject(new Error(`Failed to parse shop data from redirect: ${error.message}`));
+                              }
+                            } else {
+                              reject(new Error(`Redirect API responded with status code ${redirectRes.statusCode}: ${redirectData}`));
+                            }
+                          });
+                        });
+                        
+                        redirectReq.on('error', (error) => {
+                          log(`Redirect request error: ${error.message}`, 'shopify-debug');
+                          reject(error);
+                        });
+                        
+                        redirectReq.end();
+                      } catch (error: any) {
+                        reject(new Error(`Failed to follow Admin API redirect: ${error.message}`));
+                      }
+                    } else {
+                      reject(new Error(`Admin API redirect received but no location header`));
                     }
                   } else {
                     reject(new Error(`API responded with status code ${res.statusCode}: ${data}`));
