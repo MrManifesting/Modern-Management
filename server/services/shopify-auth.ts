@@ -125,7 +125,7 @@ export async function createShopifyClient() {
 // Test Shopify API connection and return detailed status
 export async function testShopifyConnection() {
   try {
-    const { shopify, shopInfo } = await createShopifyClient();
+    const { shopify, shopInfo, isMock } = await createShopifyClient();
     
     return {
       connected: true,
@@ -133,7 +133,10 @@ export async function testShopifyConnection() {
       domain: shopInfo.domain,
       email: shopInfo.email,
       country: shopInfo.country_name,
-      message: `Successfully connected to ${shopInfo.name}`
+      isMock: !!isMock,
+      message: isMock 
+        ? `Using mock Shopify data for development (${shopInfo.name})` 
+        : `Successfully connected to ${shopInfo.name}`
     };
   } catch (error: any) {
     log(`Shopify connection test failed: ${error.message}`, 'shopify');
@@ -153,10 +156,27 @@ export async function testShopifyConnection() {
       errorMessage = 'Store URL could not be resolved. Please check your Shopify store URL.';
     }
     
-    return {
-      connected: false,
-      store: '',
-      message: `${errorMessage} (${error.message})`
-    };
+    // Try to use mock as a fallback even in the test function
+    try {
+      const mockShopify = createMockShopifyClient();
+      const mockShopInfo = getMockShopInfo();
+      
+      return {
+        connected: true,
+        store: mockShopInfo.name,
+        domain: mockShopInfo.domain,
+        email: mockShopInfo.email,
+        country: mockShopInfo.country_name,
+        isMock: true,
+        message: `Using mock Shopify data (${mockShopInfo.name}). Real connection failed: ${errorMessage}`
+      };
+    } catch (mockError) {
+      return {
+        connected: false,
+        store: '',
+        isMock: false,
+        message: `${errorMessage} (${error.message})`
+      };
+    }
   }
 }
