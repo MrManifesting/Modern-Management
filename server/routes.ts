@@ -12,6 +12,7 @@ import {
   fetchShopifyCustomerReport 
 } from "./services/shopify-reports";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
+import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
 import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
@@ -3166,6 +3167,9 @@ ${topCustomersCsv}`;
 
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
+  
+  // Register standard CSV import routes
+  registerCSVImportRoutes(app, storage);
   
   // Register Shopify safety routes
   registerShopifySafetyRoutes(app, storage);
