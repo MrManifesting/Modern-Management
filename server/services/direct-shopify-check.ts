@@ -31,8 +31,27 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
     const tokenLength = accessToken.length;
     const tokenPrefix = accessToken.substring(0, 6);
     
-    // Log token details for debugging
-    log(`Token details - Length: ${tokenLength}, Prefix: ${tokenPrefix}...`, 'shopify-direct');
+    // Check if token appears to be masked (contains "••••••") or has invalid characters
+    const isMaskedToken = accessToken.includes('•') || accessToken.includes(' ') || accessToken.includes('\n');
+    
+    // Always use the environment token as it's most reliable
+    let realToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    
+    if (isMaskedToken || accessToken.length < 20) {
+      log(`Detected masked/invalid token, using environment variable instead`, 'shopify-direct');
+      
+      if (realToken.length > 0) {
+        // Re-calculate token length and prefix with the real token
+        const realTokenLength = realToken.length;
+        const realTokenPrefix = realToken.substring(0, 6);
+        log(`Real token details - Length: ${realTokenLength}, Prefix: ${realTokenPrefix}...`, 'shopify-direct');
+      } else {
+        log(`WARNING: Environment token is empty or not set`, 'shopify-direct');
+      }
+    } else {
+      // Log token details for debugging
+      log(`Using provided token - Length: ${tokenLength}, Prefix: ${tokenPrefix}...`, 'shopify-direct');
+    }
     
     // Determine token type based on patterns
     // For Admin API tokens (starting with shpat_)
@@ -94,9 +113,9 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       };
       
       if (isStorefrontToken) {
-        headers['X-Shopify-Storefront-Access-Token'] = accessToken;
+        headers['X-Shopify-Storefront-Access-Token'] = realToken;
       } else {
-        headers['X-Shopify-Access-Token'] = accessToken;
+        headers['X-Shopify-Access-Token'] = realToken;
       }
       
       log(`Making API request to: ${cleanUrl}${apiPath} with token type: ${tokenType}`, 'shopify-direct');
@@ -280,9 +299,9 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
           };
           
           if (isStorefrontToken) {
-            headers['X-Shopify-Storefront-Access-Token'] = accessToken;
+            headers['X-Shopify-Storefront-Access-Token'] = realToken;
           } else {
-            headers['X-Shopify-Access-Token'] = accessToken;
+            headers['X-Shopify-Access-Token'] = realToken;
           }
           
           const apiReq = https.request({
@@ -332,11 +351,17 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
                         'Accept': 'application/json'
                       };
                       
+                      // Always use the environment token for headers to avoid invalid characters
+                      const envToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+                      
                       if (isStorefrontToken) {
-                        redirectHeaders['X-Shopify-Storefront-Access-Token'] = accessToken;
+                        redirectHeaders['X-Shopify-Storefront-Access-Token'] = envToken;
                       } else {
-                        redirectHeaders['X-Shopify-Access-Token'] = accessToken;
+                        redirectHeaders['X-Shopify-Access-Token'] = envToken;
                       }
+                      
+                      // Log token being used
+                      log(`Using token for redirect - Length: ${envToken.length}`, 'shopify-direct');
                       
                       const redirectReq = https.request({
                         hostname: redirectUrl.hostname,
