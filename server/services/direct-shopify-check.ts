@@ -172,10 +172,8 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
               }
             ];
         
-        // Try each API endpoint variant
-        tryApiEndpoints(apiUrlVariants, 0);
-        
-        function tryApiEndpoints(variants: Array<{hostname: string, path: string}>, index: number) {
+        // Define the recursive function to try each API endpoint variant
+        const tryApiEndpoints = (variants: Array<{hostname: string, path: string}>, index: number) => {
           if (index >= variants.length) {
             // All variants failed, but we know it's a Shopify store
             resolve({
@@ -306,7 +304,10 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
           });
           
           apiReq.end();
-        }
+        };
+        
+        // Start checking the endpoints
+        tryApiEndpoints(apiUrlVariants, 0);
       } else {
         // Not a Shopify store
         resolve({
