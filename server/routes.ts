@@ -664,7 +664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Shopify connection
   app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
     try {
+      console.log("Testing Shopify connection from frontend...");
       const connectionStatus = await testConnection();
+      console.log("Shopify connection test result:", connectionStatus);
       res.json(connectionStatus);
     } catch (error) {
       console.error("Failed to test Shopify connection:", error);
