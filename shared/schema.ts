@@ -158,9 +158,12 @@ export const marketplaces = pgTable("marketplaces", {
   apiEndpoint: text("api_endpoint"), // API URL for the marketplace
   storeUrl: text("store_url"), // URL of the store/seller account
   syncEnabled: boolean("sync_enabled").default(false), // Whether automatic syncing is enabled
-  syncInterval: integer("sync_interval").default(60), // Minutes between syncs
-  lastSyncDate: timestamp("last_sync_date"), // When the marketplace was last synced
+  syncPullInterval: integer("sync_pull_interval").default(15), // Minutes between pulls (marketplace to local)
+  syncPushInterval: integer("sync_push_interval").default(30), // Minutes between pushes (local to marketplace)
+  lastSyncDate: timestamp("last_sync_date"), // When items were last pulled from the marketplace
+  lastPushDate: timestamp("last_push_date"), // When items were last pushed to the marketplace
   syncLog: json("sync_log").default([]), // Log of sync activities
+  isSyncEnabled: boolean("is_sync_enabled").default(false).notNull(), // Alias for syncEnabled for code clarity
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

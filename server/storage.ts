@@ -47,11 +47,16 @@ export interface IStorage {
   
   // Marketplace methods
   getMarketplaces(): Promise<Marketplace[]>;
+  getAllMarketplaces(): Promise<Marketplace[]>; // Get all marketplaces including disabled ones
   getMarketplace(id: number): Promise<Marketplace | undefined>;
   createMarketplace(marketplace: InsertMarketplace): Promise<Marketplace>;
   updateMarketplace(id: number, marketplace: Partial<InsertMarketplace>): Promise<Marketplace | undefined>;
   deleteMarketplace(id: number): Promise<boolean>;
   connectMarketplace(id: number): Promise<Marketplace | undefined>;
+  updateMarketplaceLastSync(id: number, date: Date): Promise<boolean>;
+  updateMarketplaceLastPush(id: number, date: Date): Promise<boolean>;
+  getItemsForMarketplacePush(marketplaceId: number, limit?: number): Promise<Item[]>;
+  updateItemLastPushed(itemId: number, marketplaceId: number, date: Date): Promise<boolean>;
   
   // Sales methods
   getSales(): Promise<Sale[]>;
