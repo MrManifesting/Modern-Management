@@ -31,6 +31,79 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
     const isSimplifiedCurations = cleanUrl.includes('simplifiedcurations.myshopify.com');
     if (isSimplifiedCurations) {
       log(`Special handling for simplifiedcurations store`, 'shopify-direct');
+      // For simplifiedcurations, we'll use a direct approach that bypasses most of the checks
+      // since we know precisely which endpoint works
+      
+      // Use a direct HTTPS request to a known working endpoint
+      const apiReq = https.request({
+        hostname: 'simplifiedcurations.myshopify.com',
+        port: 443,
+        path: '/admin/api/2023-10/shop.json',
+        method: 'GET',
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000 // Extended timeout
+      }, (apiRes) => {
+        log(`Direct API call to simplifiedcurations - Status: ${apiRes.statusCode}`, 'shopify-direct');
+        
+        let data = '';
+        apiRes.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        apiRes.on('end', () => {
+          if (apiRes.statusCode === 200) {
+            log(`Successfully connected to simplifiedcurations Shopify API`, 'shopify-direct');
+            resolve({
+              accessible: true,
+              status: apiRes.statusCode,
+              message: `Successfully connected to simplifiedcurations Shopify API`,
+              isShopify: true
+            });
+          } else if (apiRes.statusCode === 401) {
+            log(`Authentication failed for simplifiedcurations: ${data}`, 'shopify-direct');
+            resolve({
+              accessible: false,
+              status: apiRes.statusCode,
+              message: `Authentication failed. The access token may be invalid or expired.`,
+              isShopify: true
+            });
+          } else {
+            log(`Unexpected status code for simplifiedcurations: ${apiRes.statusCode}`, 'shopify-direct');
+            resolve({
+              accessible: false,
+              status: apiRes.statusCode,
+              message: `Unexpected status code: ${apiRes.statusCode} when connecting to simplifiedcurations`,
+              isShopify: true
+            });
+          }
+        });
+      });
+      
+      apiReq.on('error', (error) => {
+        log(`Error accessing simplifiedcurations API: ${error.message}`, 'shopify-direct');
+        resolve({
+          accessible: false,
+          message: `Connection error for simplifiedcurations: ${error.message}`,
+          isShopify: true
+        });
+      });
+      
+      apiReq.on('timeout', () => {
+        log(`Timeout accessing simplifiedcurations API`, 'shopify-direct');
+        apiReq.destroy();
+        resolve({
+          accessible: false,
+          message: 'Connection timed out after 30 seconds for simplifiedcurations',
+          isShopify: true
+        });
+      });
+      
+      apiReq.end();
+      return; // Exit early after special handling
     }
     
     log(`Using cleaned URL: ${cleanUrl}`, 'shopify-direct');
