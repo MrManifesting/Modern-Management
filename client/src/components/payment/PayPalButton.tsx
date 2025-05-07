@@ -1,186 +1,197 @@
-import React, { useEffect } from "react";
-import { apiRequest } from "@/lib/queryClient";
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "paypal-button": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement>,
-        HTMLElement
-      >;
-    }
-  }
-}
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Loader } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface PayPalButtonProps {
   amount: string;
-  currency: string;
-  intent: string;
+  currency?: string;
+  intent?: string;
   onSuccess?: (data: any) => void;
   onError?: (error: any) => void;
-  onCancel?: (data: any) => void;
   disabled?: boolean;
   className?: string;
+  buttonText?: string;
+  affiliateId?: number;
+  qrCode?: string;
 }
 
-export default function PayPalButton({
+export function PayPalButton({
   amount,
-  currency,
-  intent,
+  currency = 'USD',
+  intent = 'CAPTURE',
   onSuccess,
   onError,
-  onCancel,
   disabled = false,
-  className = "",
+  className = '',
+  buttonText = 'Pay with PayPal',
+  affiliateId,
+  qrCode
 }: PayPalButtonProps) {
-  const createOrder = async () => {
-    const orderPayload = {
-      amount: amount,
-      currency: currency,
-      intent: intent,
-    };
-    
-    try {
-      const response = await apiRequest("POST", "/api/paypal/order", orderPayload);
-      const output = await response.json();
-      return { orderId: output.id };
-    } catch (error) {
-      console.error("Failed to create PayPal order:", error);
-      if (onError) onError(error);
-      throw error;
-    }
-  };
-
-  const captureOrder = async (orderId: string) => {
-    try {
-      const response = await apiRequest("POST", `/api/paypal/order/${orderId}/capture`);
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Failed to capture PayPal order:", error);
-      if (onError) onError(error);
-      throw error;
-    }
-  };
-
-  const handleApprove = async (data: any) => {
-    console.log("PayPal order approved:", data);
-    
-    try {
-      const orderData = await captureOrder(data.orderId);
-      console.log("PayPal capture result:", orderData);
-      
-      if (onSuccess) {
-        onSuccess(orderData);
-      }
-    } catch (error) {
-      console.error("Error capturing PayPal order:", error);
-      if (onError) onError(error);
-    }
-  };
-
-  const handleCancel = (data: any) => {
-    console.log("PayPal payment canceled:", data);
-    if (onCancel) onCancel(data);
-  };
-
-  const handleError = (error: any) => {
-    console.error("PayPal payment error:", error);
-    if (onError) onError(error);
-  };
+  const [isLoading, setIsLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const loadPayPalSDK = async () => {
-      try {
-        if (!(window as any).paypal) {
-          const script = document.createElement("script");
-          script.src = import.meta.env.PROD
-            ? "https://www.paypal.com/web-sdk/v6/core"
-            : "https://www.sandbox.paypal.com/web-sdk/v6/core";
-          script.async = true;
-          script.onload = () => initPayPal();
-          document.body.appendChild(script);
-        } else {
-          await initPayPal();
-        }
-      } catch (e) {
-        console.error("Failed to load PayPal SDK", e);
-        if (onError) onError(e);
-      }
-    };
+    // Check if PayPal is configured
+    checkPayPalStatus();
+  }, []);
 
-    if (!disabled) {
-      loadPayPalSDK();
-    }
-  }, [disabled]);
-
-  const initPayPal = async () => {
+  const checkPayPalStatus = async () => {
     try {
-      // Get client token from server
-      const clientToken = await apiRequest("GET", "/api/paypal/setup")
-        .then((res) => res.json())
-        .then((data) => data.clientToken);
-
-      if (!clientToken) {
-        throw new Error("Failed to get PayPal client token");
+      const response = await apiRequest('GET', '/api/paypal/status');
+      if (!response.ok) {
+        throw new Error('Failed to check PayPal status');
       }
-
-      const sdkInstance = await (window as any).paypal.createInstance({
-        clientToken,
-        components: ["paypal-payments"],
-      });
-
-      const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
-        onApprove: handleApprove,
-        onCancel: handleCancel,
-        onError: handleError,
-      });
-
-      const onClick = async () => {
-        try {
-          const checkoutOptionsPromise = createOrder();
-          await paypalCheckout.start(
-            { paymentFlow: "auto" },
-            checkoutOptionsPromise,
-          );
-        } catch (e) {
-          console.error("Error starting PayPal checkout:", e);
-          if (onError) onError(e);
-        }
-      };
-
-      const paypalButton = document.getElementById("paypal-button");
-
-      if (paypalButton) {
-        // Clear previous event listeners if any
-        const newButton = paypalButton.cloneNode(true);
-        if (paypalButton.parentNode) {
-          paypalButton.parentNode.replaceChild(newButton, paypalButton);
-        }
-        
-        // Add new event listener
-        newButton.addEventListener("click", onClick);
+      
+      const data = await response.json();
+      
+      if (data.success && data.data.isConfigured) {
+        setIsReady(true);
+      } else {
+        console.warn('PayPal is not configured');
+        setIsReady(false);
       }
-    } catch (e) {
-      console.error("Failed to initialize PayPal:", e);
-      if (onError) onError(e);
+    } catch (error) {
+      console.error('Failed to check PayPal status:', error);
+      setIsReady(false);
     }
   };
 
-  return (
-    <div className={className}>
-      <button 
-        className="w-full h-12 bg-[#0070ba] hover:bg-[#003087] text-white rounded-md flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={disabled}
-        id="paypal-button"
+  const handlePaymentStart = async () => {
+    if (!isReady || isLoading || disabled) return;
+    
+    setIsLoading(true);
+    try {
+      // Create order
+      const orderResponse = await apiRequest('POST', '/api/paypal/order', {
+        body: JSON.stringify({
+          amount,
+          currency,
+          intent,
+          metadata: {
+            affiliateId,
+            qrCode
+          }
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!orderResponse.ok) {
+        throw new Error('Failed to create PayPal order');
+      }
+      
+      const orderData = await orderResponse.json();
+      
+      if (!orderData.id) {
+        throw new Error('No order ID returned from PayPal');
+      }
+      
+      // Create a fake form submission to open PayPal checkout in a new window
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = process.env.NODE_ENV === 'production'
+        ? `https://www.paypal.com/checkout/v2/approval/create/${orderData.id}`
+        : `https://www.sandbox.paypal.com/checkout/v2/approval/create/${orderData.id}`;
+      form.target = '_blank';
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      // Poll for completion
+      const checkOrderStatus = async () => {
+        try {
+          const captureResponse = await apiRequest('POST', `/api/paypal/order/${orderData.id}/capture`);
+          
+          if (captureResponse.ok) {
+            const captureData = await captureResponse.json();
+            
+            toast({
+              title: 'Payment Successful',
+              description: 'Your PayPal payment has been processed successfully!'
+            });
+            
+            if (onSuccess) {
+              onSuccess(captureData);
+            }
+            clearInterval(statusCheckInterval);
+            setIsLoading(false);
+          }
+        } catch (err) {
+          // Don't handle errors during polling - just keep trying
+          console.log('Payment not completed yet, continuing to poll...');
+        }
+      };
+      
+      // Poll every 3 seconds for up to 5 minutes (100 attempts)
+      let attempts = 0;
+      const statusCheckInterval = setInterval(() => {
+        attempts++;
+        if (attempts > 100) {
+          clearInterval(statusCheckInterval);
+          setIsLoading(false);
+          toast({
+            title: 'Payment Timeout',
+            description: 'The payment process took too long. Please try again.',
+            variant: 'destructive'
+          });
+        } else {
+          checkOrderStatus();
+        }
+      }, 3000);
+      
+    } catch (error: any) {
+      console.error('PayPal payment error:', error);
+      setIsLoading(false);
+      
+      toast({
+        title: 'Payment Failed',
+        description: error.message || 'An error occurred while processing your payment.',
+        variant: 'destructive'
+      });
+      
+      if (onError) {
+        onError(error);
+      }
+    }
+  };
+
+  if (!isReady) {
+    return (
+      <Button 
+        disabled 
+        className={className}
+        variant="outline"
       >
-        <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7.4 3H15.6C16.7 3 17.6 3.8 17.7 4.9L17.8 5.4C18.4 8.1 16.4 10.3 13.7 10.3H10.8C10.4 10.3 10 10.6 9.9 11L9.1 15.9C9 16.4 8.6 16.7 8.1 16.7H5.2C4.8 16.7 4.5 16.4 4.6 16L6.4 4C6.5 3.4 6.9 3 7.4 3Z" fill="currentColor" />
-          <path d="M11.3 11L10.2 17.8C10.1 18.3 10.4 18.7 10.9 18.7H13.8C14.3 18.7 14.7 18.4 14.8 17.9L15.9 11C16 10.5 15.7 10.1 15.2 10.1H12C11.8 10.1 11.5 10.2 11.4 10.3C11.3 10.5 11.3 10.8 11.3 11Z" fill="currentColor" />
-          <path d="M18.1 10.4L19.5 3.5C19.6 3.1 19.3 2.7 18.9 2.7H15.4C15.1 2.7 14.8 3 14.8 3.3L13.4 10.2C13.3 10.6 13.6 11 14 11H17.5C17.8 11 18.1 10.7 18.1 10.4Z" fill="currentColor" />
-        </svg>
-        Pay with PayPal
-      </button>
-    </div>
+        PayPal Not Available
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      onClick={handlePaymentStart}
+      disabled={isLoading || disabled || !isReady}
+      className={`bg-[#0070ba] hover:bg-[#003087] text-white ${className}`}
+    >
+      {isLoading ? (
+        <>
+          <Loader className="mr-2 h-4 w-4 animate-spin" />
+          Processing...
+        </>
+      ) : (
+        <>
+          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.4 3H15.6C16.7 3 17.6 3.8 17.7 4.9L17.8 5.4C18.4 8.1 16.4 10.3 13.7 10.3H10.8C10.4 10.3 10 10.6 9.9 11L9.1 15.9C9 16.4 8.6 16.7 8.1 16.7H5.2C4.8 16.7 4.5 16.4 4.6 16L6.4 4C6.5 3.4 6.9 3 7.4 3Z" fill="currentColor" />
+            <path d="M11.3 11L10.2 17.8C10.1 18.3 10.4 18.7 10.9 18.7H13.8C14.3 18.7 14.7 18.4 14.8 17.9L15.9 11C16 10.5 15.7 10.1 15.2 10.1H12C11.8 10.1 11.5 10.2 11.4 10.3C11.3 10.5 11.3 10.8 11.3 11Z" fill="currentColor" />
+            <path d="M18.1 10.4L19.5 3.5C19.6 3.1 19.3 2.7 18.9 2.7H15.4C15.1 2.7 14.8 3 14.8 3.3L13.4 10.2C13.3 10.6 13.6 11 14 11H17.5C17.8 11 18.1 10.7 18.1 10.4Z" fill="currentColor" />
+          </svg>
+          {buttonText}
+        </>
+      )}
+    </Button>
   );
 }

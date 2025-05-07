@@ -31,6 +31,7 @@ import BulkBreakdownPage from "@/pages/bulk-breakdown";
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate-dashboard";
 import AuthPage from "@/pages/auth-page";
+import QrScanPage from "@/pages/qr-scan";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -63,6 +64,7 @@ function Router() {
       <ProtectedRoute path="/database-cleanup" component={DatabaseCleanupPage} />
       <ProtectedRoute path="/affiliate-dashboard" component={AffiliateDashboard} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/qr-scan" component={QrScanPage} />
       <Route component={NotFound} />
     </Switch>
   );
