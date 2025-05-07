@@ -5,6 +5,11 @@ import {
   isConfirmationValid 
 } from './shopify-safety';
 import { generateSku } from './sku-generator';
+import { 
+  getShopifyStoreName as getShopifyStoreNameAuth, 
+  getShopifyCredentials as getShopifyCredentialsAuth, 
+  testShopifyConnection as testShopifyAuth 
+} from './shopify-auth';
 
 interface ShopifyProduct {
   id?: number;
@@ -137,56 +142,8 @@ export function getPushStatus(): { pushEnabled: boolean, message: string } {
  * Tests the connection to the Shopify API
  */
 export async function testConnection(): Promise<{ connected: boolean, store: string, message: string }> {
-  try {
-    // Get fresh credentials
-    const credentials = getShopifyCredentials();
-    
-    if (!credentials.storeUrl || !credentials.accessToken) {
-      return { 
-        connected: false, 
-        store: '',
-        message: 'Shopify API credentials are not configured. Check your environment variables.' 
-      };
-    }
-    
-    // Make a simple API call to test authentication
-    // Ensure the store URL doesn't include the protocol
-    const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '');
-    
-    // Debug output
-    console.log("Connecting to Shopify with:");
-    console.log(`Store URL: ${storeUrl}`);
-    console.log(`Access Token: ${credentials.accessToken.substring(0, 4)}...`);
-    
-    // Construct the API URL, ensuring it's properly formatted
-    const apiUrl = `https://${storeUrl}/admin/api/2023-10/shop.json`;
-    console.log(`API URL: ${apiUrl}`);
-    
-    const response = await fetch(apiUrl, {
-      headers: {
-        'X-Shopify-Access-Token': credentials.accessToken,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to connect to Shopify API: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return { 
-      connected: true, 
-      store: data.shop.name,
-      message: `Successfully connected to ${data.shop.name}.` 
-    };
-  } catch (error) {
-    console.error('Shopify connection test failed:', error);
-    return { 
-      connected: false, 
-      store: '',
-      message: error instanceof Error ? error.message : 'Unknown error testing Shopify connection' 
-    };
-  }
+  // Use the improved test connection function from shopify-auth
+  return testShopifyAuth();
 }
 
 /**
