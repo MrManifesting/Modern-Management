@@ -170,11 +170,14 @@ const ProductsInventoryPage: React.FC = () => {
   const queryClient = useQueryClient();
   
   // Fetch items from API
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
     queryKey: ['/api/items'],
     queryFn: async () => {
+      console.log("Fetching items from API...");
       const res = await apiRequest('GET', '/api/items');
       const data = await res.json();
+      console.log("Fetched items:", data.length);
+      
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
@@ -191,9 +194,12 @@ const ProductsInventoryPage: React.FC = () => {
         volume: item.volume || "",
         description: item.description || "",
         imageUrl: item.imageUrl || item.images?.[0] || "",
-        marketplace: item.marketplace || []
+        marketplace: item.marketplace || [],
+        shopifyId: item.shopifyId || null,
+        shopifySyncStatus: item.shopifySyncStatus || "not_synced"
       }));
-    }
+    },
+    refetchOnWindowFocus: true,
   });
   
   // Delete mutation
@@ -263,26 +269,27 @@ const ProductsInventoryPage: React.FC = () => {
     try {
       setSyncLoading(true);
       
-      // Find the marketplace ID for Shopify
-      const marketplacesResponse = await apiRequest('GET', '/api/marketplaces');
-      const marketplaces = await marketplacesResponse.json();
-      const shopifyMarketplace = marketplaces.find((m: any) => 
-        m.type.toLowerCase() === 'shopify' && m.isConnected);
+      // First check Shopify connection
+      const testResponse = await apiRequest('GET', '/api/shopify/test-connection');
+      const testResult = await testResponse.json();
       
-      if (shopifyMarketplace) {
-        // Trigger a manual sync for the Shopify marketplace
-        const syncResponse = await apiRequest('POST', `/api/marketplaces/${shopifyMarketplace.id}/sync`);
+      if (testResult.connected) {
+        // Use the direct Shopify sync endpoint
+        const syncResponse = await apiRequest('POST', '/api/shopify/sync-inventory');
         const syncResult = await syncResponse.json();
         
         if (syncResult.success) {
           toast({
             title: "Shopify Sync Successful",
-            description: "Inventory has been synced with Shopify",
+            description: `${syncResult.imported || 0} items imported from Shopify`,
             variant: "default"
           });
           
-          // Refresh products after sync
-          queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+          // Refresh products after sync with a short delay
+          setTimeout(() => {
+            console.log("Refreshing items after sync...");
+            refetchItems();
+          }, 1000);
         } else {
           toast({
             title: "Shopify Sync Warning",
@@ -293,7 +300,7 @@ const ProductsInventoryPage: React.FC = () => {
       } else {
         toast({
           title: "Shopify Connection Error",
-          description: "No connected Shopify marketplace found",
+          description: testResult.message || "Not connected to Shopify",
           variant: "destructive"
         });
       }
