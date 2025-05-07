@@ -14,6 +14,7 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
   status?: number;
   message: string;
   isShopify: boolean;
+  redirectUrl?: string;
 }> {
   return new Promise((resolve) => {
     log(`Testing direct connectivity to: ${storeUrl}`, 'shopify-direct');
@@ -120,49 +121,64 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
                   // Extract hostname and path from the redirect URL
                   try {
                     const redirectUrl = new URL(location.startsWith('http') ? location : `https://${location}`);
+                    const redirectHostname = redirectUrl.hostname;
                     
-                    // Try the redirected location
-                    const redirectReq = https.request({
-                      hostname: redirectUrl.hostname,
-                      port: 443,
-                      path: redirectUrl.pathname + redirectUrl.search,
-                      method: 'GET',
-                      headers: {
-                        'X-Shopify-Access-Token': accessToken,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                      },
-                      timeout: 10000
-                    }, (redirectRes) => {
-                      log(`Redirect API call ${redirectUrl.hostname}${redirectUrl.pathname} - Status: ${redirectRes.statusCode}`, 'shopify-direct');
-                      
-                      let redirectData = '';
-                      redirectRes.on('data', (chunk) => {
-                        redirectData += chunk;
+                    // If we received a redirect and it's a 401, pass the redirect URL back
+                    // This helps the calling code attempt a direct connection to the redirected hostname
+                    if (variant.hostname !== redirectHostname && (variant.path === '/admin/api/2023-04/shop.json' || variant.path === '/admin/api/2023-04/graphql.json')) {
+                      // Try the redirected location
+                      const redirectReq = https.request({
+                        hostname: redirectUrl.hostname,
+                        port: 443,
+                        path: redirectUrl.pathname + redirectUrl.search,
+                        method: 'GET',
+                        headers: {
+                          'X-Shopify-Access-Token': accessToken,
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json'
+                        },
+                        timeout: 10000
+                      }, (redirectRes) => {
+                        log(`Redirect API call ${redirectUrl.hostname}${redirectUrl.pathname} - Status: ${redirectRes.statusCode}`, 'shopify-direct');
+                        
+                        let redirectData = '';
+                        redirectRes.on('data', (chunk) => {
+                          redirectData += chunk;
+                        });
+                        
+                        redirectRes.on('end', () => {
+                          if (redirectRes.statusCode === 200) {
+                            log(`Successfully connected to Shopify API via redirect`, 'shopify-direct');
+                            resolve({
+                              accessible: true,
+                              status: redirectRes.statusCode,
+                              message: `Successfully connected to Shopify API via redirect`,
+                              isShopify: true,
+                              redirectUrl: redirectHostname
+                            });
+                          } else if (redirectRes.statusCode === 401) {
+                            // If we get a 401 on the redirected URL, return it so the caller knows to try this URL
+                            resolve({
+                              accessible: false,
+                              status: redirectRes.statusCode,
+                              message: `Authentication failed when connecting to ${redirectHostname}. The access token may be invalid or expired.`,
+                              isShopify: true,
+                              redirectUrl: redirectHostname
+                            });
+                          } else {
+                            // This redirect didn't work, try the next endpoint variant
+                            tryApiEndpoints(variants, index + 1);
+                          }
+                        });
                       });
                       
-                      redirectRes.on('end', () => {
-                        if (redirectRes.statusCode === 200) {
-                          log(`Successfully connected to Shopify API via redirect`, 'shopify-direct');
-                          resolve({
-                            accessible: true,
-                            status: redirectRes.statusCode,
-                            message: `Successfully connected to Shopify API via redirect`,
-                            isShopify: true
-                          });
-                        } else {
-                          // This redirect didn't work, try the next endpoint variant
-                          tryApiEndpoints(variants, index + 1);
-                        }
+                      redirectReq.on('error', () => {
+                        tryApiEndpoints(variants, index + 1);
                       });
-                    });
-                    
-                    redirectReq.on('error', () => {
-                      tryApiEndpoints(variants, index + 1);
-                    });
-                    
-                    redirectReq.end();
-                    return;
+                      
+                      redirectReq.end();
+                      return;
+                    }
                   } catch (error) {
                     log(`Failed to follow redirect: ${error}`, 'shopify-direct');
                   }
