@@ -144,6 +144,216 @@ export class MemStorage implements IStorage {
   private affiliates: Map<number, Affiliate>;
   private qrCodes: Map<number, QrCode>;
   private affiliateTransactions: Map<number, AffiliateTransaction>;
+  
+  // Implementing the required affiliate methods from IStorage interface
+  async getAllAffiliates(): Promise<Affiliate[]> {
+    return Array.from(this.affiliates.values());
+  }
+
+  async getAffiliateById(id: number): Promise<Affiliate | undefined> {
+    return this.affiliates.get(id);
+  }
+
+  async getAffiliateByCode(code: string): Promise<Affiliate | undefined> {
+    return Array.from(this.affiliates.values()).find(
+      affiliate => affiliate.code === code
+    );
+  }
+
+  async createAffiliate(affiliate: InsertAffiliate): Promise<Affiliate> {
+    const id = this.affiliateCurrentId++;
+    const now = new Date();
+    const newAffiliate: Affiliate = {
+      ...affiliate,
+      id,
+      totalEarnings: 0,
+      totalSales: 0,
+      pendingPayout: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.affiliates.set(id, newAffiliate);
+    return newAffiliate;
+  }
+
+  async updateAffiliate(id: number, affiliate: Partial<InsertAffiliate>): Promise<Affiliate | undefined> {
+    const existingAffiliate = this.affiliates.get(id);
+    
+    if (!existingAffiliate) {
+      return undefined;
+    }
+    
+    const updatedAffiliate: Affiliate = {
+      ...existingAffiliate,
+      ...affiliate,
+      updatedAt: new Date()
+    };
+    
+    this.affiliates.set(id, updatedAffiliate);
+    return updatedAffiliate;
+  }
+
+  async deleteAffiliate(id: number): Promise<boolean> {
+    return this.affiliates.delete(id);
+  }
+
+  async updateAffiliateStats(id: number, earnings: number, salesCount: number): Promise<Affiliate | undefined> {
+    const affiliate = this.affiliates.get(id);
+    if (!affiliate) {
+      return undefined;
+    }
+    
+    const updatedAffiliate: Affiliate = {
+      ...affiliate,
+      totalEarnings: affiliate.totalEarnings + earnings,
+      totalSales: affiliate.totalSales + salesCount,
+      pendingPayout: affiliate.pendingPayout + earnings,
+      updatedAt: new Date()
+    };
+    
+    this.affiliates.set(id, updatedAffiliate);
+    return updatedAffiliate;
+  }
+
+  async getAllQrCodes(): Promise<QrCode[]> {
+    return Array.from(this.qrCodes.values());
+  }
+
+  async getQrCodeById(id: number): Promise<QrCode | undefined> {
+    return this.qrCodes.get(id);
+  }
+
+  async getQrCodeByCode(code: string): Promise<QrCode | undefined> {
+    return Array.from(this.qrCodes.values()).find(
+      qrCode => qrCode.code === code
+    );
+  }
+
+  async getQrCodesByAffiliateId(affiliateId: number): Promise<QrCode[]> {
+    return Array.from(this.qrCodes.values()).filter(
+      qrCode => qrCode.affiliateId === affiliateId
+    );
+  }
+
+  async createQrCode(qrCode: InsertQrCode): Promise<QrCode> {
+    const id = this.qrCodeCurrentId++;
+    const now = new Date();
+    const newQrCode: QrCode = {
+      ...qrCode,
+      id,
+      scans: 0,
+      conversions: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.qrCodes.set(id, newQrCode);
+    return newQrCode;
+  }
+
+  async updateQrCode(id: number, qrCode: Partial<InsertQrCode>): Promise<QrCode | undefined> {
+    const existingQrCode = this.qrCodes.get(id);
+    
+    if (!existingQrCode) {
+      return undefined;
+    }
+    
+    const updatedQrCode: QrCode = {
+      ...existingQrCode,
+      ...qrCode,
+      updatedAt: new Date()
+    };
+    
+    this.qrCodes.set(id, updatedQrCode);
+    return updatedQrCode;
+  }
+
+  async deleteQrCode(id: number): Promise<boolean> {
+    return this.qrCodes.delete(id);
+  }
+
+  async incrementQrCodeScans(id: number): Promise<QrCode | undefined> {
+    const qrCode = this.qrCodes.get(id);
+    if (!qrCode) {
+      return undefined;
+    }
+    
+    const updatedQrCode: QrCode = {
+      ...qrCode,
+      scans: qrCode.scans + 1,
+      lastScannedAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.qrCodes.set(id, updatedQrCode);
+    return updatedQrCode;
+  }
+
+  async incrementQrCodeConversions(id: number): Promise<QrCode | undefined> {
+    const qrCode = this.qrCodes.get(id);
+    if (!qrCode) {
+      return undefined;
+    }
+    
+    const updatedQrCode: QrCode = {
+      ...qrCode,
+      conversions: qrCode.conversions + 1,
+      updatedAt: new Date()
+    };
+    
+    this.qrCodes.set(id, updatedQrCode);
+    return updatedQrCode;
+  }
+
+  async getAllAffiliateTransactions(): Promise<AffiliateTransaction[]> {
+    return Array.from(this.affiliateTransactions.values());
+  }
+
+  async getAffiliateTransactionById(id: number): Promise<AffiliateTransaction | undefined> {
+    return this.affiliateTransactions.get(id);
+  }
+
+  async getAffiliateTransactionsByAffiliateId(affiliateId: number): Promise<AffiliateTransaction[]> {
+    return Array.from(this.affiliateTransactions.values()).filter(
+      transaction => transaction.affiliateId === affiliateId
+    );
+  }
+
+  async getAffiliateTransactionsBySaleId(saleId: string): Promise<AffiliateTransaction[]> {
+    return Array.from(this.affiliateTransactions.values()).filter(
+      transaction => transaction.saleId === saleId
+    );
+  }
+
+  async createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction> {
+    const id = this.affiliateTransactionCurrentId++;
+    const now = new Date();
+    const newTransaction: AffiliateTransaction = {
+      ...transaction,
+      id,
+      createdAt: now
+    };
+    
+    this.affiliateTransactions.set(id, newTransaction);
+    return newTransaction;
+  }
+
+  async updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined> {
+    const transaction = this.affiliateTransactions.get(id);
+    if (!transaction) {
+      return undefined;
+    }
+    
+    const updatedTransaction: AffiliateTransaction = {
+      ...transaction,
+      status,
+      processedAt: status === 'processed' ? new Date() : transaction.processedAt
+    };
+    
+    this.affiliateTransactions.set(id, updatedTransaction);
+    return updatedTransaction;
+  }
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
