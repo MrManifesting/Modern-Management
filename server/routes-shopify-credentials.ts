@@ -14,15 +14,21 @@ export function registerShopifyCredentialsRoutes(app: Express, storage: IStorage
   // Get current credentials (masked for security)
   app.get("/api/shopify/credentials", async (_req: Request, res: Response) => {
     try {
-      // Return masked versions of the credentials
+      // Return masked versions of the credentials for display purposes only
       const shopifyStore = process.env.SHOPIFY_STORE || '';
-      const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN 
-        ? '••••••••' + (process.env.SHOPIFY_ACCESS_TOKEN.slice(-4) || '')
+      const actualAccessToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+      // Create a masked version of the token for UI display, not for internal use
+      const shopifyAccessToken = actualAccessToken 
+        ? '••••••••' + (actualAccessToken.slice(-4) || '')
         : '';
 
       res.json({
         shopifyStore,
-        shopifyAccessToken
+        shopifyAccessToken,
+        // Include token metadata for debugging but never the actual token
+        tokenLength: actualAccessToken.length,
+        tokenPrefix: actualAccessToken.substring(0, 5) + '...',
+        isAdminToken: actualAccessToken.startsWith('shpat_')
       });
     } catch (error) {
       console.error("Failed to get Shopify credentials:", error);
