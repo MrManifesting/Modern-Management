@@ -39,9 +39,10 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       // since we know precisely which endpoint works
       
       // Select appropriate endpoint based on token type
+      // For Storefront tokens, we need to use the GraphQL endpoint, not the REST API
       const apiPath = isStorefrontToken
-        ? '/api/2023-10/shop.json'  // Storefront API
-        : '/admin/api/2023-10/shop.json'; // Admin API
+        ? '/api/2023-10/graphql.json'  // Storefront API (GraphQL)
+        : '/admin/api/2023-10/shop.json'; // Admin API (REST)
       
       // Set appropriate headers based on token type
       const headers: Record<string, string> = {
