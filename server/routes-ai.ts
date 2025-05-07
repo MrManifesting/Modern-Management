@@ -17,7 +17,10 @@ import {
 import { IStorage } from './storage';
 
 // Configure multer for file uploads
-const uploadDir = path.join(__dirname, '../uploads');
+// Use import.meta.url to get the current module's URL
+const moduleURL = new URL(import.meta.url);
+// Convert the URL to a path and resolve relative to it
+const uploadDir = path.resolve(path.dirname(moduleURL.pathname), '../uploads');
 // Ensure uploads directory exists
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

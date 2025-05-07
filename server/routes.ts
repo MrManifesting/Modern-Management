@@ -17,6 +17,7 @@ import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate";
+import { registerAIRoutes } from "./routes-ai";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -3157,6 +3158,9 @@ ${topCustomersCsv}`;
   
   // Register affiliate routes
   registerAffiliateRoutes(app, storage);
+  
+  // Register AI-powered analysis routes
+  registerAIRoutes(app, storage);
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);

@@ -1,101 +1,95 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
-
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
-
 /**
- * Original API request function that takes separate method, url, and data parameters
+ * Utility functions for making API requests using React Query
  */
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  // Handle different data types properly
-  let headers = {};
-  let body = undefined;
-  
-  if (data) {
-    // If it's FormData, don't set content-type (browser will set it with boundary)
-    if (data instanceof FormData) {
-      body = data;
-    } else {
-      // For JSON data
-      headers = { "Content-Type": "application/json" };
-      body = JSON.stringify(data);
-    }
-  }
-  
-  const res = await fetch(url, {
-    method,
-    headers,
-    body,
-    credentials: "include",
-  });
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
-  await throwIfResNotOk(res);
-  return res;
-}
-
-/**
- * Simpler API request function that just takes a URL and options
- * This is easier to use with React Query
- */
-export async function apiRequestSimple<T = any>(
-  url: string,
-  options?: RequestInit
-): Promise<T> {
-  // Check if we're sending FormData
-  const isFormData = options?.body instanceof FormData;
-  
-  const res = await fetch(url, {
-    ...options,
-    credentials: "include",
-    headers: isFormData 
-      ? { ...options?.headers } // Don't set Content-Type for FormData
-      : {
-          "Content-Type": "application/json",
-          ...options?.headers,
-        }
-  });
-
-  await throwIfResNotOk(res);
-  return await res.json();
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
-
+// Create a client
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
-    },
-    mutations: {
-      retry: false,
+      retry: 1,
     },
   },
 });
+
+interface QueryFnOptions {
+  on401?: "throw" | "returnNull";
+}
+
+/**
+ * Creates a query function for React Query
+ * @param options Options for the query function
+ * @returns A query function for React Query
+ */
+export function getQueryFn(options: QueryFnOptions = {}): QueryFunction {
+  return async ({ queryKey }) => {
+    const [endpoint] = queryKey as string[];
+    
+    try {
+      const response = await fetch(endpoint);
+      
+      if (response.status === 401 && options.on401 === "returnNull") {
+        return { success: false, user: null };
+      }
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Request failed" }));
+        throw new Error(error.message || "Request failed");
+      }
+      
+      return await response.json();
+    } catch (error: any) {
+      if (error.message === "Failed to fetch" && options.on401 === "returnNull") {
+        return { success: false, user: null };
+      }
+      throw error;
+    }
+  };
+}
+
+/**
+ * Makes an API request to the specified endpoint (returns full Response object)
+ * @param method The HTTP method to use for the request
+ * @param endpoint The API endpoint to request
+ * @param data Optional data to send with the request
+ * @returns The Response object from fetch
+ */
+export async function apiRequest(method: string, endpoint: string, data?: any) {
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (data && method !== 'GET') {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(endpoint, options);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(errorData.message || 'Request failed');
+  }
+
+  return response;
+}
+
+/**
+ * Simplified API request function that directly returns the JSON result (used in multiple components)
+ * @param endpoint The API endpoint to request
+ * @param options Optional fetch options
+ * @returns The JSON response data
+ */
+export async function apiRequestSimple<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(endpoint, options);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(errorData.message || 'Request failed');
+  }
+  
+  return await response.json() as T;
+}
