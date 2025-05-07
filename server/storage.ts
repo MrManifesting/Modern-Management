@@ -532,7 +532,7 @@ export class MemStorage implements IStorage {
     const totalProfit = filteredSales.reduce((sum, sale) => {
       const item = this.items.get(sale.itemId);
       if (item) {
-        const itemCost = item.price; // Assuming price is our cost
+        const itemCost = item.basePrice; // Assuming basePrice is our cost
         const profit = (sale.salePrice - itemCost) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         return sum + profit;
       }
@@ -645,7 +645,7 @@ export class MemStorage implements IStorage {
         // Calculate profit for this item
         const itemSalesList = filteredSales.filter(sale => sale.itemId === item.id);
         const profit = itemSalesList.reduce((total, sale) => {
-          const profitPerUnit = sale.salePrice - itemEntity.price;
+          const profitPerUnit = sale.salePrice - itemEntity.basePrice;
           return total + (profitPerUnit * sale.quantity) - (sale.fees || 0) - (sale.shippingCost || 0);
         }, 0);
         
@@ -1624,7 +1624,7 @@ export class DatabaseStorage implements IStorage {
     for (const sale of filteredSales) {
       const item = await this.getItem(sale.itemId);
       if (item) {
-        const itemCost = item.price; // Assuming price is our cost
+        const itemCost = item.basePrice; // Assuming basePrice is our cost
         const profit = (sale.salePrice - itemCost) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         totalProfit += profit;
       }
