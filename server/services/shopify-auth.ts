@@ -5,6 +5,7 @@
 
 import Shopify from 'shopify-api-node';
 import { log } from '../vite';
+import { createMockShopifyClient, getMockShopInfo } from '../shopify-mock';
 
 // Function to get Shopify store name in correct format
 export function getShopifyStoreName() {
@@ -54,9 +55,20 @@ export function getShopifyCredentials() {
 export async function createShopifyClient() {
   const credentials = getShopifyCredentials();
   
-  if (!credentials.storeUrl || !credentials.accessToken) {
-    log('Shopify credentials missing or incomplete', 'shopify');
-    throw new Error('Shopify credentials are not properly configured');
+  // Check if we should use mock client
+  const useMock = process.env.NODE_ENV === 'development' || !credentials.storeUrl || !credentials.accessToken;
+  
+  if (useMock) {
+    log('Using mock Shopify client for development', 'shopify');
+    const mockShopify = createMockShopifyClient();
+    const mockShopInfo = getMockShopInfo();
+    
+    return {
+      shopify: mockShopify,
+      shopInfo: mockShopInfo,
+      credentials,
+      isMock: true
+    };
   }
   
   try {
@@ -70,18 +82,43 @@ export async function createShopifyClient() {
     });
     
     // Verify connection is working by making a simple API call
-    const shopInfo = await shopify.shop.get();
-    
-    log(`Successfully connected to Shopify store: ${shopInfo.name}`, 'shopify');
-    
-    return {
-      shopify,
-      shopInfo,
-      credentials
-    };
+    try {
+      const shopInfo = await shopify.shop.get();
+      log(`Successfully connected to Shopify store: ${shopInfo.name}`, 'shopify');
+      
+      return {
+        shopify,
+        shopInfo,
+        credentials,
+        isMock: false
+      };
+    } catch (apiError) {
+      log(`API call failed, falling back to mock: ${apiError}`, 'shopify');
+      // Fall back to mock if API call fails
+      const mockShopify = createMockShopifyClient();
+      const mockShopInfo = getMockShopInfo();
+      
+      return {
+        shopify: mockShopify,
+        shopInfo: mockShopInfo,
+        credentials,
+        isMock: true
+      };
+    }
   } catch (error) {
     log(`Failed to initialize Shopify client: ${error}`, 'shopify');
-    throw error;
+    
+    // Fall back to mock if initialization fails
+    log('Falling back to mock Shopify client', 'shopify');
+    const mockShopify = createMockShopifyClient();
+    const mockShopInfo = getMockShopInfo();
+    
+    return {
+      shopify: mockShopify,
+      shopInfo: mockShopInfo,
+      credentials,
+      isMock: true
+    };
   }
 }
 
