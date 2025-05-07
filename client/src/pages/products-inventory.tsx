@@ -44,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import ItemFormComponent from '@/components/inventory/item-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -557,38 +558,195 @@ const ProductsInventoryPage: React.FC = () => {
                     Import CSV
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Import Products from CSV</DialogTitle>
                     <DialogDescription>
                       Upload a CSV file to import multiple products at once
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="py-4">
-                    <div className="flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <UploadCloud className="w-8 h-8 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">CSV, XLS, XLSX (MAX. 10MB)</p>
-                        </div>
-                        <input id="dropzone-file" type="file" className="hidden" accept=".csv,.xls,.xlsx" onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
+                  <Tabs defaultValue="standard" className="w-full">
+                    <TabsList className="grid grid-cols-2 mb-4">
+                      <TabsTrigger value="standard">Standard Import</TabsTrigger>
+                      <TabsTrigger value="shopify">Shopify Import</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="standard" className="mt-0">
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.target as HTMLFormElement);
+                          const fileInput = document.getElementById('standard-csv-file') as HTMLInputElement;
+                          
+                          if (fileInput?.files?.length === 0) {
                             toast({
-                              title: "File selected",
-                              description: `Selected file: ${e.target.files[0].name}`
+                              title: "No file selected",
+                              description: "Please select a CSV file to import",
+                              variant: "destructive"
                             });
-                            // TODO: Implement CSV import functionality
+                            return;
                           }
-                        }} />
-                      </label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Import</Button>
-                  </DialogFooter>
+                          
+                          formData.append('file', fileInput.files![0]);
+                          
+                          apiRequest('POST', '/api/items/import', formData, false)
+                            .then(res => res.json())
+                            .then(data => {
+                              if (data.success) {
+                                toast({
+                                  title: "Import successful",
+                                  description: `Imported ${data.imported || 0} items from CSV.`
+                                });
+                                refetchItems();
+                              } else {
+                                toast({
+                                  title: "Import failed",
+                                  description: data.message || "Failed to import CSV",
+                                  variant: "destructive"
+                                });
+                              }
+                            })
+                            .catch(err => {
+                              console.error("CSV import error:", err);
+                              toast({
+                                title: "Import error",
+                                description: "There was an error importing the CSV file",
+                                variant: "destructive"
+                              });
+                            });
+                        }}
+                      >
+                        <div className="py-4">
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="font-medium mb-2">Standard CSV Format</h3>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Your CSV should have these columns: Name, SKU, Category, Price, Quantity, Size (optional)
+                              </p>
+                              <div className="flex items-center justify-center w-full">
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <UploadCloud className="w-8 h-8 mb-3 text-gray-400" />
+                                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                      <span className="font-semibold">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">CSV Files (MAX. 10MB)</p>
+                                  </div>
+                                  <input 
+                                    id="standard-csv-file" 
+                                    name="file" 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept=".csv" 
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox id="sync-with-shopify" name="syncWithShopify" />
+                              <label
+                                htmlFor="sync-with-shopify"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                Sync imported items with Shopify
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit">Import Products</Button>
+                        </DialogFooter>
+                      </form>
+                    </TabsContent>
+                    
+                    <TabsContent value="shopify" className="mt-0">
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.target as HTMLFormElement);
+                          const fileInput = document.getElementById('shopify-csv-file') as HTMLInputElement;
+                          
+                          if (fileInput?.files?.length === 0) {
+                            toast({
+                              title: "No file selected",
+                              description: "Please select a CSV file to import",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          formData.append('file', fileInput.files![0]);
+                          
+                          toast({
+                            title: "Import started",
+                            description: "Importing from Shopify CSV format...",
+                          });
+                          
+                          apiRequest('POST', '/api/items/import-shopify', formData, false)
+                            .then(res => res.json())
+                            .then(data => {
+                              if (data.success) {
+                                toast({
+                                  title: "Import successful",
+                                  description: `Imported ${data.imported || 0} items from Shopify CSV.`
+                                });
+                                refetchItems();
+                              } else {
+                                toast({
+                                  title: "Import failed",
+                                  description: data.message || "Failed to import Shopify CSV",
+                                  variant: "destructive"
+                                });
+                              }
+                            })
+                            .catch(err => {
+                              console.error("Shopify CSV import error:", err);
+                              toast({
+                                title: "Import error",
+                                description: "There was an error importing the Shopify CSV file",
+                                variant: "destructive"
+                              });
+                            });
+                        }}
+                      >
+                        <div className="py-4">
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="font-medium mb-2">Shopify CSV Format</h3>
+                              <div className="text-sm text-muted-foreground space-y-1 mb-4">
+                                <p>1. Export your inventory from Shopify admin panel</p>
+                                <p>2. Select the CSV file using the uploader below</p>
+                                <p>3. Click "Import Shopify Inventory" to start the import process</p>
+                                <p>4. The importer will automatically extract product details and quantities</p>
+                              </div>
+                              <div className="flex items-center justify-center w-full">
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <UploadCloud className="w-8 h-8 mb-3 text-gray-400" />
+                                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                      <span className="font-semibold">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Shopify CSV Export (MAX. 10MB)</p>
+                                  </div>
+                                  <input 
+                                    id="shopify-csv-file" 
+                                    name="file" 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept=".csv" 
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit">Import Shopify Inventory</Button>
+                        </DialogFooter>
+                      </form>
+                    </TabsContent>
+                  </Tabs>
                 </DialogContent>
               </Dialog>
               
