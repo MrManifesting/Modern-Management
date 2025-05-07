@@ -98,13 +98,27 @@ export async function createShopifyClient() {
     log(`Attempting to connect with shopName: "${cleanShopUrl}" and API version: "2023-04"`, 'shopify-debug');
     
     // Create the Shopify client with a direct approach
+    // For simplifiedcurations.myshopify.com, we need to handle it specially
+    // as it may have a different API structure
+    const isSimplifiedCurations = cleanShopUrl.includes('simplifiedcurations.myshopify.com');
+    
+    log(`Creating Shopify client with special handling for simplifiedcurations: ${isSimplifiedCurations}`, 'shopify');
+    
     const shopify = new Shopify({
       shopName: cleanShopUrl,
       accessToken: credentials.accessToken,
-      apiVersion: '2023-04', // Use a stable version
+      apiVersion: '2023-10', // Using a more recent API version
       autoLimit: true,
-      timeout: 15000, // 15 second timeout
-      maxRetries: 0    // Disable retries to prevent redirect loops
+      timeout: 30000, // Increased timeout to 30 seconds
+      maxRetries: 0,   // Disable retries to prevent redirect loops
+      // For simplifiedcurations, set a different base URL to avoid redirect issues
+      ...(isSimplifiedCurations ? {
+        apiUrl: 'https://simplifiedcurations.myshopify.com/admin/api',
+        maxRetries: 0, // Explicitly disable retries for this store
+        // Try to disable any redirect following
+        followRedirects: false,
+        timeout: 60000 // Extended timeout for this specific store
+      } : {})
     });
     
     // Verify connection is working by making a simple API call

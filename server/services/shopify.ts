@@ -45,15 +45,6 @@ let pushToShopifyEnabled = false;
 
 // Function to get Shopify store name in correct format
 function getShopifyStoreName() {
-  // Force a direct read from the .env file for debugging
-  try {
-    const dotenv = require('dotenv');
-    dotenv.config({ override: true });
-    console.log("***DEBUG: Direct .env SHOPIFY_STORE value:", process.env.SHOPIFY_STORE);
-  } catch (err) {
-    console.error("***DEBUG: Error loading .env file:", err);
-  }
-  
   // Get store URL from environment variable
   const storeUrl = process.env.SHOPIFY_STORE || '';
   console.log("***DEBUG: Using SHOPIFY_STORE value:", storeUrl);

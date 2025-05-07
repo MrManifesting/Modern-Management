@@ -27,6 +27,12 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       cleanUrl = `${cleanUrl}.myshopify.com`;
     }
     
+    // Special handling for simplifiedcurations.myshopify.com
+    const isSimplifiedCurations = cleanUrl.includes('simplifiedcurations.myshopify.com');
+    if (isSimplifiedCurations) {
+      log(`Special handling for simplifiedcurations store`, 'shopify-direct');
+    }
+    
     log(`Using cleaned URL: ${cleanUrl}`, 'shopify-direct');
     
     // First check if the store exists by accessing the root domain
@@ -48,23 +54,50 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
         log(`Confirmed Shopify store domain`, 'shopify-direct');
         
         // Now try the API
-        const apiUrlVariants = [
-          // First try the standard GraphQL admin API
-          {
-            hostname: cleanUrl,
-            path: '/admin/api/2023-04/graphql.json'
-          },
-          // Then try the REST admin API
-          {
-            hostname: cleanUrl,
-            path: '/admin/api/2023-04/shop.json'
-          },
-          // Try the partner API format
-          {
-            hostname: 'partners.shopify.com',
-            path: `/api/2023-04/shops/${cleanUrl}.json`
-          }
-        ];
+        // Add special handling for simplifiedcurations store
+        const apiUrlVariants = isSimplifiedCurations
+          ? [
+              // For simplifiedcurations, try more API versions
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-10/shop.json'
+              },
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-07/shop.json'
+              },
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-04/shop.json'
+              },
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-01/shop.json'
+              }
+            ]
+          : [
+              // Standard API endpoints for other stores
+              // First try the standard GraphQL admin API
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-10/graphql.json'
+              },
+              // Then try the REST admin API
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-10/shop.json'
+              },
+              // Try older API version
+              {
+                hostname: cleanUrl,
+                path: '/admin/api/2023-04/shop.json'
+              },
+              // Try the partner API format
+              {
+                hostname: 'partners.shopify.com',
+                path: `/api/2023-10/shops/${cleanUrl}.json`
+              }
+            ];
         
         // Try each API endpoint variant
         tryApiEndpoints(apiUrlVariants, 0);
@@ -125,7 +158,9 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
                     
                     // If we received a redirect and it's a 401, pass the redirect URL back
                     // This helps the calling code attempt a direct connection to the redirected hostname
-                    if (variant.hostname !== redirectHostname && (variant.path === '/admin/api/2023-04/shop.json' || variant.path === '/admin/api/2023-04/graphql.json')) {
+                    if (variant.hostname !== redirectHostname && 
+                        (variant.path.includes('/admin/api/') && 
+                         (variant.path.includes('/shop.json') || variant.path.includes('/graphql.json')))) {
                       // Try the redirected location
                       const redirectReq = https.request({
                         hostname: redirectUrl.hostname,
