@@ -642,7 +642,13 @@ export class MemStorage implements IStorage {
   }
 
   async deleteItem(id: number): Promise<boolean> {
-    return this.items.delete(id);
+    try {
+      const result = await db.delete(items).where(eq(items.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting item ID ${id} from database:`, error);
+      throw error;
+    }
   }
 
   // Marketplace methods
