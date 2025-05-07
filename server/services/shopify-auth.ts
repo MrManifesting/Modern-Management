@@ -72,57 +72,53 @@ export async function getShopifyCredentials() {
   }
   
   try {
-    // Try to get credentials from database via API
-    const credentialsResponse = await fetch('http://localhost:5000/api/shopify/credentials', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // We directly use environment variables which contain the actual values
+    // without masking, which avoids issues with API calls
     
-    if (credentialsResponse.ok) {
-      const credentials = await credentialsResponse.json();
-      
-      // Get the saved tokens from DB if available
-      const adminToken = credentials.shopifyAccessToken || process.env.SHOPIFY_ACCESS_TOKEN || '';
-      const storefrontToken = credentials.shopifyStorefrontToken || process.env.SHOPIFY_STOREFRONT_TOKEN || '';
-      const storeUrl = credentials.shopifyStore || getShopifyStoreName();
-      
-      // Cache the credentials
-      cachedCredentials = {
-        storeUrl,
-        accessToken: adminToken,
-        storefrontToken,
-        timestamp: now
-      };
-      
-      // Log token debugging info
-      log(`Admin token length: ${adminToken.length}`, 'shopify-debug');
-      log(`Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
-      
-      return {
-        storeUrl,
-        accessToken: adminToken,
-        storefrontToken
-      };
+    // Get tokens directly from environment
+    const adminToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    const storefrontToken = process.env.SHOPIFY_STOREFRONT_TOKEN || '';
+    const storeUrl = process.env.SHOPIFY_STORE || getShopifyStoreName();
+    
+    // Log token debugging info (safely)
+    log(`Admin token length: ${adminToken.length}`, 'shopify-debug');
+    if (adminToken.length > 0) {
+      log(`Admin token starts with: ${adminToken.substring(0, 5)}...`, 'shopify-debug');
     }
+    log(`Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
+      
+    // Cache the credentials
+    cachedCredentials = {
+      storeUrl,
+      accessToken: adminToken,
+      storefrontToken,
+      timestamp: now
+    };
+    
+    // Return the credentials
+    return {
+      storeUrl,
+      accessToken: adminToken,
+      storefrontToken
+    };
   } catch (error) {
-    log(`Error fetching credentials from API: ${error}`, 'shopify-debug');
+    log(`Error getting Shopify credentials: ${error}`, 'shopify-debug');
+    
+    // Fallback to environment variables
+    const adminToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    const storefrontToken = process.env.SHOPIFY_STOREFRONT_TOKEN || '';
+    const storeUrl = getShopifyStoreName();
+    
+    // Log token debugging info
+    log(`Fallback token - Admin token length: ${adminToken.length}`, 'shopify-debug');
+    log(`Fallback token - Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
+    
+    return {
+      storeUrl,
+      accessToken: adminToken,
+      storefrontToken
+    };
   }
-  
-  // Fallback to environment variables if API fails
-  const adminToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
-  const storefrontToken = process.env.SHOPIFY_STOREFRONT_TOKEN || '';
-  
-  // Log token debugging info
-  log(`Admin token length: ${adminToken.length}`, 'shopify-debug');
-  log(`Storefront token length: ${storefrontToken.length}`, 'shopify-debug');
-  
-  // For compatibility, continue using the SHOPIFY_ACCESS_TOKEN as the main token
-  // but also make the storefront token available when needed
-  return {
-    storeUrl: getShopifyStoreName(),
-    accessToken: adminToken,
-    storefrontToken: storefrontToken
-  };
 }
 
 // Create a unified Shopify client for use throughout the application
