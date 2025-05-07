@@ -27,12 +27,18 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       cleanUrl = `${cleanUrl}.myshopify.com`;
     }
     
-    // Determine token type based on prefix
-    // shpat_ = Storefront API token (limited access)
-    // shpca_ = Custom App Admin API token (full access)
-    // shpss_ = App Store app token (full access)
-    // shppa_ = Partner API token
-    const isStorefrontToken = accessToken.startsWith('shpat_');
+    // Analyze token for better detection
+    const tokenLength = accessToken.length;
+    const tokenPrefix = accessToken.substring(0, 6);
+    
+    // Log token details for debugging
+    log(`Token details - Length: ${tokenLength}, Prefix: ${tokenPrefix}...`, 'shopify-direct');
+    
+    // Determine if this looks like a storefront token (default detection logic)
+    // In newer versions, tokens may have different formats
+    const isStorefrontToken = 
+      accessToken.includes('front') || 
+      accessToken.startsWith('shpat_');
     const isCustomAdminToken = accessToken.startsWith('shpca_');
     const isAppStoreToken = accessToken.startsWith('shpss_');
     const isPartnerToken = accessToken.startsWith('shppa_');

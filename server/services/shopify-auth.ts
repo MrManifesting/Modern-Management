@@ -117,22 +117,31 @@ export async function createShopifyClient() {
       
       // Determine token type based on prefix
       // shpat_ = Storefront API token (limited access)
-      // shpca_ = Custom App Admin API token (full access)
-      // shpss_ = App Store app token (full access)
-      // shppa_ = Partner API token
-      const isStorefrontToken = credentials.accessToken.startsWith('shpat_');
-      const isCustomAdminToken = credentials.accessToken.startsWith('shpca_');
-      const isAppStoreToken = credentials.accessToken.startsWith('shpss_');
-      const isPartnerToken = credentials.accessToken.startsWith('shppa_');
+      // Analyze token to detect its type based on format
+      // In newer Shopify versions, token patterns may vary
+      // Instead of relying solely on prefixes, we'll use both detection and testing
       
-      // While these prefixes do identify the token source, they don't necessarily limit permissions
-      // The actual permissions are determined by the scopes granted when the token was created
-      const tokenType = isStorefrontToken ? 'Storefront API' :
-                       isCustomAdminToken ? 'Custom App Admin API' :
-                       isAppStoreToken ? 'App Store Admin API' :
-                       isPartnerToken ? 'Partner API' : 'Unknown/Legacy API';
+      // Check token length and pattern for basic validation
+      const tokenLength = credentials.accessToken.length;
+      log(`Token length: ${tokenLength}`, 'shopify-details');
+      log(`Token starts with: ${credentials.accessToken.substring(0, 6)}...`, 'shopify-details');
       
-      log(`Token type: ${tokenType} (prefix: ${credentials.accessToken.substring(0, 6)}...)`, 'shopify-details');
+      // Try to detect token type - but these are just educated guesses
+      // We'll test both Storefront and Admin API endpoints regardless
+      const isLikelyStorefrontToken = 
+        credentials.accessToken.startsWith('shpat_') || 
+        credentials.accessToken.toLowerCase().includes('front');
+        
+      const isLikelyAdminToken = 
+        !isLikelyStorefrontToken || 
+        credentials.accessToken.toLowerCase().includes('admin');
+      
+      // For backward compatibility
+      const isStorefrontToken = isLikelyStorefrontToken;
+      
+      const tokenType = isLikelyStorefrontToken ? 'Likely Storefront API' : 'Likely Admin API';
+      
+      log(`Detected token type: ${tokenType}`, 'shopify-details');
       
       // Create a custom API client that makes direct HTTPS requests to avoid redirect issues
       shopify = {
@@ -222,13 +231,14 @@ export async function createShopifyClient() {
                 graphqlReq.end();
               }
               
-              // For Storefront API tokens, use GraphQL endpoint
+              // First try our best guess API type based on token
+              // For tokens we think are Storefront API tokens, use GraphQL
               if (isStorefrontToken) {
                 return useStorefrontGraphQL();
               }
               
               // For Admin API, use REST endpoint
-              const apiPath = '/admin/api/2023-10/shop.json';
+                const apiPath = '/admin/api/2023-10/shop.json';
               
               const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
