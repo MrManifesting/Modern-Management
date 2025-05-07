@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   UploadCloud, 
@@ -7,7 +7,11 @@ import {
   Filter,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  ShoppingCart, 
+  AlertTriangle,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +46,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import ItemFormComponent from '@/components/inventory/item-form';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import AddItemModal from '@/components/modals/add-item-modal';
 
 // Define the Product interface
 interface Product {
@@ -153,12 +160,65 @@ const categories = [
 ];
 
 const ProductsInventoryPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productIdToDelete, setProductIdToDelete] = useState<number | null>(null);
+  const [addItemModalOpen, setAddItemModalOpen] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch items from API
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['/api/items'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/items');
+      const data = await res.json();
+      return data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category || "Uncategorized",
+        subcategory: item.subcategory || "General",
+        price: item.basePrice || 0,
+        retailPrice: item.retailPrice || item.basePrice || 0,
+        wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
+        sku: item.sku || "NO-SKU",
+        barcode: item.barcode || "",
+        quantity: item.quantity || 0,
+        status: item.status || "draft",
+        size: item.size || "",
+        volume: item.volume || "",
+        description: item.description || "",
+        imageUrl: item.imageUrl || item.images?.[0] || "",
+        marketplace: item.marketplace || []
+      }));
+    }
+  });
+  
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/items/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      toast({
+        title: "Item deleted",
+        description: "The item has been successfully removed from your inventory."
+      });
+      setDeleteDialogOpen(false);
+      setProductIdToDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete the item. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
 
   // Format price
   const formatPrice = (price: number) => {
@@ -194,9 +254,58 @@ const ProductsInventoryPage: React.FC = () => {
 
   const confirmDelete = () => {
     if (productIdToDelete) {
-      setProducts(products.filter(p => p.id !== productIdToDelete));
-      setDeleteDialogOpen(false);
-      setProductIdToDelete(null);
+      deleteMutation.mutate(productIdToDelete);
+    }
+  };
+  
+  // Function to sync with Shopify
+  const syncWithShopify = async () => {
+    try {
+      setSyncLoading(true);
+      
+      // Find the marketplace ID for Shopify
+      const marketplacesResponse = await apiRequest('GET', '/api/marketplaces');
+      const marketplaces = await marketplacesResponse.json();
+      const shopifyMarketplace = marketplaces.find((m: any) => 
+        m.type.toLowerCase() === 'shopify' && m.isConnected);
+      
+      if (shopifyMarketplace) {
+        // Trigger a manual sync for the Shopify marketplace
+        const syncResponse = await apiRequest('POST', `/api/marketplaces/${shopifyMarketplace.id}/sync`);
+        const syncResult = await syncResponse.json();
+        
+        if (syncResult.success) {
+          toast({
+            title: "Shopify Sync Successful",
+            description: "Inventory has been synced with Shopify",
+            variant: "default"
+          });
+          
+          // Refresh products after sync
+          queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+        } else {
+          toast({
+            title: "Shopify Sync Warning",
+            description: syncResult.message || "Error syncing with Shopify",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Shopify Connection Error",
+          description: "No connected Shopify marketplace found",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Shopify sync error:', error);
+      toast({
+        title: "Shopify Sync Error",
+        description: "Failed to connect to Shopify. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -329,6 +438,41 @@ const ProductsInventoryPage: React.FC = () => {
 
   return (
     <>
+      {/* Add Item Modal */}
+      <AddItemModal 
+        isOpen={addItemModalOpen}
+        onClose={() => setAddItemModalOpen(false)}
+        editItem={null}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete this item from your inventory.
+              {deleteMutation.isPending && (
+                <div className="mt-2 flex items-center text-amber-600">
+                  <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                  Deleting...
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
@@ -341,44 +485,63 @@ const ProductsInventoryPage: React.FC = () => {
             
             {/* Mobile: Show only primary actions */}
             <div className="flex md:hidden gap-2">
-              <Button className="gap-1.5 flex-1" size="sm">
+              <Button 
+                className="gap-1.5 flex-1" 
+                size="sm"
+                onClick={() => setAddItemModalOpen(true)}
+              >
                 <Plus className="h-4 w-4" />
                 Add
               </Button>
-              <Button variant="outline" className="gap-1.5 flex-1" size="sm">
-                <UploadCloud className="h-4 w-4" />
-                Import
+              <Button 
+                variant="outline" 
+                className="gap-1.5 flex-1" 
+                size="sm"
+                onClick={syncWithShopify}
+                disabled={syncLoading}
+              >
+                {syncLoading ? (
+                  <>
+                    <div className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1"></div>
+                    Sync
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Sync
+                  </>
+                )}
               </Button>
             </div>
             
             {/* Desktop: Show all actions */}
             <div className="hidden md:flex flex-wrap gap-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="gap-1.5">
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle>Add New Product</DialogTitle>
-                    <DialogDescription>
-                      Create a new product in your inventory
-                    </DialogDescription>
-                  </DialogHeader>
-                  <ItemFormComponent 
-                    onSubmit={(data) => {
-                      console.log('Form data:', data);
-                      // TODO: Implement actual product creation with API
-                      toast({
-                        title: "Product created",
-                        description: "The product has been added to your inventory."
-                      });
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
+              <Button 
+                className="gap-1.5"
+                onClick={() => setAddItemModalOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={syncWithShopify}
+                disabled={syncLoading}
+              >
+                {syncLoading ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-1"></div>
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Sync with Shopify
+                  </>
+                )}
+              </Button>
               
               <Dialog>
                 <DialogTrigger asChild>

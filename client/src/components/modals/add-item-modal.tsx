@@ -179,6 +179,14 @@ export default function AddItemModal({
     }
   }, [isOpen, createMutation]);
 
+  // Reset Shopify sync status when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setShopifySyncStatus('idle');
+      setShopifySyncMessage('');
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -187,11 +195,31 @@ export default function AddItemModal({
             {isEditing ? "Edit Item" : "Add New Item"}
           </DialogTitle>
         </DialogHeader>
+        
+        {/* Shopify sync status indicator */}
+        {shopifySyncStatus !== 'idle' && (
+          <div className={`p-3 mb-3 rounded-md flex items-center gap-2 ${
+            shopifySyncStatus === 'syncing' ? 'bg-blue-50 text-blue-700' :
+            shopifySyncStatus === 'success' ? 'bg-green-50 text-green-700' :
+            'bg-red-50 text-red-700'
+          }`}>
+            {shopifySyncStatus === 'syncing' && (
+              <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
+            )}
+            {shopifySyncStatus === 'success' && <Check className="w-4 h-4" />}
+            {shopifySyncStatus === 'error' && <AlertTriangle className="w-4 h-4" />}
+            <span className="text-sm">{shopifySyncMessage || `Shopify sync ${shopifySyncStatus}`}</span>
+            {shopifySyncStatus === 'success' && (
+              <ShoppingCart className="w-4 h-4 ml-auto" />
+            )}
+          </div>
+        )}
+        
         <div className="mt-4">
           <ItemFormComponent
             defaultValues={getDefaultValues()}
             onSubmit={handleSubmit}
-            isLoading={createMutation.isPending}
+            isLoading={createMutation.isPending || shopifySyncStatus === 'syncing'}
             isEditing={isEditing}
           />
         </div>
