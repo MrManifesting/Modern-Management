@@ -55,11 +55,11 @@ export function getShopifyCredentials() {
 export async function createShopifyClient() {
   const credentials = getShopifyCredentials();
   
-  // Check if we should use mock client
-  const useMock = process.env.NODE_ENV === 'development' || !credentials.storeUrl || !credentials.accessToken;
+  // Check if we should use mock client - only if credentials are missing
+  const useMock = !credentials.storeUrl || !credentials.accessToken;
   
   if (useMock) {
-    log('Using mock Shopify client for development', 'shopify');
+    log('Using mock Shopify client due to missing credentials', 'shopify');
     const mockShopify = createMockShopifyClient();
     const mockShopInfo = getMockShopInfo();
     
@@ -156,27 +156,12 @@ export async function testShopifyConnection() {
       errorMessage = 'Store URL could not be resolved. Please check your Shopify store URL.';
     }
     
-    // Try to use mock as a fallback even in the test function
-    try {
-      const mockShopify = createMockShopifyClient();
-      const mockShopInfo = getMockShopInfo();
-      
-      return {
-        connected: true,
-        store: mockShopInfo.name,
-        domain: mockShopInfo.domain,
-        email: mockShopInfo.email,
-        country: mockShopInfo.country_name,
-        isMock: true,
-        message: `Using mock Shopify data (${mockShopInfo.name}). Real connection failed: ${errorMessage}`
-      };
-    } catch (mockError) {
-      return {
-        connected: false,
-        store: '',
-        isMock: false,
-        message: `${errorMessage} (${error.message})`
-      };
-    }
+    // Don't use mock as fallback for test function - return actual error
+    return {
+      connected: false,
+      store: '',
+      isMock: false,
+      message: `${errorMessage} (${error.message})`
+    };
   }
 }
