@@ -174,82 +174,102 @@ export function determineProductAttributes(title: string, variant: string): {
   packageSize: string;
   price: number;
 } {
-  // Determine brand from the title
-  let brand = 'MrListerscurations';
-  let prefix = 'GS'; // Default SKU prefix
+  // Extract Brand if present in title format "BrandName - Product Name"
+  let brand = 'Default Brand';
+  let prefix = 'INV'; // Default SKU prefix for Inventory Pro
   
-  if (title.toUpperCase().includes('TREE MASON')) {
-    brand = 'Tree Mason';
-    prefix = 'TM';
-  } else if (title.toUpperCase().includes('THCA')) {
-    brand = 'THCA Flower';
-    prefix = 'THCA';
+  // Try to extract brand from title pattern like "BrandName - Product"
+  const brandMatch = title.match(/^([^-]+)\s*-\s*/);
+  if (brandMatch && brandMatch[1]) {
+    brand = brandMatch[1].trim();
+    // Generate prefix from first letters of brand words
+    prefix = brand.split(/\s+/).map(word => word.charAt(0).toUpperCase()).join('');
   }
   
-  // Determine tier/category based on title
+  // Determine tier/quality based on keywords in title
   let tier = 'Standard';
-  let category = 'Cannabis';
+  let category = 'General';
   
-  if (title.toUpperCase().includes('TOP SHELF')) {
-    tier = 'Top Shelf';
-  } else if (title.toUpperCase().includes('EXOTIC')) {
-    tier = 'Exotic';
-  } else if (title.toUpperCase().includes('CLASSIC RESERVE')) { 
-    tier = 'Classic Reserve';
-  } else if (title.toUpperCase().includes('AAA')) {
-    tier = 'AAA Indoor';
-  } else if (title.toUpperCase().includes('AA')) {
-    tier = 'AA Indoor';
+  // Look for quality indicators
+  if (title.toUpperCase().includes('PREMIUM') || title.toUpperCase().includes('DELUXE')) {
+    tier = 'Premium';
+  } else if (title.toUpperCase().includes('LUXURY') || title.toUpperCase().includes('HIGH END')) {
+    tier = 'Luxury';
+  } else if (title.toUpperCase().includes('BASIC') || title.toUpperCase().includes('ECONOMY')) {
+    tier = 'Basic';
+  } else if (title.toUpperCase().includes('VALUE') || title.toUpperCase().includes('BUDGET')) {
+    tier = 'Value';
   }
   
-  if (title.toUpperCase().includes('THCA')) {
-    category = 'THCA Flower';
-  } else if (title.toUpperCase().includes('TREE MASON')) {
-    category = 'Tree Mason';
-  } else if (title.toUpperCase().includes('GOLD STANDARD')) {
-    category = 'MrListerscurations';
-  }
+  // Try to determine category based on keywords
+  const categoryKeywords = [
+    { keywords: ['ELECTRONICS', 'DEVICE', 'GADGET'], category: 'Electronics' },
+    { keywords: ['APPAREL', 'CLOTHING', 'SHIRT', 'PANTS', 'DRESS'], category: 'Apparel' },
+    { keywords: ['FURNITURE', 'CHAIR', 'TABLE', 'DESK'], category: 'Furniture' },
+    { keywords: ['FOOD', 'DRINK', 'BEVERAGE', 'SNACK'], category: 'Food & Beverage' },
+    { keywords: ['TOOL', 'HARDWARE', 'EQUIPMENT'], category: 'Tools & Hardware' },
+    { keywords: ['TOY', 'GAME', 'PLAY'], category: 'Toys & Games' },
+    { keywords: ['BEAUTY', 'COSMETIC', 'MAKEUP', 'SKIN', 'HAIR'], category: 'Beauty' },
+    { keywords: ['BOOK', 'MAGAZINE', 'PUBLICATION'], category: 'Books & Media' },
+    { keywords: ['ACCESSORY', 'JEWELRY', 'WATCH'], category: 'Accessories' }
+  ];
   
-  // Determine weight from variant
-  let weight: number | null = null;
-  let packageSize = variant || '';
-  
-  if (variant) {
-    if (variant.toLowerCase().includes('pound')) {
-      weight = 453.59; // 1 pound in grams
-    } else if (variant.toLowerCase().includes('1/2')) {
-      weight = 226.8; // Half pound in grams
-    } else if (variant.toLowerCase().includes('1/4')) {
-      weight = 113.4; // Quarter pound in grams
-    } else if (variant.match(/\b28\s*g/i) || variant.includes('28g') || variant.includes('28 g') || variant.includes('1 oz')) {
-      weight = 28; // 28 grams / 1 oz
-    } else if (variant.match(/\b14\s*g/i) || variant.includes('14g') || variant.includes('14 g') || variant.includes('1/2 oz')) {
-      weight = 14; // 14 grams / half oz
-    } else if (variant.match(/\b7\s*g/i) || variant.includes('7g') || variant.includes('7 g') || variant.includes('1/4 oz')) {
-      weight = 7; // 7 grams / quarter oz
-    } else if (variant.match(/\b3.5\s*g/i) || variant.includes('3.5g') || variant.includes('3.5 g') || variant.includes('1/8 oz')) {
-      weight = 3.5; // 3.5 grams / eighth oz
+  const titleUpper = title.toUpperCase();
+  for (const { keywords, category: cat } of categoryKeywords) {
+    if (keywords.some(keyword => titleUpper.includes(keyword))) {
+      category = cat;
+      break;
     }
   }
   
-  // Generate default price based on tier and weight
-  let price = 39.99;
+  // Determine weight/size from variant if applicable
+  let weight: number | null = null;
+  let packageSize = variant || '';
   
-  if (weight && weight >= 400) { // ~ 1 pound
-    price = 500;
-  } else if (weight && weight >= 200) { // ~ half pound
-    price = 275;
-  } else if (weight && weight >= 100) { // ~ quarter pound
-    price = 150;
-  } else if (weight && weight >= 25) { // ~ 1 oz
-    price = 120;
-  } else if (weight && weight >= 12) { // ~ half oz
-    price = 75;
-  } else if (weight && weight >= 6) { // ~ quarter oz
-    price = 40;
-  } else if (weight && weight >= 3) { // ~ eighth oz
-    price = 25;
+  // Extract weight/size information from variant text
+  const weightMatch = variant.match(/(\d+(?:\.\d+)?)\s*(g|grams|kg|lb|lbs|oz|ounce)/i);
+  if (weightMatch) {
+    const value = parseFloat(weightMatch[1]);
+    const unit = weightMatch[2].toLowerCase();
+    
+    // Convert to a standard unit (grams)
+    if (unit.startsWith('kg')) {
+      weight = value * 1000;
+    } else if (unit.startsWith('lb') || unit.startsWith('lbs')) {
+      weight = value * 453.59;
+    } else if (unit.startsWith('oz') || unit.startsWith('ounce')) {
+      weight = value * 28.35;
+    } else {
+      // Assume grams
+      weight = value;
+    }
   }
+  
+  // Generate default price - more generic approach
+  let price = 19.99; // Default base price
+  
+  // Adjust price based on tier
+  const tierMultipliers: {[key: string]: number} = {
+    'Value': 0.7,
+    'Basic': 0.9,
+    'Standard': 1.0,
+    'Premium': 1.5,
+    'Luxury': 2.5
+  };
+  
+  // Apply tier multiplier
+  price = price * (tierMultipliers[tier] || 1.0);
+  
+  // If we have weight/size info, adjust price accordingly
+  if (weight) {
+    // Simple linear price scaling based on weight
+    const baseWeight = 100; // reference weight in grams
+    const weightFactor = Math.max(0.5, Math.min(10, weight / baseWeight)); // limit the factor between 0.5 and 10
+    price = price * weightFactor;
+  }
+  
+  // Round price to two decimal places
+  price = Math.round(price * 100) / 100;
   
   return {
     brand,
