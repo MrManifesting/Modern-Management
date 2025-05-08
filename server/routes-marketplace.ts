@@ -620,6 +620,145 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
   });
 
   /**
+   * Bulk publish items to marketplaces
+   */
+  app.post("/api/items/bulk-publish", async (req: Request, res: Response) => {
+    try {
+      const { ids, marketplaces, sync = false } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Item IDs are required and must be an array" 
+        });
+      }
+      
+      if (!marketplaces || !Array.isArray(marketplaces) || marketplaces.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          error: "At least one marketplace is required" 
+        });
+      }
+      
+      const items = await Promise.all(
+        ids.map(async (id) => await storage.getItem(id))
+      );
+      
+      const validItems = items.filter(Boolean) as any[];
+      
+      if (validItems.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          error: "No valid items found with the provided IDs" 
+        });
+      }
+      
+      const results = [];
+      const errors = [];
+      
+      // Process each marketplace
+      for (const marketplaceName of marketplaces) {
+        // Find the marketplace by name
+        const marketplace = await storage.getMarketplaceByName(marketplaceName);
+        
+        if (!marketplace) {
+          errors.push(`Marketplace '${marketplaceName}' not found`);
+          continue;
+        }
+        
+        if (!marketplace.isConnected) {
+          errors.push(`Marketplace '${marketplaceName}' is not connected`);
+          continue;
+        }
+        
+        const marketplaceService = new MarketplaceService(marketplace);
+        
+        // Push each item to the marketplace
+        for (const item of validItems) {
+          try {
+            const result = await marketplaceService.pushProduct(item);
+            
+            if (result.success) {
+              // Update item with marketplace info
+              if (result.data?.shopifyProductId) {
+                const marketplaceData = item.marketplace || [];
+                const existingIndex = marketplaceData.findIndex(
+                  (m: any) => (typeof m === 'string' && m === marketplaceName) || 
+                  (typeof m === 'object' && m.name === marketplaceName)
+                );
+                
+                if (existingIndex >= 0) {
+                  marketplaceData[existingIndex] = {
+                    name: marketplaceName,
+                    isListed: true,
+                    productId: result.data.shopifyProductId,
+                    lastSynced: new Date()
+                  };
+                } else {
+                  marketplaceData.push({
+                    name: marketplaceName,
+                    isListed: true,
+                    productId: result.data.shopifyProductId,
+                    lastSynced: new Date()
+                  });
+                }
+                
+                await storage.updateItem(item.id, {
+                  marketplace: marketplaceData,
+                  status: 'listed'
+                });
+              }
+              
+              results.push({
+                itemId: item.id,
+                itemName: item.name,
+                marketplace: marketplaceName,
+                success: true,
+                message: result.message || 'Successfully published'
+              });
+            } else {
+              errors.push(`Failed to publish '${item.name}' to ${marketplaceName}: ${result.message}`);
+            }
+          } catch (error) {
+            console.error(`Error publishing item ${item.id} to ${marketplaceName}:`, error);
+            errors.push(`Error publishing '${item.name}' to ${marketplaceName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+      }
+      
+      // Trigger a sync if requested
+      if (sync && results.length > 0) {
+        try {
+          for (const marketplaceName of marketplaces) {
+            const marketplace = await storage.getMarketplaceByName(marketplaceName);
+            if (marketplace && marketplace.isConnected) {
+              // Schedule sync to run in the background
+              scheduler.scheduleImmediateSync(marketplace.id, 'push');
+            }
+          }
+        } catch (syncError) {
+          console.error('Error scheduling sync after bulk publish:', syncError);
+          // Don't fail the whole operation for sync errors
+        }
+      }
+      
+      res.json({
+        success: true,
+        published: results.length,
+        total: validItems.length,
+        results,
+        errors
+      });
+    } catch (error) {
+      console.error("Error in bulk publish to marketplace:", error);
+      res.status(500).json({ 
+        success: false,
+        error: `Failed to bulk publish items: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  /**
    * Get push info for an item to a marketplace
    */
   app.get("/api/items/:id/marketplace-push-info/:marketplaceId", async (req: Request, res: Response) => {
