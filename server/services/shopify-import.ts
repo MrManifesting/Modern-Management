@@ -296,13 +296,17 @@ export function generateSKU(prefix: string, handle: string): string {
  * Create a product description
  */
 export function createDescription(title: string, tier: string): string {
-  let strain = title;
+  let productName = title;
+  
+  // If title has a format like "Brand - Product", extract the product part
   if (title.includes(' - ')) {
     const parts = title.split(' - ');
-    strain = parts[0];
+    if (parts.length > 1) {
+      productName = parts[1]; // Use the part after the brand
+    }
   }
   
-  return `${strain} - Premium Quality Cannabis - ${tier}`;
+  return `${productName} - ${tier} Quality Product. This product was imported from Shopify.`;
 }
 
 /**
@@ -365,9 +369,19 @@ export async function importShopifyCSV(
           continue;
         }
         
-        // Skip Printify items
-        if (row.some((cell: string) => cell?.includes('Printify') || cell?.includes('not stocked'))) {
-          errors.push({row: rowIndex + 2, reason: "Printify or not stocked items are skipped"});
+        // Skip items marked as unavailable, but allow normal items to be imported
+        // We've removed the Printify-specific filter as it's no longer needed
+        if (row.some((cell: string) => {
+          // Only skip if we find very specific "not stocked" or "unavailable" messages
+          if (cell) {
+            const lowerCell = cell.toLowerCase();
+            return lowerCell === 'not stocked' || 
+                   lowerCell === 'unavailable' || 
+                   lowerCell === 'out of stock'; 
+          }
+          return false;
+        })) {
+          errors.push({row: rowIndex + 2, reason: "Out of stock/unavailable items are skipped"});
           skipped++;
           continue;
         }
@@ -416,8 +430,6 @@ export async function importShopifyCSV(
             name: 'Shopify',
             isListed: true
           }],
-          aiEnhanced: false,
-          aiTags: [],
           weight: attributes.weight || null,
         };
         
