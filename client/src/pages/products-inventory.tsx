@@ -748,7 +748,7 @@ const ProductsInventoryPage: React.FC = () => {
                           
                           formData.append('file', fileInput.files![0]);
                           
-                          apiRequest('POST', '/api/items/import', formData, false)
+                          apiRequest('POST', '/api/items/import', formData, true)
                             .then(res => res.json())
                             .then(data => {
                               if (data.success) {
