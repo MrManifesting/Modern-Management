@@ -10,6 +10,7 @@ import {
   Barcode,
   Store
 } from "lucide-react";
+import ImageCarousel from "./image-carousel";
 import { 
   Card,
   CardContent,
@@ -108,12 +109,12 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
         onClick={handleViewDetails}
       >
         <div className="relative h-48 bg-gray-200">
-          {/* Item image */}
-          {(item.images as string[])[0] ? (
-            <img
-              src={(item.images as string[])[0]}
-              alt={item.name}
-              className="h-full w-full object-cover hover-card-image"
+          {/* Item image carousel */}
+          {(item.images as string[])?.length > 0 ? (
+            <ImageCarousel 
+              images={item.images as string[]} 
+              alt={item.name} 
+              className="hover-card-image"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gray-200">
