@@ -82,6 +82,7 @@ export function extractProductInfo(
   title: string; 
   quantity: number; 
   variant: string;
+  price: number | null;
   error?: string;
 } {
   try {
@@ -93,9 +94,14 @@ export function extractProductInfo(
       const availableIndex = headers.indexOf('Available');
       const variantInventoryIndex = headers.indexOf('Variant Inventory Qty');
       
+      // Look for price in various possible column names
+      const variantPriceIndex = headers.indexOf('Variant Price');
+      const priceIndex = headers.indexOf('Price');
+      const regularPriceIndex = headers.indexOf('Regular Price');
+      
       if (handleIndex < 0 || titleIndex < 0) {
         return { 
-          handle: '', title: '', quantity: 0, variant: '',
+          handle: '', title: '', quantity: 0, variant: '', price: null,
           error: 'Missing required Handle or Title columns'
         };
       }
@@ -119,7 +125,20 @@ export function extractProductInfo(
         quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
       }
       
-      return { handle, title, quantity, variant: optionValue };
+      // Extract price if available in any of the price columns
+      let price: number | null = null;
+      if (variantPriceIndex >= 0 && row[variantPriceIndex]) {
+        const priceStr = row[variantPriceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      } else if (priceIndex >= 0 && row[priceIndex]) {
+        const priceStr = row[priceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      } else if (regularPriceIndex >= 0 && row[regularPriceIndex]) {
+        const priceStr = row[regularPriceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      }
+      
+      return { handle, title, quantity, variant: optionValue, price };
     } 
     else if (format === 'inventory') {
       const productIndex = headers.indexOf('Product');
