@@ -657,6 +657,12 @@ export class MemStorage implements IStorage {
     return Array.from(this.marketplaces.values());
   }
 
+  async getMarketplaceByName(name: string): Promise<Marketplace | undefined> {
+    return Array.from(this.marketplaces.values()).find(
+      marketplace => marketplace.name === name
+    );
+  }
+
   async getMarketplace(id: number): Promise<Marketplace | undefined> {
     return this.marketplaces.get(id);
   }
