@@ -74,13 +74,30 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
       }
 
       // Initialize Shopify client
-      const shopify = await createShopifyClient();
-      if (!shopify) {
+      const shopifyClient = await createShopifyClient();
+      if (!shopifyClient) {
         return res.status(500).json({ error: "Failed to connect to Shopify" });
       }
 
       // Search for the product by SKU in Shopify
       try {
+        // Different approach depending on whether we got a real or mock client
+        if (shopifyClient.isMock) {
+          // For mock client, return simulated results
+          return res.json({
+            success: true,
+            productInfo: {
+              title: `${item.name} (Mock)`,
+              handle: item.name.toLowerCase().replace(/\s+/g, '-'),
+              storeUrl: `https://example.myshopify.com/products/${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+              imageUrl: (item.images as string[])[0] || null,
+              id: `gid://shopify/Product/${item.id}`,
+              note: "This is a mock preview as Shopify credentials are not configured"
+            }
+          });
+        }
+
+        // For real client, use the GraphQL API
         const query = `
           {
             products(first: 1, query: "sku:${item.sku}") {
@@ -103,8 +120,13 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
           }
         `;
 
-        // First, try using the GraphQL API
-        const graphqlResult = await shopify.graphql(query);
+        // First, try using the GraphQL API if available
+        let graphqlResult;
+        
+        // Check if the client has graphql method
+        if (typeof shopifyClient.shopify.graphql === 'function') {
+          graphqlResult = await shopifyClient.shopify.graphql(query);
+        }
         
         if (graphqlResult && 
             graphqlResult.products && 
@@ -140,11 +162,41 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
           });
         }
         
-        // If GraphQL doesn't return results, try the REST API
-        console.log("GraphQL search failed, falling back to REST API...");
-        const products = await shopify.rest.Product.all({
-          query: `sku:${item.sku}`
-        });
+        // If GraphQL doesn't return results, try the REST API if available
+        console.log("GraphQL search failed or not available, trying another approach...");
+        
+        // Check if the client has REST API available
+        let products;
+        try {
+          if (shopifyClient.shopify.rest && typeof shopifyClient.shopify.rest.Product?.all === 'function') {
+            products = await shopifyClient.shopify.rest.Product.all({
+              query: `sku:${item.sku}`
+            });
+          } else {
+            // For clients without standard REST API, try another approach
+            // This is a simplified fallback that returns a generic response
+            return res.json({
+              success: false,
+              message: "Cannot search products. Shopify API client doesn't have REST product search capability.",
+              item: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku
+              }
+            });
+          }
+        } catch (restError) {
+          console.error("REST API error:", restError);
+          return res.json({
+            success: false,
+            message: "Error searching for product in Shopify",
+            item: {
+              id: item.id,
+              name: item.name,
+              sku: item.sku
+            }
+          });
+        }
         
         if (products && products.data && products.data.length > 0) {
           const product = products.data[0];
@@ -171,10 +223,15 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
           });
         }
         
-        // If no product found by SKU, try searching by name
-        const nameProducts = await shopify.rest.Product.all({
-          query: `title:${item.name}`
-        });
+        // If no product found by SKU, try searching by name if REST API is available
+        let nameProducts;
+        if (shopifyClient.shopify.rest && typeof shopifyClient.shopify.rest.Product?.all === 'function') {
+          nameProducts = await shopifyClient.shopify.rest.Product.all({
+            query: `title:${item.name}`
+          });
+        } else {
+          nameProducts = { data: [] };
+        }
         
         if (nameProducts && nameProducts.data && nameProducts.data.length > 0) {
           const product = nameProducts.data[0];
