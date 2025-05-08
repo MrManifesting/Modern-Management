@@ -74,7 +74,7 @@ export default function MarketplaceManagement() {
     queryKey: ['/api/marketplaces', marketplaceIdFromUrl],
     queryFn: async () => {
       if (!marketplaceIdFromUrl) return null;
-      return apiRequest(`/api/marketplaces/${marketplaceIdFromUrl}`);
+      return apiRequest('GET', `/api/marketplaces/${marketplaceIdFromUrl}`);
     },
     enabled: !!marketplaceIdFromUrl
   });
@@ -89,9 +89,7 @@ export default function MarketplaceManagement() {
   
   // Delete marketplace mutation
   const deleteMarketplaceMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/marketplaces/${id}`, {
-      method: 'DELETE'
-    }),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/marketplaces/${id}`),
     onSuccess: () => {
       toast({
         title: "Marketplace deleted",
