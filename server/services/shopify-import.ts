@@ -145,9 +145,14 @@ export function extractProductInfo(
       const variantIndex = headers.indexOf('Variant');
       const qtyIndex = headers.indexOf('Variant Inventory Qty');
       
+      // Look for price in various possible column names in inventory format
+      const priceIndex = headers.indexOf('Price');
+      const costPriceIndex = headers.indexOf('Cost Price');
+      const comparePriceIndex = headers.indexOf('Compare At Price');
+      
       if (productIndex < 0) {
         return { 
-          handle: '', title: '', quantity: 0, variant: '',
+          handle: '', title: '', quantity: 0, variant: '', price: null,
           error: 'Missing required Product column'
         };
       }
@@ -166,25 +171,38 @@ export function extractProductInfo(
         quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
       }
       
-      return { handle, title, quantity, variant };
+      // Extract price if available in any of the price columns
+      let price: number | null = null;
+      if (priceIndex >= 0 && row[priceIndex]) {
+        const priceStr = row[priceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      } else if (costPriceIndex >= 0 && row[costPriceIndex]) {
+        const priceStr = row[costPriceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      } else if (comparePriceIndex >= 0 && row[comparePriceIndex]) {
+        const priceStr = row[comparePriceIndex].trim().replace(/[^0-9.]/g, '');
+        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      }
+      
+      return { handle, title, quantity, variant, price };
     }
     
     return { 
-      handle: '', title: '', quantity: 0, variant: '',
+      handle: '', title: '', quantity: 0, variant: '', price: null,
       error: 'Unknown CSV format'
     };
   } catch (error) {
     return { 
-      handle: '', title: '', quantity: 0, variant: '',
+      handle: '', title: '', quantity: 0, variant: '', price: null,
       error: `Error processing row ${rowIndex}: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }
 
 /**
- * Determine product attributes based on title and variant
+ * Determine product attributes based on title, variant, and price
  */
-export function determineProductAttributes(title: string, variant: string): {
+export function determineProductAttributes(title: string, variant: string, extractedPrice: number | null = null): {
   brand: string;
   prefix: string;
   category: string;
@@ -264,27 +282,39 @@ export function determineProductAttributes(title: string, variant: string): {
     }
   }
   
-  // Generate default price - more generic approach
-  let price = 19.99; // Default base price
+  // Use extracted price if available, otherwise use a default
+  let price: number;
   
-  // Adjust price based on tier
-  const tierMultipliers: {[key: string]: number} = {
-    'Value': 0.7,
-    'Basic': 0.9,
-    'Standard': 1.0,
-    'Premium': 1.5,
-    'Luxury': 2.5
-  };
-  
-  // Apply tier multiplier
-  price = price * (tierMultipliers[tier] || 1.0);
-  
-  // If we have weight/size info, adjust price accordingly
-  if (weight) {
-    // Simple linear price scaling based on weight
-    const baseWeight = 100; // reference weight in grams
-    const weightFactor = Math.max(0.5, Math.min(10, weight / baseWeight)); // limit the factor between 0.5 and 10
-    price = price * weightFactor;
+  if (extractedPrice !== null && extractedPrice > 0) {
+    // Use the actual price from the CSV
+    price = extractedPrice;
+    
+    console.log(`Using extracted price from CSV: $${price.toFixed(2)}`);
+  } else {
+    // Generate default price - more generic approach when CSV doesn't have price
+    price = 19.99; // Default base price
+    
+    // Adjust price based on tier
+    const tierMultipliers: {[key: string]: number} = {
+      'Value': 0.7,
+      'Basic': 0.9,
+      'Standard': 1.0,
+      'Premium': 1.5,
+      'Luxury': 2.5
+    };
+    
+    // Apply tier multiplier
+    price = price * (tierMultipliers[tier] || 1.0);
+    
+    // If we have weight/size info, adjust price accordingly
+    if (weight) {
+      // Simple linear price scaling based on weight
+      const baseWeight = 100; // reference weight in grams
+      const weightFactor = Math.max(0.5, Math.min(10, weight / baseWeight)); // limit the factor between 0.5 and 10
+      price = price * weightFactor;
+    }
+    
+    console.log(`No price in CSV, using calculated default: $${price.toFixed(2)}`);
   }
   
   // Round price to two decimal places
@@ -414,7 +444,7 @@ export async function importShopifyCSV(
           continue;
         }
         
-        const { handle, title, quantity, variant } = productInfo;
+        const { handle, title, quantity, variant, price: extractedPrice } = productInfo;
         
         // Skip duplicate products (only take the first variant)
         if (processedHandles.has(handle)) {
@@ -424,8 +454,8 @@ export async function importShopifyCSV(
         }
         processedHandles.add(handle);
         
-        // Determine product attributes
-        const attributes = determineProductAttributes(title, variant);
+        // Determine product attributes with extracted price if available
+        const attributes = determineProductAttributes(title, variant, extractedPrice);
         
         // Generate SKU
         const sku = generateSKU(attributes.prefix, handle);
