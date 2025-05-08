@@ -380,11 +380,19 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   const handleBulkEditComplete = () => {
+    console.log("handleBulkEditComplete called, closing panel");
+    
+    // Close the panel
     setBulkEditOpen(false);
+    
+    // Reset selection state for new selections
     setSelectedItems([]);
     setBulkSelectMode(false);
+    
+    // Refresh the product list
     queryClient.invalidateQueries({ queryKey: ['/api/items'] });
     
+    // Show success toast
     toast({
       title: "Bulk update complete",
       description: "Selected items have been updated successfully."
@@ -537,13 +545,38 @@ const ProductsInventoryPage: React.FC = () => {
         editItem={null}
       />
       
-      {/* Bulk Edit Panel */}
-      {bulkSelectMode && selectedItems.length > 0 && bulkEditOpen && (
-        <BulkEditPanel
-          selectedItems={selectedItems}
-          onBulkEditComplete={handleBulkEditComplete}
-        />
-      )}
+      {/* Bulk Edit Panel - Using Dialog directly for simplicity */}
+      <Dialog open={bulkEditOpen} onOpenChange={(open) => {
+        if (!open) {
+          setBulkEditOpen(false);
+        }
+      }}>
+        {selectedItems.length > 0 && (
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Bulk Edit {selectedItems.length} Items</DialogTitle>
+              <DialogDescription>
+                Make changes to multiple items at once
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p>You have selected {selectedItems.length} items.</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {selectedItems.slice(0, 5).map(item => (
+                  <Badge key={item.id} variant="outline">{item.name}</Badge>
+                ))}
+                {selectedItems.length > 5 && (
+                  <Badge variant="outline">+{selectedItems.length - 5} more</Badge>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleBulkEditComplete}>Apply Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
