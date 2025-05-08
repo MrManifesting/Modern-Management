@@ -8,11 +8,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Upload, Info, AlertCircle, CheckCircle2, Eye, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useLocation, useRoute } from 'wouter';
 
 const formSchema = z.object({
   file: z.instanceof(FileList).refine((files) => {
@@ -30,6 +31,7 @@ const formSchema = z.object({
 export default function ShopifyImport() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [progress, setProgress] = useState(0);
   const [importedItems, setImportedItems] = useState<Array<any>>([]);
   const [errors, setErrors] = useState<Array<any>>([]);
@@ -41,6 +43,7 @@ export default function ShopifyImport() {
   }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectToInventory, setRedirectToInventory] = useState(false);
 
   // Progress bar animation
   useEffect(() => {
@@ -59,6 +62,18 @@ export default function ShopifyImport() {
       if (interval) clearInterval(interval);
     };
   }, [isLoading, progress]);
+  
+  // Handle auto-redirect to inventory view
+  useEffect(() => {
+    if (redirectToInventory) {
+      // Add slight delay to allow the user to see the success message
+      const redirectTimer = setTimeout(() => {
+        setLocation("/inventory"); // Redirect to inventory page
+      }, 2000);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [redirectToInventory, setLocation]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -118,13 +133,19 @@ export default function ShopifyImport() {
         
         setImportStats(stats);
         
+        // Show toast message about import success and upcoming redirection
         toast({
           title: 'Import Successful',
-          description: data.message || `Successfully imported ${data.items.length} items from Shopify CSV.`,
+          description: `Successfully imported ${data.items.length} items. Redirecting to inventory view...`,
         });
         
         // Invalidate queries to refresh inventory data
         queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+        
+        // Initiate auto-redirect to inventory view after a brief delay
+        if (data.items.length > 0) {
+          setRedirectToInventory(true);
+        }
       } else {
         // Handle case where data.items is missing
         setImportedItems([]);
@@ -304,13 +325,23 @@ export default function ShopifyImport() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="bg-gray-800/30 py-3 px-6">
+          <CardFooter className="bg-gray-800/30 py-3 px-6 flex justify-between">
+            <div className="text-sm text-gray-400">
+              {redirectToInventory ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Redirecting to inventory...</span>
+                </div>
+              ) : (
+                <span>Click the button to view all items in the inventory</span>
+              )}
+            </div>
             <Button 
               variant="outline" 
-              className="text-sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/items'] })}
+              className="text-sm flex items-center gap-2"
+              onClick={() => setLocation("/inventory")}
             >
-              View All Items
+              <Eye className="h-4 w-4" /> View All Items
             </Button>
           </CardFooter>
         </Card>
@@ -327,12 +358,12 @@ export default function ShopifyImport() {
             
             <div className="space-y-2 max-h-64 overflow-y-auto p-2">
               {errors.map((error, index) => (
-                <Alert key={index} variant="outline" className="bg-yellow-900/10 border-yellow-500/30 text-sm">
+                <div key={index} className="bg-yellow-900/10 border border-yellow-500/30 rounded-md p-3 text-sm">
                   <div className="flex items-start">
                     <span className="font-mono text-yellow-300 mr-2">Row {error.row}:</span> 
                     <span>{error.reason}</span>
                   </div>
-                </Alert>
+                </div>
               ))}
             </div>
           </CardContent>
