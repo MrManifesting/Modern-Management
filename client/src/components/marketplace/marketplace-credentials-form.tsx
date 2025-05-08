@@ -178,15 +178,9 @@ export default function MarketplaceCredentialsForm({
       };
       
       if (isEditing) {
-        return apiRequest(`/api/marketplaces/${marketplace.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload)
-        });
+        return apiRequest('PATCH', `/api/marketplaces/${marketplace.id}`, payload);
       } else {
-        return apiRequest('/api/marketplaces', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
+        return apiRequest('POST', '/api/marketplaces', payload);
       }
     },
     onSuccess: (data) => {
