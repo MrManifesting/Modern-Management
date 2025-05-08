@@ -228,6 +228,9 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
     }
   };
 
+  // Log when rendering
+  console.log("Rendering BulkEditPanel dialog, selectedItems:", selectedItems.length);
+
   return (
     <Dialog open={true} onOpenChange={() => onBulkEditComplete()}>
       <DialogContent className="max-w-3xl">
