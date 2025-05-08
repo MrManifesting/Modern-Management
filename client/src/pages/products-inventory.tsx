@@ -336,9 +336,24 @@ const ProductsInventoryPage: React.FC = () => {
       if (prev) {
         // If turning off, clear selections
         setSelectedItems([]);
+        // Also close the bulk edit panel if it's open
+        setBulkEditOpen(false);
       }
       return !prev;
     });
+  };
+  
+  // Function to handle opening the bulk edit panel
+  const openBulkEditPanel = () => {
+    if (selectedItems.length > 0) {
+      setBulkEditOpen(true);
+    } else {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to perform bulk edit operations.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleItemSelection = (product: Product, isSelected: boolean) => {
@@ -574,11 +589,11 @@ const ProductsInventoryPage: React.FC = () => {
               <Button 
                 className="gap-1.5 flex-1" 
                 size="sm"
-                onClick={toggleBulkSelectMode}
+                onClick={bulkSelectMode && selectedItems.length > 0 ? openBulkEditPanel : toggleBulkSelectMode}
                 variant={bulkSelectMode ? "secondary" : "outline"}
               >
                 <ClipboardList className="h-4 w-4" />
-                {bulkSelectMode ? "Exit" : "Bulk"}
+                {bulkSelectMode ? (selectedItems.length > 0 ? "Edit Items" : "Exit") : "Bulk"}
               </Button>
               <Button 
                 variant="outline" 
@@ -614,13 +629,20 @@ const ProductsInventoryPage: React.FC = () => {
               <Button
                 variant={bulkSelectMode ? "secondary" : "outline"}
                 className="gap-1.5"
-                onClick={toggleBulkSelectMode}
+                onClick={bulkSelectMode && selectedItems.length > 0 ? openBulkEditPanel : toggleBulkSelectMode}
               >
                 {bulkSelectMode ? (
-                  <>
-                    <XSquare className="h-4 w-4" />
-                    Cancel Selection
-                  </>
+                  selectedItems.length > 0 ? (
+                    <>
+                      <Edit className="h-4 w-4" />
+                      Edit Selected ({selectedItems.length})
+                    </>
+                  ) : (
+                    <>
+                      <XSquare className="h-4 w-4" />
+                      Cancel Selection
+                    </>
+                  )
                 ) : (
                   <>
                     <ClipboardList className="h-4 w-4" />
