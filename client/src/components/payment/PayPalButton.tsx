@@ -66,19 +66,14 @@ export function PayPalButton({
     try {
       // Create order
       const orderResponse = await apiRequest('POST', '/api/paypal/order', {
-        body: JSON.stringify({
-          amount,
-          currency,
-          intent,
-          metadata: {
-            affiliateId,
-            qrCode
-          }
-        }),
-        headers: {
-          'Content-Type': 'application/json'
+        amount,
+        currency,
+        intent,
+        metadata: {
+          affiliateId,
+          qrCode
         }
-      });
+      }, false);
       
       if (!orderResponse.ok) {
         throw new Error('Failed to create PayPal order');
