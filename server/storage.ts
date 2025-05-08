@@ -48,6 +48,7 @@ export interface IStorage {
   // Marketplace methods
   getMarketplaces(): Promise<Marketplace[]>;
   getAllMarketplaces(): Promise<Marketplace[]>; // Get all marketplaces including disabled ones
+  getMarketplaceByName(name: string): Promise<Marketplace | undefined>;
   getMarketplace(id: number): Promise<Marketplace | undefined>;
   createMarketplace(marketplace: InsertMarketplace): Promise<Marketplace>;
   updateMarketplace(id: number, marketplace: Partial<InsertMarketplace>): Promise<Marketplace | undefined>;
@@ -1746,6 +1747,11 @@ export class DatabaseStorage implements IStorage {
   
   async getAllMarketplaces(): Promise<Marketplace[]> {
     return await db.select().from(marketplaces);
+  }
+  
+  async getMarketplaceByName(name: string): Promise<Marketplace | undefined> {
+    const [marketplace] = await db.select().from(marketplaces).where(eq(marketplaces.name, name));
+    return marketplace;
   }
   
   async getMarketplace(id: number): Promise<Marketplace | undefined> {
