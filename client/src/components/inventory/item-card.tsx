@@ -41,10 +41,18 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [, navigate] = useLocation();
 
-  // Format date for display
-  const formattedDate = formatDistanceToNow(new Date(item.createdAt), { 
-    addSuffix: true 
-  });
+  // Format date for display with error handling
+  let formattedDate = "Recently added";
+  try {
+    // Make sure we have a valid date to format
+    if (item.createdAt && !isNaN(new Date(item.createdAt).getTime())) {
+      formattedDate = formatDistanceToNow(new Date(item.createdAt), { 
+        addSuffix: true 
+      });
+    }
+  } catch (err) {
+    console.warn("Could not format date for item:", item.id);
+  }
   
   // Handle click to view item details
   const handleViewDetails = (e: React.MouseEvent) => {
