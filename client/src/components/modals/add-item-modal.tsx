@@ -50,7 +50,7 @@ export default function AddItemModal({
         const res = await apiRequest("PATCH", `/api/items/${editItem.id}`, formData, true);
         return res.json();
       } else {
-        const res = await apiRequest("POST", "/api/items", formData);
+        const res = await apiRequest("POST", "/api/items", formData, true);
         return res.json();
       }
     },
