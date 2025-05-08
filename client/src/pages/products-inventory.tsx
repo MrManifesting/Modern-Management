@@ -346,7 +346,14 @@ const ProductsInventoryPage: React.FC = () => {
   // Function to handle opening the bulk edit panel
   const openBulkEditPanel = () => {
     if (selectedItems.length > 0) {
+      console.log("Opening bulk edit panel with", selectedItems.length, "items");
       setBulkEditOpen(true);
+      
+      // Add debug toast to confirm panel should be opening
+      toast({
+        title: "Opening bulk edit panel",
+        description: `${selectedItems.length} items selected for bulk editing.`
+      });
     } else {
       toast({
         title: "No items selected",

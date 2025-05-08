@@ -34,6 +34,18 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
   const [currentTab, setCurrentTab] = useState('status');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Add debugging
+  console.log("BulkEditPanel rendered with", selectedItems.length, "items");
+  
+  // Show toast with debug info when component mounts
+  React.useEffect(() => {
+    console.log("BulkEditPanel mounted");
+    toast({
+      title: "Bulk Edit Panel Active",
+      description: `Editing ${selectedItems.length} items`
+    });
+  }, []);
 
   // Status state
   const [status, setStatus] = useState('');
