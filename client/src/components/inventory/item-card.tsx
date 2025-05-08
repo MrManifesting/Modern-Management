@@ -7,7 +7,8 @@ import {
   Trash2,
   Printer,
   QrCode,
-  Barcode
+  Barcode,
+  Store
 } from "lucide-react";
 import { 
   Card,
@@ -25,6 +26,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import BarcodePrint from "./barcode-print";
+import ShopifyStorePreview from "./shopify-store-preview";
 import { Item } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -115,8 +117,8 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <div className="absolute top-2 right-2 flex space-x-1">
             {/* Stock status badge */}
             <span className={`rounded-full px-2 py-1 text-xs font-medium text-white
-              ${item.quantity > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
-              {item.quantity > 0 ? `In Stock (${item.quantity})` : 'Out of Stock'}
+              ${Number(item.quantity) > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+              {Number(item.quantity) > 0 ? `In Stock (${item.quantity})` : 'Out of Stock'}
             </span>
             
             {/* Marketplace badge */}
@@ -162,6 +164,19 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                     <Printer className="mr-2 h-4 w-4" />
                     Print Barcode/QR
                   </DropdownMenuItem>
+                  {/* Only show View in Store for items that have a SKU and are listed */}
+                  {item.sku && item.status === 'listed' && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        document.getElementById(`shopify-preview-${item.id}`)?.click();
+                      }}
+                    >
+                      <Store className="mr-2 h-4 w-4" />
+                      View in Shopify Store
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => onDelete(item.id)}
@@ -199,6 +214,11 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <BarcodePrint item={item} onClose={() => setIsPrintModalOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      {/* Hidden trigger for shopify preview */}
+      <span className="hidden" id={`shopify-preview-${item.id}`}>
+        <ShopifyStorePreview item={item} />
+      </span>
     </>
   );
 }
