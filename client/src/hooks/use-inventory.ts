@@ -45,7 +45,7 @@ export function useInventory(initialFilters: InventoryFilters = {}) {
         }
       });
       
-      const res = await apiRequest("POST", API_ENDPOINTS.ITEMS, formData);
+      const res = await apiRequest("POST", API_ENDPOINTS.ITEMS, formData, true);
       return res.json();
     },
     onSuccess: () => {
@@ -88,7 +88,7 @@ export function useInventory(initialFilters: InventoryFilters = {}) {
         }
       });
       
-      const res = await apiRequest("PATCH", API_ENDPOINTS.ITEM_DETAIL(id), formData);
+      const res = await apiRequest("PATCH", API_ENDPOINTS.ITEM_DETAIL(id), formData, true);
       return res.json();
     },
     onSuccess: () => {
