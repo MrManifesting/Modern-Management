@@ -13,7 +13,13 @@ import {
   AlertTriangle,
   Check,
   RefreshCw,
-  ShoppingBag
+  ShoppingBag,
+  CheckSquare,
+  XSquare,
+  ListFilter,
+  CircleDollarSign,
+  Percent,
+  Tags
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +58,7 @@ import ItemFormComponent from '@/components/inventory/item-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
+import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 
 // Define the Product interface
 interface Product {
@@ -169,6 +176,9 @@ const ProductsInventoryPage: React.FC = () => {
   const [productIdToDelete, setProductIdToDelete] = useState<number | null>(null);
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Product[]>([]);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -319,6 +329,45 @@ const ProductsInventoryPage: React.FC = () => {
     }
   };
 
+  // Bulk selection handling
+  const toggleBulkSelectMode = () => {
+    setBulkSelectMode(prev => {
+      if (prev) {
+        // If turning off, clear selections
+        setSelectedItems([]);
+      }
+      return !prev;
+    });
+  };
+
+  const handleItemSelection = (product: Product, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedItems(prev => [...prev, product]);
+    } else {
+      setSelectedItems(prev => prev.filter(item => item.id !== product.id));
+    }
+  };
+
+  const handleBulkSelectAll = (select: boolean) => {
+    if (select) {
+      setSelectedItems([...filteredProducts]);
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleBulkEditComplete = () => {
+    setBulkEditOpen(false);
+    setSelectedItems([]);
+    setBulkSelectMode(false);
+    queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+    
+    toast({
+      title: "Bulk update complete",
+      description: "Selected items have been updated successfully."
+    });
+  };
+
   // Render mobile product card
   const renderMobileProductCard = (product: Product) => (
     <Card key={product.id} className="mb-4">
@@ -465,6 +514,14 @@ const ProductsInventoryPage: React.FC = () => {
         editItem={null}
       />
       
+      {/* Bulk Edit Panel */}
+      {bulkSelectMode && selectedItems.length > 0 && (
+        <BulkEditPanel
+          selectedItems={selectedItems}
+          onBulkEditComplete={handleBulkEditComplete}
+        />
+      )}
+      
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -559,6 +616,24 @@ const ProductsInventoryPage: React.FC = () => {
                   <>
                     <RefreshCw className="h-4 w-4" />
                     Sync with Shopify
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant={bulkSelectMode ? "secondary" : "outline"}
+                className="gap-1.5"
+                onClick={toggleBulkSelectMode}
+              >
+                {bulkSelectMode ? (
+                  <>
+                    <XSquare className="h-4 w-4" />
+                    Cancel Selection
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="h-4 w-4" />
+                    Bulk Edit
                   </>
                 )}
               </Button>
@@ -845,6 +920,14 @@ const ProductsInventoryPage: React.FC = () => {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border">
+                          {bulkSelectMode && (
+                            <th className="py-3 px-2 w-10">
+                              <Checkbox 
+                                checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
+                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked)}
+                              />
+                            </th>
+                          )}
                           <th className="text-left py-3 px-4">Product</th>
                           <th className="text-left py-3 px-4">Category</th>
                           <th className="text-center py-3 px-4">SKU</th>
@@ -858,6 +941,14 @@ const ProductsInventoryPage: React.FC = () => {
                       <tbody>
                         {filteredProducts.map((product) => (
                           <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                            {bulkSelectMode && (
+                              <td className="py-3 px-2">
+                                <Checkbox 
+                                  checked={selectedItems.some(item => item.id === product.id)}
+                                  onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                />
+                              </td>
+                            )}
                             <td className="py-3 px-4">
                               <div className="font-medium">{product.name}</div>
                               <div className="text-sm text-muted-foreground">{product.subcategory}</div>
