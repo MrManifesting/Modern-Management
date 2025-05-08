@@ -53,18 +53,23 @@ export function getQueryFn(options: QueryFnOptions = {}): QueryFunction {
  * @param method The HTTP method to use for the request
  * @param endpoint The API endpoint to request
  * @param data Optional data to send with the request
+ * @param isFormData Optional flag to indicate if data is FormData
  * @returns The Response object from fetch
  */
-export async function apiRequest(method: string, endpoint: string, data?: any) {
+export async function apiRequest(method: string, endpoint: string, data?: any, isFormData = false) {
   const options: RequestInit = {
     method,
-    headers: {
+    headers: isFormData ? {} : {
       'Content-Type': 'application/json',
     },
   };
 
   if (data && method !== 'GET') {
-    options.body = JSON.stringify(data);
+    if (isFormData) {
+      options.body = data;
+    } else {
+      options.body = JSON.stringify(data);
+    }
   }
 
   const response = await fetch(endpoint, options);

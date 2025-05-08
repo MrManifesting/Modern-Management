@@ -154,7 +154,7 @@ export default function CSVImport() {
       
       // Use our dedicated Shopify import endpoint for Shopify files
       const endpoint = isShopifyFile ? "/api/items/import-shopify" : "/api/items/import-csv";
-      const response = await apiRequest("POST", endpoint, formData);
+      const response = await apiRequest("POST", endpoint, formData, true);
       return response.json();
     },
     onSuccess: (data) => {
