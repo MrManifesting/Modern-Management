@@ -572,6 +572,15 @@ const ProductsInventoryPage: React.FC = () => {
                 Add
               </Button>
               <Button 
+                className="gap-1.5 flex-1" 
+                size="sm"
+                onClick={toggleBulkSelectMode}
+                variant={bulkSelectMode ? "secondary" : "outline"}
+              >
+                <ClipboardList className="h-4 w-4" />
+                {bulkSelectMode ? "Exit" : "Bulk"}
+              </Button>
+              <Button 
                 variant="outline" 
                 className="gap-1.5 flex-1" 
                 size="sm"
@@ -602,6 +611,24 @@ const ProductsInventoryPage: React.FC = () => {
                 Add Product
               </Button>
               
+              <Button
+                variant={bulkSelectMode ? "secondary" : "outline"}
+                className="gap-1.5"
+                onClick={toggleBulkSelectMode}
+              >
+                {bulkSelectMode ? (
+                  <>
+                    <XSquare className="h-4 w-4" />
+                    Cancel Selection
+                  </>
+                ) : (
+                  <>
+                    <ClipboardList className="h-4 w-4" />
+                    Bulk Edit
+                  </>
+                )}
+              </Button>
+              
               <Button 
                 variant="outline" 
                 className="gap-1.5"
@@ -617,24 +644,6 @@ const ProductsInventoryPage: React.FC = () => {
                   <>
                     <RefreshCw className="h-4 w-4" />
                     Sync with Shopify
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                variant={bulkSelectMode ? "secondary" : "outline"}
-                className="gap-1.5"
-                onClick={toggleBulkSelectMode}
-              >
-                {bulkSelectMode ? (
-                  <>
-                    <XSquare className="h-4 w-4" />
-                    Cancel Selection
-                  </>
-                ) : (
-                  <>
-                    <CheckSquare className="h-4 w-4" />
-                    Bulk Edit
                   </>
                 )}
               </Button>
