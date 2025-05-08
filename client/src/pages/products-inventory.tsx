@@ -516,7 +516,7 @@ const ProductsInventoryPage: React.FC = () => {
       />
       
       {/* Bulk Edit Panel */}
-      {bulkSelectMode && selectedItems.length > 0 && (
+      {bulkSelectMode && selectedItems.length > 0 && bulkEditOpen && (
         <BulkEditPanel
           selectedItems={selectedItems}
           onBulkEditComplete={handleBulkEditComplete}
