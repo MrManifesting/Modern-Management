@@ -34,16 +34,11 @@ export function PaymentCheckout({ affiliateId, qrCode, onSuccess, onCancel }: Pa
     try {
       // Record the conversion with the payment data
       const response = await apiRequest('POST', `/api/qrcodes/${qrCode}/conversion`, {
-        body: JSON.stringify({
-          paymentId: paymentData.id,
-          amount: parseFloat(amount),
-          paymentMethod: 'paypal',
-          affiliateId
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+        paymentId: paymentData.id,
+        amount: parseFloat(amount),
+        paymentMethod: 'paypal',
+        affiliateId
+      }, false);
 
       if (!response.ok) {
         throw new Error('Failed to record conversion');
