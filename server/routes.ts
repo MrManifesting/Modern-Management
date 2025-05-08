@@ -598,6 +598,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API route for bulk updating items
+  app.post("/api/items/bulk-update", async (req: Request, res: Response) => {
+    const { ids, updates } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing or invalid item IDs" 
+      });
+    }
+    
+    try {
+      // Handle different update scenarios
+      if (updates.status) {
+        // Update status of all items
+        for (const id of ids) {
+          await storage.updateItem(id, { status: updates.status });
+        }
+      } else if (updates.basePrice !== undefined) {
+        // Set prices directly
+        for (const id of ids) {
+          const updateData: any = { basePrice: updates.basePrice };
+          
+          if (updates.retailPrice !== undefined) {
+            updateData.retailPrice = updates.retailPrice;
+          }
+          
+          if (updates.wholesalePrice !== undefined) {
+            updateData.wholesalePrice = updates.wholesalePrice;
+          }
+          
+          await storage.updateItem(id, updateData);
+        }
+      } else if (updates.priceModifier) {
+        // Apply price modifications (increase, decrease, percentage changes)
+        const { type, value, applyToRetail, applyToWholesale } = updates.priceModifier;
+        
+        for (const id of ids) {
+          const item = await storage.getItem(id);
+          if (!item) continue;
+          
+          const updateData: any = {};
+          let basePrice = item.basePrice || 0;
+          
+          if (type === 'increase') {
+            updateData.basePrice = basePrice + value;
+          } else if (type === 'decrease') {
+            updateData.basePrice = Math.max(0, basePrice - value);
+          } else if (type === 'percent-increase') {
+            updateData.basePrice = basePrice * (1 + value / 100);
+          } else if (type === 'percent-decrease') {
+            updateData.basePrice = basePrice * (1 - value / 100);
+          }
+          
+          if (applyToRetail) {
+            updateData.retailPrice = updateData.basePrice;
+          }
+          
+          if (applyToWholesale) {
+            updateData.wholesalePrice = updateData.basePrice * 0.5;
+          }
+          
+          await storage.updateItem(id, updateData);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Updated ${ids.length} items successfully` 
+      });
+    } catch (error) {
+      console.error("Error during bulk update:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to update items" 
+      });
+    }
+  });
+
+  // API route for bulk publishing items to marketplaces
+  app.post("/api/items/bulk-publish", async (req: Request, res: Response) => {
+    const { ids, marketplaces, sync } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing or invalid item IDs" 
+      });
+    }
+    
+    if (!marketplaces || !Array.isArray(marketplaces) || marketplaces.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing or invalid marketplaces" 
+      });
+    }
+    
+    try {
+      const results = {
+        success: true,
+        published: 0,
+        failed: 0,
+        messages: [] as string[]
+      };
+      
+      // Update each item's marketplace setting and status
+      for (const id of ids) {
+        try {
+          const item = await storage.getItem(id);
+          if (!item) {
+            results.failed++;
+            results.messages.push(`Item ID ${id} not found`);
+            continue;
+          }
+          
+          // Update item marketplace settings
+          const updatedMarketplaces = [...new Set([
+            ...(item.marketplace || []),
+            ...marketplaces
+          ])];
+          
+          await storage.updateItem(id, { 
+            marketplace: updatedMarketplaces,
+            status: 'active' // Set status to active when publishing
+          });
+          
+          results.published++;
+        } catch (err) {
+          results.failed++;
+          results.messages.push(`Failed to update item ID ${id}`);
+        }
+      }
+      
+      // If sync is requested, trigger marketplace sync
+      if (sync && marketplaces.includes('shopify')) {
+        try {
+          // This would trigger your marketplace sync
+          // For now, we'll just log it
+          console.log("Triggering Shopify sync for published items");
+        } catch (syncErr) {
+          results.messages.push("Marketplace sync requested but encountered an error");
+        }
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error during bulk publish:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to publish items to marketplaces" 
+      });
+    }
+  });
+
   // Marketplace Routes
   app.get("/api/marketplaces", async (_req: Request, res: Response) => {
     try {
