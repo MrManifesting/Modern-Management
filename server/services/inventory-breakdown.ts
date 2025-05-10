@@ -144,8 +144,9 @@ export async function processBreakdown(
     status: ProcessingStatus.IN_PROGRESS
   });
   
-  // Use the provided targets or the existing ones
-  const targetProducts = targets || (breakdown.targetProducts as BreakdownTarget[]);
+  // Use the provided targets or the existing ones - make it mutable (let instead of const)
+  // since we may need to adjust the quantities
+  let targetProducts = targets || (breakdown.targetProducts as BreakdownTarget[]);
   
   // Calculate the total weight of all breakdown items
   const totalBreakdownWeight = targetProducts.reduce(
@@ -155,9 +156,70 @@ export async function processBreakdown(
   
   // Validate the total weight does not exceed the bulk item weight
   const bulkWeight = bulkItem.weight || 0;
+  
+  // Check if total breakdown weight exceeds the bulk item weight
+  // ------------ Weight Checking Block ------------
+  console.log("Original targets:", JSON.stringify(targetProducts));
+  console.log(`Total breakdown weight check: ${totalBreakdownWeight}g vs bulk item weight ${bulkWeight}g`);
+  
   if (bulkWeight > 0 && totalBreakdownWeight > bulkWeight) {
-    throw new Error(`Total breakdown weight (${totalBreakdownWeight}) exceeds bulk item weight (${bulkWeight})`);
+    console.log(`EXCEED: Original breakdown would exceed weight: ${totalBreakdownWeight}g vs bulk ${bulkWeight}g`);
+    
+    try {
+      // Create a fixed version of the targets that will fit
+      const fixedTargets = [];
+      let remainingWeight = bulkWeight;
+      
+      // Sort by smallest weight first to maximize the number of items we can create
+      const sortedByWeight = [...targetProducts].sort((a, b) => a.weight - b.weight);
+      
+      console.log("Sorted targets by weight:", JSON.stringify(sortedByWeight));
+      
+      // For each target, see how many we can fit in the remaining weight
+      for (const target of sortedByWeight) {
+        if (remainingWeight <= 0) {
+          // No weight left, skip the rest
+          fixedTargets.push({...target, quantity: 0});
+          continue;
+        }
+        
+        // How many units of this weight can we fit?
+        const maxUnits = Math.floor(remainingWeight / target.weight);
+        const finalQty = Math.min(maxUnits, target.quantity);
+        
+        console.log(`Target ${target.name}: max units=${maxUnits}, final quantity=${finalQty}`);
+        
+        // Add this target with adjusted quantity
+        fixedTargets.push({
+          ...target,
+          quantity: finalQty
+        });
+        
+        // Update remaining weight
+        remainingWeight -= finalQty * target.weight;
+        console.log(`Remaining weight: ${remainingWeight}g`);
+      }
+      
+      // Replace the targets with our fixed ones
+      targetProducts = fixedTargets;
+      
+      // Final check of total weight
+      const finalTotalWeight = targetProducts.reduce((sum, t) => sum + (t.weight * t.quantity), 0);
+      console.log(`FIXED: Final total breakdown weight: ${finalTotalWeight}g (bulk: ${bulkWeight}g)`);
+      
+      // Return immediately if we're still exceeding the weight limit somehow
+      if (finalTotalWeight > bulkWeight) {
+        throw new Error(`Unable to adjust quantities: ${finalTotalWeight}g still exceeds ${bulkWeight}g`);
+      }
+      
+      // Log the final target list we're going to use
+      console.log("Final targets to be created:", JSON.stringify(targetProducts));
+    } catch (error) {
+      console.error("Error adjusting breakdown quantities:", error);
+      throw new Error(`Failed to adjust breakdown quantities: ${error.message}`);
+    }
   }
+  // ------------ End Weight Checking Block ------------
   
   // Process each target product
   const completedProducts = [];
