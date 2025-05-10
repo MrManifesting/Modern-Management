@@ -46,34 +46,34 @@ function Router() {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>}>
       <Switch>
-        <ProtectedRoute path="/" component={Dashboard} />
-        <ProtectedRoute path="/inventory" component={Inventory} />
-        <ProtectedRoute path="/products-inventory" component={ProductsInventoryPage} />
-        <ProtectedRoute path="/inventory/products" component={ProductsInventoryPage} />
-        <ProtectedRoute path="/inventory/specialty-products" component={SpecialtyProductsPage} />
-        <ProtectedRoute path="/inventory/package" component={PackageInventoryPage} />
-        <ProtectedRoute path="/marketplace" component={Marketplace} />
-        <ProtectedRoute path="/marketplace-management" component={MarketplaceManagement} />
-        <ProtectedRoute path="/scanner" component={Scanner} />
-        <ProtectedRoute path="/sales" component={Sales} />
-        <ProtectedRoute path="/reports" component={Reports} />
-        <ProtectedRoute path="/forecast" component={Forecast} />
-        <ProtectedRoute path="/image-optimization" component={ImageOptimization} />
-        <ProtectedRoute path="/employees" component={Employees} />
-        <ProtectedRoute path="/settings" component={Settings} />
-        <ProtectedRoute path="/shopify-settings" component={ShopifySettingsPage} />
-        <ProtectedRoute path="/shopify-sync" component={ShopifySyncPage} />
-        <ProtectedRoute path="/shopify-reports" component={ShopifyReportsPage} />
-        <ProtectedRoute path="/shopify-import" component={ShopifyImportPage} />
-        <ProtectedRoute path="/accessibility-guide" component={AccessibilityGuide} />
-        <ProtectedRoute path="/media-manager" component={MediaManagerPage} />
-        <ProtectedRoute path="/bulk-breakdown" component={BulkBreakdownPage} />
-        <ProtectedRoute path="/database-cleanup" component={DatabaseCleanupPage} />
-        <ProtectedRoute path="/affiliate-dashboard" component={AffiliateDashboard} />
-        <ProtectedRoute path="/ai-tools" component={AiToolsPage} />
-        <ProtectedRoute path="/csv-validator" component={CSVValidatorPage} />
-        <Route path="/auth" component={AuthPage} />
-        <Route path="/qr-scan" component={QrScanPage} />
+        <ProtectedRoute path="/" component={() => <Dashboard />} />
+        <ProtectedRoute path="/inventory" component={() => <Inventory />} />
+        <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
+        <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
+        <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
+        <ProtectedRoute path="/inventory/package" component={() => <PackageInventoryPage />} />
+        <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
+        <ProtectedRoute path="/marketplace-management" component={() => <MarketplaceManagement />} />
+        <ProtectedRoute path="/scanner" component={() => <Scanner />} />
+        <ProtectedRoute path="/sales" component={() => <Sales />} />
+        <ProtectedRoute path="/reports" component={() => <Reports />} />
+        <ProtectedRoute path="/forecast" component={() => <Forecast />} />
+        <ProtectedRoute path="/image-optimization" component={() => <ImageOptimization />} />
+        <ProtectedRoute path="/employees" component={() => <Employees />} />
+        <ProtectedRoute path="/settings" component={() => <Settings />} />
+        <ProtectedRoute path="/shopify-settings" component={() => <ShopifySettingsPage />} />
+        <ProtectedRoute path="/shopify-sync" component={() => <ShopifySyncPage />} />
+        <ProtectedRoute path="/shopify-reports" component={() => <ShopifyReportsPage />} />
+        <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
+        <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
+        <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
+        <ProtectedRoute path="/bulk-breakdown" component={() => <BulkBreakdownPage />} />
+        <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
+        <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
+        <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
+        <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
+        <Route path="/auth" component={() => <AuthPage />} />
+        <Route path="/qr-scan" component={() => <QrScanPage />} />
         <Route path="/affiliate/:code?" component={() => {
           const AffiliateQrDemo = React.lazy(() => import("@/pages/affiliate/qr-demo"));
           return <AffiliateQrDemo />;

@@ -86,6 +86,9 @@ interface Product {
   volume?: string;
   description?: string;
   imageUrl?: string;
+  marketplace?: any[];
+  shopifyId?: string | null;
+  shopifySyncStatus?: string;
 }
 
 // Mock data for demonstration
@@ -292,7 +295,7 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Filter products based on search term and category
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase());
