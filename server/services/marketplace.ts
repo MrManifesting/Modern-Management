@@ -11,6 +11,8 @@ export interface IMarketplaceService {
   syncProducts(): Promise<{ success: boolean; message: string; data?: any }>;
   pushProduct(item: Item): Promise<{ success: boolean; message: string; data?: any }>;
   prepareItemForPush(item: Item): Promise<{ success: boolean; message: string; data?: any }>;
+  fetchProduct?(externalId: string): Promise<{ success: boolean; message: string; product?: any }>;
+  deleteProduct(externalId: string): Promise<{ success: boolean; message: string }>;
 }
 
 /**
@@ -225,6 +227,84 @@ export class MarketplaceService {
       return { 
         success: false, 
         message: `Error preparing product for push: ${error.message}` 
+      };
+    }
+  }
+  
+  /**
+   * Fetch a product from the marketplace
+   */
+  async fetchProduct(externalId: string): Promise<{ success: boolean; message: string; product?: any }> {
+    try {
+      if (!this.service) {
+        return { 
+          success: false, 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+        };
+      }
+      
+      // Check if the service implements fetchProduct
+      if (typeof this.service.fetchProduct !== 'function') {
+        return {
+          success: false,
+          message: `Fetch product is not supported for ${this.marketplace.name}`
+        };
+      }
+      
+      return await this.service.fetchProduct(externalId);
+    } catch (error: any) {
+      return { 
+        success: false, 
+        message: `Error fetching product from marketplace: ${error.message}` 
+      };
+    }
+  }
+  
+  /**
+   * Delete a product from the marketplace
+   */
+  async deleteProduct(externalId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!this.service) {
+        return { 
+          success: false, 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+        };
+      }
+      
+      // Log start of delete operation
+      await MarketplaceLogger.logOperation(
+        this.marketplace,
+        'Delete Product',
+        `Starting product deletion for ID "${externalId}" from ${this.marketplace.name}`,
+        'info'
+      );
+      
+      const result = await this.service.deleteProduct(externalId);
+      
+      // Log result of deletion
+      await MarketplaceLogger.logOperation(
+        this.marketplace,
+        'Delete Product',
+        `Completed product deletion for ID "${externalId}" from ${this.marketplace.name}`,
+        result.success ? 'success' : 'error',
+        result.success ? undefined : result.message
+      );
+      
+      return result;
+    } catch (error: any) {
+      // Log error
+      await MarketplaceLogger.logOperation(
+        this.marketplace,
+        'Delete Product',
+        `Error deleting product ID "${externalId}" from ${this.marketplace.name}`,
+        'error',
+        error.message
+      );
+      
+      return { 
+        success: false, 
+        message: `Error deleting product: ${error.message}` 
       };
     }
   }
