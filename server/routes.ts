@@ -3097,6 +3097,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Generate standard breakdown targets for a bulk item
+  app.get("/api/bulk-items/:id/standard-targets", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const bulkItem = await storage.getItem(id);
+      
+      if (!bulkItem) {
+        return res.status(404).json({ error: "Bulk item not found" });
+      }
+      
+      if (bulkItem.itemType !== ItemType.BULK) {
+        return res.status(400).json({ error: "Item is not a bulk item" });
+      }
+      
+      const standardTargets = generateStandardBreakdownTargets(bulkItem);
+      res.json(standardTargets);
+    } catch (error) {
+      console.error("Error generating standard breakdown targets:", error);
+      res.status(500).json({ error: "Failed to generate standard breakdown targets" });
+    }
+  });
+  
   // Move bulk item to waiting area
   app.post("/api/bulk-items/:id/move-to-waiting", async (req: Request, res: Response) => {
     try {
