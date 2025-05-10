@@ -200,8 +200,8 @@ export class ShopifyService implements IMarketplaceService {
       let updated = 0;
       let failed = 0;
       
-      // Import products using ES modules import
-      import { importShopifyProducts } from '../shopify-import';
+      // Dynamically import the shopify-import module
+      const { importShopifyProducts } = await import('../shopify-import.js');
       if (allProducts.length > 0) {
         log(`Starting to import ${allProducts.length} products into local database`, 'marketplace-shopify');
         try {
