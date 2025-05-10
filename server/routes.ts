@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
+import { log } from "./vite";
 import { analyzeProductImage, generateProductDescription } from "./services/openai";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 // Inventory breakdown functions are imported below
@@ -21,6 +22,7 @@ import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate";
 import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
+import { registerSyncRoutes } from "./routes-sync";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -700,6 +702,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           await storage.updateItem(id, updateData);
         }
+      }
+      
+      // Trigger real-time sync with marketplaces for all updated items
+      try {
+        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+        
+        // Get all updated items for syncing
+        const updatedItems = await Promise.all(ids.map(id => storage.getItem(id)));
+        const validItems = updatedItems.filter(item => item !== undefined) as Item[];
+        
+        if (validItems.length > 0) {
+          log(`Initiating real-time sync for ${validItems.length} bulk-updated items`, 'marketplace-sync');
+          
+          // Process each item sync in parallel, but don't wait for completion to respond
+          validItems.forEach(item => {
+            syncItemWithMarketplaces(item, storage).catch(err => {
+              console.error(`Real-time sync failed for item ${item.id} (${item.name}):`, err);
+            });
+          });
+        }
+      } catch (syncError) {
+        console.error("Failed to initiate real-time sync for bulk updates:", syncError);
+        // Continue with response even if sync failed to initialize
       }
       
       res.json({ 
