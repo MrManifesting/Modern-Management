@@ -11,6 +11,7 @@ import {
   Trash2,
   ShoppingCart, 
   AlertTriangle,
+  AlertCircle,
   Check,
   RefreshCw,
   ShoppingBag,
@@ -54,6 +55,12 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
 import { useToast } from '@/hooks/use-toast';
 import ItemFormComponent from '@/components/inventory/item-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -238,6 +245,30 @@ const ProductsInventoryPage: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to delete the item. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Delete All Inventory Mutation
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/items/delete-all');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      setDeleteAllDialogOpen(false);
+      setDeleteAllConfirmation('');
+      toast({
+        title: "Inventory Cleared",
+        description: "All items have been successfully removed from your inventory.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete all inventory items. Please try again later.",
         variant: "destructive"
       });
     }
