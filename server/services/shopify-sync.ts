@@ -236,7 +236,10 @@ export async function updateShopifyProduct(
       
       // Update price if requested
       if (options.updatePrice) {
-        updateData.price = inventoryItem.price.toString();
+        // Use salePrice if available, otherwise basePrice
+        const priceToUse = inventoryItem.salePrice !== null ? 
+          inventoryItem.salePrice : inventoryItem.basePrice;
+        updateData.price = priceToUse.toString();
       }
       
       // Update inventory if requested
@@ -276,7 +279,7 @@ export async function updateShopifyProduct(
       }
       
       // Update images if requested and if inventory item has images
-      if (options.updateImages && inventoryItem.images && inventoryItem.images.length > 0) {
+      if (options.updateImages && inventoryItem.images && Array.isArray(inventoryItem.images) && inventoryItem.images.length > 0) {
         // In a real implementation, we'd upload the images to Shopify
         // For now, we'll just log this
         log(`Would update images for product ${shopifyId}`, 'shopify');
