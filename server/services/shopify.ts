@@ -4,7 +4,7 @@ import {
   isOperationAllowed, 
   isConfirmationValid 
 } from './shopify-safety';
-import { generateSku } from './sku-generator';
+import { generateSKU } from './sku-generator';
 import { 
   getShopifyStoreName as getShopifyStoreNameAuth, 
   getShopifyCredentials as getShopifyCredentialsAuth, 
@@ -153,10 +153,10 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
   
   if (!sku) {
     // Generate a SKU without making API calls
-    sku = generateSku(item);
+    sku = generateSKU(item);
     // Log the SKU generation
     logShopifyOperation(
-      'generateSku',
+      'generateSKU',
       { item, generatedSku: sku },
       true
     );

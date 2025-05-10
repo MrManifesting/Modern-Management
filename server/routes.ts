@@ -101,6 +101,12 @@ import { generateBarcodeData } from "./services/barcode";
 import { generateQRCodeDataURL } from "./services/qrcode";
 import { generateForecast, calculateKPIs } from "./services/forecasting";
 import { 
+  createBulkBreakdown, 
+  processBreakdown, 
+  generateStandardBreakdownTargets 
+} from "./services/inventory-breakdown";
+import { generateSKU } from "./services/sku-generator";
+import { 
   prepareItemForShopify, 
   getPushStatus, 
   setPushStatus, 

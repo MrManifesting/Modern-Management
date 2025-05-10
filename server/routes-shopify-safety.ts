@@ -13,7 +13,7 @@ import {
   getOperationsReport,
   logShopifyOperation
 } from './services/shopify-safety';
-import { generateSku, generateSkuBatch } from './services/sku-generator';
+import { generateSKU, generateSKUBatch } from './services/sku-generator';
 import { IStorage } from './storage';
 
 /**
@@ -132,11 +132,11 @@ export function registerShopifySafetyRoutes(app: Express, storage: IStorage) {
       }
       
       // Generate the SKU
-      const sku = generateSku(item);
+      const sku = generateSKU(item);
       
       // Log the operation
       logShopifyOperation(
-        'generateSku',
+        'generateSKU',
         { itemId: id, oldSku: item.sku, newSku: sku },
         true
       );
