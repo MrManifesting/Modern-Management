@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { analyzeProductImage, generateProductDescription } from "./services/openai";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
+import { generateStandardBreakdownTargets, processBreakdown } from "./services/inventory-breakdown";
 import { 
   fetchShopifySalesReport, 
   fetchShopifyInventoryReport, 
@@ -3201,6 +3202,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating breakdown products:", error);
       res.status(500).json({ error: "Failed to create breakdown products" });
+    }
+  });
+
+  // Get standard breakdown targets for a bulk item
+  app.get("/api/bulk-items/:id/standard-targets", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      
+      if (isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid item ID" });
+      }
+      
+      // Get the bulk item
+      const bulkItem = await storage.getItem(itemId);
+      
+      if (!bulkItem) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Check if the item is a bulk item
+      if (bulkItem.itemType !== ItemType.BULK) {
+        return res.status(400).json({ error: "Item is not marked as a bulk item" });
+      }
+      
+      // Generate standard breakdown targets
+      try {
+        const standardTargets = generateStandardBreakdownTargets(bulkItem);
+        res.json({ targets: standardTargets });
+      } catch (error) {
+        if (error instanceof Error) {
+          return res.status(400).json({ error: error.message });
+        }
+        return res.status(500).json({ error: "Failed to generate standard targets" });
+      }
+    } catch (error) {
+      console.error("Error generating standard breakdown targets:", error);
+      res.status(500).json({ error: "Failed to generate standard breakdown targets" });
     }
   });
 
