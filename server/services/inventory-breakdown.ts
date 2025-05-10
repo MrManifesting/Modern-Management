@@ -330,41 +330,33 @@ export function generateStandardBreakdownTargets(bulkItem: Item): BreakdownTarge
   const bulkWeight = bulkItem.weight;
   const unit = bulkItem.weightUnit || 'g';
   
+  // Standard cannabis-specific weight divisions in grams
+  // 7g (quarter), 14g (half), 28g (ounce), 112g (quarter pound), 224g (half pound)
+  const standardCannabisWeights = [7, 14, 28, 112, 224];
+  
   // Standard proportions (could be configured per product category)
   let divisions: number[];
   
   if (unit === 'g' || unit === 'ml') {
-    // For grams or milliliters - divide by appropriate increments
-    if (bulkWeight >= 1000) {
-      divisions = [500, 250, 100, 50, 25];
-    } else if (bulkWeight >= 500) {
-      divisions = [250, 100, 50, 25, 10];
-    } else if (bulkWeight >= 250) {
-      divisions = [100, 50, 25, 10, 5];
-    } else if (bulkWeight >= 100) {
-      divisions = [50, 25, 10, 5, 1];
-    } else {
-      divisions = [bulkWeight / 2, bulkWeight / 4, bulkWeight / 5, bulkWeight / 10];
-    }
+    // Use standard cannabis weights for grams
+    divisions = standardCannabisWeights.filter(weight => weight < bulkWeight);
   } else if (unit === 'kg' || unit === 'l') {
-    // For kilograms or liters
-    if (bulkWeight >= 10) {
-      divisions = [5, 2, 1, 0.5, 0.25];
-    } else if (bulkWeight >= 5) {
-      divisions = [2, 1, 0.5, 0.25, 0.1];
-    } else {
-      divisions = [1, 0.5, 0.25, 0.1, 0.05];
-    }
-  } else if (unit === 'oz' || unit === 'lb') {
-    // For ounces or pounds (imperial)
-    if (unit === 'lb' && bulkWeight >= 5) {
-      divisions = [2, 1, 0.5, 0.25, 0.125];
-    } else {
-      divisions = [bulkWeight / 2, bulkWeight / 4, bulkWeight / 8];
-    }
+    // Convert the standard cannabis weights from grams to kg
+    divisions = standardCannabisWeights.map(g => g / 1000).filter(kg => kg < bulkWeight);
+  } else if (unit === 'oz') {
+    // Convert from grams to oz (1g ≈ 0.035oz)
+    divisions = standardCannabisWeights.map(g => g * 0.035).filter(oz => oz < bulkWeight);
+  } else if (unit === 'lb') {
+    // Convert from grams to lb (1g ≈ 0.0022lb)
+    divisions = standardCannabisWeights.map(g => g * 0.0022).filter(lb => lb < bulkWeight);
   } else {
-    // Default divisions if unit not recognized
-    divisions = [bulkWeight / 2, bulkWeight / 4, bulkWeight / 5, bulkWeight / 10];
+    // Default divisions if unit not recognized - use the standard weights in grams
+    divisions = standardCannabisWeights.filter(weight => weight < bulkWeight);
+  }
+  
+  // If no divisions can be made (item too small), use fractions of the bulk weight
+  if (divisions.length === 0) {
+    divisions = [bulkWeight / 2, bulkWeight / 4];
   }
   
   // Create breakdown targets
