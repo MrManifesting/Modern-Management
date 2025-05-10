@@ -48,11 +48,22 @@ export async function syncItemWithMarketplaces(
     
     if (validItem.marketplace && Array.isArray(validItem.marketplace) && validItem.marketplace.length > 0) {
       // Find marketplaces that match the IDs in item.marketplace
-      enabledMarketplaces = allMarketplaces.filter(m => 
-        m.isConnected && 
-        m.isSyncEnabled &&
-        (validItem.marketplace?.includes(m.id.toString()) || validItem.marketplace?.includes(m.id))
-      );
+      enabledMarketplaces = allMarketplaces.filter(m => {
+        // First ensure the marketplace is connected and sync is enabled
+        if (!m.isConnected || !m.isSyncEnabled) {
+          return false;
+        }
+        
+        // Then check if marketplace ID is in the validItem.marketplace array
+        // Only if validItem.marketplace is a valid array
+        if (Array.isArray(validItem.marketplace)) {
+          return validItem.marketplace.includes(m.id.toString()) || 
+                 validItem.marketplace.includes(m.id);
+        }
+        
+        // If marketplace is not specified, don't include
+        return false;
+      });
     } else {
       // Get all enabled marketplaces
       enabledMarketplaces = allMarketplaces.filter(m => m.isConnected && m.isSyncEnabled);
