@@ -99,7 +99,7 @@ function DemoProduct({ title, price, description, affiliateId, qrCode }: DemoPro
             <Skeleton className="h-10 w-full" />
           </div>
         ) : !paypalReady ? (
-          <Alert variant="warning" className="mb-4">
+          <Alert className="mb-4 border-yellow-500 bg-yellow-50 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>PayPal Not Configured</AlertTitle>
             <AlertDescription>
