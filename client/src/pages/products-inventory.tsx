@@ -268,12 +268,17 @@ const ProductsInventoryPage: React.FC = () => {
         description: `Successfully deleted ${data.results ? data.results.deleted : 'all'} items from your inventory.`,
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Failed to delete all inventory:", error);
       toast({
         title: "Error",
         description: "Failed to delete all inventory items. Please try again later.",
         variant: "destructive"
       });
+      setDeleteAllLoading(false);
+    },
+    onSettled: () => {
+      setDeleteAllLoading(false);
     }
   });
 
