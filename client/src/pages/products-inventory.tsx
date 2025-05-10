@@ -949,7 +949,7 @@ const ProductsInventoryPage: React.FC = () => {
                   // Combine headers and rows
                   const csvContent = [
                     headers.join(","),
-                    ...rows.map(row => row.join(","))
+                    ...rows.map((row: any[]) => row.join(","))
                   ].join("\n");
                   
                   // Create a blob and download link
@@ -1308,8 +1308,8 @@ const ProductsInventoryPage: React.FC = () => {
                       {/* Table body */}
                       <tbody>
                         {filteredProducts
-                          .filter(product => product.category === "Electronics")
-                          .map((product) => (
+                          .filter((product: Product) => product.category === "Electronics")
+                          .map((product: Product) => (
                             <tr key={product.id} className="border-b border-border hover:bg-muted/50">
                               <td className="py-3 px-4">
                                 <div className="font-medium">{product.name}</div>
