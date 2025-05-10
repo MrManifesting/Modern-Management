@@ -1151,4 +1151,111 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       });
     }
   });
+  
+  /**
+   * Process commission for an affiliate based on a sale
+   */
+  app.post("/api/affiliates/process-commission", async (req: Request, res: Response) => {
+    try {
+      const { affiliateId, qrCode, orderId, amount, paymentProcessor } = req.body;
+      
+      if (!affiliateId || !orderId || !amount || !qrCode) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required parameters: affiliateId, qrCode, orderId, and amount are required"
+        });
+      }
+      
+      // Get the affiliate
+      const affiliate = await storage.getAffiliateById(affiliateId);
+      
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+      
+      // Get the QR code
+      const qrCodeRecord = await storage.getQrCodeByCode(qrCode);
+      
+      if (!qrCodeRecord) {
+        return res.status(404).json({
+          success: false,
+          message: "QR code not found"
+        });
+      }
+      
+      // Verify that the QR code belongs to the affiliate
+      if (qrCodeRecord.affiliateId !== affiliateId) {
+        return res.status(400).json({
+          success: false,
+          message: "QR code does not belong to this affiliate"
+        });
+      }
+      
+      // Process the commission based on the payment processor
+      let commissionResult;
+      const commissionRate = affiliate.commissionRate || 0.04; // Default to 4% if not specified
+      
+      if (paymentProcessor === "paypal") {
+        commissionResult = await paypalService.processAffiliateCommission(
+          orderId, 
+          affiliateId,
+          commissionRate
+        );
+      } else if (paymentProcessor === "stripe") {
+        // Handle Stripe commission processing
+        // This is handled by webhooks in the Stripe implementation
+        return res.status(400).json({
+          success: false,
+          message: "Stripe commission processing should be handled via webhooks"
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment processor"
+        });
+      }
+      
+      // Calculate commission amount
+      const commissionAmount = amount * commissionRate;
+      
+      // Record the commission as a transaction
+      const transaction = await storage.createAffiliateTransaction({
+        affiliateId,
+        saleId: orderId,
+        transactionType: "commission",
+        amount: commissionAmount,
+        description: `Commission for order ${orderId} via ${paymentProcessor}`,
+        status: "pending",
+        paypalOrderId: paymentProcessor === "paypal" ? orderId : undefined,
+        stripePaymentIntentId: paymentProcessor === "stripe" ? orderId : undefined,
+        feeAmount: 0, // No fee for commissions
+        createdAt: new Date(),
+      });
+      
+      // Update the QR code conversion count
+      await storage.incrementQrCodeConversion(qrCodeRecord.id);
+      
+      // Update affiliate stats
+      await storage.updateAffiliateStats(affiliateId, amount, commissionAmount);
+      
+      res.json({
+        success: true,
+        data: {
+          transaction,
+          commissionAmount,
+          commissionRate,
+          paymentProcessor
+        }
+      });
+    } catch (error) {
+      console.error("Error processing affiliate commission:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error processing affiliate commission"
+      });
+    }
+  });
 }
