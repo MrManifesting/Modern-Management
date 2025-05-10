@@ -1,11 +1,13 @@
 /**
  * Shopify Import Service
  * 
- * This service handles importing inventory data from Shopify CSV exports
+ * This service handles importing inventory data from Shopify CSV exports or API responses
  */
 
 import { Item, InsertItem } from '@shared/schema';
 import { IStorage } from '../storage';
+import { storage } from '../storage';
+import { log } from '../vite';
 
 interface ParsedCsvData {
   headers: string[];
