@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { importShopifyCSV } from './services/shopify-import';
 import { IStorage } from './storage';
-import { generateBarcodeData, generateQRCodeDataURL } from './services/barcode';
+import { generateBarcodeData } from './services/barcode';
+import { generateQRCodeDataURL } from './services/qrcode';
 import multer from 'multer';
 import { createShopifyClient } from './services/shopify-auth';
 

@@ -4,10 +4,183 @@
  * This service handles importing inventory data from Shopify CSV exports or API responses
  */
 
-import { Item, InsertItem } from '@shared/schema';
+import { Item, InsertItem, ItemType, ProcessingStatus, BreakdownStatus, ItemCondition } from '@shared/schema';
 import { IStorage } from '../storage';
 import { storage } from '../storage';
 import { log } from '../vite';
+import { generateBarcodeData } from './barcode';
+import { generateQRCodeDataURL } from './qrcode';
+
+/**
+ * Import products from Shopify API data
+ * 
+ * @param shopifyProducts - Products from Shopify API
+ * @returns Object with import statistics
+ */
+export async function importShopifyProducts(shopifyProducts: any[]): Promise<{
+  imported: number;
+  updated: number;
+  failed: number;
+  message: string;
+}> {
+  log(`Starting to import ${shopifyProducts.length} products from Shopify API`, 'shopify-import');
+  
+  let imported = 0;
+  let updated = 0;
+  let failed = 0;
+  
+  for (const shopifyProduct of shopifyProducts) {
+    try {
+      // Convert Shopify product to our Item format
+      const itemData = convertShopifyProductToItem(shopifyProduct);
+      
+      // Check if product already exists by SKU
+      let existingItem: Item | undefined;
+      
+      // Try to find by Shopify ID in marketplace data
+      const shopifyId = shopifyProduct.id.toString();
+      const existingItems = await storage.getItems();
+      existingItem = existingItems.find(item => {
+        if (!item.marketplace || !Array.isArray(item.marketplace)) return false;
+        
+        return item.marketplace.some(mp => 
+          mp.type === 'shopify' && mp.externalId === shopifyId
+        );
+      });
+      
+      // If not found by Shopify ID, try by SKU
+      if (!existingItem && itemData.sku) {
+        existingItem = await storage.getItemBySku(itemData.sku);
+      }
+      
+      // Update or create the item
+      if (existingItem) {
+        // Preserve existing item data that shouldn't be overwritten
+        const updateData: Partial<InsertItem> = {
+          ...itemData,
+          // Don't overwrite these fields if they exist
+          barcode: existingItem.barcode || itemData.barcode,
+          qrCode: existingItem.qrCode || itemData.qrCode,
+        };
+        
+        const updatedItem = await storage.updateItem(existingItem.id, updateData);
+        if (updatedItem) {
+          log(`Updated existing item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'shopify-import');
+          updated++;
+        } else {
+          log(`Failed to update item: ${existingItem.name} (ID: ${existingItem.id})`, 'shopify-import-error');
+          failed++;
+        }
+      } else {
+        // Create new item
+        const createdItem = await storage.createItem(itemData);
+        if (createdItem) {
+          log(`Created new item: ${createdItem.name} (ID: ${createdItem.id})`, 'shopify-import');
+          imported++;
+          
+          // Generate barcode and QR code
+          try {
+            const barcode = generateBarcodeData(createdItem.sku);
+            const qrCode = await generateQRCodeDataURL(createdItem);
+            
+            if (barcode || qrCode) {
+              const updateData: Partial<InsertItem> = {};
+              if (barcode) updateData.barcode = barcode;
+              if (qrCode) updateData.qrCode = qrCode;
+              
+              await storage.updateItem(createdItem.id, updateData);
+            }
+          } catch (codeErr) {
+            log(`Generated item but barcode/QR code generation failed: ${codeErr instanceof Error ? codeErr.message : 'Unknown error'}`, 'shopify-import-warning');
+          }
+        } else {
+          log(`Failed to create item: ${itemData.name}`, 'shopify-import-error');
+          failed++;
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      log(`Error processing Shopify product: ${errorMessage}`, 'shopify-import-error');
+      failed++;
+    }
+  }
+  
+  const message = `Completed Shopify import: ${imported} imported, ${updated} updated, ${failed} failed`;
+  log(message, 'shopify-import');
+  
+  return {
+    imported,
+    updated,
+    failed,
+    message
+  };
+}
+
+/**
+ * Convert a Shopify product to our item format
+ */
+function convertShopifyProductToItem(shopifyProduct: any): InsertItem {
+  // Extract the primary variant (first one)
+  const variant = Array.isArray(shopifyProduct.variants) && shopifyProduct.variants.length > 0 
+    ? shopifyProduct.variants[0] 
+    : { price: '0', sku: '', inventory_quantity: 0 };
+  
+  // Extract images
+  const images = Array.isArray(shopifyProduct.images) 
+    ? shopifyProduct.images.map((img: any) => ({ url: img.src, alt: img.alt || '' }))
+    : [];
+  
+  // Extract tags
+  const tags = shopifyProduct.tags ? shopifyProduct.tags.split(', ') : [];
+  
+  // Create marketplace data
+  const marketplaceData = [{
+    type: 'shopify',
+    externalId: shopifyProduct.id.toString(),
+    externalUrl: shopifyProduct.admin_url || '',
+    lastSynced: new Date()
+  }];
+  
+  // Convert to our Item format
+  return {
+    name: shopifyProduct.title || 'Untitled Product',
+    description: shopifyProduct.body_html || '',
+    sku: variant.sku || `SHOP-${shopifyProduct.id}`,
+    barcode: variant.barcode || '',
+    brand: shopifyProduct.vendor || null,
+    costPrice: parseFloat(variant.cost) || 0,
+    basePrice: parseFloat(variant.price) || 0,
+    salePrice: parseFloat(variant.compare_at_price) || null,
+    wholesalePrice: null,
+    category: shopifyProduct.product_type || 'General',
+    subcategory: '',
+    quantity: parseInt(variant.inventory_quantity) || 0,
+    weight: parseFloat(variant.weight) || 0,
+    weightUnit: 'g',
+    dimensions: JSON.stringify({}),
+    status: shopifyProduct.status === 'active' ? 'active' : 'draft',
+    tags,
+    attributes: JSON.stringify({}),
+    images,
+    videos: JSON.stringify([]),
+    documents: JSON.stringify([]),
+    marketplace: marketplaceData,
+    syncedToMarketplaces: ['shopify'],
+    marketplaceIds: JSON.stringify({}),
+    lowStockThreshold: 5,
+    reorderPoint: 3,
+    reorderQuantity: 10,
+    stockAlerts: true,
+    itemType: ItemType.REGULAR,
+    processingStatus: ProcessingStatus.NONE,
+    breakdownStatus: BreakdownStatus.NONE,
+    visibility: 'visible',
+    featured: false,
+    condition: ItemCondition.NEW,
+    bundlePlan: JSON.stringify([]),
+    parentItemId: null
+  };
+}
 
 interface ParsedCsvData {
   headers: string[];
@@ -533,7 +706,7 @@ export async function importShopifyCSV(
         
         // Update with barcode and QR code if we have them
         if (barcode || qrCode) {
-          const updateData: Partial<Item> = {};
+          const updateData: Partial<InsertItem> = {};
           if (barcode) updateData.barcode = barcode;
           if (qrCode) updateData.qrCode = qrCode;
           

@@ -97,7 +97,8 @@ function groupTimeSeriesData(data: TimeSeriesData[], groupBy: 'day' | 'week' | '
 
 // analyzeImage import removed per requirements
 // generateSEOContent import removed per requirements
-import { generateSKU, generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
+import { generateBarcodeData } from "./services/barcode";
+import { generateQRCodeDataURL } from "./services/qrcode";
 import { generateForecast, calculateKPIs } from "./services/forecasting";
 import { 
   prepareItemForShopify, 
