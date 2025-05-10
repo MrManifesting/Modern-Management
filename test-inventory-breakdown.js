@@ -37,19 +37,20 @@ async function testInventoryBreakdown() {
     console.log('\n2. Generating standard breakdown targets...');
     const targetsResponse = await axios.get(`${API_URL}/api/bulk-items/${bulkItemId}/standard-targets`);
     
-    if (!targetsResponse.data || !Array.isArray(targetsResponse.data)) {
+    if (!targetsResponse.data || !targetsResponse.data.targets || !Array.isArray(targetsResponse.data.targets)) {
       throw new Error('Failed to generate standard breakdown targets');
     }
     
-    console.log(`Generated ${targetsResponse.data.length} standard targets`);
-    console.log(targetsResponse.data);
+    const standardTargets = targetsResponse.data.targets;
+    console.log(`Generated ${standardTargets.length} standard targets`);
+    console.log(JSON.stringify(standardTargets, null, 2));
     
     // Step 3: Create product breakdown
     console.log('\n3. Creating product breakdown...');
     const breakdownResponse = await axios.post(`${API_URL}/api/product-breakdowns`, {
       bulkItemId: bulkItemId,
       employeeId: 1, // Using employee ID 1 for testing
-      targetProducts: targetsResponse.data
+      targetProducts: standardTargets
     });
     
     if (!breakdownResponse.data || !breakdownResponse.data.id) {
@@ -63,7 +64,7 @@ async function testInventoryBreakdown() {
     console.log('\n4. Processing breakdown (creating breakdown products)...');
     const processResponse = await axios.post(`${API_URL}/api/product-breakdowns/${breakdownId}/create-products`, {
       employeeId: 1,
-      targetProducts: targetsResponse.data
+      targetProducts: standardTargets
     });
     
     if (!processResponse.data) {
