@@ -191,11 +191,11 @@ export function registerShopifySafetyRoutes(app: Express, storage: IStorage) {
       }
       
       // Generate SKUs
-      const skuMap = generateSkuBatch(selectedItems);
+      const skuMap = generateSKUBatch(selectedItems);
       
       // Log the operation
       logShopifyOperation(
-        'generateSkuBatch',
+        'generateSKUBatch',
         { itemIds, skuMap },
         true
       );
