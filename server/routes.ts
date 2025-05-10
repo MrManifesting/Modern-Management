@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { analyzeProductImage, generateProductDescription } from "./services/openai";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
-import { generateStandardBreakdownTargets, processBreakdown } from "./services/inventory-breakdown";
+// Inventory breakdown functions are imported below
 import { 
   fetchShopifySalesReport, 
   fetchShopifyInventoryReport, 
