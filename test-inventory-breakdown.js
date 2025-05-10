@@ -1,7 +1,7 @@
 // Inventory Breakdown Test Script
 // This script tests the functionality of the inventory breakdown system
 
-const axios = require('axios');
+import axios from 'axios';
 
 const API_URL = 'http://localhost:5000';
 
@@ -37,11 +37,21 @@ async function testInventoryBreakdown() {
     console.log('\n2. Generating standard breakdown targets...');
     const targetsResponse = await axios.get(`${API_URL}/api/bulk-items/${bulkItemId}/standard-targets`);
     
-    if (!targetsResponse.data || !targetsResponse.data.targets || !Array.isArray(targetsResponse.data.targets)) {
-      throw new Error('Failed to generate standard breakdown targets');
+    console.log('Raw targets response:', JSON.stringify(targetsResponse.data, null, 2));
+    
+    let standardTargets;
+    if (Array.isArray(targetsResponse.data)) {
+      // Directly use the array if that's the response structure
+      standardTargets = targetsResponse.data;
+      console.log('Using direct array response');
+    } else if (targetsResponse.data && targetsResponse.data.targets && Array.isArray(targetsResponse.data.targets)) {
+      // Use the targets property if that's the response structure
+      standardTargets = targetsResponse.data.targets;
+      console.log('Using targets property from response');
+    } else {
+      throw new Error('Failed to generate standard breakdown targets - unexpected response format');
     }
     
-    const standardTargets = targetsResponse.data.targets;
     console.log(`Generated ${standardTargets.length} standard targets`);
     console.log(JSON.stringify(standardTargets, null, 2));
     
@@ -105,4 +115,8 @@ async function testInventoryBreakdown() {
 }
 
 // Run the test
-testInventoryBreakdown();
+testInventoryBreakdown()
+  .catch(error => {
+    console.error('Error executing test:', error);
+    process.exit(1);
+  });

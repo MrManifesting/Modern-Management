@@ -314,7 +314,21 @@ export function generateStandardBreakdownTargets(bulkItem: Item): BreakdownTarge
       
       // Calculate quantity (how many can we make from the bulk item)
       const maxQuantity = Math.floor(bulkWeight / roundedWeight);
-      const suggestedQuantity = Math.min(maxQuantity, 10); // Default suggestion of up to 10
+      
+      // Limit the suggested quantity based on weight
+      // This ensures we don't suggest too many breakdown items
+      let maxSuggestedQty;
+      if (roundedWeight >= bulkWeight / 2) {
+        maxSuggestedQty = 1; // For large weight divisions (half or more), suggest just 1
+      } else if (roundedWeight >= bulkWeight / 5) {
+        maxSuggestedQty = 2; // For medium weight divisions, suggest 2
+      } else if (roundedWeight >= bulkWeight / 10) {
+        maxSuggestedQty = 3; // For smaller weight divisions, suggest 3
+      } else {
+        maxSuggestedQty = 4; // For very small divisions, suggest up to 4
+      }
+      
+      const suggestedQuantity = Math.min(maxQuantity, maxSuggestedQty);
       
       // Calculate price per unit
       const price = calculatePricePerUnit(bulkItem, roundedWeight, bulkWeight);
