@@ -15,7 +15,7 @@ import { MarketplaceService } from "./marketplace";
  * This is called after any item update/creation in the app to push changes to marketplaces
  */
 export async function syncItemWithMarketplaces(
-  item: Item, 
+  item: Item | undefined, 
   storage: IStorage
 ): Promise<{
   success: boolean;
