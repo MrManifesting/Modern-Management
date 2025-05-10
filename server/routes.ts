@@ -657,6 +657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             connectedMarketplaces.map(async marketplace => {
               const externalId = externalIds[marketplace.id.toString()];
               if (externalId) {
+                // Import MarketplaceService
+                const { MarketplaceService } = await import('./services/marketplace');
                 const marketplaceService = new MarketplaceService(marketplace);
                 try {
                   await marketplaceService.deleteProduct(externalId);
