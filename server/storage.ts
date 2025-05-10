@@ -581,24 +581,7 @@ export class MemStorage implements IStorage {
     }
   }
   
-  async getItemBySku(sku: string): Promise<Item | undefined> {
-    try {
-      console.log(`Searching for item with SKU: ${sku}`);
-      const items = Array.from(this.items.values());
-      const item = items.find(item => item.sku === sku);
-      
-      if (item) {
-        console.log(`Found item by SKU ${sku}: ID=${item.id}, Name=${item.name}`);
-      } else {
-        console.log(`No item found with SKU ${sku}`);
-      }
-      
-      return item;
-    } catch (error) {
-      console.error(`Error retrieving item by SKU ${sku}:`, error);
-      return undefined;
-    }
-  }
+  // The duplicate getItemBySku method was removed
 
   async createItem(item: InsertItem): Promise<Item> {
     try {

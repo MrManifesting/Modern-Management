@@ -118,3 +118,34 @@ export function generateBarcodeForItem(item: Item): string {
   // Use the SKU as the barcode value
   return generateBarcodeData(item.sku);
 }
+
+/**
+ * Generate a QR code data URL for various data objects
+ */
+export async function generateQRCodeDataURL(data: { id: string | number, name: string, customUrl?: string } | any): Promise<string> {
+  try {
+    // Dynamically import QRCode library
+    const QRCode = await import('qrcode');
+    
+    // Format the data - either use custom URL or create encoded data
+    const qrData = data.customUrl || JSON.stringify({
+      id: data.id,
+      name: data.name,
+      generatedAt: new Date().toISOString()
+    });
+    
+    // Generate QR code as data URL
+    return await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      scale: 8,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    });
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    return '';
+  }
+}
