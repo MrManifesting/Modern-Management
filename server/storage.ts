@@ -465,6 +465,36 @@ export class MemStorage implements IStorage {
     
     return data.lastPushedAt;
   }
+  
+  /**
+   * Get items by their external IDs in a specific marketplace
+   * @param marketplaceId The marketplace ID
+   * @param externalIds The list of external IDs to lookup
+   * @returns A mapping of external IDs to their corresponding items
+   */
+  async getItemsByExternalIds(marketplaceId: number, externalIds: string[]): Promise<Record<string, Item>> {
+    if (!externalIds.length) {
+      return {};
+    }
+    
+    const result: Record<string, Item> = {};
+    
+    // Loop through all items and check if they have the requested external IDs
+    for (const [itemId, itemExternalMap] of this.itemExternalIds.entries()) {
+      // Check if this item has an external ID for the requested marketplace
+      const data = itemExternalMap.get(marketplaceId);
+      
+      if (data && externalIds.includes(data.externalId)) {
+        // This item matches one of the requested external IDs
+        const item = this.items.get(itemId);
+        if (item) {
+          result[data.externalId] = {...item};
+        }
+      }
+    }
+    
+    return result;
+  }
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
