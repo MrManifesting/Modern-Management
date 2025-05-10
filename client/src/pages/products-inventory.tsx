@@ -935,7 +935,7 @@ const ProductsInventoryPage: React.FC = () => {
                     "ID", "Name", "Category", "SKU", "Size", "Price", "Quantity", "Status"
                   ];
                   
-                  const rows = filteredProducts.map(product => [
+                  const rows = filteredProducts.map((product: Product) => [
                     product.id,
                     product.name,
                     product.category,
@@ -1085,7 +1085,7 @@ const ProductsInventoryPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredProducts.map((product) => (
+                        {filteredProducts.map((product: Product) => (
                           <tr key={product.id} className="border-b border-border hover:bg-muted/50">
                             {bulkSelectMode && (
                               <td className="py-3 px-2">
