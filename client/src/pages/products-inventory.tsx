@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
+
+// Placeholder image as base64 data URL (simple image with camera icon)
+const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmNGY0ZjUiIC8+CiAgPHBhdGggZD0iTTM1IDQwSDY1QzY4LjMxMzcgNDAgNzEgNDIuNjg2MyA3MSA0NlY2NkM3MSA2OS4zMTM3IDY4LjMxMzcgNzIgNjUgNzJIMzVDMzEuNjg2MyA3MiAyOSA2OS4zMTM3IDI5IDY2VjQ2QzI5IDQyLjY4NjMgMzEuNjg2MyA0MCAzNSA0MFoiIHN0cm9rZT0iIzk0YTNiOCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1NCIgcj0iOCIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+Cg==";
 import { 
   Plus, 
   UploadCloud, 
@@ -1065,20 +1068,44 @@ const ProductsInventoryPage: React.FC = () => {
                               </td>
                             )}
                             <td className="py-3 px-2 text-center">
-                              <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border">
-                                {product.imageUrl ? (
-                                  <img 
-                                    src={product.imageUrl} 
-                                    alt={product.name}
-                                    className="object-cover w-full h-full"
-                                    onError={(e) => {
-                                      // Replace with a placeholder if image fails to load
-                                      (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
-                                    <ImageIcon className="h-6 w-6 opacity-50" />
+                              <div className="group relative">
+                                <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border transition-all duration-200 cursor-pointer hover:shadow-md">
+                                  {product.imageUrl ? (
+                                    <img 
+                                      src={product.imageUrl} 
+                                      alt={product.name}
+                                      className="object-cover w-full h-full"
+                                      onError={(e) => {
+                                        // Replace with a placeholder if image fails to load
+                                        (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                      <ImageIcon className="h-6 w-6 opacity-50" />
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Larger preview on hover */}
+                                {product.imageUrl && (
+                                  <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
+                                    <div className="relative w-48 h-48 overflow-hidden rounded">
+                                      <img 
+                                        src={product.imageUrl} 
+                                        alt={product.name} 
+                                        className="object-contain w-full h-full"
+                                        onError={(e) => {
+                                          // Replace with a placeholder if image fails to load
+                                          (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
+                                      {product.name}
+                                    </div>
+                                    {/* Triangle pointer */}
+                                    <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
                                   </div>
                                 )}
                               </div>
