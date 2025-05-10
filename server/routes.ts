@@ -539,13 +539,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Trigger real-time sync with marketplaces after item creation
       try {
-        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
-        syncItemWithMarketplaces(updatedItem, storage).catch(err => {
-          console.error("Real-time sync failed after item creation:", err);
-        });
-        
-        // Note: We don't wait for sync to complete before responding to avoid delays
-        log(`Initiated real-time sync for new item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+        if (updatedItem) {
+          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+          syncItemWithMarketplaces(updatedItem, storage).catch(err => {
+            console.error("Real-time sync failed after item creation:", err);
+          });
+          
+          // Note: We don't wait for sync to complete before responding to avoid delays
+          log(`Initiated real-time sync for new item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+        } else {
+          log(`Skipping real-time sync: Item update returned undefined`, 'marketplace-sync');
+        }
       } catch (syncError) {
         console.error("Failed to initiate real-time sync:", syncError);
         // Continue with response even if sync failed to initialize
@@ -606,13 +610,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Trigger real-time sync with marketplaces after item update
       try {
-        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
-        syncItemWithMarketplaces(updatedItem, storage).catch(err => {
-          console.error("Real-time sync failed after item update:", err);
-        });
-        
-        // Note: We don't wait for sync to complete before responding to avoid delays
-        log(`Initiated real-time sync for updated item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+        if (updatedItem) {
+          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+          syncItemWithMarketplaces(updatedItem, storage).catch(err => {
+            console.error("Real-time sync failed after item update:", err);
+          });
+          
+          // Note: We don't wait for sync to complete before responding to avoid delays
+          log(`Initiated real-time sync for updated item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+        } else {
+          log(`Skipping real-time sync: Item update returned undefined`, 'marketplace-sync');
+        }
       } catch (syncError) {
         console.error("Failed to initiate real-time sync after update:", syncError);
         // Continue with response even if sync failed to initialize
