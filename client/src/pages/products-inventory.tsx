@@ -1077,7 +1077,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       className="object-cover w-full h-full"
                                       onError={(e) => {
                                         // Replace with a placeholder if image fails to load
-                                        (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                        (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
                                       }}
                                     />
                                   ) : (
@@ -1097,7 +1097,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
                                           // Replace with a placeholder if image fails to load
-                                          (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                          (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
                                         }}
                                       />
                                     </div>
