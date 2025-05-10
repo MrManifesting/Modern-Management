@@ -63,6 +63,7 @@ export async function getShopifyProducts(): Promise<SyncPreviewResponse> {
   try {
     // Check if Shopify is configured
     if (!await isShopifyConfigured()) {
+      log('Shopify not configured properly for sync preview', 'shopify-details');
       return {
         shopifyProducts: [],
         message: 'Shopify is not properly configured. Please check your API credentials.',
@@ -73,6 +74,7 @@ export async function getShopifyProducts(): Promise<SyncPreviewResponse> {
     // Get Shopify client
     const shopify = await getShopifyClient();
     if (!shopify) {
+      log('Failed to initialize Shopify client for sync preview', 'shopify-details');
       return {
         shopifyProducts: [],
         message: 'Failed to initialize Shopify client',
@@ -80,13 +82,28 @@ export async function getShopifyProducts(): Promise<SyncPreviewResponse> {
       };
     }
     
-    // Fetch products from Shopify
-    const response = await shopify.product.list({ limit: 250 });
+    log('Attempting to fetch products from Shopify for sync preview', 'shopify-details');
+    
+    // Add timeout handling for the Shopify API request
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Shopify API request timed out after 20 seconds')), 20000);
+    });
+    
+    // Fetch products from Shopify with timeout protection
+    const responsePromise = shopify.product.list({ limit: 250 });
+    
+    // Race the API call against the timeout
+    const response = await Promise.race([responsePromise, timeoutPromise])
+      .catch(error => {
+        log(`Shopify API request failed: ${error.message}`, 'shopify-details');
+        return null;
+      });
     
     if (!response) {
+      log('No response or timeout from Shopify API for sync preview', 'shopify-details');
       return {
         shopifyProducts: [],
-        message: 'No response from Shopify API',
+        message: 'No response from Shopify API. The request may have timed out or failed.',
         success: false
       };
     }
@@ -136,10 +153,20 @@ export async function getShopifyProducts(): Promise<SyncPreviewResponse> {
       success: true
     };
   } catch (error) {
-    log(`Error fetching Shopify products: ${error}`, 'shopify');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log(`Error fetching Shopify products: ${errorMessage}`, 'shopify');
+    
+    // Determine if it's a connection error
+    const isConnectionError = errorMessage.includes('ECONNREFUSED') || 
+                              errorMessage.includes('ETIMEDOUT') ||
+                              errorMessage.includes('timed out') ||
+                              errorMessage.includes('connect');
+    
     return {
       shopifyProducts: [],
-      message: `Error fetching Shopify products: ${error}`,
+      message: isConnectionError 
+        ? `Failed to connect to Shopify. Please check your internet connection and Shopify store status.` 
+        : `Error fetching Shopify products: ${errorMessage}`,
       success: false
     };
   }

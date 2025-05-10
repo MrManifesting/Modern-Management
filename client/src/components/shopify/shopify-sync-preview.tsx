@@ -209,10 +209,45 @@ const ShopifySyncPreview: React.FC = () => {
   const fetchSyncPreview = async () => {
     setIsLoadingPreview(true);
     try {
-      const shopifyDataResponse = await fetch('/api/shopify/products');
+      // First check Shopify connection
+      const connectionResponse = await fetch('/api/shopify/test-connection');
+      const connectionStatus = await connectionResponse.json();
+      
+      if (!connectionStatus.connected) {
+        throw new Error(connectionStatus.message || 'Unable to connect to Shopify. Please check your API credentials.');
+      }
+      
+      // Set a timeout to abort the fetch if it takes too long
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      // Fetch Shopify products with timeout
+      const shopifyDataResponse = await fetch('/api/shopify/products', {
+        signal: controller.signal
+      }).catch(error => {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out when connecting to Shopify. Please try again later.');
+        }
+        throw error;
+      });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      if (!shopifyDataResponse.ok) {
+        const errorData = await shopifyDataResponse.json().catch(() => ({ message: 'Error connecting to Shopify' }));
+        throw new Error(errorData.message || `Shopify API returned status ${shopifyDataResponse.status}`);
+      }
+      
       const shopifyData = await shopifyDataResponse.json();
       
+      // Fetch inventory items
       const inventoryDataResponse = await fetch('/api/items');
+      
+      if (!inventoryDataResponse.ok) {
+        throw new Error('Failed to fetch inventory items');
+      }
+      
       const inventoryData = await inventoryDataResponse.json();
       
       // Process and match the data
@@ -283,11 +318,32 @@ const ShopifySyncPreview: React.FC = () => {
       setSelectedCount(syncData.filter(item => item.selected).length);
     } catch (error) {
       console.error('Error fetching sync preview:', error);
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'There was a problem loading the sync preview.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timed out')) {
+          errorMessage = 'Connection to Shopify timed out. Please try again later or check if the store is accessible.';
+        } else if (error.message.includes('API credentials') || error.message.includes('access token')) {
+          errorMessage = 'Invalid Shopify API credentials. Please check your store URL and access token.';
+        } else if (error.message.includes('connect')) {
+          errorMessage = 'Could not connect to Shopify. Please check your internet connection and try again.';
+        } else {
+          // Use the actual error message if it exists
+          errorMessage = error.message || errorMessage;
+        }
+      }
+      
       toast({
-        title: 'Error loading sync preview',
-        description: 'There was a problem loading the sync preview. Please try again.',
+        title: 'Shopify Connection Error',
+        description: errorMessage,
         variant: 'destructive',
+        duration: 7000, // Show longer for error messages
       });
+      
+      // Set empty sync items to prevent UI issues
+      setSyncItems([]);
     } finally {
       setIsLoadingPreview(false);
     }
@@ -771,18 +827,36 @@ const ShopifySyncPreview: React.FC = () => {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={fetchSyncPreview}
-                disabled={isLoadingPreview || isSyncing}
-              >
-                {isLoadingPreview ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Refresh Preview
-              </Button>
+              {syncItems.length === 0 && !isLoadingPreview ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-500 border-amber-500 hover:bg-amber-500/10"
+                  onClick={() => {
+                    toast({
+                      title: "Retrying connection",
+                      description: "Attempting to reconnect to Shopify...",
+                    });
+                    fetchSyncPreview();
+                  }}
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Retry Shopify Connection
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={fetchSyncPreview}
+                  disabled={isLoadingPreview || isSyncing}
+                >
+                  {isLoadingPreview ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Refresh Preview
+                </Button>
+              )}
               <Button 
                 variant={selectedCount > 0 ? "default" : "outline"} 
                 onClick={startSync}
