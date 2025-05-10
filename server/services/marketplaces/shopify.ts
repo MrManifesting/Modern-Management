@@ -117,8 +117,14 @@ export class ShopifyService implements IMarketplaceService {
       // Get shop info
       const shop = await client.shop.get();
       
-      // Get product count
-      const productCount = await client.product.count();
+      // Get product count with error handling
+      let productCount = 0;
+      try {
+        productCount = await client.product.count();
+      } catch (countError) {
+        log(`Error getting product count in getMarketplaceInfo: ${countError}`, 'marketplace-shopify');
+        // Continue without product count
+      }
       
       return {
         success: true,
@@ -156,9 +162,15 @@ export class ShopifyService implements IMarketplaceService {
         };
       }
       
-      // Get product count
-      const productCount = await client.product.count();
-      log(`Found ${productCount} products in Shopify store`, 'marketplace-shopify');
+      // Get product count - wrap in try/catch to handle potential errors
+      let productCount = 0;
+      try {
+        productCount = await client.product.count();
+        log(`Found ${productCount} products in Shopify store`, 'marketplace-shopify');
+      } catch (countError) {
+        log(`Error getting product count, continuing with sync: ${countError}`, 'marketplace-shopify');
+        // Continue without product count
+      }
       
       // Get all products from Shopify
       // Use pagination to handle large catalogs
@@ -217,7 +229,7 @@ export class ShopifyService implements IMarketplaceService {
             success: false,
             message: `Error importing products: ${importErr.message}`,
             data: {
-              total: productCount,
+              total: productCount || 0,
               fetched: allProducts.length,
               imported: 0,
               updated: 0,
@@ -231,7 +243,7 @@ export class ShopifyService implements IMarketplaceService {
         success: true,
         message: `Successfully synced ${imported + updated} products from Shopify`,
         data: {
-          total: productCount,
+          total: productCount || allProducts.length,
           fetched: allProducts.length,
           imported,
           updated,
