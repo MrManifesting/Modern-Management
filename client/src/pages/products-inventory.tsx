@@ -633,7 +633,7 @@ const ProductsInventoryPage: React.FC = () => {
                 variant={bulkSelectMode ? "secondary" : "outline"}
               >
                 <ClipboardList className="h-4 w-4" />
-                {bulkSelectMode ? (selectedItems.length > 0 ? "Edit Items" : "Exit") : "Bulk"}
+                {bulkSelectMode ? (selectedItems.length > 0 ? "Edit Items" : "Exit") : "Bulk Edit"}
               </Button>
               <Button 
                 variant="outline" 

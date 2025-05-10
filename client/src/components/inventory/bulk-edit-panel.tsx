@@ -24,6 +24,11 @@ import { Badge } from '@/components/ui/badge';
 import { CircleDollarSign, Percent, Tags, ShoppingCart, CircleCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 
 type BulkEditPanelProps = {
   selectedItems: any[];
@@ -34,10 +39,10 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
   const [currentTab, setCurrentTab] = useState('status');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  
+
   // Add debugging
   console.log("BulkEditPanel rendered with", selectedItems.length, "items");
-  
+
   // Show toast with debug info when component mounts
   React.useEffect(() => {
     console.log("BulkEditPanel mounted");
@@ -49,7 +54,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
 
   // Status state
   const [status, setStatus] = useState('');
-  
+
   // Price state
   const [priceAction, setPriceAction] = useState('amount');
   const [priceValue, setPriceValue] = useState('');
@@ -228,6 +233,36 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
     }
   };
 
+  // Handle bulk delete submission
+  const handleBulkDelete = async () => {
+    setLoading(true);
+    try {
+      const response = await apiRequest('DELETE', '/api/items/bulk-delete', {
+        ids: selectedItems.map(item => item.id),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "Items deleted",
+          description: `${selectedItems.length} items deleted successfully.`
+        });
+        onBulkEditComplete();
+      } else {
+        throw new Error(result.message || "Failed to delete items");
+      }
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast({
+        title: "Deletion failed",
+        description: "There was an error deleting the selected items.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Log when rendering
   console.log("Rendering BulkEditPanel dialog, selectedItems:", selectedItems.length);
 
@@ -242,12 +277,13 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
         </DialogHeader>
 
         <Tabs defaultValue="status" onValueChange={setCurrentTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-4 mb-4">
             <TabsTrigger value="status">Update Status</TabsTrigger>
             <TabsTrigger value="price">Update Pricing</TabsTrigger>
             <TabsTrigger value="marketplace">Publish to Marketplaces</TabsTrigger>
+            <TabsTrigger value="delete">Delete Items</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="status" className="space-y-4">
             <div className="grid gap-4">
               <div className="space-y-2">
@@ -266,7 +302,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h3 className="font-medium mb-2">Selected Items Preview</h3>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
@@ -279,7 +315,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="price" className="space-y-4">
             <div className="grid gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -298,7 +334,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="priceValue">
                     {priceAction.includes('percent') ? 'Percentage (%)' : 'Amount ($)'}
@@ -318,7 +354,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Apply To</Label>
                 <div className="flex flex-col space-y-2">
@@ -336,7 +372,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h3 className="font-medium mb-2">Price Change Preview</h3>
                 <div className="max-h-32 overflow-y-auto">
@@ -352,7 +388,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                       {selectedItems.slice(0, 3).map(item => {
                         let newPrice = item.price;
                         const numValue = Number(priceValue) || 0;
-                        
+
                         if (priceAction === 'amount') {
                           newPrice = numValue;
                         } else if (priceAction === 'increase') {
@@ -364,7 +400,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                         } else if (priceAction === 'percent-decrease') {
                           newPrice = item.price * (1 - numValue / 100);
                         }
-                        
+
                         return (
                           <tr key={item.id} className="border-b">
                             <td className="py-2">{item.name}</td>
@@ -386,7 +422,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="marketplace" className="space-y-4">
             <div className="grid gap-4">
               <div className="space-y-2">
@@ -410,7 +446,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -423,7 +459,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                   </label>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h3 className="font-medium mb-2">Publishing Preview</h3>
                 <div className="text-sm text-muted-foreground space-y-1">
@@ -443,9 +479,33 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
               </div>
             </div>
           </TabsContent>
-        </Tabs>
 
-        <DialogFooter className="pt-2">
+        {/* Delete Items Tab */}
+        <TabsContent value="delete" className="space-y-4">
+          <div className="grid gap-4">
+            <Alert variant="destructive">
+              <AlertTitle>Warning: This action cannot be undone</AlertTitle>
+              <AlertDescription>
+                You are about to permanently delete {selectedItems.length} items from your inventory.
+                This will remove all data associated with these items.
+              </AlertDescription>
+            </Alert>
+
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-medium mb-2">Items to be deleted</h3>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {selectedItems.map(item => (
+                  <Badge key={item.id} variant="outline" className="justify-start overflow-hidden text-destructive border-destructive/50">
+                    {item.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <DialogFooter className="pt-2">
           <Button variant="outline" onClick={onBulkEditComplete} disabled={loading}>
             Cancel
           </Button>
@@ -457,9 +517,12 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
                 handlePriceUpdate();
               } else if (currentTab === 'marketplace') {
                 handlePublishToMarketplace();
+              } else if (currentTab === 'delete') {
+                handleBulkDelete();
               }
             }}
             disabled={loading}
+            variant={currentTab === 'delete' ? "destructive" : "default"}
             className="gap-2"
           >
             {loading ? (
@@ -470,7 +533,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
             ) : (
               <>
                 <CircleCheck className="h-4 w-4" />
-                Apply Changes
+                {currentTab === 'delete' ? 'Delete Items' : 'Apply Changes'}
               </>
             )}
           </Button>
