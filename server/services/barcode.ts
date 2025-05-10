@@ -1,83 +1,70 @@
-import QRCode from 'qrcode';
+/**
+ * Barcode generation service
+ */
+import JsBarcode from 'jsbarcode';
+import { DOMImplementation, XMLSerializer } from 'xmldom';
 import { Item } from '@shared/schema';
 
 /**
- * Generate a SKU (Stock Keeping Unit) based on item details
- * Format: CAT-COND-RANDOM where:
- * - CAT: First 3 letters of category
- * - COND: First letter of condition
- * - RANDOM: Random 6-digit number
+ * Generate a barcode as a data URL
  */
-export function generateSKU(item: Partial<Item>): string {
-  const category = (item.category || 'MISC').substring(0, 3).toUpperCase();
-  const condition = (item.condition || 'N').substring(0, 1).toUpperCase();
-  const randomPart = Math.floor(100000 + Math.random() * 900000); // 6-digit number
-  
-  return `${category}-${condition}-${randomPart}`;
-}
-
-/**
- * Generate barcode data in Code128 format
- * Returns the value to be encoded (the SKU)
- */
-export function generateBarcodeData(sku: string): string {
-  return sku;
-}
-
-/**
- * Generate QR code data URL
- * Contains JSON with item details
- */
-export async function generateQRCodeDataURL(item: Item): Promise<string> {
-  // Create a simplified version of the item data for the QR code
-  const qrData = {
-    id: item.id,
-    sku: item.sku,
-    name: item.name,
-    price: item.price,
-    category: item.category,
-    quantity: item.quantity
-  };
-  
+export function generateBarcodeData(text: string): string {
   try {
-    // Generate QR code as data URL
-    const dataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
-      width: 200,
-      margin: 2,
-      errorCorrectionLevel: 'M'
+    const xmlSerializer = new XMLSerializer();
+    const document = new DOMImplementation().createDocument('http://www.w3.org/1999/xhtml', 'html', null);
+    const svgNode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    JsBarcode(svgNode, text, {
+      format: 'CODE128',
+      lineColor: '#000',
+      width: 2,
+      height: 100,
+      displayValue: true,
+      fontSize: 16,
+      margin: 10,
+      background: '#ffffff'
     });
-    
-    return dataURL;
+
+    const svgText = xmlSerializer.serializeToString(svgNode);
+    const encoded = Buffer.from(svgText).toString('base64');
+    return `data:image/svg+xml;base64,${encoded}`;
   } catch (error) {
-    console.error('Error generating QR code:', error);
-    throw new Error('Failed to generate QR code');
+    console.error('Error generating barcode:', error);
+    return '';
   }
 }
 
 /**
- * Generate QR code as buffer
+ * Generate a barcode as an SVG string
  */
-export async function generateQRCodeBuffer(item: Item): Promise<Buffer> {
-  const qrData = {
-    id: item.id,
-    sku: item.sku,
-    name: item.name,
-    price: item.price,
-    category: item.category,
-    quantity: item.quantity
-  };
-  
+export function generateBarcodeSVG(text: string): string {
   try {
-    // Generate QR code as buffer
-    const buffer = await QRCode.toBuffer(JSON.stringify(qrData), {
-      width: 200,
-      margin: 2,
-      errorCorrectionLevel: 'M'
+    const xmlSerializer = new XMLSerializer();
+    const document = new DOMImplementation().createDocument('http://www.w3.org/1999/xhtml', 'html', null);
+    const svgNode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    JsBarcode(svgNode, text, {
+      format: 'CODE128',
+      lineColor: '#000',
+      width: 2,
+      height: 100,
+      displayValue: true,
+      fontSize: 16,
+      margin: 10,
+      background: '#ffffff'
     });
-    
-    return buffer;
+
+    return xmlSerializer.serializeToString(svgNode);
   } catch (error) {
-    console.error('Error generating QR code buffer:', error);
-    throw new Error('Failed to generate QR code buffer');
+    console.error('Error generating barcode SVG:', error);
+    return '';
   }
+}
+
+/**
+ * Generate a barcode for an item
+ */
+export function generateBarcodeForItem(item: Item): string {
+  // Use the SKU as the barcode value
+  return generateBarcodeData(item.sku);
 }
