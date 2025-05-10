@@ -27,6 +27,18 @@ export async function syncItemWithMarketplaces(
   }>;
   error?: string;
 }> {
+  // Early return if item is undefined
+  if (!item) {
+    return {
+      success: false,
+      syncedWith: [],
+      error: "Cannot sync undefined item"
+    };
+  }
+  
+  // At this point, item is definitely defined
+  const validItem: Item = item;
+  
   try {
     // Get all enabled marketplaces this item should be pushed to
     const allMarketplaces = await storage.getAllMarketplaces();
@@ -34,12 +46,12 @@ export async function syncItemWithMarketplaces(
     // If the item has marketplace settings, filter by those
     let enabledMarketplaces: Marketplace[] = [];
     
-    if (item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0) {
+    if (validItem.marketplace && Array.isArray(validItem.marketplace) && validItem.marketplace.length > 0) {
       // Find marketplaces that match the IDs in item.marketplace
       enabledMarketplaces = allMarketplaces.filter(m => 
         m.isConnected && 
         m.isSyncEnabled &&
-        (item.marketplace?.includes(m.id.toString()) || item.marketplace?.includes(m.id))
+        (validItem.marketplace?.includes(m.id.toString()) || validItem.marketplace?.includes(m.id))
       );
     } else {
       // Get all enabled marketplaces
@@ -54,19 +66,19 @@ export async function syncItemWithMarketplaces(
       };
     }
     
-    log(`Real-time sync: Pushing item "${item.name}" (ID: ${item.id}) to ${enabledMarketplaces.length} marketplaces`, 'marketplace-sync');
+    log(`Real-time sync: Pushing item "${validItem.name}" (ID: ${validItem.id}) to ${enabledMarketplaces.length} marketplaces`, 'marketplace-sync');
     
     // Push to each marketplace in parallel
     const syncResults = await Promise.all(
       enabledMarketplaces.map(async (marketplace) => {
         try {
           const marketplaceService = new MarketplaceService(marketplace);
-          const result = await marketplaceService.pushProduct(item);
+          const result = await marketplaceService.pushProduct(validItem);
           
           if (result.success) {
             // Update the item's last pushed timestamp for this marketplace
             if (typeof storage.updateItemLastPushed === 'function') {
-              await storage.updateItemLastPushed(item.id, marketplace.id, new Date());
+              await storage.updateItemLastPushed(validItem.id, marketplace.id, new Date());
             }
           }
           
@@ -94,7 +106,7 @@ export async function syncItemWithMarketplaces(
       syncedWith: syncResults
     };
   } catch (error: any) {
-    log(`Error in real-time sync for item ${item.id}: ${error.message}`, 'marketplace-sync-error');
+    log(`Error in real-time sync for item ${validItem.id}: ${error.message}`, 'marketplace-sync-error');
     return {
       success: false,
       syncedWith: [],
@@ -108,7 +120,7 @@ export async function syncItemWithMarketplaces(
  * Called when viewing/using a specific item to ensure its data is up-to-date
  */
 export async function refreshItemFromMarketplaces(
-  item: Item,
+  item: Item | undefined,
   storage: IStorage
 ): Promise<{
   success: boolean;
@@ -121,12 +133,24 @@ export async function refreshItemFromMarketplaces(
   }>;
   error?: string;
 }> {
+  // Early return if item is undefined
+  if (!item) {
+    return {
+      success: false,
+      refreshedFrom: [],
+      error: "Cannot refresh undefined item"
+    };
+  }
+  
+  // At this point, item is definitely defined
+  const validItem: Item = item;
+  
   try {
     // Get all external IDs for this item
     let itemExternalIds: Record<string, string> = {};
     
     if (typeof storage.getItemExternalIds === 'function') {
-      itemExternalIds = await storage.getItemExternalIds(item.id) || {};
+      itemExternalIds = await storage.getItemExternalIds(validItem.id) || {};
     }
     
     // Get all enabled marketplaces
@@ -154,7 +178,7 @@ export async function refreshItemFromMarketplaces(
       };
     }
     
-    log(`Real-time refresh: Fetching latest data for item "${item.name}" (ID: ${item.id}) from ${relevantMarketplaces.length} marketplaces`, 'marketplace-sync');
+    log(`Real-time refresh: Fetching latest data for item "${validItem.name}" (ID: ${validItem.id}) from ${relevantMarketplaces.length} marketplaces`, 'marketplace-sync');
     
     // Fetch from each marketplace in parallel
     const refreshResults = await Promise.all(
@@ -178,7 +202,7 @@ export async function refreshItemFromMarketplaces(
             // Update the item with data from the marketplace
             // Here you could selectively update certain fields from the marketplace
             // For example, you might want to update inventory but not other fields
-            await storage.updateItem(item.id, { 
+            await storage.updateItem(validItem.id, { 
               quantity: result.product.quantity,
               // Add any other fields that should be updated from the marketplace
             });
