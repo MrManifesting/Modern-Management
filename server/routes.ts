@@ -806,6 +806,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // API route for deleting ALL inventory items (with confirmation and optional filter)
+  app.post("/api/items/delete-all", async (req: Request, res: Response) => {
+    try {
+      const { confirmation, filter } = req.body;
+      
+      // Require explicit confirmation to prevent accidental deletion
+      if (confirmation !== "DELETE_ALL_INVENTORY") {
+        return res.status(400).json({ 
+          success: false,
+          error: "Confirmation required", 
+          message: "You must provide the confirmation code 'DELETE_ALL_INVENTORY' to proceed with deleting all inventory" 
+        });
+      }
+      
+      // Get all items, applying filter if provided
+      const allItems = await storage.getItems();
+      let itemsToDelete = [...allItems];
+      
+      // Apply filters if provided
+      if (filter) {
+        if (filter.category) {
+          itemsToDelete = itemsToDelete.filter(item => item.category === filter.category);
+        }
+        if (filter.status) {
+          itemsToDelete = itemsToDelete.filter(item => item.status === filter.status);
+        }
+        if (filter.itemType) {
+          itemsToDelete = itemsToDelete.filter(item => item.itemType === filter.itemType);
+        }
+      }
+      
+      if (itemsToDelete.length === 0) {
+        return res.json({ 
+          success: true, 
+          message: "No items found matching the criteria", 
+          deletedCount: 0 
+        });
+      }
+      
+      // Track successful and failed deletions
+      const results = {
+        success: true,
+        deleted: 0,
+        failed: 0,
+        total: itemsToDelete.length,
+        failedIds: [] as number[],
+        messages: [] as string[]
+      };
+      
+      // Delete items one by one
+      for (const item of itemsToDelete) {
+        try {
+          const success = await storage.deleteItem(item.id);
+          if (success) {
+            results.deleted++;
+          } else {
+            results.failed++;
+            results.failedIds.push(item.id);
+            results.messages.push(`Item ID ${item.id} (${item.name}) could not be deleted`);
+          }
+        } catch (e) {
+          console.error(`Error deleting item ${item.id}:`, e);
+          results.failed++;
+          results.failedIds.push(item.id);
+          results.messages.push(`Error deleting item ID ${item.id} (${item.name}): ${e instanceof Error ? e.message : 'Unknown error'}`);
+        }
+      }
+      
+      return res.json({
+        success: true,
+        message: `Successfully deleted ${results.deleted} of ${results.total} items`,
+        results
+      });
+      
+    } catch (error) {
+      console.error("Error performing delete all items:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "An error occurred while attempting to delete all items",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Marketplace Routes
   app.get("/api/marketplaces", async (_req: Request, res: Response) => {
