@@ -78,9 +78,241 @@ function parseCSV(content: string): { headers: string[]; rows: string[][] } {
 }
 
 /**
+ * Validate CSV data without importing
+ * 
+ * @param content The CSV content to validate
+ * @returns Validation results with errors and warnings
+ */
+function validateCSV(content: string): {
+  isValid: boolean;
+  headers: string[];
+  sampleData: any[];
+  errors: { row: number; message: string; field?: string }[];
+  warnings: { row: number; message: string; field?: string }[];
+  stats: {
+    totalRows: number;
+    validRows: number;
+    columnsDetected: number;
+    requiredColumnsFound: string[];
+    requiredColumnsMissing: string[];
+  };
+} {
+  const result = {
+    isValid: true,
+    headers: [],
+    sampleData: [],
+    errors: [],
+    warnings: [],
+    stats: {
+      totalRows: 0,
+      validRows: 0,
+      columnsDetected: 0,
+      requiredColumnsFound: [],
+      requiredColumnsMissing: []
+    }
+  };
+
+  try {
+    // Parse the CSV content
+    const { headers, rows } = parseCSV(content);
+    
+    result.headers = headers;
+    result.stats.totalRows = rows.length;
+    result.stats.columnsDetected = headers.length;
+    
+    // Check if we have any data
+    if (headers.length === 0) {
+      result.isValid = false;
+      result.errors.push({ row: 0, message: "No headers found in CSV file" });
+      return result;
+    }
+
+    if (rows.length === 0) {
+      result.isValid = false;
+      result.errors.push({ row: 0, message: "No data rows found in CSV file" });
+      return result;
+    }
+    
+    // Check for required columns
+    const requiredColumns = ["name", "price"];
+    const requiredColumnNames = {
+      "name": ["name", "product name", "title", "product title", "item name"],
+      "price": ["price", "product price", "base price", "baseprice", "retail price"]
+    };
+    
+    // Find column indexes
+    const nameIndex = headers.findIndex(h => 
+      h === 'name' || h === 'product name' || h === 'title' || 
+      h === 'product title' || h === 'item name' || h === 'item title' ||
+      h === 'product' || h === 'handle' || h.includes('product') && h.includes('name'));
+      
+    const priceIndex = headers.findIndex(h => 
+      h === 'price' || h === 'product price' || h === 'item price' || 
+      h === 'base price' || h === 'baseprice' || h === 'retail price' || 
+      h === 'sale price' || h === 'selling price' || h === 'variant price' ||
+      h === 'retail' || h === 'msrp');
+      
+    const skuIndex = headers.findIndex(h => 
+      h === 'sku' || h === 'product sku' || h === 'item sku' || 
+      h === 'stock keeping unit' || h === 'variant sku');
+    
+    // Check if required columns are present
+    if (nameIndex === -1) {
+      result.warnings.push({ row: 0, message: "No product name column found - will use generic names" });
+      result.stats.requiredColumnsMissing.push("name");
+    } else {
+      result.stats.requiredColumnsFound.push("name");
+    }
+    
+    if (priceIndex === -1) {
+      if (skuIndex === -1) {
+        result.errors.push({ row: 0, message: "Neither price nor SKU column found - one is required" });
+        result.isValid = false;
+      } else {
+        result.warnings.push({ row: 0, message: "No price column found - will use default prices" });
+      }
+      result.stats.requiredColumnsMissing.push("price");
+    } else {
+      result.stats.requiredColumnsFound.push("price");
+    }
+    
+    // Add sample data (up to 5 rows)
+    const maxSamples = Math.min(5, rows.length);
+    for (let i = 0; i < maxSamples; i++) {
+      const row = rows[i];
+      if (row.length <= 1) continue;
+      
+      const rowData: Record<string, any> = {};
+      
+      // Add all columns to sample data
+      headers.forEach((header, index) => {
+        if (index < row.length) {
+          rowData[header] = row[index];
+        } else {
+          rowData[header] = "";
+        }
+      });
+      
+      // Validate this row
+      if (nameIndex >= 0 && (!row[nameIndex] || row[nameIndex].trim() === "")) {
+        result.warnings.push({ 
+          row: i + 1, 
+          field: headers[nameIndex], 
+          message: "Empty product name" 
+        });
+      }
+      
+      if (priceIndex >= 0) {
+        const priceValue = row[priceIndex];
+        if (!priceValue || priceValue.trim() === "") {
+          result.warnings.push({ 
+            row: i + 1, 
+            field: headers[priceIndex], 
+            message: "Empty price field" 
+          });
+        } else {
+          // Check if price can be parsed as a number
+          const cleanPrice = priceValue.replace(/[^0-9.]/g, '');
+          const priceNum = parseFloat(cleanPrice);
+          
+          if (isNaN(priceNum)) {
+            result.errors.push({ 
+              row: i + 1, 
+              field: headers[priceIndex], 
+              message: `Invalid price format: "${priceValue}"` 
+            });
+          } else if (priceNum === 0) {
+            result.warnings.push({ 
+              row: i + 1, 
+              field: headers[priceIndex], 
+              message: "Price is zero" 
+            });
+          } else {
+            rowData[headers[priceIndex] + "_parsed"] = priceNum;
+          }
+        }
+      }
+      
+      result.sampleData.push(rowData);
+    }
+    
+    // Count valid rows
+    let validRows = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.length <= 1) continue;
+      
+      let rowHasData = false;
+      
+      // Check if row has any non-empty cells
+      for (let j = 0; j < row.length; j++) {
+        if (row[j] && row[j].trim() !== "") {
+          rowHasData = true;
+          break;
+        }
+      }
+      
+      if (rowHasData) {
+        validRows++;
+      }
+    }
+    
+    result.stats.validRows = validRows;
+    
+    // Final validation check
+    if (result.errors.length > 0) {
+      result.isValid = false;
+    }
+    
+    return result;
+    
+  } catch (error) {
+    result.isValid = false;
+    result.errors.push({ 
+      row: 0, 
+      message: `Failed to parse CSV: ${error instanceof Error ? error.message : "Unknown error"}` 
+    });
+    return result;
+  }
+}
+
+/**
  * Register CSV import routes
  */
 export function registerCSVImportRoutes(app: any, storage: IStorage) {
+  // CSV validation endpoint
+  app.post("/api/items/validate-csv", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "No file uploaded" 
+        });
+      }
+      
+      const file = req.file;
+      const content = file.buffer.toString('utf8');
+      
+      // Validate the CSV file
+      const validationResult = validateCSV(content);
+      
+      // Return the validation results
+      res.json({
+        success: true,
+        validation: validationResult,
+        fileName: file.originalname,
+        fileSize: file.size
+      });
+      
+    } catch (error) {
+      console.error("Error validating CSV:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to validate CSV file. " + (error instanceof Error ? error.message : "Unknown error")
+      });
+    }
+  });
+
   // Standard CSV import endpoint
   app.post("/api/items/import", upload.single("file"), async (req: Request, res: Response) => {
     try {

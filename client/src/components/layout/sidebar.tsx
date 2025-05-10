@@ -18,7 +18,9 @@ import {
   Trash2,
   ShoppingBag,
   Share2,
-  QrCode
+  QrCode,
+  FileSpreadsheet,
+  FileCheck
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -91,6 +93,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           title: "Package Inventory",
           path: "/inventory/package",
           className: "inventory-link package-brand",
+        },
+        {
+          title: "CSV Validator",
+          path: "/csv-validator",
+          className: "inventory-link specialty-brand",
         }
       ]
     },

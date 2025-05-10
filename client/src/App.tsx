@@ -31,6 +31,7 @@ import BulkBreakdownPage from "@/pages/bulk-breakdown";
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
+import CSVValidatorPage from "@/pages/csv-validator";
 import AuthPage from "@/pages/auth-page";
 import QrScanPage from "@/pages/qr-scan";
 import NotFound from "@/pages/not-found";
@@ -66,6 +67,7 @@ function Router() {
       <ProtectedRoute path="/database-cleanup" component={DatabaseCleanupPage} />
       <ProtectedRoute path="/affiliate-dashboard" component={AffiliateDashboard} />
       <ProtectedRoute path="/ai-tools" component={AiToolsPage} />
+      <ProtectedRoute path="/csv-validator" component={CSVValidatorPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/qr-scan" component={QrScanPage} />
       <Route component={NotFound} />
