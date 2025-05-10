@@ -237,15 +237,16 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
   const handleBulkDelete = async () => {
     setLoading(true);
     try {
+      // Correctly format the request with ids in the body for DELETE
       const response = await apiRequest('DELETE', '/api/items/bulk-delete', {
         ids: selectedItems.map(item => item.id),
-      });
+      }, false, true); // The last parameter ensures body is sent with DELETE
 
       const result = await response.json();
       if (result.success) {
         toast({
           title: "Items deleted",
-          description: `${selectedItems.length} items deleted successfully.`
+          description: `${result.deleted} items deleted successfully.`
         });
         onBulkEditComplete();
       } else {

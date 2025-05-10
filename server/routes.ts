@@ -759,6 +759,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // API route for bulk deleting items
+  app.delete("/api/items/bulk-delete", async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing or invalid item IDs" 
+      });
+    }
+    
+    try {
+      const results = {
+        success: true,
+        deleted: 0,
+        failed: 0,
+        messages: [] as string[]
+      };
+      
+      // Delete each item
+      for (const id of ids) {
+        try {
+          const success = await storage.deleteItem(id);
+          
+          if (success) {
+            results.deleted++;
+          } else {
+            results.failed++;
+            results.messages.push(`Item ID ${id} not found or could not be deleted`);
+          }
+        } catch (err) {
+          results.failed++;
+          results.messages.push(`Error deleting item ID ${id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error during bulk delete:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to delete items",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Marketplace Routes
   app.get("/api/marketplaces", async (_req: Request, res: Response) => {
