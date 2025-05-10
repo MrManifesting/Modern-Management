@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-
-// Placeholder image as base64 data URL (simple image with camera icon)
-const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmNGY0ZjUiIC8+CiAgPHBhdGggZD0iTTM1IDQwSDY1QzY4LjMxMzcgNDAgNzEgNDIuNjg2MyA3MSA0NlY2NkM3MSA2OS4zMTM3IDY4LjMxMzcgNzIgNjUgNzJIMzVDMzEuNjg2MyA3MiAyOSA2OS4zMTM3IDI5IDY2VjQ2QzI5IDQyLjY4NjMgMzEuNjg2MyA0MCAzNSA0MFoiIHN0cm9rZT0iIzk0YTNiOCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1NCIgcj0iOCIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+Cg==";
 import { 
   Plus, 
   UploadCloud, 
@@ -473,8 +470,17 @@ const ProductsInventoryPage: React.FC = () => {
                   alt={product.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    // Replace with a placeholder if image fails to load
-                    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                    const imgElement = e.target as HTMLImageElement;
+                    const parentContainer = imgElement.parentElement;
+                    // Hide the image
+                    imgElement.style.display = 'none';
+                    // Show icon instead
+                    if (parentContainer) {
+                      const iconDiv = document.createElement('div');
+                      iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                      iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                      parentContainer.appendChild(iconDiv);
+                    }
                   }}
                 />
               ) : (
@@ -1095,8 +1101,17 @@ const ProductsInventoryPage: React.FC = () => {
                                       alt={product.name}
                                       className="object-cover w-full h-full"
                                       onError={(e) => {
-                                        // Replace with a placeholder if image fails to load
-                                        (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                                        const imgElement = e.target as HTMLImageElement;
+                                        const parentContainer = imgElement.parentElement;
+                                        // Hide the image
+                                        imgElement.style.display = 'none';
+                                        // Show icon instead
+                                        if (parentContainer) {
+                                          const iconDiv = document.createElement('div');
+                                          iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                          iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                          parentContainer.appendChild(iconDiv);
+                                        }
                                       }}
                                     />
                                   ) : (
@@ -1115,8 +1130,17 @@ const ProductsInventoryPage: React.FC = () => {
                                         alt={product.name} 
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
-                                          // Replace with a placeholder if image fails to load
-                                          (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                                          const imgElement = e.target as HTMLImageElement;
+                                          const parentContainer = imgElement.parentElement;
+                                          // Hide the image
+                                          imgElement.style.display = 'none';
+                                          // Show icon instead
+                                          if (parentContainer) {
+                                            const iconDiv = document.createElement('div');
+                                            iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                            iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                            parentContainer.appendChild(iconDiv);
+                                          }
                                         }}
                                       />
                                     </div>
