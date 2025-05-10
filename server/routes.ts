@@ -19,6 +19,7 @@ import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate";
+import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
 import { setupAuth } from "./auth";
 import { 
@@ -3559,24 +3560,14 @@ ${topCustomersCsv}`;
   // Register affiliate routes
   registerAffiliateRoutes(app, storage);
   
+  // Register PayPal payment routes
+  registerPayPalRoutes(app, storage);
+  
   // Register AI-powered analysis routes
   registerAIRoutes(app, storage);
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
-
-  // PayPal integration routes
-  app.get("/api/paypal/setup", async (req, res) => {
-    await loadPaypalDefault(req, res);
-  });
-
-  app.post("/api/paypal/order", async (req, res) => {
-    await createPaypalOrder(req, res);
-  });
-
-  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
-    await capturePaypalOrder(req, res);
-  });
 
   const httpServer = createServer(app);
   return httpServer;
