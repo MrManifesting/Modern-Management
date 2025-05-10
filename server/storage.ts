@@ -2964,6 +2964,97 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
   }
+  
+  /**
+   * Get items by their external IDs in a specific marketplace
+   * @param marketplaceId The marketplace ID
+   * @param externalIds The list of external IDs to lookup
+   * @returns A mapping of external IDs to their corresponding items
+   */
+  async getItemsByExternalIds(marketplaceId: number, externalIds: string[]): Promise<Record<string, Item>> {
+    if (!externalIds.length) {
+      return {};
+    }
+    
+    try {
+      // Ensure the table exists
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS item_external_ids (
+          id SERIAL PRIMARY KEY,
+          item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+          marketplace_id INTEGER NOT NULL REFERENCES marketplaces(id) ON DELETE CASCADE,
+          external_id TEXT NOT NULL,
+          last_pushed_at TIMESTAMP,
+          UNIQUE(item_id, marketplace_id)
+        );
+      `);
+      
+      // Use an IN clause to get all matching external IDs in one query
+      const placeholders = externalIds.map((_, i) => `$${i + 2}`).join(',');
+      const query = `
+        SELECT i.*, e.external_id
+        FROM items i
+        JOIN item_external_ids e ON i.id = e.item_id
+        WHERE e.marketplace_id = $1
+        AND e.external_id IN (${placeholders})
+      `;
+      
+      const result = await pool.query(query, [marketplaceId, ...externalIds]);
+      
+      // Map results to a record of external ID -> item
+      const itemMap: Record<string, Item> = {};
+      for (const row of result.rows) {
+        const item: Item = {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          sku: row.sku,
+          brand: row.brand,
+          costPrice: row.cost_price,
+          basePrice: row.base_price,
+          salePrice: row.sale_price,
+          wholesalePrice: row.wholesale_price,
+          category: row.category,
+          subcategory: row.subcategory,
+          tags: row.tags || [],
+          images: row.images || [],
+          quantity: row.quantity,
+          unit: row.unit,
+          weight: row.weight,
+          weightUnit: row.weight_unit,
+          dimensions: row.dimensions,
+          barcode: row.barcode,
+          isPublished: row.is_published,
+          status: row.status,
+          supplier: row.supplier,
+          supplierSku: row.supplier_sku,
+          location: row.location,
+          minimumStockLevel: row.minimum_stock_level,
+          notes: row.notes,
+          customFields: row.custom_fields,
+          metadata: row.metadata,
+          isHidden: row.is_hidden,
+          lastPushed: row.last_pushed || {},
+          syncErrorCount: row.sync_error_count || 0,
+          lastSyncError: row.last_sync_error,
+          lastSyncAttempt: row.last_sync_attempt,
+          type: row.type,
+          itemCondition: row.item_condition,
+          processingStatus: row.processing_status,
+          parentItemId: row.parent_item_id,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        
+        itemMap[row.external_id] = item;
+      }
+      
+      return itemMap;
+    } catch (error) {
+      console.error(`Error getting items by external IDs:`, error);
+      return {};
+    }
+  }
 }
 
 // Use the database storage implementation
