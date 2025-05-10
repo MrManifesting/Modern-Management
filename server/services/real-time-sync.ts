@@ -39,7 +39,7 @@ export async function syncItemWithMarketplaces(
       enabledMarketplaces = allMarketplaces.filter(m => 
         m.isConnected && 
         m.isSyncEnabled &&
-        item.marketplace?.includes(m.id.toString())
+        (item.marketplace?.includes(m.id.toString()) || item.marketplace?.includes(m.id))
       );
     } else {
       // Get all enabled marketplaces
