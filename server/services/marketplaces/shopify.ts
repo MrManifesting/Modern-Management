@@ -215,9 +215,12 @@ export class ShopifyService implements IMarketplaceService {
       
       log(`Starting to fetch all products from Shopify (page ${page})`, 'marketplace-shopify');
       
+      // Determine which client instance to use
+      const productClient = client.shopify ? client.shopify.product : client.product;
+      
       while (hasNextPage) {
         try {
-          const products = await client.product.list(params);
+          const products = await productClient.list(params);
           allProducts = allProducts.concat(products);
           
           if (products.length < params.limit) {
@@ -330,7 +333,8 @@ export class ShopifyService implements IMarketplaceService {
       };
       
       // Create or update the product in Shopify
-      const result = await client.product.create(shopifyProduct);
+      const productClient = client.shopify ? client.shopify.product : client.product;
+      const result = await productClient.create(shopifyProduct);
       
       // Extract the numeric ID from the GID
       const shopifyId = result.id.toString();
@@ -431,7 +435,8 @@ export class ShopifyService implements IMarketplaceService {
       }
       
       // Fetch the product from Shopify
-      const product = await client.product.get(parseInt(externalId));
+      const productClient = client.shopify ? client.shopify.product : client.product;
+      const product = await productClient.get(parseInt(externalId));
       
       if (!product) {
         return {
