@@ -80,7 +80,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       const account = await stripeService.createConnectedAccount(
         affiliate.email, 
         affiliate.name,
-        { affiliate_id: affiliate.id }
+        { affiliate_id: String(affiliate.id) }
       );
       
       // Update the affiliate with the Stripe account ID
@@ -266,7 +266,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         amount, 
         affiliate.stripeAccountId,
         {
-          affiliate_id: affiliate.id,
+          affiliate_id: String(affiliate.id),
           payout_type: "manual"
         }
       );
@@ -399,12 +399,17 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
       const payoutResults = await Promise.all(
         eligibleAffiliates.map(async (affiliate) => {
           try {
+            if (!affiliate.stripeAccountId) {
+              console.error(`Affiliate ${affiliate.id} has no Stripe account ID`);
+              return; // Skip this affiliate
+            }
+            
             // Process the payout via Stripe
             const transfer = await stripeService.createPayout(
               affiliate.pendingPayout, 
               affiliate.stripeAccountId,
               {
-                affiliate_id: affiliate.id,
+                affiliate_id: String(affiliate.id),
                 payout_type: "scheduled",
                 batch_id: batchId
               }
