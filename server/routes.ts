@@ -535,6 +535,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the item with the QR code data
       const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
       
+      // Trigger real-time sync with marketplaces after item creation
+      try {
+        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+        syncItemWithMarketplaces(updatedItem, storage).catch(err => {
+          console.error("Real-time sync failed after item creation:", err);
+        });
+        
+        // Note: We don't wait for sync to complete before responding to avoid delays
+        log(`Initiated real-time sync for new item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+      } catch (syncError) {
+        console.error("Failed to initiate real-time sync:", syncError);
+        // Continue with response even if sync failed to initialize
+      }
+      
       res.status(201).json(updatedItem);
     } catch (error) {
       // More detailed error logging
@@ -586,6 +600,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedItem = await storage.updateItem(id, updateData);
+      
+      // Trigger real-time sync with marketplaces after item update
+      try {
+        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+        syncItemWithMarketplaces(updatedItem, storage).catch(err => {
+          console.error("Real-time sync failed after item update:", err);
+        });
+        
+        // Note: We don't wait for sync to complete before responding to avoid delays
+        log(`Initiated real-time sync for updated item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
+      } catch (syncError) {
+        console.error("Failed to initiate real-time sync after update:", syncError);
+        // Continue with response even if sync failed to initialize
+      }
+      
       res.json(updatedItem);
     } catch (error) {
       res.status(500).json({ error: "Failed to update item" });
