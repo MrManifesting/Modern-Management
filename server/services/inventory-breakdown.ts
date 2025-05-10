@@ -105,29 +105,38 @@ export async function createBulkBreakdown(
  * 
  * @param storage The storage instance
  * @param breakdownId The ID of the breakdown to process
+ * @param targets Optional array of target products to override existing targets
+ * @param employeeId Optional employee ID performing the breakdown
  * @returns The updated breakdown record with created items
  */
 export async function processBreakdown(
   storage: IStorage,
-  breakdownId: number
-): Promise<ProductBreakdown> {
+  breakdownId: number,
+  targets?: BreakdownTarget[],
+  employeeId?: number
+): Promise<ProductBreakdown | undefined> {
   // Get the breakdown record
   const breakdown = await storage.getProductBreakdown(breakdownId);
   
   if (!breakdown) {
-    throw new Error(`Breakdown with ID ${breakdownId} not found`);
+    return undefined;
   }
   
   // Verify the breakdown is in a valid state to process
   if (breakdown.status === ProcessingStatus.COMPLETED) {
-    throw new Error('This breakdown has already been processed');
+    return undefined;
   }
   
   // Get the bulk item
   const bulkItem = await storage.getItem(breakdown.bulkItemId);
   
   if (!bulkItem) {
-    throw new Error(`Bulk item with ID ${breakdown.bulkItemId} not found`);
+    return undefined;
+  }
+  
+  // If employeeId is provided, update the breakdown record
+  if (employeeId) {
+    await storage.updateProductBreakdown(breakdownId, { employeeId });
   }
   
   // Update status to in-progress
@@ -135,8 +144,11 @@ export async function processBreakdown(
     status: ProcessingStatus.IN_PROGRESS
   });
   
+  // Use the provided targets or the existing ones
+  const targetProducts = targets || (breakdown.targetProducts as BreakdownTarget[]);
+  
   // Calculate the total weight of all breakdown items
-  const totalBreakdownWeight = (breakdown.targetProducts as BreakdownTarget[]).reduce(
+  const totalBreakdownWeight = targetProducts.reduce(
     (sum, target) => sum + (target.weight * target.quantity), 
     0
   );
@@ -149,7 +161,7 @@ export async function processBreakdown(
   
   // Process each target product
   const completedProducts = [];
-  const updatedTargets = [...(breakdown.targetProducts as BreakdownTarget[])];
+  const updatedTargets = [...targetProducts];
   
   for (let i = 0; i < updatedTargets.length; i++) {
     const target = updatedTargets[i];
@@ -202,11 +214,10 @@ export async function processBreakdown(
         updatedTargets[i].resultItemId = createdItem.id;
         updatedTargets[i].status = ProcessingStatus.COMPLETED;
         
-        // Add to completed products
-        completedProducts.push({
-          ...updatedItem,
-          sourceItem: bulkItem.id
-        });
+        // Add to completed products list (just the IDs)
+        if (updatedItem) {
+          completedProducts.push(updatedItem.id);
+        }
       } catch (error) {
         console.error('Error creating breakdown item:', error);
         updatedTargets[i].status = 'error';
@@ -236,7 +247,7 @@ export async function processBreakdown(
   const updatedBreakdown = await storage.updateProductBreakdown(breakdownId, {
     status: ProcessingStatus.COMPLETED,
     targetProducts: updatedTargets,
-    completedProducts,
+    completedProducts: completedProducts,
     completedAt: new Date()
   });
   

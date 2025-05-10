@@ -3178,13 +3178,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const createdProducts = await storage.createBreakdownProducts(id, validatedTargets, employeeId);
+      // Process the breakdown using the inventory-breakdown service
+      const updatedBreakdown = await processBreakdown(storage, id, validatedTargets, employeeId);
       
-      if (createdProducts.length === 0) {
+      if (!updatedBreakdown) {
         return res.status(404).json({ error: "Breakdown not found or already completed" });
       }
       
-      res.status(201).json(createdProducts);
+      // Get all the created items
+      const createdItems = [];
+      for (const productId of updatedBreakdown.completedProducts) {
+        const item = await storage.getItem(productId);
+        if (item) {
+          createdItems.push(item);
+        }
+      }
+      
+      res.status(201).json({
+        breakdown: updatedBreakdown,
+        createdItems
+      });
     } catch (error) {
       console.error("Error creating breakdown products:", error);
       res.status(500).json({ error: "Failed to create breakdown products" });
