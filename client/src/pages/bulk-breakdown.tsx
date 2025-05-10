@@ -748,11 +748,11 @@ export default function BulkBreakdownPage() {
                                   />
                                 );
                                 
-                                // Standard weight variants
+                                // Standard weight variants based on requirements
                                 const standardWeightVariants = {
-                                  g: [3.5, 7, 14, 28],
-                                  oz: [0.125, 0.25, 0.5, 1],
-                                  lb: [0.25, 0.5, 1]
+                                  g: [7, 14, 28, 112, 224],
+                                  oz: [0.25, 0.5, 1, 4, 8],
+                                  lb: [0.015, 0.03, 0.06, 0.25, 0.5]
                                 };
                                 
                                 // Determine which unit we're using
@@ -836,9 +836,9 @@ export default function BulkBreakdownPage() {
                                 onValueChange={(value) => {
                                   // When changing unit, select an appropriate default weight for that unit
                                   const standardWeightVariants = {
-                                    g: [3.5, 7, 14, 28],
-                                    oz: [0.125, 0.25, 0.5, 1],
-                                    lb: [0.25, 0.5, 1]
+                                    g: [7, 14, 28, 112, 224],
+                                    oz: [0.25, 0.5, 1, 4, 8],
+                                    lb: [0.015, 0.03, 0.06, 0.25, 0.5]
                                   };
                                   
                                   const newWeight = standardWeightVariants[value as keyof typeof standardWeightVariants][0];
