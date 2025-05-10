@@ -465,13 +465,32 @@ const ProductsInventoryPage: React.FC = () => {
     <Card key={product.id} className="mb-4">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{product.name}</CardTitle>
-            <div className="flex flex-wrap gap-2 mt-1">
-              <Badge variant="outline">{product.category}</Badge>
-              <Badge variant={product.status?.includes("Low") ? "destructive" : "default"}>
-                {product.status}
-              </Badge>
+          <div className="flex gap-3">
+            <div className="w-16 h-16 rounded-md border border-border overflow-hidden flex-shrink-0">
+              {product.imageUrl ? (
+                <img 
+                  src={product.imageUrl} 
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Replace with a placeholder if image fails to load
+                    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                  <ImageIcon className="h-6 w-6 opacity-50" />
+                </div>
+              )}
+            </div>
+            <div>
+              <CardTitle className="text-lg">{product.name}</CardTitle>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <Badge variant="outline">{product.category}</Badge>
+                <Badge variant={product.status?.includes("Low") ? "destructive" : "default"}>
+                  {product.status}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
