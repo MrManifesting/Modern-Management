@@ -1232,14 +1232,13 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         paypalOrderId: paymentProcessor === "paypal" ? orderId : undefined,
         stripePaymentIntentId: paymentProcessor === "stripe" ? orderId : undefined,
         feeAmount: 0, // No fee for commissions
-        createdAt: new Date(),
       });
       
       // Update the QR code conversion count
-      await storage.incrementQrCodeConversion(qrCodeRecord.id);
+      await storage.incrementQrCodeConversions(qrCodeRecord.id);
       
       // Update affiliate stats
-      await storage.updateAffiliateStats(affiliateId, amount, commissionAmount);
+      await storage.updateAffiliateStats(affiliateId, amount);
       
       res.json({
         success: true,
