@@ -489,9 +489,12 @@ export class ShopifyService implements IMarketplaceService {
         };
       }
       
+      // Get the appropriate product client
+      const productClient = client.shopify ? client.shopify.product : client.product;
+      
       // First, check if the product exists
       try {
-        await client.product.get(parseInt(externalId));
+        await productClient.get(parseInt(externalId));
       } catch (err: any) {
         // If we get a 404, the product doesn't exist
         if (err.statusCode === 404) {
@@ -506,7 +509,7 @@ export class ShopifyService implements IMarketplaceService {
       }
       
       // Delete the product from Shopify
-      await client.product.delete(parseInt(externalId));
+      await productClient.delete(parseInt(externalId));
       
       return {
         success: true,
