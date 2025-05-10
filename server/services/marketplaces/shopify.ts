@@ -133,13 +133,24 @@ export class ShopifyService implements IMarketplaceService {
         };
       }
       
-      // Get shop info
-      const shop = await client.shop.get();
+      // Get shop info based on the client structure
+      let shop;
+      if (client.shopify) {
+        // If client has a shopify property, use it
+        shop = await client.shopify.shop.get();
+      } else {
+        // Otherwise use the client directly
+        shop = await client.shop.get();
+      }
       
       // Get product count with error handling
       let productCount = 0;
       try {
-        productCount = await client.product.count();
+        if (client.shopify) {
+          productCount = await client.shopify.product.count();
+        } else {
+          productCount = await client.product.count();
+        }
       } catch (countError) {
         log(`Error getting product count in getMarketplaceInfo: ${countError}`, 'marketplace-shopify');
         // Continue without product count
@@ -184,7 +195,11 @@ export class ShopifyService implements IMarketplaceService {
       // Get product count - wrap in try/catch to handle potential errors
       let productCount = 0;
       try {
-        productCount = await client.product.count();
+        if (client.shopify) {
+          productCount = await client.shopify.product.count();
+        } else {
+          productCount = await client.product.count();
+        }
         log(`Found ${productCount} products in Shopify store`, 'marketplace-shopify');
       } catch (countError) {
         log(`Error getting product count, continuing with sync: ${countError}`, 'marketplace-shopify');

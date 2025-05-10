@@ -684,6 +684,16 @@ export class MemStorage implements IStorage {
 
   async createItem(item: InsertItem): Promise<Item> {
     try {
+      // Ensure the item has a SKU
+      if (!item.sku || item.sku.trim() === '') {
+        // Import the SKU generator if needed
+        const { generateSKU } = await import('./services/sku-generator');
+        
+        // Generate a SKU for the item
+        item.sku = generateSKU(item);
+        console.log(`Generated SKU for item: ${item.sku}`);
+      }
+      
       console.log(`Creating new item in database: Name=${item.name}, SKU=${item.sku}`);
       
       // Insert the item into the database using Drizzle ORM
@@ -693,7 +703,7 @@ export class MemStorage implements IStorage {
       
       return newItem;
     } catch (error) {
-      console.error(`Error creating item ${item.name} (${item.sku}):`, error);
+      console.error(`Error creating item ${item.name} (${item.sku || 'no SKU'}):`, error);
       throw error;
     }
   }
