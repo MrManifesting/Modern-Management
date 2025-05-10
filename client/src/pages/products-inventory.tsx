@@ -21,7 +21,8 @@ import {
   CircleDollarSign,
   Percent,
   Tags,
-  ClipboardList
+  ClipboardList,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -1041,6 +1042,7 @@ const ProductsInventoryPage: React.FC = () => {
                               />
                             </th>
                           )}
+                          <th className="text-center py-3 px-2 w-16">Image</th>
                           <th className="text-left py-3 px-4">Product</th>
                           <th className="text-left py-3 px-4">Category</th>
                           <th className="text-center py-3 px-4">SKU</th>
@@ -1062,6 +1064,25 @@ const ProductsInventoryPage: React.FC = () => {
                                 />
                               </td>
                             )}
+                            <td className="py-3 px-2 text-center">
+                              <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border">
+                                {product.imageUrl ? (
+                                  <img 
+                                    src={product.imageUrl} 
+                                    alt={product.name}
+                                    className="object-cover w-full h-full"
+                                    onError={(e) => {
+                                      // Replace with a placeholder if image fails to load
+                                      (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                    <ImageIcon className="h-6 w-6 opacity-50" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
                             <td className="py-3 px-4">
                               <div className="font-medium">{product.name}</div>
                               <div className="text-sm text-muted-foreground">{product.subcategory}</div>

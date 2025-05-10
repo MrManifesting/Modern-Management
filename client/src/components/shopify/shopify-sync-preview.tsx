@@ -883,6 +883,22 @@ const ShopifySyncPreview: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* Connection error alert */}
+              {syncItems.length === 0 && (
+                <Alert className="mb-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                  <AlertTitle className="text-amber-800 dark:text-amber-500">Shopify Connection Issue</AlertTitle>
+                  <AlertDescription className="text-amber-800/90 dark:text-amber-500/90">
+                    <p>Unable to load products from Shopify. This could be due to:</p>
+                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                      <li>Connection timeout (Shopify API might be slow to respond)</li>
+                      <li>API credentials need to be refreshed</li>
+                      <li>Shopify store may be under maintenance</li>
+                    </ul>
+                    <p className="mt-2">Please click the "Retry Shopify Connection" button to try again.</p>
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* Controls */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                 <div className="flex gap-2 w-full sm:w-auto">
