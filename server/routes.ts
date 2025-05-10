@@ -3622,6 +3622,9 @@ ${topCustomersCsv}`;
   
   // Register database cleanup and maintenance routes
   registerCleanupRoutes(app, storage);
+  
+  // Register real-time sync routes for bidirectional marketplace synchronization
+  registerSyncRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
