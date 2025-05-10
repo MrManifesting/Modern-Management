@@ -735,6 +735,15 @@ const ProductsInventoryPage: React.FC = () => {
                 )}
               </Button>
               
+              <Button
+                variant="destructive"
+                className="gap-1.5"
+                onClick={() => setDeleteAllDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete All Inventory
+              </Button>
+              
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-1.5">
@@ -1250,6 +1259,57 @@ const ProductsInventoryPage: React.FC = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete All Inventory Confirmation Dialog */}
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Entire Inventory</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Warning: Irreversible Action</AlertTitle>
+                  <AlertDescription>
+                    This will permanently delete ALL items in your inventory. This action cannot be undone.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmationText">Type <span className="font-mono bg-muted px-1 rounded">DELETE_ALL_INVENTORY</span> to confirm</Label>
+                  <Input 
+                    id="confirmationText"
+                    placeholder="DELETE_ALL_INVENTORY"
+                    value={deleteAllConfirmation}
+                    onChange={(e) => setDeleteAllConfirmation(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAllLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAllInventory}
+              disabled={deleteAllLoading || deleteAllConfirmation !== "DELETE_ALL_INVENTORY"}
+              className="bg-destructive hover:bg-destructive/90 gap-2"
+            >
+              {deleteAllLoading ? (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete All Inventory
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
