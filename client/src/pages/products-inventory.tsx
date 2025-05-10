@@ -180,6 +180,9 @@ const ProductsInventoryPage: React.FC = () => {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deleteAllConfirmation, setDeleteAllConfirmation] = useState("");
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -275,6 +278,53 @@ const ProductsInventoryPage: React.FC = () => {
   const confirmDelete = () => {
     if (productIdToDelete) {
       deleteMutation.mutate(productIdToDelete);
+    }
+  };
+  
+  // Function to handle deleting all inventory
+  const handleDeleteAllInventory = async () => {
+    if (deleteAllConfirmation !== "DELETE_ALL_INVENTORY") {
+      toast({
+        title: "Confirmation required",
+        description: "Please type 'DELETE_ALL_INVENTORY' to confirm this destructive action.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setDeleteAllLoading(true);
+    
+    try {
+      const response = await apiRequest('POST', '/api/items/delete-all', {
+        confirmation: "DELETE_ALL_INVENTORY"
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Inventory cleared",
+          description: `Successfully deleted ${result.results.deleted} items from inventory.`
+        });
+        
+        // Refetch the products list
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+        
+        // Reset state
+        setDeleteAllDialogOpen(false);
+        setDeleteAllConfirmation("");
+      } else {
+        throw new Error(result.message || "Failed to delete inventory");
+      }
+    } catch (error) {
+      console.error("Failed to delete all inventory:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete inventory. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteAllLoading(false);
     }
   };
   
@@ -545,38 +595,13 @@ const ProductsInventoryPage: React.FC = () => {
         editItem={null}
       />
       
-      {/* Bulk Edit Panel - Using Dialog directly for simplicity */}
-      <Dialog open={bulkEditOpen} onOpenChange={(open) => {
-        if (!open) {
-          setBulkEditOpen(false);
-        }
-      }}>
-        {selectedItems.length > 0 && (
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Bulk Edit {selectedItems.length} Items</DialogTitle>
-              <DialogDescription>
-                Make changes to multiple items at once
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <p>You have selected {selectedItems.length} items.</p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {selectedItems.slice(0, 5).map(item => (
-                  <Badge key={item.id} variant="outline">{item.name}</Badge>
-                ))}
-                {selectedItems.length > 5 && (
-                  <Badge variant="outline">+{selectedItems.length - 5} more</Badge>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
-              <Button onClick={handleBulkEditComplete}>Apply Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
+      {/* Use the BulkEditPanel component with all the functionality */}
+      {bulkEditOpen && selectedItems.length > 0 && (
+        <BulkEditPanel 
+          selectedItems={selectedItems} 
+          onBulkEditComplete={handleBulkEditComplete} 
+        />
+      )}
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
