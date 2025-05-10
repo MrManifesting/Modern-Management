@@ -372,4 +372,114 @@ export class ShopifyService implements IMarketplaceService {
       };
     }
   }
+  
+  /**
+   * Fetch a product from Shopify by its ID
+   */
+  async fetchProduct(externalId: string): Promise<{ success: boolean; message: string; product?: any }> {
+    try {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
+        return { 
+          success: false, 
+          message: 'Shopify client not initialized' 
+        };
+      }
+      
+      // Check if the externalId is valid
+      if (!externalId || isNaN(parseInt(externalId))) {
+        return {
+          success: false,
+          message: `Invalid Shopify product ID: ${externalId}`
+        };
+      }
+      
+      // Fetch the product from Shopify
+      const product = await client.product.get(parseInt(externalId));
+      
+      if (!product) {
+        return {
+          success: false,
+          message: `Product not found in Shopify with ID: ${externalId}`
+        };
+      }
+      
+      return {
+        success: true,
+        message: `Successfully fetched product from Shopify`,
+        product
+      };
+    } catch (error: any) {
+      // Handle 404 errors more gracefully
+      if (error.statusCode === 404) {
+        return {
+          success: false,
+          message: `Product not found in Shopify with ID: ${externalId}`
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: `Error fetching product from Shopify: ${error.message}` 
+      };
+    }
+  }
+  
+  /**
+   * Delete a product from Shopify
+   */
+  async deleteProduct(externalId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Get a client, possibly creating it from env vars
+      const client = await this.getClient();
+      
+      if (!client) {
+        return { 
+          success: false, 
+          message: 'Shopify client not initialized' 
+        };
+      }
+      
+      // Validate the external ID
+      if (!externalId || isNaN(parseInt(externalId))) {
+        return {
+          success: false,
+          message: `Invalid Shopify product ID: ${externalId}`
+        };
+      }
+      
+      // First, check if the product exists
+      try {
+        await client.product.get(parseInt(externalId));
+      } catch (err: any) {
+        // If we get a 404, the product doesn't exist
+        if (err.statusCode === 404) {
+          return {
+            success: true,
+            message: `Product already deleted or doesn't exist in Shopify (ID: ${externalId})`
+          };
+        }
+        
+        // If it's another error, rethrow to be caught by the outer catch
+        throw err;
+      }
+      
+      // Delete the product from Shopify
+      await client.product.delete(parseInt(externalId));
+      
+      return {
+        success: true,
+        message: `Successfully deleted product from Shopify (ID: ${externalId})`
+      };
+    } catch (error: any) {
+      log(`Error deleting product from Shopify (ID: ${externalId}): ${error.message}`, 'marketplace-shopify-error');
+      
+      return { 
+        success: false, 
+        message: `Error deleting product from Shopify: ${error.message}` 
+      };
+    }
+  }
 }

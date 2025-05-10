@@ -626,14 +626,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/items/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Get the item before deletion for sync purposes
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Before deleting from our system, try to remove from marketplaces if connected
+      try {
+        if (item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0) {
+          log(`Attempting to remove item ${item.id} (${item.name}) from connected marketplaces before local deletion`, 'marketplace-sync');
+          
+          // Get external IDs for this item if available
+          let externalIds: Record<string, string> = {};
+          if (typeof storage.getItemExternalIds === 'function') {
+            externalIds = await storage.getItemExternalIds(item.id) || {};
+          }
+          
+          // Get connected marketplaces
+          const marketplaces = await storage.getAllMarketplaces();
+          const connectedMarketplaces = marketplaces.filter(m => 
+            m.isConnected && 
+            item.marketplace?.includes(m.id.toString())
+          );
+          
+          // Request removal from each connected marketplace
+          await Promise.allSettled(
+            connectedMarketplaces.map(async marketplace => {
+              const externalId = externalIds[marketplace.id.toString()];
+              if (externalId) {
+                const marketplaceService = new MarketplaceService(marketplace);
+                try {
+                  await marketplaceService.deleteProduct(externalId);
+                  log(`Successfully removed item ${item.id} (${item.name}) from ${marketplace.name}`, 'marketplace-sync');
+                } catch (err) {
+                  console.error(`Failed to remove item ${item.id} from ${marketplace.name}:`, err);
+                }
+              }
+            })
+          );
+        }
+      } catch (syncError) {
+        console.error(`Error while attempting to remove item ${id} from marketplaces:`, syncError);
+        // Continue with local deletion even if marketplace removal failed
+      }
+      
+      // Delete the item from our system
       const success = await storage.deleteItem(id);
       
       if (!success) {
-        return res.status(404).json({ error: "Item not found" });
+        return res.status(404).json({ error: "Item not found or already deleted" });
       }
       
       res.status(204).send();
     } catch (error) {
+      console.error("Failed to delete item:", error);
       res.status(500).json({ error: "Failed to delete item" });
     }
   });
