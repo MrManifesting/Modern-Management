@@ -94,12 +94,22 @@ export class ShopifyService implements IMarketplaceService {
       }
       
       // Try to get shop info to test connection
-      const shop = await client.shop.get();
-      
-      return { 
-        success: true, 
-        message: `Connected to Shopify store: ${shop.name}` 
-      };
+      // Access the shopify object correctly from the client object
+      if (client.shopify) {
+        // If client has a shopify property (from createShopifyClient), use it
+        const shop = await client.shopify.shop.get();
+        return { 
+          success: true, 
+          message: `Connected to Shopify store: ${shop.name}` 
+        };
+      } else {
+        // Otherwise try to use the client directly
+        const shop = await client.shop.get();
+        return { 
+          success: true, 
+          message: `Connected to Shopify store: ${shop.name}` 
+        };
+      }
     } catch (error: any) {
       return { 
         success: false, 
