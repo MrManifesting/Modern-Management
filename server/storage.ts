@@ -45,6 +45,11 @@ export interface IStorage {
   getBreakdownItems(): Promise<Item[]>;
   getWaitingItems(): Promise<Item[]>;
   
+  // External ID management for marketplace integrations
+  getItemExternalIds(itemId: number): Promise<Record<string, string>>;
+  updateItemExternalId(itemId: number, marketplaceId: number, externalId: string): Promise<boolean>;
+  getItemLastPushedTime(itemId: number, marketplaceId: number): Promise<Date | null>;
+  
   // Marketplace methods
   getMarketplaces(): Promise<Marketplace[]>;
   getAllMarketplaces(): Promise<Marketplace[]>; // Get all marketplaces including disabled ones
@@ -58,6 +63,7 @@ export interface IStorage {
   updateMarketplaceLastPush(id: number, date: Date): Promise<boolean>;
   getItemsForMarketplacePush(marketplaceId: number, limit?: number): Promise<Item[]>;
   updateItemLastPushed(itemId: number, marketplaceId: number, date: Date): Promise<boolean>;
+  getItemsByExternalIds(marketplaceId: number, externalIds: string[]): Promise<Record<string, Item>>;
   
   // Sales methods
   getSales(): Promise<Sale[]>;
@@ -150,6 +156,7 @@ export class MemStorage implements IStorage {
   private affiliates: Map<number, Affiliate>;
   private qrCodes: Map<number, QrCode>;
   private affiliateTransactions: Map<number, AffiliateTransaction>;
+  private itemExternalIds: Map<number, Map<number, {externalId: string, lastPushedAt: Date}>>;
   
   // Implementing the required affiliate methods from IStorage interface
   async getAllAffiliates(): Promise<Affiliate[]> {
@@ -397,6 +404,67 @@ export class MemStorage implements IStorage {
     this.affiliateTransactions.set(id, updatedTransaction);
     return updatedTransaction;
   }
+
+  /**
+   * Get all external IDs for an item across all marketplaces
+   * @param itemId The item ID
+   * @returns Record mapping marketplace IDs to external IDs
+   */
+  async getItemExternalIds(itemId: number): Promise<Record<string, string>> {
+    const itemExternalMap = this.itemExternalIds.get(itemId);
+    if (!itemExternalMap) {
+      return {};
+    }
+    
+    const result: Record<string, string> = {};
+    for (const [marketplaceId, data] of itemExternalMap.entries()) {
+      result[marketplaceId] = data.externalId;
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Update or add an external ID mapping for an item in a marketplace
+   * @param itemId The item ID
+   * @param marketplaceId The marketplace ID
+   * @param externalId The external ID in the marketplace
+   * @returns Success status
+   */
+  async updateItemExternalId(itemId: number, marketplaceId: number, externalId: string): Promise<boolean> {
+    let itemExternalMap = this.itemExternalIds.get(itemId);
+    if (!itemExternalMap) {
+      itemExternalMap = new Map();
+      this.itemExternalIds.set(itemId, itemExternalMap);
+    }
+    
+    itemExternalMap.set(marketplaceId, {
+      externalId,
+      lastPushedAt: new Date()
+    });
+    
+    return true;
+  }
+  
+  /**
+   * Get the last time an item was pushed to a marketplace
+   * @param itemId The item ID
+   * @param marketplaceId The marketplace ID
+   * @returns The timestamp of the last push, or null if never pushed
+   */
+  async getItemLastPushedTime(itemId: number, marketplaceId: number): Promise<Date | null> {
+    const itemExternalMap = this.itemExternalIds.get(itemId);
+    if (!itemExternalMap) {
+      return null;
+    }
+    
+    const data = itemExternalMap.get(marketplaceId);
+    if (!data) {
+      return null;
+    }
+    
+    return data.lastPushedAt;
+  }
   private itemCurrentId: number;
   private marketplaceCurrentId: number;
   private salesCurrentId: number;
@@ -422,6 +490,7 @@ export class MemStorage implements IStorage {
     this.affiliates = new Map();
     this.qrCodes = new Map();
     this.affiliateTransactions = new Map();
+    this.itemExternalIds = new Map();
     this.itemCurrentId = 1;
     this.marketplaceCurrentId = 1;
     this.salesCurrentId = 1;
@@ -1520,6 +1589,9 @@ export class MemStorage implements IStorage {
 }
 
 // Database-backed storage implementation
+// Define the item external IDs table if needed
+// We'll create this table in the methods that need it
+
 export class DatabaseStorage implements IStorage {
   // Session store for authentication
   sessionStore: any;
@@ -2775,6 +2847,121 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error updating affiliate stats:", error);
       return false;
+    }
+  }
+  
+  /**
+   * Get all external IDs for an item across all marketplaces
+   * @param itemId The item ID
+   * @returns Record mapping marketplace IDs to external IDs
+   */
+  async getItemExternalIds(itemId: number): Promise<Record<string, string>> {
+    try {
+      // Check if the item_external_ids table exists, if not create it
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS item_external_ids (
+          id SERIAL PRIMARY KEY,
+          item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+          marketplace_id INTEGER NOT NULL REFERENCES marketplaces(id) ON DELETE CASCADE,
+          external_id TEXT NOT NULL,
+          last_pushed_at TIMESTAMP,
+          UNIQUE(item_id, marketplace_id)
+        );
+      `);
+      
+      // Get all external IDs for this item
+      const externalIds = await pool.query(`
+        SELECT marketplace_id, external_id 
+        FROM item_external_ids 
+        WHERE item_id = $1
+      `, [itemId]);
+      
+      // Convert to a record of marketplace ID -> external ID
+      const result: Record<string, string> = {};
+      for (const row of externalIds.rows) {
+        result[row.marketplace_id] = row.external_id;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error(`Error getting external IDs for item ${itemId}:`, error);
+      return {};
+    }
+  }
+  
+  /**
+   * Update or add an external ID mapping for an item in a marketplace
+   * @param itemId The item ID
+   * @param marketplaceId The marketplace ID
+   * @param externalId The external ID in the marketplace
+   * @returns Success status
+   */
+  async updateItemExternalId(itemId: number, marketplaceId: number, externalId: string): Promise<boolean> {
+    try {
+      // Check if the item_external_ids table exists, if not create it
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS item_external_ids (
+          id SERIAL PRIMARY KEY,
+          item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+          marketplace_id INTEGER NOT NULL REFERENCES marketplaces(id) ON DELETE CASCADE,
+          external_id TEXT NOT NULL, 
+          last_pushed_at TIMESTAMP,
+          UNIQUE(item_id, marketplace_id)
+        );
+      `);
+      
+      // Insert or update the external ID
+      await pool.query(`
+        INSERT INTO item_external_ids (item_id, marketplace_id, external_id, last_pushed_at)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (item_id, marketplace_id) 
+        DO UPDATE SET
+          external_id = $3,
+          last_pushed_at = NOW()
+      `, [itemId, marketplaceId, externalId]);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error updating external ID for item ${itemId} in marketplace ${marketplaceId}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Get the last time an item was pushed to a marketplace
+   * @param itemId The item ID
+   * @param marketplaceId The marketplace ID
+   * @returns The timestamp of the last push, or null if never pushed
+   */
+  async getItemLastPushedTime(itemId: number, marketplaceId: number): Promise<Date | null> {
+    try {
+      // Check if the item_external_ids table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'item_external_ids'
+        );
+      `);
+      
+      if (!tableCheck.rows[0].exists) {
+        return null;
+      }
+      
+      // Get the last pushed time
+      const result = await pool.query(`
+        SELECT last_pushed_at
+        FROM item_external_ids
+        WHERE item_id = $1 AND marketplace_id = $2
+      `, [itemId, marketplaceId]);
+      
+      if (result.rows.length === 0 || !result.rows[0].last_pushed_at) {
+        return null;
+      }
+      
+      return new Date(result.rows[0].last_pushed_at);
+    } catch (error) {
+      console.error(`Error getting last pushed time for item ${itemId} in marketplace ${marketplaceId}:`, error);
+      return null;
     }
   }
 }
