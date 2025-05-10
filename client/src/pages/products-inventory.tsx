@@ -253,16 +253,19 @@ const ProductsInventoryPage: React.FC = () => {
   // Delete All Inventory Mutation
   const deleteAllMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/items/delete-all');
+      const res = await apiRequest('POST', '/api/items/delete-all', {
+        confirmation: "DELETE_ALL_INVENTORY"
+      });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
       setDeleteAllDialogOpen(false);
       setDeleteAllConfirmation('');
+      
       toast({
         title: "Inventory Cleared",
-        description: "All items have been successfully removed from your inventory.",
+        description: `Successfully deleted ${data.results ? data.results.deleted : 'all'} items from your inventory.`,
       });
     },
     onError: () => {
@@ -313,7 +316,7 @@ const ProductsInventoryPage: React.FC = () => {
   };
   
   // Function to handle deleting all inventory
-  const handleDeleteAllInventory = async () => {
+  const handleDeleteAllInventory = () => {
     if (deleteAllConfirmation !== "DELETE_ALL_INVENTORY") {
       toast({
         title: "Confirmation required",
@@ -324,39 +327,7 @@ const ProductsInventoryPage: React.FC = () => {
     }
     
     setDeleteAllLoading(true);
-    
-    try {
-      const response = await apiRequest('POST', '/api/items/delete-all', {
-        confirmation: "DELETE_ALL_INVENTORY"
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "Inventory cleared",
-          description: `Successfully deleted ${result.results.deleted} items from inventory.`
-        });
-        
-        // Refetch the products list
-        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
-        
-        // Reset state
-        setDeleteAllDialogOpen(false);
-        setDeleteAllConfirmation("");
-      } else {
-        throw new Error(result.message || "Failed to delete inventory");
-      }
-    } catch (error) {
-      console.error("Failed to delete all inventory:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete inventory. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setDeleteAllLoading(false);
-    }
+    deleteAllMutation.mutate();
   };
   
   // Function to sync with Shopify
