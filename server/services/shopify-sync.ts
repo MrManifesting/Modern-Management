@@ -124,9 +124,9 @@ export async function getShopifyProducts(): Promise<SyncPreviewResponse> {
             price: parseFloat(variant.price),
             quantity: variant.inventory_quantity,
             weight: variant.weight,
-            option1: variant.option1,
-            option2: variant.option2,
-            option3: variant.option3,
+            option1: variant.option1 === null ? undefined : variant.option1,
+            option2: variant.option2 === null ? undefined : variant.option2,
+            option3: variant.option3 === null ? undefined : variant.option3,
             hasImage: product.images && product.images.length > 0,
             inShopify: true,
             updatedAt: new Date(product.updated_at)
@@ -343,7 +343,7 @@ export async function createShopifyProduct(
       product_type: inventoryItem.category || 'CBD',
       variants: [
         {
-          price: inventoryItem.price.toString(),
+          price: (inventoryItem.salePrice !== null ? inventoryItem.salePrice : inventoryItem.basePrice).toString(),
           sku: customSku || inventoryItem.sku,
           inventory_management: 'shopify',
           inventory_quantity: inventoryItem.quantity,
