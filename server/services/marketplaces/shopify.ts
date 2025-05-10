@@ -156,25 +156,90 @@ export class ShopifyService implements IMarketplaceService {
         };
       }
       
-      // In a real implementation, we would:
-      // 1. Get all products from Shopify
-      // 2. Convert them to our Item format
-      // 3. Upsert them to our local storage
-      
       // Get product count
       const productCount = await client.product.count();
       log(`Found ${productCount} products in Shopify store`, 'marketplace-shopify');
       
+      // Get all products from Shopify
+      // Use pagination to handle large catalogs
+      let params: any = { limit: 50 };
+      let allProducts: any[] = [];
+      let page = 1;
+      let hasNextPage = true;
+      
+      log(`Starting to fetch all products from Shopify (page ${page})`, 'marketplace-shopify');
+      
+      while (hasNextPage) {
+        try {
+          const products = await client.product.list(params);
+          allProducts = allProducts.concat(products);
+          
+          if (products.length < params.limit) {
+            hasNextPage = false;
+          } else {
+            page++;
+            log(`Fetching next page of products (page ${page})`, 'marketplace-shopify');
+            // Check if we have pagination info
+            if (products.nextPageParameters) {
+              params = { ...params, page_info: products.nextPageParameters.page_info };
+            } else {
+              // If no pagination info, just increment the page number
+              params = { ...params, page: page };
+            }
+          }
+        } catch (err: any) {
+          log(`Error fetching products from Shopify page ${page}: ${err.message}`, 'marketplace-shopify-error');
+          hasNextPage = false;
+        }
+      }
+      
+      log(`Successfully fetched ${allProducts.length} products from Shopify`, 'marketplace-shopify');
+      
+      // Import each product into the local database
+      let imported = 0;
+      let updated = 0;
+      let failed = 0;
+      
+      // Import products using the shopify-import service
+      const { importShopifyProducts } = require('../shopify-import');
+      if (allProducts.length > 0) {
+        log(`Starting to import ${allProducts.length} products into local database`, 'marketplace-shopify');
+        try {
+          const importResult = await importShopifyProducts(allProducts);
+          imported = importResult.imported || 0;
+          updated = importResult.updated || 0;
+          failed = importResult.failed || 0;
+          
+          log(`Import completed: ${imported} imported, ${updated} updated, ${failed} failed`, 'marketplace-shopify');
+        } catch (importErr: any) {
+          log(`Error during import process: ${importErr.message}`, 'marketplace-shopify-error');
+          return {
+            success: false,
+            message: `Error importing products: ${importErr.message}`,
+            data: {
+              total: productCount,
+              fetched: allProducts.length,
+              imported: 0,
+              updated: 0,
+              failed: 0
+            }
+          };
+        }
+      }
+      
       return {
         success: true,
-        message: 'Successfully synced products from Shopify',
+        message: `Successfully synced ${imported + updated} products from Shopify`,
         data: {
-          imported: 0,
-          updated: 0,
-          total: productCount
+          total: productCount,
+          fetched: allProducts.length,
+          imported,
+          updated,
+          failed
         }
       };
     } catch (error: any) {
+      log(`Error syncing products from Shopify: ${error.message}`, 'marketplace-shopify-error');
       return { 
         success: false, 
         message: `Error syncing products from Shopify: ${error.message}` 
