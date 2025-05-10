@@ -26,8 +26,13 @@ function parseCSV(content: string): { headers: string[]; rows: string[][] } {
   const rows: string[][] = [];
   const lines = content.split(/\r?\n/);
   
+  console.log(`Parsing CSV with ${lines.length} lines`);
+  
   for (const line of lines) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      console.log('Skipping empty line');
+      continue;
+    }
     
     const row: string[] = [];
     let cell = '';
@@ -51,8 +56,23 @@ function parseCSV(content: string): { headers: string[]; rows: string[][] } {
     rows.push(row);
   }
   
+  // Add better logging
+  const headers = rows[0]?.map(h => h.trim().toLowerCase()) || [];
+  console.log(`CSV Headers (${headers.length}): ${headers.join(', ')}`);
+  
+  if (rows.length > 1) {
+    console.log(`First row data (${rows[1].length} columns):`);
+    rows[1].forEach((cell, index) => {
+      if (headers[index]) {
+        console.log(`  ${headers[index]}: ${cell}`);
+      } else {
+        console.log(`  Column ${index}: ${cell}`);
+      }
+    });
+  }
+  
   return { 
-    headers: rows[0]?.map(h => h.trim().toLowerCase()) || [],
+    headers: headers,
     rows: rows.slice(1) 
   };
 }
@@ -81,16 +101,47 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
         });
       }
       
-      // Map required field indexes
-      const nameIndex = headers.findIndex(h => h === 'name' || h === 'product name' || h === 'title');
-      const skuIndex = headers.findIndex(h => h === 'sku' || h === 'product sku');
-      const categoryIndex = headers.findIndex(h => h === 'category' || h === 'product category');
-      const priceIndex = headers.findIndex(h => h === 'price' || h === 'product price' || h === 'base price' || h === 'baseprice');
-      const quantityIndex = headers.findIndex(h => h === 'quantity' || h === 'stock' || h === 'inventory');
-      const sizeIndex = headers.findIndex(h => h === 'size' || h === 'product size');
-      const descriptionIndex = headers.findIndex(h => h === 'description' || h === 'product description');
-      const wholesalePriceIndex = headers.findIndex(h => h === 'wholesale price' || h === 'wholesaleprice' || h === 'wholesale');
-      const retailPriceIndex = headers.findIndex(h => h === 'retail price' || h === 'retailprice' || h === 'retail');
+      // Map required field indexes with more extensive matching
+      const nameIndex = headers.findIndex(h => 
+        h === 'name' || h === 'product name' || h === 'title' || 
+        h === 'product title' || h === 'item name' || h === 'item title' ||
+        h === 'product' || h === 'handle' || h.includes('product') && h.includes('name'));
+        
+      const skuIndex = headers.findIndex(h => 
+        h === 'sku' || h === 'product sku' || h === 'item sku' || 
+        h === 'stock keeping unit' || h === 'variant sku');
+        
+      const categoryIndex = headers.findIndex(h => 
+        h === 'category' || h === 'product category' || h === 'item category' || 
+        h === 'product type' || h === 'type' || h === 'collection');
+        
+      const priceIndex = headers.findIndex(h => 
+        h === 'price' || h === 'product price' || h === 'item price' || 
+        h === 'base price' || h === 'baseprice' || h === 'retail price' || 
+        h === 'sale price' || h === 'selling price' || h === 'variant price' ||
+        h === 'retail' || h === 'msrp');
+        
+      const quantityIndex = headers.findIndex(h => 
+        h === 'quantity' || h === 'stock' || h === 'inventory' || 
+        h === 'available' || h === 'stock quantity' || h === 'inventory quantity' || 
+        h === 'qty' || h === 'amount' || h === 'count');
+        
+      const sizeIndex = headers.findIndex(h => 
+        h === 'size' || h === 'product size' || h === 'item size' || 
+        h === 'variant' || h === 'option' || h === 'weight' || 
+        h === 'dimensions' || h === 'option1');
+        
+      const descriptionIndex = headers.findIndex(h => 
+        h === 'description' || h === 'product description' || h === 'item description' || 
+        h === 'details' || h === 'product details' || h === 'body');
+        
+      const wholesalePriceIndex = headers.findIndex(h => 
+        h === 'wholesale price' || h === 'wholesaleprice' || h === 'wholesale' || 
+        h === 'distributor price' || h === 'cost' || h === 'unit cost');
+        
+      const retailPriceIndex = headers.findIndex(h => 
+        h === 'retail price' || h === 'retailprice' || h === 'retail' || 
+        h === 'msrp' || h === 'srp' || h === 'suggested retail price');
       
       if (nameIndex === -1 || (skuIndex === -1 && priceIndex === -1)) {
         return res.status(400).json({ 
@@ -113,11 +164,46 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
         if (row.length <= 1) continue; // Skip empty rows
         
         try {
+          // Extract and clean product name
+          let productName = "";
+          if (nameIndex >= 0 && row[nameIndex]) {
+            productName = row[nameIndex].trim();
+            // Log the product name we found
+            console.log(`Found product name in CSV: "${productName}"`);
+          } else {
+            productName = `Product ${i+1}`;
+            console.log(`No product name found, using default: "${productName}"`);
+          }
+          
+          // Extract and clean price
+          let productPrice = 0;
+          if (priceIndex >= 0 && row[priceIndex]) {
+            const priceString = row[priceIndex].trim();
+            console.log(`Found price string: "${priceString}"`);
+            
+            // Remove currency symbols and non-numeric characters except decimal point
+            const cleanedPrice = priceString.replace(/[^0-9.]/g, '');
+            console.log(`Cleaned price string: "${cleanedPrice}"`);
+            
+            if (cleanedPrice) {
+              productPrice = parseFloat(cleanedPrice);
+              if (isNaN(productPrice)) {
+                console.warn(`Warning: Could not parse price "${priceString}" - defaulting to 0`);
+                productPrice = 0;
+              } else {
+                console.log(`Parsed price value: ${productPrice}`);
+              }
+            }
+          } else {
+            console.log(`No price column found at index ${priceIndex}`);
+          }
+          
+          // Create item data with proper values
           const itemData: any = {
-            name: nameIndex >= 0 && row[nameIndex] ? row[nameIndex].trim() : `Product ${i+1}`,
+            name: productName,
             sku: skuIndex >= 0 && row[skuIndex] ? row[skuIndex].trim() : `SKU-${Date.now()}-${i+1}`,
             category: categoryIndex >= 0 && row[categoryIndex] ? row[categoryIndex].trim() : "Uncategorized",
-            basePrice: priceIndex >= 0 && row[priceIndex] ? parseFloat(row[priceIndex].replace(/[^0-9.]/g, '')) : 0,
+            basePrice: productPrice,
             quantity: quantityIndex >= 0 && row[quantityIndex] ? parseInt(row[quantityIndex], 10) : 0,
             size: sizeIndex >= 0 && row[sizeIndex] ? row[sizeIndex].trim() : "",
             description: descriptionIndex >= 0 && row[descriptionIndex] ? row[descriptionIndex].trim() : "",
@@ -128,11 +214,36 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
           
           // Add optional prices if available
           if (wholesalePriceIndex >= 0 && row[wholesalePriceIndex]) {
-            itemData.wholesalePrice = parseFloat(row[wholesalePriceIndex].replace(/[^0-9.]/g, ''));
+            const wholesalePriceString = row[wholesalePriceIndex].trim();
+            const cleanedWholesalePrice = wholesalePriceString.replace(/[^0-9.]/g, '');
+            itemData.wholesalePrice = cleanedWholesalePrice ? parseFloat(cleanedWholesalePrice) : null;
+            console.log(`Wholesale price: ${itemData.wholesalePrice}`);
           }
           
           if (retailPriceIndex >= 0 && row[retailPriceIndex]) {
-            itemData.retailPrice = parseFloat(row[retailPriceIndex].replace(/[^0-9.]/g, ''));
+            const retailPriceString = row[retailPriceIndex].trim();
+            const cleanedRetailPrice = retailPriceString.replace(/[^0-9.]/g, '');
+            itemData.retailPrice = cleanedRetailPrice ? parseFloat(cleanedRetailPrice) : null;
+            console.log(`Retail price: ${itemData.retailPrice}`);
+          }
+          
+          // Log the final item data we're about to insert
+          console.log(`Creating item with name "${itemData.name}" and basePrice ${itemData.basePrice}`);
+          
+          // Safety check - don't create items with default/empty values unless explicitly allowed
+          if (itemData.name === `Product ${i+1}` && itemData.basePrice === 0) {
+            console.warn(`Warning: Row ${i+1} has default name and zero price. Checking if it has other valid data...`);
+            
+            // Only create this item if it has at least some valid data in other fields
+            const hasValidData = 
+              (skuIndex >= 0 && row[skuIndex]) || 
+              (quantityIndex >= 0 && row[quantityIndex]) ||
+              (descriptionIndex >= 0 && row[descriptionIndex]);
+              
+            if (!hasValidData) {
+              console.warn(`Skipping row ${i+1} due to insufficient data`);
+              continue; // Skip this row
+            }
           }
           
           // Create the item in storage
