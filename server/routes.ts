@@ -598,7 +598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add new images if any
       if (fileUrls.length > 0) {
-        updateData.images = [...(existingItem.images || []), ...fileUrls];
+        const existingImages = Array.isArray(existingItem.images) ? existingItem.images : [];
+        updateData.images = [...existingImages, ...fileUrls];
       }
       
       const updatedItem = await storage.updateItem(id, updateData);
@@ -647,10 +648,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get connected marketplaces
           const marketplaces = await storage.getAllMarketplaces();
-          const connectedMarketplaces = marketplaces.filter(m => 
-            m.isConnected && 
-            item.marketplace?.includes(m.id.toString())
-          );
+          const connectedMarketplaces = marketplaces.filter(m => {
+            if (!m.isConnected) return false;
+            if (!item.marketplace || !Array.isArray(item.marketplace)) return false;
+            return item.marketplace.includes(m.id.toString()) || item.marketplace.includes(m.id);
+          });
           
           // Request removal from each connected marketplace
           await Promise.allSettled(
@@ -828,13 +830,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Update item marketplace settings
-          const updatedMarketplaces = [...new Set([
-            ...(item.marketplace || []),
+          const marketplaceArray = Array.isArray(item.marketplace) ? item.marketplace : [];
+          const uniqueMarketplaces = Array.from(new Set([
+            ...marketplaceArray,
             ...marketplaces
-          ])];
+          ]));
           
           await storage.updateItem(id, { 
-            marketplace: updatedMarketplaces,
+            marketplace: uniqueMarketplaces,
             status: 'active' // Set status to active when publishing
           });
           
