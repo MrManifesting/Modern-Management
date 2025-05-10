@@ -5,10 +5,10 @@
  * Ensures immediate sync rather than waiting for scheduled updates
  */
 
-import { type Item, type Marketplace } from '@shared/schema';
-import { IStorage } from '../storage';
-import { MarketplaceService } from './marketplace';
+import type { IStorage } from "../storage";
+import type { Item, Marketplace } from "@shared/schema";
 import { log } from '../vite';
+import { MarketplaceService } from "./marketplace";
 
 /**
  * Synchronize a single item with all connected marketplaces
@@ -17,60 +17,89 @@ import { log } from '../vite';
 export async function syncItemWithMarketplaces(
   item: Item, 
   storage: IStorage
-): Promise<{ success: boolean; message: string }> {
+): Promise<{
+  success: boolean;
+  syncedWith: Array<{
+    marketplaceId: number;
+    name: string;
+    success: boolean;
+    message: string;
+  }>;
+  error?: string;
+}> {
   try {
-    // Get all connected and enabled marketplaces
-    const marketplaces = await storage.getAllMarketplaces();
-    const enabledMarketplaces = marketplaces.filter(m => m.isConnected && m.isSyncEnabled);
+    // Get all enabled marketplaces this item should be pushed to
+    const allMarketplaces = await storage.getAllMarketplaces();
+    
+    // If the item has marketplace settings, filter by those
+    let enabledMarketplaces: Marketplace[] = [];
+    
+    if (item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0) {
+      // Find marketplaces that match the IDs in item.marketplace
+      enabledMarketplaces = allMarketplaces.filter(m => 
+        m.isConnected && 
+        m.isSyncEnabled &&
+        item.marketplace?.includes(m.id.toString())
+      );
+    } else {
+      // Get all enabled marketplaces
+      enabledMarketplaces = allMarketplaces.filter(m => m.isConnected && m.isSyncEnabled);
+    }
     
     if (enabledMarketplaces.length === 0) {
-      return { success: true, message: "No enabled marketplaces found for synchronization" };
+      return {
+        success: true,
+        syncedWith: [],
+        error: "No enabled marketplaces found for this item"
+      };
     }
     
     log(`Real-time sync: Pushing item "${item.name}" (ID: ${item.id}) to ${enabledMarketplaces.length} marketplaces`, 'marketplace-sync');
     
-    // Track results
-    let successCount = 0;
-    let errorMessages: string[] = [];
-    
-    // Push to each marketplace
-    for (const marketplace of enabledMarketplaces) {
-      try {
-        const marketplaceService = new MarketplaceService(marketplace);
-        const result = await marketplaceService.pushProduct(item);
-        
-        if (result.success) {
-          successCount++;
+    // Push to each marketplace in parallel
+    const syncResults = await Promise.all(
+      enabledMarketplaces.map(async (marketplace) => {
+        try {
+          const marketplaceService = new MarketplaceService(marketplace);
+          const result = await marketplaceService.pushProduct(item);
           
-          // Update the item's last pushed timestamp for this marketplace
-          await storage.updateItemLastPushed(item.id, marketplace.id, new Date());
+          if (result.success) {
+            // Update the item's last pushed timestamp for this marketplace
+            if (typeof storage.updateItemLastPushed === 'function') {
+              await storage.updateItemLastPushed(item.id, marketplace.id, new Date());
+            }
+          }
           
-          log(`Real-time sync: Successfully pushed item "${item.name}" to ${marketplace.name}`, 'marketplace-sync');
-        } else {
-          errorMessages.push(`Failed on ${marketplace.name}: ${result.message}`);
-          log(`Real-time sync: Failed to push item "${item.name}" to ${marketplace.name}: ${result.message}`, 'marketplace-sync-error');
+          return {
+            marketplaceId: marketplace.id,
+            name: marketplace.name,
+            success: result.success,
+            message: result.message || (result.success ? 'Sync successful' : 'Sync failed')
+          };
+        } catch (error: any) {
+          return {
+            marketplaceId: marketplace.id,
+            name: marketplace.name,
+            success: false,
+            message: `Error during sync: ${error.message}`
+          };
         }
-      } catch (error: any) {
-        errorMessages.push(`Error with ${marketplace.name}: ${error.message}`);
-        log(`Real-time sync: Error pushing item "${item.name}" to ${marketplace.name}: ${error.message}`, 'marketplace-sync-error');
-      }
-    }
+      })
+    );
     
-    // Return overall result
-    if (successCount === enabledMarketplaces.length) {
-      return { 
-        success: true, 
-        message: `Item "${item.name}" successfully synced with all ${successCount} marketplaces` 
-      };
-    } else {
-      return { 
-        success: false, 
-        message: `Item partially synced with ${successCount}/${enabledMarketplaces.length} marketplaces. Errors: ${errorMessages.join('; ')}` 
-      };
-    }
+    const allSuccessful = syncResults.every(result => result.success);
+    
+    return {
+      success: allSuccessful,
+      syncedWith: syncResults
+    };
   } catch (error: any) {
-    log(`Real-time sync: Error during sync for item "${item.name}": ${error.message}`, 'marketplace-sync-error');
-    return { success: false, message: `Sync error: ${error.message}` };
+    log(`Error in real-time sync for item ${item.id}: ${error.message}`, 'marketplace-sync-error');
+    return {
+      success: false,
+      syncedWith: [],
+      error: `Sync failed: ${error.message}`
+    };
   }
 }
 
@@ -79,64 +108,119 @@ export async function syncItemWithMarketplaces(
  * Called when viewing/using a specific item to ensure its data is up-to-date
  */
 export async function refreshItemFromMarketplaces(
-  itemId: number,
+  item: Item,
   storage: IStorage
-): Promise<{ success: boolean; message: string }> {
+): Promise<{
+  success: boolean;
+  refreshedFrom: Array<{
+    marketplaceId: number;
+    name: string;
+    success: boolean;
+    message: string;
+    externalData?: any;
+  }>;
+  error?: string;
+}> {
   try {
-    const item = await storage.getItem(itemId);
+    // Get all external IDs for this item
+    let itemExternalIds: Record<string, string> = {};
     
-    if (!item) {
-      return { success: false, message: "Item not found" };
+    if (typeof storage.getItemExternalIds === 'function') {
+      itemExternalIds = await storage.getItemExternalIds(item.id) || {};
     }
     
-    // Get all connected marketplaces
-    const marketplaces = await storage.getAllMarketplaces();
-    const enabledMarketplaces = marketplaces.filter(m => m.isConnected && m.isSyncEnabled);
+    // Get all enabled marketplaces
+    const allMarketplaces = await storage.getAllMarketplaces();
+    const enabledMarketplaces = allMarketplaces.filter(m => m.isConnected && m.isSyncEnabled);
     
     if (enabledMarketplaces.length === 0) {
-      return { success: true, message: "No enabled marketplaces found for synchronization" };
-    }
-    
-    log(`Real-time refresh: Checking latest data for item "${item.name}" (ID: ${item.id}) from marketplaces`, 'marketplace-sync');
-    
-    let updated = false;
-    let errorMessages: string[] = [];
-    
-    for (const marketplace of enabledMarketplaces) {
-      try {
-        // Implement marketplace-specific logic to fetch the latest data for this item
-        // This will depend on how your specific marketplace integrations work
-        // For Shopify, this would involve looking up by externalId
-
-        // Example placeholder - actual implementation will depend on marketplace specifics
-        // const marketplaceService = new MarketplaceService(marketplace);
-        // const latestData = await marketplaceService.getItemLatestData(item);
-        // if (latestData.needsUpdate) {
-        //   await storage.updateItem(item.id, latestData.updates);
-        //   updated = true;
-        // }
-      } catch (error: any) {
-        errorMessages.push(`Error with ${marketplace.name}: ${error.message}`);
-      }
-    }
-    
-    if (updated) {
-      return { 
-        success: true, 
-        message: `Item "${item.name}" was updated with the latest data from marketplaces` 
-      };
-    } else if (errorMessages.length > 0) {
-      return { 
-        success: false, 
-        message: `Could not refresh item data. Errors: ${errorMessages.join('; ')}` 
-      };
-    } else {
-      return { 
-        success: true, 
-        message: `Item "${item.name}" is already up-to-date with marketplace data` 
+      return {
+        success: true,
+        refreshedFrom: [],
+        error: "No enabled marketplaces found"
       };
     }
+    
+    // Only process marketplaces where this item exists
+    const relevantMarketplaces = enabledMarketplaces.filter(m => 
+      itemExternalIds[m.id.toString()] !== undefined
+    );
+    
+    if (relevantMarketplaces.length === 0) {
+      return {
+        success: true,
+        refreshedFrom: [],
+        error: "Item not found in any marketplace"
+      };
+    }
+    
+    log(`Real-time refresh: Fetching latest data for item "${item.name}" (ID: ${item.id}) from ${relevantMarketplaces.length} marketplaces`, 'marketplace-sync');
+    
+    // Fetch from each marketplace in parallel
+    const refreshResults = await Promise.all(
+      relevantMarketplaces.map(async (marketplace) => {
+        try {
+          const externalId = itemExternalIds[marketplace.id.toString()];
+          
+          if (!externalId) {
+            return {
+              marketplaceId: marketplace.id,
+              name: marketplace.name,
+              success: false,
+              message: 'No external ID found for this marketplace'
+            };
+          }
+          
+          const marketplaceService = new MarketplaceService(marketplace);
+          const result = await marketplaceService.fetchProduct(externalId);
+          
+          if (result.success && result.product) {
+            // Update the item with data from the marketplace
+            // Here you could selectively update certain fields from the marketplace
+            // For example, you might want to update inventory but not other fields
+            await storage.updateItem(item.id, { 
+              quantity: result.product.quantity,
+              // Add any other fields that should be updated from the marketplace
+            });
+            
+            return {
+              marketplaceId: marketplace.id,
+              name: marketplace.name,
+              success: true,
+              message: 'Successfully refreshed item data',
+              externalData: result.product
+            };
+          } else {
+            return {
+              marketplaceId: marketplace.id,
+              name: marketplace.name,
+              success: false,
+              message: result.message || 'Failed to fetch product data'
+            };
+          }
+        } catch (error: any) {
+          return {
+            marketplaceId: marketplace.id,
+            name: marketplace.name,
+            success: false,
+            message: `Error during refresh: ${error.message}`
+          };
+        }
+      })
+    );
+    
+    const allSuccessful = refreshResults.every(result => result.success);
+    
+    return {
+      success: allSuccessful,
+      refreshedFrom: refreshResults
+    };
   } catch (error: any) {
-    return { success: false, message: `Refresh error: ${error.message}` };
+    log(`Error in real-time refresh for item ${item.id}: ${error.message}`, 'marketplace-sync-error');
+    return {
+      success: false,
+      refreshedFrom: [],
+      error: `Refresh failed: ${error.message}`
+    };
   }
 }
