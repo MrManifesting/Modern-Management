@@ -57,8 +57,17 @@ export class ShopifyService implements IMarketplaceService {
       try {
         log(`Creating Shopify client from env vars for marketplace integration`, 'marketplace-shopify');
         // Use the shared client creation method
-        this.client = await createShopifyClient();
-        return this.client;
+        const shopifyClientResult = await createShopifyClient();
+        
+        // The createShopifyClient returns an object with multiple properties
+        // The actual Shopify client is in the 'shopify' property
+        if (shopifyClientResult && shopifyClientResult.shopify) {
+          this.client = shopifyClientResult.shopify;
+          return this.client;
+        } else {
+          log('Shopify client not found in createShopifyClient result', 'marketplace-shopify-error');
+          throw new Error('Shopify client not found in result');
+        }
       } catch (error: any) {
         log(`Error creating Shopify client from env vars: ${error.message}`, 'marketplace-shopify-error');
         throw new Error(`Failed to initialize Shopify client: ${error.message}`);
