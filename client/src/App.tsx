@@ -36,6 +36,7 @@ import CSVValidatorPage from "@/pages/csv-validator";
 import AuthPage from "@/pages/auth-page";
 import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
+import CheckoutPage from "@/pages/checkout";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -86,6 +87,7 @@ function Router() {
           const AffiliateQrDemo = React.lazy(() => import("@/pages/affiliate/qr-demo"));
           return <AffiliateQrDemo />;
         }} />
+        <Route path="/checkout" component={() => <CheckoutPage />} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
