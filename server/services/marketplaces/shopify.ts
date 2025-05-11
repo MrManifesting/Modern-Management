@@ -4,6 +4,7 @@ import { IMarketplaceService } from '../marketplace';
 import Shopify from 'shopify-api-node';
 import { log } from '../../vite';
 import { createShopifyClient } from '../shopify-auth';
+import { getShopifyCredentials } from '../shopify-auth';
 
 /**
  * Shopify marketplace integration service
@@ -333,8 +334,51 @@ export class ShopifyService implements IMarketplaceService {
       };
       
       // Create or update the product in Shopify
-      const productClient = client.shopify ? client.shopify.product : client.product;
-      const result = await productClient.create(shopifyProduct);
+      let result;
+      
+      try {
+        // Try different possible client structures
+        if (client.shopify && client.shopify.product && typeof client.shopify.product.create === 'function') {
+          // Standard client structure
+          result = await client.shopify.product.create(shopifyProduct);
+        } else if (client.product && typeof client.product.create === 'function') {
+          // Alternative client structure
+          result = await client.product.create(shopifyProduct);
+        } else if (typeof client.create === 'function') {
+          // Direct client structure
+          result = await client.create(shopifyProduct);
+        } else {
+          // Fallback to direct API call using Fetch
+          const credentials = await getShopifyCredentials();
+          
+          if (!credentials || !credentials.accessToken || !credentials.storeUrl) {
+            throw new Error('Missing Shopify credentials for direct API call');
+          }
+          
+          const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+          const accessToken = credentials.accessToken;
+          
+          const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
+            method: 'POST',
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ product: shopifyProduct })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Shopify API error (${response.status}): ${errorText}`);
+          }
+          
+          const data = await response.json();
+          result = data.product;
+        }
+      } catch (clientError) {
+        console.error('Error in Shopify client.create:', clientError);
+        throw new Error(`Client create error: ${clientError.message}`);
+      }
       
       // Extract the numeric ID from the GID
       const shopifyId = result.id.toString();
