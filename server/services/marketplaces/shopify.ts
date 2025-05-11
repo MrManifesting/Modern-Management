@@ -375,9 +375,10 @@ export class ShopifyService implements IMarketplaceService {
           const data = await response.json();
           result = data.product;
         }
-      } catch (clientError) {
+      } catch (error) {
+        const clientError = error as Error;
         console.error('Error in Shopify client.create:', clientError);
-        throw new Error(`Client create error: ${clientError.message}`);
+        throw new Error(`Client create error: ${clientError.message || 'Unknown error'}`);
       }
       
       // Extract the numeric ID from the GID
