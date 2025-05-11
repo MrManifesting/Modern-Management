@@ -1,13 +1,14 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 
-interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonProps {
   shape?: "rectangle" | "circle" | "leaf";
   width?: string | number;
   height?: string | number;
   className?: string;
   animate?: boolean;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -19,12 +20,13 @@ export function Skeleton({
   height,
   className,
   animate = true,
-  ...props
+  style,
 }: SkeletonProps) {
   // Define styles based on shape
-  const styles = {
+  const baseStyles: React.CSSProperties = {
     width: width ?? "100%",
-    height: height ?? (shape === "circle" ? width : "1rem")
+    height: height ?? (shape === "circle" ? width : "1rem"),
+    ...style
   };
 
   const shapeClasses = {
@@ -38,50 +40,69 @@ export function Skeleton({
     return (
       <div
         className={cn("relative overflow-hidden", className)}
-        style={styles}
-        {...props}
+        style={baseStyles}
       >
-        <motion.div
-          initial={animate ? { opacity: 0.5 } : {}}
-          animate={animate ? { opacity: 1 } : {}}
-          transition={{
-            duration: 1.2,
-            repeat: Infinity,
-            repeatType: "reverse",
-            ease: "easeInOut",
-          }}
-          className="w-full h-full bg-gray-200 dark:bg-gray-700"
-        >
-          <svg
-            viewBox="0 0 100 100"
-            className="w-full h-full"
-            xmlns="http://www.w3.org/2000/svg"
+        {animate ? (
+          <motion.div
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+            className="w-full h-full bg-gray-200 dark:bg-gray-700"
           >
-            <path
-              className="fill-current text-primary/40"
-              d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
-            />
-          </svg>
-        </motion.div>
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                className="fill-current text-primary/40"
+                d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+              />
+            </svg>
+          </motion.div>
+        ) : (
+          <div className="w-full h-full bg-gray-200 dark:bg-gray-700">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                className="fill-current text-primary/40"
+                d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+              />
+            </svg>
+          </div>
+        )}
       </div>
     );
   }
 
   // Standard skeleton for rectangle and circle
   return (
-    <motion.div
-      initial={animate ? { opacity: 0.5 } : {}}
-      animate={animate ? { opacity: 1 } : {}}
-      transition={{
-        duration: 1.2,
-        repeat: Infinity,
-        repeatType: "reverse",
-        ease: "easeInOut",
-      }}
+    <div
       className={cn("bg-gray-200 dark:bg-gray-700", shapeClasses[shape], className)}
-      style={styles}
-      {...props}
-    />
+      style={baseStyles}
+    >
+      {animate && (
+        <motion.div
+          className="w-full h-full"
+          initial={{ opacity: 0.5 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 1.2,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut",
+          }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -145,8 +166,12 @@ export function LoadingSpinner({
         }}
         className={cn(
           "w-full h-full rounded-full border-4 border-t-transparent",
-          `border-${color}`,
-          className
+          {
+            "border-primary": color === "primary",
+            "border-secondary": color === "secondary", 
+            "border-accent": color === "accent",
+            "border-white": color === "white"
+          }
         )}
       />
     </div>
