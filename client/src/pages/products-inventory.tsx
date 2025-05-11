@@ -24,6 +24,8 @@ import {
   ClipboardList,
   Image as ImageIcon
 } from 'lucide-react';
+import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -196,10 +198,6 @@ const ProductsInventoryPage: React.FC = () => {
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Import our leaf loader components
-  const { LeafLoadingPattern, DashboardLoadingSkeleton } = React.lazy(() => import('@/components/ui/skeleton-loader'));
-  const { LoadingOverlay } = React.lazy(() => import('@/components/ui/loading-overlay'));
   
   // Fetch items from API
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
@@ -629,8 +627,25 @@ const ProductsInventoryPage: React.FC = () => {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // If data is loading, show the leaf loading pattern
+  if (isLoading) {
+    return (
+      <div className="container mx-auto h-screen flex flex-col items-center justify-center">
+        <LeafLoadingPattern message="Loading inventory data..." />
+      </div>
+    );
+  }
+
   return (
     <>
+      {/* Loading overlay for Shopify sync */}
+      <LoadingOverlay 
+        isLoading={syncLoading} 
+        message="Syncing with Shopify..."
+        animation="falling"
+        variant="full"
+      />
+      
       {/* Add Item Modal */}
       <AddItemModal 
         isOpen={addItemModalOpen}
@@ -712,8 +727,17 @@ const ProductsInventoryPage: React.FC = () => {
               >
                 {syncLoading ? (
                   <>
-                    <div className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1"></div>
-                    Sync
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="w-4 h-4 mr-1 animate-spin text-primary"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        className="fill-current"
+                        d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+                      />
+                    </svg>
+                    Syncing
                   </>
                 ) : (
                   <>
