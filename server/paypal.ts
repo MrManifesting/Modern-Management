@@ -147,3 +147,57 @@ export async function loadPaypalDefault(req: Request, res: Response) {
   });
 }
 // <END_EXACT_CODE>
+
+// Additional helper functions for the affiliate system
+export function isConfigured(): boolean {
+  return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+}
+
+export async function processAffiliateCommission(
+  orderId: string,
+  affiliateId: number,
+  commissionRate: number = 0.04
+): Promise<{ 
+  success: boolean; 
+  amount?: number; 
+  error?: string;
+}> {
+  try {
+    // Get order details from PayPal
+    const collect = { id: orderId };
+    const { body } = await ordersController.getOrder(collect);
+    const order = JSON.parse(String(body));
+    
+    // Extract amount from the order
+    let amount = 0;
+    if (order && order.purchase_units && order.purchase_units.length > 0) {
+      const unit = order.purchase_units[0];
+      if (unit.amount && unit.amount.value) {
+        amount = parseFloat(unit.amount.value);
+      }
+    }
+    
+    if (amount <= 0) {
+      return { 
+        success: false, 
+        error: "Invalid order amount" 
+      };
+    }
+    
+    // Calculate commission
+    const commissionAmount = amount * commissionRate;
+    
+    // In a real implementation, we would record this in the database
+    // and potentially transfer funds to the affiliate's PayPal account
+    
+    return {
+      success: true,
+      amount: commissionAmount
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}

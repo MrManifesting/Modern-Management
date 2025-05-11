@@ -180,6 +180,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/database-cleanup",
     },
     {
+      title: "Payment Testing",
+      icon: <CreditCard className="h-5 w-5" />,
+      path: "/checkout",
+      highlight: true,
+    },
+    {
       title: "Settings",
       icon: <Settings className="h-5 w-5" />,
       path: "/settings",

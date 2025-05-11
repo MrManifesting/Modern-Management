@@ -451,7 +451,7 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
               affiliateId: affiliate.id,
               amount: affiliate.pendingPayout,
               success: false,
-              error: error.message
+              error: error instanceof Error ? error.message : String(error)
             };
           }
         })
