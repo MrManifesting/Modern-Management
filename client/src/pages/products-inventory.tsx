@@ -638,12 +638,28 @@ const ProductsInventoryPage: React.FC = () => {
 
   return (
     <>
-      {/* Loading overlay for Shopify sync */}
+      {/* Loading overlays */}
       <LoadingOverlay 
         isLoading={syncLoading} 
         message="Syncing with Shopify..."
         animation="falling"
         variant="full"
+      />
+      
+      <LoadingOverlay 
+        isLoading={deleteAllLoading} 
+        message="Removing all inventory items..."
+        animation="ring"
+        variant="full"
+        blur={true}
+      />
+      
+      <LoadingOverlay 
+        isLoading={deleteMutation.isPending} 
+        message="Removing item from inventory..."
+        animation="pattern"
+        variant="partial"
+        blur={true}
       />
       
       {/* Add Item Modal */}
@@ -681,9 +697,25 @@ const ProductsInventoryPage: React.FC = () => {
             <AlertDialogAction 
               onClick={confirmDelete}
               disabled={deleteMutation.isPending}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 gap-2"
             >
-              Delete
+              {deleteMutation.isPending ? (
+                <>
+                  <svg
+                    viewBox="0 0 100 100"
+                    className="w-4 h-4 mr-1 animate-spin text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      className="fill-current"
+                      d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+                    />
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -791,8 +823,17 @@ const ProductsInventoryPage: React.FC = () => {
               >
                 {syncLoading ? (
                   <>
-                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-1"></div>
-                    Syncing...
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="w-5 h-5 mr-1 animate-spin text-primary"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        className="fill-current"
+                        d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+                      />
+                    </svg>
+                    Syncing with Shopify...
                   </>
                 ) : (
                   <>
@@ -1430,8 +1471,17 @@ const ProductsInventoryPage: React.FC = () => {
             >
               {deleteAllLoading ? (
                 <>
-                  <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-                  Deleting...
+                  <svg
+                    viewBox="0 0 100 100"
+                    className="w-4 h-4 mr-1 animate-spin text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      className="fill-current"
+                      d="M50,0 C50,0 20,20 20,50 C20,75 35,90 50,100 C65,90 80,75 80,50 C80,20 50,0 50,0 Z"
+                    />
+                  </svg>
+                  Deleting Inventory...
                 </>
               ) : (
                 <>
