@@ -18,6 +18,7 @@ import {
   Trash2,
   ShoppingBag,
   Share2,
+  CreditCard,
   QrCode,
   FileSpreadsheet,
   FileCheck
