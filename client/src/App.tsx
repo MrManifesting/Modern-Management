@@ -35,6 +35,7 @@ import AiToolsPage from "@/pages/ai/tools";
 import CSVValidatorPage from "@/pages/csv-validator";
 import AuthPage from "@/pages/auth-page";
 import QrScanPage from "@/pages/qr-scan";
+import AnimationDemo from "@/pages/animation-demo";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -43,7 +44,13 @@ import { OnboardingTour, WelcomeBanner } from "@/components/onboarding";
 function Router() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <React.Suspense fallback={<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>}>
+          {/* Dynamically import the leaf loader to avoid circular dependencies */}
+          {(() => {
+            const LeafLoadingPattern = React.lazy(() => import("@/components/ui/leaf-loader").then(module => ({ default: module.LeafLoadingPattern })));
+            return <LeafLoadingPattern message="Loading application..." />;
+          })()}
+        </React.Suspense>
       </div>}>
       <Switch>
         <ProtectedRoute path="/" component={() => <Dashboard />} />
@@ -72,6 +79,7 @@ function Router() {
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
         <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
         <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
+        <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
         <Route path="/auth" component={() => <AuthPage />} />
         <Route path="/qr-scan" component={() => <QrScanPage />} />
         <Route path="/affiliate/:code?" component={() => {
