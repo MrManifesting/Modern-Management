@@ -197,6 +197,10 @@ const ProductsInventoryPage: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Import our leaf loader components
+  const { LeafLoadingPattern, DashboardLoadingSkeleton } = React.lazy(() => import('@/components/ui/skeleton-loader'));
+  const { LoadingOverlay } = React.lazy(() => import('@/components/ui/loading-overlay'));
+  
   // Fetch items from API
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
     queryKey: ['/api/items'],

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 
 // This component redirects from the older inventory page to the new products-inventory page
 const InventoryRedirectPage: React.FC = () => {
@@ -10,11 +11,10 @@ const InventoryRedirectPage: React.FC = () => {
     setLocation('/products-inventory');
   }, [setLocation]);
   
-  // For the brief moment this component is visible, show a loading state
+  // For the brief moment this component is visible, show a loading state with leaf animation
   return (
-    <div className="h-screen flex items-center justify-center">
-      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Redirecting..."/>
-      <span className="ml-3">Redirecting to inventory management...</span>
+    <div className="h-screen flex flex-col items-center justify-center bg-background">
+      <LeafLoadingPattern message="Redirecting to inventory management..." />
     </div>
   );
 };
