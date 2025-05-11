@@ -348,12 +348,40 @@ const ProductsInventoryPage: React.FC = () => {
       
       // First check Shopify connection
       const testResponse = await apiRequest('GET', '/api/shopify/test-connection');
-      const testResult = await testResponse.json();
+      
+      // Handle non-200 response
+      if (!testResponse.ok) {
+        console.error('Shopify connection test failed:', testResponse.status, testResponse.statusText);
+        throw new Error(`Shopify connection test failed: ${testResponse.statusText}`);
+      }
+      
+      // Parse the JSON response safely
+      let testResult;
+      try {
+        testResult = await testResponse.json();
+      } catch (parseError) {
+        console.error('Failed to parse Shopify test response:', parseError);
+        throw new Error('Invalid response from Shopify connection test');
+      }
       
       if (testResult.connected) {
         // Use the direct Shopify sync endpoint
         const syncResponse = await apiRequest('POST', '/api/shopify/sync-inventory');
-        const syncResult = await syncResponse.json();
+        
+        // Handle non-200 response
+        if (!syncResponse.ok) {
+          console.error('Shopify sync failed:', syncResponse.status, syncResponse.statusText);
+          throw new Error(`Shopify sync failed: ${syncResponse.statusText}`);
+        }
+        
+        // Parse the JSON response safely
+        let syncResult;
+        try {
+          syncResult = await syncResponse.json();
+        } catch (parseError) {
+          console.error('Failed to parse Shopify sync response:', parseError);
+          throw new Error('Invalid response from Shopify sync endpoint');
+        }
         
         if (syncResult.success) {
           toast({
@@ -385,7 +413,7 @@ const ProductsInventoryPage: React.FC = () => {
       console.error('Shopify sync error:', error);
       toast({
         title: "Shopify Sync Error",
-        description: "Failed to connect to Shopify. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to connect to Shopify. Please try again.",
         variant: "destructive"
       });
     } finally {
