@@ -1,297 +1,220 @@
 import React, { useState } from 'react';
-import { useLocation } from 'wouter';
-import { Item } from '@shared/schema';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { PackageOpen, Printer, ArrowRight, Save, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BarcodePrint from './barcode-print';
+import { PackageOpen, Plus, Minus } from 'lucide-react';
+
+interface Item {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  quantity: number;
+  weight?: number;
+  sku: string;
+}
+
+interface BreakdownOption {
+  weight: number;
+  quantity: number;
+  price: number;
+}
 
 interface QuickBreakdownProps {
   item: Item;
-  isOpen: boolean;
   onClose: () => void;
 }
 
-// Weight brackets 
-const WEIGHT_BRACKETS = {
-  SEVEN_GRAM: { name: '7 Gram', value: 7, unit: 'g' },
-  FOURTEEN_GRAM: { name: '14 Gram', value: 14, unit: 'g' },
-  TWENTY_EIGHT_GRAM: { name: '28 Gram', value: 28, unit: 'g' },
-  QUARTER_LB: { name: 'Quarter Pound', value: 113.4, unit: 'g' },
-};
-
-export default function QuickBreakdown({ item, isOpen, onClose }: QuickBreakdownProps) {
-  const { toast } = useToast();
+const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, onClose }) => {
+  const [options, setOptions] = useState<BreakdownOption[]>([
+    { weight: 1, quantity: 1, price: item.price / (item.weight || 1) },
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
-  const [, navigate] = useLocation();
-  const [quantities, setQuantities] = useState<Record<string, number>>({
-    [WEIGHT_BRACKETS.SEVEN_GRAM.name]: 0,
-    [WEIGHT_BRACKETS.FOURTEEN_GRAM.name]: 0,
-    [WEIGHT_BRACKETS.TWENTY_EIGHT_GRAM.name]: 0,
-    [WEIGHT_BRACKETS.QUARTER_LB.name]: 0,
-  });
-  const [calculatingBreakdown, setCalculatingBreakdown] = useState(false);
-  const [createdItems, setCreatedItems] = useState<Item[]>([]);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Calculate the maximum quantities possible for each bracket
-  const calculateMaxQuantities = () => {
-    if (!item.weight) {
+  const addOption = () => {
+    setOptions([...options, { weight: 1, quantity: 1, price: item.price / (item.weight || 1) }]);
+  };
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index));
+  };
+
+  const updateOption = (index: number, field: keyof BreakdownOption, value: number) => {
+    const newOptions = [...options];
+    newOptions[index][field] = value;
+    setOptions(newOptions);
+  };
+
+  const totalWeight = options.reduce((sum, option) => sum + (option.weight * option.quantity), 0);
+  const isValid = totalWeight <= (item.weight || 0) * item.quantity;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isValid) {
       toast({
-        title: "Missing weight information",
-        description: "This item doesn't have weight information needed for breakdown.",
-        variant: "destructive"
+        title: "Invalid breakdown",
+        description: "The total weight exceeds the available weight.",
+        variant: "destructive",
       });
       return;
     }
 
-    const bulkWeight = item.weight;
-    const newQuantities = { ...quantities };
-    
-    Object.values(WEIGHT_BRACKETS).forEach(bracket => {
-      // Calculate maximum possible quantity for this weight bracket
-      const maxQty = Math.floor(bulkWeight / bracket.value);
-      newQuantities[bracket.name] = maxQty;
-    });
-    
-    setQuantities(newQuantities);
-  };
-
-  // Handle quantity change
-  const handleQuantityChange = (bracketName: string, value: number) => {
-    setQuantities(prev => ({
-      ...prev,
-      [bracketName]: value
-    }));
-  };
-
-  // Create breakdown mutation
-  const createBreakdownMutation = useMutation({
-    mutationFn: async () => {
-      // Convert quantities to breakdown targets
-      const targets = Object.entries(quantities)
-        .filter(([_, qty]) => qty > 0)
-        .map(([bracketName, qty]) => {
-          const bracket = Object.values(WEIGHT_BRACKETS).find(b => b.name === bracketName);
-          if (!bracket) return null;
-          
-          return {
-            name: `${item.name} - ${bracket.name}`,
-            price: calculatePriceForWeight(item, bracket.value),
-            quantity: qty,
-            weight: bracket.value,
-            weightUnit: bracket.unit,
-            parentItemId: item.id,
-          };
-        })
-        .filter(Boolean);
+    try {
+      setIsSubmitting(true);
       
-      if (targets.length === 0) {
-        throw new Error("No targets specified for breakdown");
-      }
-      
-      const res = await apiRequest('POST', `/api/items/${item.id}/quick-breakdown`, { targets });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCreatedItems(data.createdItems || []);
-      toast({
-        title: "Breakdown created",
-        description: `Successfully created ${data.createdItems?.length || 0} breakdown products.`,
+      // Call API to create breakdown
+      await apiRequest('POST', `/api/items/${item.id}/quick-breakdown`, { 
+        options,
+        parentSku: item.sku,
+        remainingQuantity: item.quantity - 1 // Assuming we're breaking down 1 unit
       });
+      
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
-    },
-    onError: (error) => {
+      
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create breakdown products",
-        variant: "destructive"
+        title: "Breakdown successful",
+        description: `Successfully broke down ${item.name} into ${options.length} units.`,
       });
-    },
-    onSettled: () => {
-      setCalculatingBreakdown(false);
+      
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Breakdown failed",
+        description: "There was an error processing the breakdown. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  });
-
-  // Handle breakdown creation
-  const handleCreateBreakdown = () => {
-    setCalculatingBreakdown(true);
-    createBreakdownMutation.mutate();
-  };
-
-  // Calculate price for a given weight
-  const calculatePriceForWeight = (bulkItem: Item, weight: number): number => {
-    if (!bulkItem.weight || bulkItem.weight <= 0) return 0;
-    
-    const ratio = weight / bulkItem.weight;
-    const basePrice = bulkItem.basePrice * ratio;
-    
-    // Round to 2 decimal places
-    return Math.round(basePrice * 100) / 100;
-  };
-
-  // Handle print barcode for an item
-  const handlePrintBarcode = (breakdownItem: Item) => {
-    setSelectedItem(breakdownItem);
-    setIsPrintModalOpen(true);
-  };
-
-  // Reset the form when dialog closes
-  const handleClose = () => {
-    setCreatedItems([]);
-    setQuantities({
-      [WEIGHT_BRACKETS.SEVEN_GRAM.name]: 0,
-      [WEIGHT_BRACKETS.FOURTEEN_GRAM.name]: 0,
-      [WEIGHT_BRACKETS.TWENTY_EIGHT_GRAM.name]: 0,
-      [WEIGHT_BRACKETS.QUARTER_LB.name]: 0,
-    });
-    onClose();
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Quick Breakdown - {item.name}</DialogTitle>
-            <DialogDescription>
-              Create smaller weight products from this bulk item.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {createdItems.length === 0 ? (
-            <div className="space-y-4 py-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Bulk Item Weight: {item.weight} {item.weightUnit}</p>
-                  <p className="text-sm text-gray-500">Bulk Item Price: ${item.basePrice?.toFixed(2)}</p>
-                </div>
-                <Button size="sm" onClick={calculateMaxQuantities}>
-                  Calculate Max
-                </Button>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-3">
-                {Object.values(WEIGHT_BRACKETS).map(bracket => (
-                  <div key={bracket.name} className="grid grid-cols-3 gap-4 items-center">
-                    <Label htmlFor={`qty-${bracket.name}`} className="col-span-1">
-                      {bracket.name}
-                    </Label>
-                    <div className="col-span-1">
-                      <Input
-                        id={`qty-${bracket.name}`}
-                        type="number"
-                        min="0"
-                        value={quantities[bracket.name]}
-                        onChange={(e) => handleQuantityChange(bracket.name, parseInt(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <p className="text-sm text-gray-500">
-                        ${calculatePriceForWeight(item, bracket.value).toFixed(2)} each
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateBreakdown} 
-                  disabled={calculatingBreakdown || Object.values(quantities).every(qty => qty === 0)}
-                >
-                  {calculatingBreakdown ? (
-                    <>
-                      <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <PackageOpen className="w-4 h-4 mr-2" />
-                      Create Breakdown
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="space-y-4 py-2">
-              <h3 className="font-medium text-green-600 flex items-center">
-                <Check className="w-4 h-4 mr-2" />
-                Breakdown Created Successfully
-              </h3>
-              
-              <div className="max-h-[300px] overflow-y-auto space-y-3">
-                {createdItems.map(breakdownItem => (
-                  <Card key={breakdownItem.id} className="overflow-hidden">
-                    <CardHeader className="p-3">
-                      <div className="flex justify-between">
-                        <CardTitle className="text-md">{breakdownItem.name}</CardTitle>
-                        <Badge variant="outline">
-                          {breakdownItem.weight} {breakdownItem.weightUnit}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm">Quantity: {breakdownItem.quantity}</p>
-                          <p className="text-sm">Price: ${breakdownItem.basePrice?.toFixed(2)}</p>
-                          <p className="text-sm text-gray-500">SKU: {breakdownItem.sku}</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrintBarcode(breakdownItem)}
-                        >
-                          <Printer className="h-4 w-4 mr-1" />
-                          Print
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={handleClose}>
-                  Close
-                </Button>
-                <Button onClick={() => {
-                  handleClose();
-                  navigate('/products-inventory');
-                }}>
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  Go to Inventory
-                </Button>
-              </DialogFooter>
-            </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex flex-col space-y-1 mb-4">
+        <h3 className="text-lg font-medium">{item.name}</h3>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-xs">
+            {item.category}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            SKU: {item.sku}
+          </Badge>
+          {item.weight && (
+            <Badge variant="secondary" className="text-xs">
+              Weight: {item.weight}g
+            </Badge>
           )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Barcode Print Dialog */}
-      {selectedItem && (
-        <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
-          <DialogContent className="sm:max-w-md">
-            <BarcodePrint item={selectedItem} onClose={() => setIsPrintModalOpen(false)} />
-          </DialogContent>
-        </Dialog>
+          <Badge variant="outline" className="text-xs">
+            Qty: {item.quantity}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {options.map((option, index) => (
+          <div key={index} className="grid grid-cols-12 gap-2 items-center border p-2 rounded-md">
+            <div className="col-span-3">
+              <Label htmlFor={`weight-${index}`} className="text-xs">Weight (g)</Label>
+              <Input
+                id={`weight-${index}`}
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={option.weight}
+                onChange={(e) => updateOption(index, 'weight', parseFloat(e.target.value))}
+                className="h-8"
+              />
+            </div>
+            
+            <div className="col-span-3">
+              <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label>
+              <Input
+                id={`quantity-${index}`}
+                type="number"
+                min="1"
+                value={option.quantity}
+                onChange={(e) => updateOption(index, 'quantity', parseInt(e.target.value))}
+                className="h-8"
+              />
+            </div>
+            
+            <div className="col-span-4">
+              <Label htmlFor={`price-${index}`} className="text-xs">Unit Price ($)</Label>
+              <Input
+                id={`price-${index}`}
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={option.price}
+                onChange={(e) => updateOption(index, 'price', parseFloat(e.target.value))}
+                className="h-8"
+              />
+            </div>
+            
+            <div className="col-span-2 pt-5 flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => removeOption(index)}
+                disabled={options.length === 1}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        
+        <Button type="button" variant="outline" size="sm" onClick={addOption} className="w-full">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Another Weight Option
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between py-2 px-3 bg-muted rounded-md">
+        <div>
+          <p className="text-sm">Total breakdown weight:</p>
+          <p className="font-medium">{totalWeight.toFixed(1)}g</p>
+        </div>
+        <div>
+          <p className="text-sm">Original item weight:</p>
+          <p className="font-medium">{(item.weight || 0) * item.quantity}g</p>
+        </div>
+        <div>
+          <p className="text-sm">Remaining:</p>
+          <p className={`font-medium ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+            {((item.weight || 0) * item.quantity - totalWeight).toFixed(1)}g
+          </p>
+        </div>
+      </div>
+
+      {!isValid && (
+        <p className="text-sm text-red-600">
+          Total breakdown weight exceeds the original item weight.
+        </p>
       )}
-    </>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" type="button" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !isValid}>
+          {isSubmitting ? "Processing..." : "Break Down Item"}
+          <PackageOpen className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </form>
   );
-}
+};
+
+export default QuickBreakdown;
