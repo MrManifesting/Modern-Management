@@ -369,68 +369,109 @@ export class ShopifyService implements IMarketplaceService {
           const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
           const accessToken = credentials.accessToken;
           
-          console.log(`Making direct API call to ${storeUrl}/admin/api/2023-10/products.json`);
-          console.log('Shopify product data structure:', Object.keys(shopifyProduct));
+          console.log(`[${new Date().toISOString()}] Making direct API call to ${storeUrl}/admin/api/2023-10/products.json`);
           
-          const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
-            method: 'POST',
-            headers: {
-              'X-Shopify-Access-Token': accessToken,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ product: shopifyProduct })
+          // Log product data for debugging
+          console.log('Shopify product data being sent:', {
+            title: shopifyProduct.title,
+            body_html: shopifyProduct.body_html ? shopifyProduct.body_html.substring(0, 100) + '...' : 'None',
+            variants: shopifyProduct.variants?.length || 0,
+            price: shopifyProduct.variants?.[0]?.price || 'N/A',
+            sku: shopifyProduct.variants?.[0]?.sku || 'N/A',
+            quantity: shopifyProduct.variants?.[0]?.inventory_quantity || 0
           });
           
-          console.log('Shopify API direct fetch response status:', response.status);
+          // Prepare the request body
+          const requestBody = JSON.stringify({ product: shopifyProduct });
+          console.log('Request body length:', requestBody.length, 'bytes');
           
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Shopify API error response:', errorText);
-            throw new Error(`Shopify API error (${response.status}): ${errorText}`);
-          }
+          // Make the API call with a timeout to detect hanging requests
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
-          const data = await response.json();
-          // Safely log the response structure without risking circular reference issues
           try {
-            console.log('Shopify API response JSON structure:', Object.keys(data));
-            
-            // Create a safe version of the data for logging by removing potentially circular references
-            const safeData = {};
-            Object.keys(data).forEach(key => {
-              if (typeof data[key] === 'object' && data[key] !== null) {
-                safeData[key] = '[Object]';
-              } else {
-                safeData[key] = data[key];
-              }
+            const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
+              method: 'POST',
+              headers: {
+                'X-Shopify-Access-Token': accessToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: requestBody,
+              signal: controller.signal
             });
             
-            console.log('Shopify API response data keys:', safeData);
+            // Clear the timeout since the request completed
+            clearTimeout(timeoutId);
             
-            // Only try to stringify the full object if it's reasonably small
-            if (JSON.stringify(safeData).length < 10000) {
-              console.log('Complete Shopify API response (limited):', JSON.stringify(data, null, 2).substring(0, 2000) + '...');
-            } else {
-              console.log('Shopify API response too large to log completely');
-            }
-          } catch (logError) {
-            console.error('Error logging Shopify API response:', logError);
-          }
+            // Log the raw response details
+            console.log(`[${new Date().toISOString()}] Shopify API response received:`, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries([...response.headers.entries()]),
+              size: response.headers.get('content-length') || 'unknown'
+            });
           
-          // Check for various response structures
-          if (data.product) {
-            result = data.product;
-          } else if (data.products) {
-            // Some versions of the API might return an array in 'products'
-            result = data.products[0];
-          } else if (data.data && data.data.product) {
-            // GraphQL response format
-            result = data.data.product;
-          } else if (data.id) {
-            // The response might be the product object directly
-            result = data;
-          } else {
-            console.error('Shopify API response missing product data:', data);
-            throw new Error('Shopify API response missing product data');
+            console.log('Shopify API direct fetch response status:', response.status);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Shopify API error response:', errorText);
+              throw new Error(`Shopify API error (${response.status}): ${errorText}`);
+            }
+          
+            const data = await response.json();
+            // Safely log the response structure without risking circular reference issues
+            try {
+              console.log('Shopify API response JSON structure:', Object.keys(data));
+              
+              // Create a safe version of the data for logging by removing potentially circular references
+              const safeData = {};
+              Object.keys(data).forEach(key => {
+                if (typeof data[key] === 'object' && data[key] !== null) {
+                  safeData[key] = '[Object]';
+                } else {
+                  safeData[key] = data[key];
+                }
+              });
+              
+              console.log('Shopify API response data keys:', safeData);
+              
+              // Only try to stringify the full object if it's reasonably small
+              if (JSON.stringify(safeData).length < 10000) {
+                console.log('Complete Shopify API response (limited):', JSON.stringify(data, null, 2).substring(0, 2000) + '...');
+              } else {
+                console.log('Shopify API response too large to log completely');
+              }
+            } catch (logError) {
+              console.error('Error logging Shopify API response:', logError);
+            }
+          
+            // Check for various response structures
+            if (data.product) {
+              result = data.product;
+              console.log(`[${new Date().toISOString()}] Found product in data.product`);
+            } else if (data.products) {
+              // Some versions of the API might return an array in 'products'
+              result = data.products[0];
+              console.log(`[${new Date().toISOString()}] Found product in data.products[0]`);
+            } else if (data.data && data.data.product) {
+              // GraphQL response format
+              result = data.data.product;
+              console.log(`[${new Date().toISOString()}] Found product in data.data.product`);
+            } else if (data.id) {
+              // The response might be the product object directly
+              result = data;
+              console.log(`[${new Date().toISOString()}] Using data directly as product (has ID)`);
+            } else {
+              console.error('Shopify API response missing product data:', data);
+              throw new Error('Shopify API response missing product data');
+            }
+          } catch (fetchError) {
+            // Clean up the timeout if there was an error
+            clearTimeout(timeoutId);
+            console.error(`[${new Date().toISOString()}] Error making Shopify API request:`, fetchError);
+            throw fetchError;
           }
         }
       } catch (error) {

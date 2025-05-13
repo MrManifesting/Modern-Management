@@ -828,4 +828,94 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       });
     }
   });
+  
+  // Add a test endpoint to diagnose Shopify API issues
+  app.post("/api/test-shopify-api", async (req: Request, res: Response) => {
+    try {
+      console.log(`[${new Date().toISOString()}] Running Shopify API test`);
+      
+      // Get Shopify credentials
+      const { getShopifyCredentials } = await import('./services/shopify-auth');
+      const credentials = await getShopifyCredentials();
+      
+      if (!credentials || !credentials.accessToken || !credentials.storeUrl) {
+        return res.status(500).json({
+          success: false,
+          message: 'Missing Shopify credentials'
+        });
+      }
+      
+      // Clean up the store URL
+      const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      
+      // Create a test product
+      const testProduct = {
+        title: `Test Product ${Date.now()}`,
+        body_html: '<p>Test product created via API test</p>',
+        vendor: 'API Test',
+        product_type: 'Test',
+        status: 'draft', // Important: use draft to avoid cluttering your store
+        variants: [
+          {
+            price: '9.99',
+            sku: `TEST-${Date.now()}`,
+            inventory_quantity: 1,
+            requires_shipping: true,
+            taxable: true
+          }
+        ]
+      };
+      
+      console.log(`[${new Date().toISOString()}] Making direct Shopify API call to create test product`);
+      
+      // Make direct API call
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': credentials.accessToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ product: testProduct })
+      });
+      
+      console.log(`[${new Date().toISOString()}] Shopify API response status:`, response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Shopify API error response:', errorText);
+        return res.status(response.status).json({
+          success: false,
+          message: `Shopify API error: ${response.status} ${response.statusText}`,
+          details: errorText
+        });
+      }
+      
+      const data = await response.json();
+      console.log('Shopify API test response keys:', Object.keys(data));
+      
+      // Extract the product ID and URL
+      let productId = null;
+      let productUrl = null;
+      
+      if (data.product && data.product.id) {
+        productId = data.product.id;
+        productUrl = `https://${storeUrl}/admin/products/${productId}`;
+      }
+      
+      return res.json({
+        success: true,
+        message: 'Shopify API test successful',
+        productId,
+        productUrl,
+        responseData: data
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error testing Shopify API:`, error);
+      return res.status(500).json({
+        success: false,
+        message: `Error testing Shopify API: ${error.message}`
+      });
+    }
+  });
 }
