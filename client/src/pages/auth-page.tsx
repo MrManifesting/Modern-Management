@@ -297,6 +297,12 @@ export default function AuthPage() {
               </Form>
             </TabsContent>
           </Tabs>
+          
+          <div className="p-4 text-center border-t border-gray-200 dark:border-gray-700">
+            <a href="/checkout" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              Test PayPal Payment Integration →
+            </a>
+          </div>
         </Card>
 
         {/* Hero Section */}
