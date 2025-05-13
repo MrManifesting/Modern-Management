@@ -90,6 +90,16 @@ function Router() {
           return <AffiliateQrDemo />;
         }} />
         <Route path="/checkout" component={() => <CheckoutPage />} />
+        <Route path="/demo-inventory" component={() => {
+          const DemoInventoryPage = React.lazy(() => import('@/pages/demo-inventory'));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <DemoInventoryPage />
+            </React.Suspense>
+          );
+        }} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
