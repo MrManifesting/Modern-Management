@@ -396,7 +396,7 @@ const DemoInventoryPage: React.FC = () => {
             
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <Button variant="outline" size="sm" onClick={() => toast({ title: "Demo Mode", description: "This feature is available in the full version." })}>
-                <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
+                <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
               <Button className="bg-yellow-600 hover:bg-yellow-700" size="sm" onClick={() => toast({ title: "Demo Mode", description: "In the full version, you can add new items with quantity options." })}>
