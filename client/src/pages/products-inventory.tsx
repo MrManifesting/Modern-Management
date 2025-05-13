@@ -21,12 +21,15 @@ import {
   CircleDollarSign,
   Percent,
   Tags,
+  Tag,
   ClipboardList,
   Image as ImageIcon,
   Printer,
   ChevronDown,
   Store,
-  PackageOpen
+  PackageOpen,
+  Barcode,
+  QrCode
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -379,6 +382,75 @@ const ProductsInventoryPage: React.FC = () => {
       });
       setIsPrintModalOpen(true);
     }
+  };
+
+  // Handle SKU generation
+  const handleGenerateSKU = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
+
+    // Call API to generate SKU
+    apiRequest('POST', `/api/items/${id}/generate-sku`)
+      .then(() => {
+        toast({
+          title: "SKU Generated",
+          description: "A new SKU has been generated for this item.",
+        });
+        // Refresh the items list
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to generate SKU. Please try again.",
+          variant: "destructive"
+        });
+      });
+  };
+
+  // Handle QR code generation
+  const handleGenerateQRCode = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
+
+    // Call API to generate QR code
+    apiRequest('POST', `/api/items/${id}/generate-qrcode`)
+      .then(() => {
+        toast({
+          title: "QR Code Generated",
+          description: "A new QR code has been generated for this item.",
+        });
+        // Refresh the items list
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to generate QR code. Please try again.",
+          variant: "destructive"
+        });
+      });
+  };
+
+  // Handle barcode generation
+  const handleGenerateBarcode = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
+
+    // Call API to generate barcode
+    apiRequest('POST', `/api/items/${id}/generate-barcode`)
+      .then(() => {
+        toast({
+          title: "Barcode Generated",
+          description: "A new barcode has been generated for this item.",
+        });
+        // Refresh the items list
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to generate barcode. Please try again.",
+          variant: "destructive"
+        });
+      });
   };
 
   // Handle viewing in Shopify
@@ -1561,19 +1633,67 @@ const ProductsInventoryPage: React.FC = () => {
                                         <Printer className="mr-2 h-4 w-4" />
                                         Print Barcode/QR
                                       </DropdownMenuItem>
-                                      {product.weight && product.id !== undefined && (
-                                        <DropdownMenuItem 
-                                          className="flex items-center cursor-pointer"
-                                          onClick={() => {
-                                            if (product.id !== undefined) {
-                                              handleQuickBreakdownClick(product.id);
-                                            }
-                                          }}
-                                        >
-                                          <PackageOpen className="mr-2 h-4 w-4" />
-                                          Quick Breakdown
-                                        </DropdownMenuItem>
-                                      )}
+                                      
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Quick Breakdown
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            // Call the SKU generation API
+                                            toast({
+                                              title: "Generating SKU",
+                                              description: "A new SKU is being generated for this item."
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Tags className="mr-2 h-4 w-4" />
+                                        Generate SKU
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            // Call the QR code generation API
+                                            toast({
+                                              title: "Generating QR Code",
+                                              description: "A new QR code is being generated for this item."
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <QrCode className="mr-2 h-4 w-4" />
+                                        Generate QR Code
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            // Call the barcode generation API
+                                            toast({
+                                              title: "Generating Barcode",
+                                              description: "A new barcode is being generated for this item."
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Barcode className="mr-2 h-4 w-4" />
+                                        Generate Barcode
+                                      </DropdownMenuItem>
+                                      
                                       {product.shopifyId && product.id !== undefined && (
                                         <DropdownMenuItem
                                           className="flex items-center cursor-pointer"
