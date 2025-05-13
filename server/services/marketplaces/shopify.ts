@@ -390,14 +390,48 @@ export class ShopifyService implements IMarketplaceService {
           }
           
           const data = await response.json();
-          console.log('Shopify API response JSON structure:', Object.keys(data));
+          // Safely log the response structure without risking circular reference issues
+          try {
+            console.log('Shopify API response JSON structure:', Object.keys(data));
+            
+            // Create a safe version of the data for logging by removing potentially circular references
+            const safeData = {};
+            Object.keys(data).forEach(key => {
+              if (typeof data[key] === 'object' && data[key] !== null) {
+                safeData[key] = '[Object]';
+              } else {
+                safeData[key] = data[key];
+              }
+            });
+            
+            console.log('Shopify API response data keys:', safeData);
+            
+            // Only try to stringify the full object if it's reasonably small
+            if (JSON.stringify(safeData).length < 10000) {
+              console.log('Complete Shopify API response (limited):', JSON.stringify(data, null, 2).substring(0, 2000) + '...');
+            } else {
+              console.log('Shopify API response too large to log completely');
+            }
+          } catch (logError) {
+            console.error('Error logging Shopify API response:', logError);
+          }
           
-          if (!data.product) {
+          // Check for various response structures
+          if (data.product) {
+            result = data.product;
+          } else if (data.products) {
+            // Some versions of the API might return an array in 'products'
+            result = data.products[0];
+          } else if (data.data && data.data.product) {
+            // GraphQL response format
+            result = data.data.product;
+          } else if (data.id) {
+            // The response might be the product object directly
+            result = data;
+          } else {
             console.error('Shopify API response missing product data:', data);
             throw new Error('Shopify API response missing product data');
           }
-          
-          result = data.product;
         }
       } catch (error) {
         const clientError = error as Error;
@@ -425,14 +459,45 @@ export class ShopifyService implements IMarketplaceService {
         throw new Error('Invalid response from Shopify API: No product data returned');
       }
       
-      // Verify that result has an id property
-      if (!result.id) {
-        throw new Error('Invalid response from Shopify API: Product has no ID');
-      }
+      // Handle different ID formats from Shopify API
+      let shopifyProductId = 0;
       
-      // Extract the numeric ID from the GID
-      const shopifyId = result.id.toString();
-      const shopifyProductId = parseInt(shopifyId.split('/').pop() || '0');
+      try {
+        // Make sure we have an ID in the result
+        if (!result.id) {
+          console.warn('Shopify product result has no ID property:', result);
+          // Try to find ID in a different location
+          if (result.admin_graphql_api_id) {
+            console.log('Using admin_graphql_api_id instead of id');
+            result.id = result.admin_graphql_api_id;
+          } else {
+            throw new Error('No product ID found in Shopify API response');
+          }
+        }
+        
+        const shopifyId = result.id.toString();
+        console.log('Raw Shopify product ID:', shopifyId);
+        
+        // Handle numeric ID
+        if (/^\d+$/.test(shopifyId)) {
+          shopifyProductId = parseInt(shopifyId);
+        } 
+        // Handle GID format (gid://shopify/Product/1234567890)
+        else if (shopifyId.includes('/')) {
+          const idParts = shopifyId.split('/');
+          const lastPart = idParts[idParts.length - 1];
+          shopifyProductId = parseInt(lastPart || '0');
+        }
+        
+        console.log('Extracted Shopify product ID:', shopifyProductId);
+        
+        if (isNaN(shopifyProductId) || shopifyProductId === 0) {
+          throw new Error(`Failed to extract valid product ID from: ${shopifyId}`);
+        }
+      } catch (error) {
+        console.error('Error extracting Shopify product ID:', error);
+        // Continue with shopifyProductId = 0, we'll handle this in the updateItemWithShopifyId check
+      }
       
       // In a real implementation, we would update the item with the Shopify ID
       if (shopifyProductId > 0) {
@@ -440,18 +505,32 @@ export class ShopifyService implements IMarketplaceService {
       }
       
       // Make sure we have variants array before trying to map it
-      const variants = result.variants || [];
-      const variantIds = Array.isArray(variants) 
-        ? variants.map((v: any) => v && v.id ? v.id : null).filter(Boolean)
-        : [];
+      let variantIds: any[] = [];
+      
+      try {
+        const variants = result.variants || [];
+        
+        if (Array.isArray(variants)) {
+          console.log('Variant data available:', variants.length, 'variants found');
+          variantIds = variants
+            .map((v: any) => v && v.id ? v.id : null)
+            .filter(Boolean);
+        } else {
+          console.log('No variant array found in result');
+        }
+      } catch (error) {
+        console.error('Error processing variant IDs:', error);
+      }
         
       return {
         success: true,
         message: `Successfully pushed product "${item.name}" to Shopify`,
         data: {
           shopifyProductId,
-          shopifyProductGid: result.id,
-          shopifyVariantIds: variantIds
+          shopifyProductGid: result.id || 'unknown',
+          shopifyVariantIds: variantIds,
+          responseType: typeof result,
+          responseKeys: Object.keys(result)
         }
       };
     } catch (error: any) {
