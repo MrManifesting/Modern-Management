@@ -77,7 +77,8 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
       
       // Group targets by weight for organized SKU generation
       const targetWeights = validTargets.map(target => target.weight);
-      const uniqueWeights = [...new Set(targetWeights)];
+      const uniqueWeightsSet = new Set(targetWeights);
+      const uniqueWeights = Array.from(uniqueWeightsSet);
       
       // Generate SKUs for all weights at once
       const skuMap = generateBreakdownSKUs(
