@@ -1479,8 +1479,65 @@ const ProductsInventoryPage: React.FC = () => {
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <div className="flex justify-center gap-2">
-                                  <Button size="sm" variant="outline">View</Button>
-                                  <Button size="sm" variant="outline">Edit</Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewClick(product.id)}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handlePrintBarcodeClick(product.id)}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      {product.weight && (
+                                        <DropdownMenuItem 
+                                          className="flex items-center cursor-pointer"
+                                          onClick={() => handleQuickBreakdownClick(product.id)}
+                                        >
+                                          <PackageOpen className="mr-2 h-4 w-4" />
+                                          Quick Breakdown
+                                        </DropdownMenuItem>
+                                      )}
+                                      {product.shopifyId && (
+                                        <DropdownMenuItem
+                                          className="flex items-center cursor-pointer"
+                                          onClick={() => handleViewShopifyClick(product.id)}
+                                        >
+                                          <Store className="mr-2 h-4 w-4" />
+                                          View in Shopify
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => handleDeleteClick(product.id)}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </td>
                             </tr>
