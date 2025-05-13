@@ -27,7 +27,9 @@ export function getQueryFn(options: QueryFnOptions = {}): QueryFunction {
     const [endpoint] = queryKey as string[];
 
     try {
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        credentials: 'include', // Include cookies for authentication
+      });
 
       if (response.status === 401 && options.on401 === "returnNull") {
         return { success: false, user: null };
@@ -111,7 +113,13 @@ export const apiRequest = async (
  * @returns The JSON response data
  */
 export async function apiRequestSimple<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(endpoint, options);
+  // Ensure credentials are included for all requests
+  const fetchOptions = { 
+    ...options,
+    credentials: 'include' // Include cookies for authentication
+  };
+  
+  const response = await fetch(endpoint, fetchOptions);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
