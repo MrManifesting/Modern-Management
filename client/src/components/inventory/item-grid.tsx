@@ -41,7 +41,7 @@ export default function ItemGrid({
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
   // Fetch items
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ['/api/items'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -76,9 +76,18 @@ export default function ItemGrid({
   // Get unique categories from items
   const categories = ["all", ...new Set(items.map((item: Item) => item.category))];
   
-  // Sort items - in stock first (quantity > 0) then alphabetically within each group
+  // Sort items - newest items first, then in stock items, then alphabetically
   const sortedItems = [...filteredItems].sort((a, b) => {
-    // First sort by stock status (in stock first)
+    // First prioritize newest items based on creation date
+    const dateA = new Date(a.createdAt || 0);
+    const dateB = new Date(b.createdAt || 0);
+    
+    // Sort by newest first (newest items appear at the top)
+    if (dateB.getTime() !== dateA.getTime()) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    
+    // Then sort by stock status (in stock first)
     if (a.quantity > 0 && b.quantity <= 0) return -1;
     if (a.quantity <= 0 && b.quantity > 0) return 1;
     
