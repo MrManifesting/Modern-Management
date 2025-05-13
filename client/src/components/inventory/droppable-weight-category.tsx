@@ -61,27 +61,27 @@ export const DroppableWeightCategory: React.FC<DroppableWeightCategoryProps> = (
     <div className="h-full">
       <Card 
         ref={drop}
-        className={`${getBorderStyle()} h-full transition-colors overflow-hidden`}
+        className={`${getBorderStyle()} h-full sm:h-auto min-h-[200px] transition-colors overflow-hidden`}
       >
-        <CardHeader className="p-3">
+        <CardHeader className="p-2 sm:p-3">
           <div className="flex justify-between items-center">
-            <CardTitle className="text-md flex items-center">
-              <Scale className="h-4 w-4 mr-2" />
+            <CardTitle className="text-sm sm:text-md flex items-center">
+              <Scale className="h-4 w-4 mr-1 sm:mr-2" />
               {name}
             </CardTitle>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="text-xs sm:text-sm">
               {items.length} items
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-3 pt-0 h-[calc(100%-60px)] overflow-auto">
+        <CardContent className="p-2 sm:p-3 pt-0 overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[250px]">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-center text-muted-foreground">
-              <ArrowDownUp className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">Drag items here to break down into {name} units</p>
+            <div className="flex flex-col items-center justify-center h-28 sm:h-40 text-center text-muted-foreground">
+              <ArrowDownUp className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
+              <p className="text-xs sm:text-sm">Drag items here to break down into {name} units</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {items.map((item) => (
                 <DraggableInventoryItem
                   key={item.id}
