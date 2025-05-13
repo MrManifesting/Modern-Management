@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Item } from '@shared/schema';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const WEIGHT_BRACKETS = {
 export default function QuickBreakdown({ item, isOpen, onClose }: QuickBreakdownProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [quantities, setQuantities] = useState<Record<string, number>>({
     [WEIGHT_BRACKETS.SEVEN_GRAM.name]: 0,
     [WEIGHT_BRACKETS.FOURTEEN_GRAM.name]: 0,
@@ -269,7 +271,10 @@ export default function QuickBreakdown({ item, isOpen, onClose }: QuickBreakdown
                 <Button variant="outline" onClick={handleClose}>
                   Close
                 </Button>
-                <Button onClick={() => navigate('/products-inventory')}>
+                <Button onClick={() => {
+                  handleClose();
+                  navigate('/products-inventory');
+                }}>
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Go to Inventory
                 </Button>

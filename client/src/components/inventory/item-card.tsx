@@ -8,7 +8,8 @@ import {
   Printer,
   QrCode,
   Barcode,
-  Store
+  Store,
+  PackageOpen
 } from "lucide-react";
 import ImageCarousel from "./image-carousel";
 import { 
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import BarcodePrint from "./barcode-print";
 import ShopifyStorePreview from "./shopify-store-preview";
+import QuickBreakdown from "./quick-breakdown";
 import { Item } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -40,6 +42,7 @@ type ItemCardProps = {
 export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [, navigate] = useLocation();
 
   // Format date for display with error handling
@@ -173,6 +176,13 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                     <Printer className="mr-2 h-4 w-4" />
                     Print Barcode/QR
                   </DropdownMenuItem>
+                  {/* Show breakdown option if item has weight info */}
+                  {item.weight && item.weight > 0 && (
+                    <DropdownMenuItem onClick={() => setIsBreakdownModalOpen(true)}>
+                      <PackageOpen className="mr-2 h-4 w-4" />
+                      Quick Breakdown
+                    </DropdownMenuItem>
+                  )}
                   {/* Only show View in Store for items that have a SKU and are listed */}
                   {item.sku && item.status === 'listed' && (
                     <DropdownMenuItem
@@ -223,6 +233,13 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <BarcodePrint item={item} onClose={() => setIsPrintModalOpen(false)} />
         </DialogContent>
       </Dialog>
+      
+      {/* Quick Breakdown Dialog */}
+      <QuickBreakdown 
+        item={item} 
+        isOpen={isBreakdownModalOpen} 
+        onClose={() => setIsBreakdownModalOpen(false)} 
+      />
 
       {/* Hidden trigger for shopify preview */}
       <span className="hidden" id={`shopify-preview-${item.id}`}>
