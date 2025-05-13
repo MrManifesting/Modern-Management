@@ -87,11 +87,7 @@ function Router() {
           const AffiliateQrDemo = React.lazy(() => import("@/pages/affiliate/qr-demo"));
           return <AffiliateQrDemo />;
         }} />
-        <Route path="/checkout">
-          <MainLayout>
-            <CheckoutPage />
-          </MainLayout>
-        </Route>
+        <Route path="/checkout" component={() => <CheckoutPage />} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
