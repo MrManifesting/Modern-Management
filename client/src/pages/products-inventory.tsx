@@ -1650,11 +1650,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         className="flex items-center cursor-pointer"
                                         onClick={() => {
                                           if (product.id !== undefined) {
-                                            // Call the SKU generation API
-                                            toast({
-                                              title: "Generating SKU",
-                                              description: "A new SKU is being generated for this item."
-                                            });
+                                            handleGenerateSKU(product.id);
                                           }
                                         }}
                                       >
@@ -1666,11 +1662,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         className="flex items-center cursor-pointer"
                                         onClick={() => {
                                           if (product.id !== undefined) {
-                                            // Call the QR code generation API
-                                            toast({
-                                              title: "Generating QR Code",
-                                              description: "A new QR code is being generated for this item."
-                                            });
+                                            handleGenerateQRCode(product.id);
                                           }
                                         }}
                                       >
@@ -1682,11 +1674,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         className="flex items-center cursor-pointer"
                                         onClick={() => {
                                           if (product.id !== undefined) {
-                                            // Call the barcode generation API
-                                            toast({
-                                              title: "Generating Barcode",
-                                              description: "A new barcode is being generated for this item."
-                                            });
+                                            handleGenerateBarcode(product.id);
                                           }
                                         }}
                                       >
