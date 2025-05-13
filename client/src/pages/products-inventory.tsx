@@ -50,6 +50,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -70,6 +79,8 @@ import {
 } from "@/components/ui/alert";
 import { useToast } from '@/hooks/use-toast';
 import ItemFormComponent from '@/components/inventory/item-form';
+import QuickBreakdown from '@/components/inventory/quick-breakdown';
+import BarcodePrint from '@/components/inventory/barcode-print';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
@@ -90,6 +101,7 @@ interface Product {
   status?: string;
   size?: string;
   volume?: string;
+  weight?: number;
   description?: string;
   imageUrl?: string;
   marketplace?: any[];
@@ -607,101 +619,66 @@ const ProductsInventoryPage: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2 mt-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="flex-1">
-                <Eye className="h-3 w-3 mr-1" />
-                View
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{product.name}</DialogTitle>
-                <DialogDescription>
-                  Product details
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
-                  <p>{product.category}</p>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
-                  <p>{product.subcategory}</p>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
-                  <p className="font-mono">{product.sku}</p>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
-                  <p>{product.size || "N/A"}</p>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
-                  <p>{formatPrice(product.price)}</p>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
-                  <p>{product.quantity}</p>
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
-                  <p>{product.description || "No description available"}</p>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="flex-1">
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>Edit Product</DialogTitle>
-                <DialogDescription>
-                  Make changes to the product information
-                </DialogDescription>
-              </DialogHeader>
-              <ItemFormComponent 
-                isEditing={true}
-                defaultValues={{
-                  name: product.name,
-                  description: product.description || "",
-                  basePrice: product.price,
-                  category: product.category,
-                  condition: "Used",
-                  status: product.status || "draft",
-                  images: product.imageUrl ? [product.imageUrl] : [],
-                  tags: [],
-                  marketplace: [],
-                }}
-                onSubmit={(data) => {
-                  console.log('Form data:', data);
-                  // TODO: Implement actual product update with API
-                  toast({
-                    title: "Product updated",
-                    description: "The product has been updated successfully."
-                  });
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-          
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-            onClick={() => handleDeleteClick(product.id || 0)}
+            className="flex-1"
+            onClick={() => handleViewClick(product.id || 0)}
           >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Delete
+            <Eye className="h-3 w-3 mr-1" />
+            View
           </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                Actions <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+              <DropdownMenuItem 
+                className="flex items-center cursor-pointer"
+                onClick={() => handleEditClick(product)}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Item
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center cursor-pointer"
+                onClick={() => handlePrintBarcodeClick(product.id || 0)}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print Barcode/QR
+              </DropdownMenuItem>
+              {product.weight && (
+                <DropdownMenuItem 
+                  className="flex items-center cursor-pointer"
+                  onClick={() => handleQuickBreakdownClick(product.id || 0)}
+                >
+                  <PackageOpen className="mr-2 h-4 w-4" />
+                  Quick Breakdown
+                </DropdownMenuItem>
+              )}
+              {product.shopifyId && (
+                <DropdownMenuItem
+                  className="flex items-center cursor-pointer"
+                  onClick={() => handleViewShopifyClick(product.id || 0)}
+                >
+                  <Store className="mr-2 h-4 w-4" />
+                  View in Shopify
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => handleDeleteClick(product.id || 0)}
+                className="flex items-center cursor-pointer text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardContent>
     </Card>
@@ -757,6 +734,46 @@ const ProductsInventoryPage: React.FC = () => {
           selectedItems={selectedItems} 
           onBulkEditComplete={handleBulkEditComplete} 
         />
+      )}
+      
+      {/* Quick Breakdown Dialog */}
+      {selectedItem && (
+        <Dialog open={isBreakdownModalOpen} onOpenChange={setIsBreakdownModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Quick Breakdown</DialogTitle>
+              <DialogDescription>
+                Break down this item into smaller units
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-4">
+              <QuickBreakdown 
+                item={selectedItem}
+                onClose={() => setIsBreakdownModalOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Barcode Print Dialog */}
+      {selectedItem && (
+        <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Print Barcode/QR Code</DialogTitle>
+              <DialogDescription>
+                Print a barcode or QR code for this item
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-4">
+              <BarcodePrint 
+                item={selectedItem}
+                onClose={() => setIsPrintModalOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
       
       {/* Delete Confirmation Dialog */}
