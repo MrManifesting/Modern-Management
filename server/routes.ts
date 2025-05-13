@@ -23,6 +23,7 @@ import { registerAffiliateRoutes } from "./routes-affiliate";
 import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
 import { registerSyncRoutes } from "./routes-sync";
+import { registerBreakdownRoutes } from "./routes-breakdown";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -3687,6 +3688,9 @@ ${topCustomersCsv}`;
   
   // Register real-time sync routes for bidirectional marketplace synchronization
   registerSyncRoutes(app, storage);
+  
+  // Register inventory breakdown routes
+  registerBreakdownRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;

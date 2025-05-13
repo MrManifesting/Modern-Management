@@ -129,8 +129,8 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <div className="absolute top-2 right-2 flex space-x-1">
             {/* Stock status badge */}
             <span className={`rounded-full px-2 py-1 text-xs font-medium text-white
-              ${Number(item.quantity) > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
-              {Number(item.quantity) > 0 ? `In Stock (${Number(item.quantity)})` : 'Out of Stock'}
+              ${Number(item.quantity || 0) > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+              {Number(item.quantity || 0) > 0 ? `In Stock (${Number(item.quantity)})` : 'Out of Stock'}
             </span>
             
             {/* Marketplace badge */}
