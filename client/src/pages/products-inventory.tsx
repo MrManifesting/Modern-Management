@@ -1525,7 +1525,11 @@ const ProductsInventoryPage: React.FC = () => {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => product.id && handleViewClick(product.id)}
+                                    onClick={() => {
+                                      if (product.id !== undefined) {
+                                        handleViewClick(product.id);
+                                      }
+                                    }}
                                   >
                                     <Eye className="h-3 w-3 mr-1" />
                                     View
@@ -1548,24 +1552,36 @@ const ProductsInventoryPage: React.FC = () => {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem 
                                         className="flex items-center cursor-pointer"
-                                        onClick={() => product.id && handlePrintBarcodeClick(product.id)}
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handlePrintBarcodeClick(product.id);
+                                          }
+                                        }}
                                       >
                                         <Printer className="mr-2 h-4 w-4" />
                                         Print Barcode/QR
                                       </DropdownMenuItem>
-                                      {product.weight && product.id && (
+                                      {product.weight && product.id !== undefined && (
                                         <DropdownMenuItem 
                                           className="flex items-center cursor-pointer"
-                                          onClick={() => handleQuickBreakdownClick(product.id)}
+                                          onClick={() => {
+                                            if (product.id !== undefined) {
+                                              handleQuickBreakdownClick(product.id);
+                                            }
+                                          }}
                                         >
                                           <PackageOpen className="mr-2 h-4 w-4" />
                                           Quick Breakdown
                                         </DropdownMenuItem>
                                       )}
-                                      {product.shopifyId && product.id && (
+                                      {product.shopifyId && product.id !== undefined && (
                                         <DropdownMenuItem
                                           className="flex items-center cursor-pointer"
-                                          onClick={() => handleViewShopifyClick(product.id)}
+                                          onClick={() => {
+                                            if (product.id !== undefined) {
+                                              handleViewShopifyClick(product.id);
+                                            }
+                                          }}
                                         >
                                           <Store className="mr-2 h-4 w-4" />
                                           View in Shopify
@@ -1573,7 +1589,11 @@ const ProductsInventoryPage: React.FC = () => {
                                       )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem 
-                                        onClick={() => product.id && handleDeleteClick(product.id)}
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
                                         className="flex items-center cursor-pointer text-red-600"
                                       >
                                         <Trash2 className="mr-2 h-4 w-4" />
