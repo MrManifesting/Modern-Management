@@ -1,17 +1,20 @@
 import React from 'react';
-import { useDrop } from 'react-dnd';
+import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BreakdownItem, convertWeight } from './drag-drop-context';
 import { DraggableInventoryItem } from './draggable-inventory-item';
 import { Scale, ArrowDownUp } from 'lucide-react';
 
+// Define the type for items being dragged
+type DraggableItem = BreakdownItem & { dragQuantity: number };
+
 interface DroppableWeightCategoryProps {
   name: string;
   weight: number;
   unit: string;
   items: BreakdownItem[];
-  onDrop: (item: BreakdownItem & { dragQuantity: number }) => void;
+  onDrop: (item: DraggableItem) => void;
   onMoveToWaiting: (itemId: number) => void;
 }
 
@@ -23,12 +26,13 @@ export const DroppableWeightCategory: React.FC<DroppableWeightCategoryProps> = (
   onDrop,
   onMoveToWaiting
 }) => {
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
+  const [{ isOver, canDrop }, drop] = useDrop<DraggableItem, void, { isOver: boolean; canDrop: boolean }>({
     accept: 'INVENTORY_ITEM',
-    drop: (droppedItem: BreakdownItem & { dragQuantity: number }) => {
+    drop: (droppedItem) => {
       onDrop(droppedItem);
+      return undefined;
     },
-    canDrop: (droppedItem: BreakdownItem) => {
+    canDrop: (droppedItem: DraggableItem) => {
       // Can only drop if the item has a weight and it's greater than or equal to the category weight
       if (!droppedItem.weight || !droppedItem.weightUnit) return false;
       
@@ -41,11 +45,11 @@ export const DroppableWeightCategory: React.FC<DroppableWeightCategoryProps> = (
       
       return itemWeightInCategoryUnit >= weight;
     },
-    collect: (monitor) => ({
+    collect: (monitor: DropTargetMonitor<DraggableItem, void>) => ({
       isOver: !!monitor.isOver(),
       canDrop: !!monitor.canDrop()
     })
-  }), [weight, unit, onDrop]);
+  }, [weight, unit, onDrop]);
   
   const getBorderStyle = () => {
     if (isOver && canDrop) return 'border-2 border-dashed border-green-500';
