@@ -411,6 +411,8 @@ export class ShopifyService implements IMarketplaceService {
               headers: Object.fromEntries([...response.headers.entries()]),
               size: response.headers.get('content-length') || 'unknown'
             });
+            
+            console.log(`[${new Date().toISOString()}] Important: Checking exact endpoint called: ${storeUrl}/admin/api/2023-10/products.json`);
           
             console.log('Shopify API direct fetch response status:', response.status);
             
@@ -449,12 +451,21 @@ export class ShopifyService implements IMarketplaceService {
           
             // Check for various response structures
             if (data.product) {
+              // Single product response
               result = data.product;
               console.log(`[${new Date().toISOString()}] Found product in data.product`);
-            } else if (data.products) {
-              // Some versions of the API might return an array in 'products'
-              result = data.products[0];
-              console.log(`[${new Date().toISOString()}] Found product in data.products[0]`);
+            } else if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+              // Products array response - this is the format returning from our test endpoint
+              console.log(`[${new Date().toISOString()}] Found products array with ${data.products.length} products`);
+              
+              // We need to find the product we just created
+              // For now, take the last one in the array (most recently created)
+              // In the future, we could match by title or other properties
+              result = data.products[data.products.length - 1];
+              console.log(`[${new Date().toISOString()}] Using most recent product from products array:`, {
+                id: result.id,
+                title: result.title
+              });
             } else if (data.data && data.data.product) {
               // GraphQL response format
               result = data.data.product;
@@ -464,7 +475,9 @@ export class ShopifyService implements IMarketplaceService {
               result = data;
               console.log(`[${new Date().toISOString()}] Using data directly as product (has ID)`);
             } else {
-              console.error('Shopify API response missing product data:', data);
+              // Additional troubleshooting info
+              console.error('Shopify API response missing product data. Available keys:', Object.keys(data));
+              console.error('Response data structure:', JSON.stringify(data).substring(0, 500) + '...');
               throw new Error('Shopify API response missing product data');
             }
           } catch (fetchError) {
