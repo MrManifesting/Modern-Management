@@ -231,8 +231,29 @@ export default function ItemFormComponent({
                       />
                     </div>
                   </FormControl>
-                  
-                  
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+          
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => {
+              return (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="1"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               );
@@ -316,19 +337,54 @@ export default function ItemFormComponent({
           <div className="sm:col-span-2">
             <div className="flex justify-between items-center">
               <FormLabel>Photos</FormLabel>
-              <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Upload className="h-4 w-4 mr-1" /> Bulk Upload
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle>Bulk Upload Items</DialogTitle>
-                  </DialogHeader>
-                  <BulkUpload onComplete={handleBulkUploadComplete} />
-                </DialogContent>
-              </Dialog>
+              <div className="flex space-x-2">
+                <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-1" /> Bulk Upload
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                      <DialogTitle>Bulk Upload Items</DialogTitle>
+                    </DialogHeader>
+                    <BulkUpload onComplete={handleBulkUploadComplete} />
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Telegram integration button */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-1.5"
+                  onClick={() => {
+                    // Open telegram photo selection dialog
+                    window.open('https://t.me/share/url?url=' + encodeURIComponent(window.location.href), '_blank');
+                    toast({
+                      title: "Telegram Integration",
+                      description: "Send photos to your bot and they'll appear in the app. Copy the item name first for auto-matching.",
+                    });
+                  }}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="h-4 w-4 mr-1"
+                  >
+                    <path d="M21.5 8.5V6.2c0-1.8-1.4-3.2-3.2-3.2H5.2C3.5 3 2 4.5 2 6.2v11.5c0 1.7 1.5 3.3 3.2 3.3h16.2c.5 0 .9-.4.9-1v-7.5"></path>
+                    <path d="M21.5 8.5C14 8.5 14 20 14 20"></path>
+                    <path d="M17 20V8.5h4.5"></path>
+                  </svg>
+                  From Telegram
+                </Button>
+              </div>
             </div>
             <div className="mt-1">
               <div 
