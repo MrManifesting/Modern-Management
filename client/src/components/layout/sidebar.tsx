@@ -174,6 +174,18 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Bulk Breakdown",
       icon: <Layers className="h-5 w-5" />,
       path: "/bulk-breakdown",
+      subItems: [
+        {
+          title: "Standard Breakdown",
+          path: "/bulk-breakdown",
+          className: "inventory-link primary-brand",
+        },
+        {
+          title: "Drag & Drop Breakdown",
+          path: "/drag-bulk-breakdown",
+          className: "inventory-link specialty-brand",
+        }
+      ]
     },
     {
       title: "Database Cleanup",

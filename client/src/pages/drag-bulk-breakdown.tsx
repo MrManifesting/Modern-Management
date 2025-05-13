@@ -82,7 +82,7 @@ const BulkBreakdownContent: React.FC = () => {
   
   // Filter items with weight >= 1 lb or 16 oz
   const bulkItems = React.useMemo(() => {
-    if (!allItems) return [];
+    if (!allItems || !Array.isArray(allItems)) return [];
     
     return allItems.filter((item: Item) => {
       // Convert different units to a standard (ounces)
@@ -106,12 +106,9 @@ const BulkBreakdownContent: React.FC = () => {
   // Mutation to add an item to the waiting area
   const moveToWaitingAreaMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      return apiRequest(`/api/bulk-items/${id}/move-to-waiting`, {
-        method: 'POST',
-        body: JSON.stringify({
-          quantity,
-          employeeId: 1 // TODO: Replace with actual logged-in employee ID
-        })
+      return apiRequest(`/api/bulk-items/${id}/move-to-waiting`, 'POST', {
+        quantity,
+        employeeId: 1 // TODO: Replace with actual logged-in employee ID
       });
     },
     onSuccess: (_, variables) => {
@@ -145,28 +142,34 @@ const BulkBreakdownContent: React.FC = () => {
   // Mutation to create breakdown products
   const createBreakdownMutation = useMutation({
     mutationFn: async (breakdownTargets: any[]) => {
-      return apiRequest('/api/product-breakdowns', {
-        method: 'POST',
-        body: JSON.stringify({
-          bulkItemId: waitingItems[0]?.id, // Use the first waiting item
-          employeeId: 1, // TODO: Replace with actual logged-in employee ID
-          targetProducts: breakdownTargets
-        })
+      return apiRequest('/api/product-breakdowns', 'POST', {
+        bulkItemId: waitingItems[0]?.id, // Use the first waiting item
+        employeeId: 1, // TODO: Replace with actual logged-in employee ID
+        targetProducts: breakdownTargets
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       // Now process the breakdown
-      processBreakdownMutation.mutate({
-        breakdownId: data.id,
-        targets: Object.values(targetItems).flat().map(item => ({
-          name: item.name,
-          price: item.price || 0,
-          quantity: item.quantity,
-          weight: item.weight || 0,
-          weightUnit: item.weightUnit || 'g',
-          sku: item.sku
-        }))
-      });
+      if (data && data.id) {
+        processBreakdownMutation.mutate({
+          breakdownId: data.id,
+          targets: Object.values(targetItems).flat().map(item => ({
+            name: item.name,
+            price: item.price || 0,
+            quantity: item.quantity,
+            weight: item.weight || 0,
+            weightUnit: item.weightUnit || 'g',
+            sku: item.sku
+          }))
+        });
+      } else {
+        setSavingBreakdown(false);
+        toast({
+          title: "Error",
+          description: "Failed to create breakdown: Invalid response from server",
+          variant: "destructive"
+        });
+      }
     },
     onError: (error) => {
       setSavingBreakdown(false);
@@ -181,12 +184,9 @@ const BulkBreakdownContent: React.FC = () => {
   // Mutation to process the breakdown
   const processBreakdownMutation = useMutation({
     mutationFn: async ({ breakdownId, targets }: { breakdownId: number; targets: any[] }) => {
-      return apiRequest(`/api/product-breakdowns/${breakdownId}/create-products`, {
-        method: 'POST',
-        body: JSON.stringify({
-          employeeId: 1, // TODO: Replace with actual logged-in employee ID
-          targetProducts: targets
-        })
+      return apiRequest(`/api/product-breakdowns/${breakdownId}/create-products`, 'POST', {
+        employeeId: 1, // TODO: Replace with actual logged-in employee ID
+        targetProducts: targets
       });
     },
     onSuccess: () => {
@@ -195,8 +195,7 @@ const BulkBreakdownContent: React.FC = () => {
       
       toast({
         title: "Breakdown completed",
-        description: "The bulk item has been successfully broken down into smaller products.",
-        variant: "success"
+        description: "The bulk item has been successfully broken down into smaller products."
       });
       
       // Clear the breakdown
