@@ -381,6 +381,16 @@ export class ShopifyService implements IMarketplaceService {
         throw new Error(`Client create error: ${clientError.message || 'Unknown error'}`);
       }
       
+      // Verify that we have a valid result before proceeding
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response from Shopify API: No product data returned');
+      }
+      
+      // Verify that result has an id property
+      if (!result.id) {
+        throw new Error('Invalid response from Shopify API: Product has no ID');
+      }
+      
       // Extract the numeric ID from the GID
       const shopifyId = result.id.toString();
       const shopifyProductId = parseInt(shopifyId.split('/').pop() || '0');
@@ -390,13 +400,19 @@ export class ShopifyService implements IMarketplaceService {
         await updateItemWithShopifyId(item.id, shopifyProductId);
       }
       
+      // Make sure we have variants array before trying to map it
+      const variants = result.variants || [];
+      const variantIds = Array.isArray(variants) 
+        ? variants.map((v: any) => v && v.id ? v.id : null).filter(Boolean)
+        : [];
+        
       return {
         success: true,
         message: `Successfully pushed product "${item.name}" to Shopify`,
         data: {
           shopifyProductId,
           shopifyProductGid: result.id,
-          shopifyVariantIds: result.variants.map((v: any) => v.id)
+          shopifyVariantIds: variantIds
         }
       };
     } catch (error: any) {
