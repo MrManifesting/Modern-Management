@@ -340,23 +340,37 @@ export class ShopifyService implements IMarketplaceService {
         // Try different possible client structures
         if (client.shopify && client.shopify.product && typeof client.shopify.product.create === 'function') {
           // Standard client structure
-          result = await client.shopify.product.create(shopifyProduct);
+          console.log('Using standard structure (client.shopify.product.create)');
+          const response = await client.shopify.product.create(shopifyProduct);
+          console.log('Shopify API response structure:', Object.keys(response));
+          result = response;
         } else if (client.product && typeof client.product.create === 'function') {
           // Alternative client structure
-          result = await client.product.create(shopifyProduct);
+          console.log('Using alternative structure (client.product.create)');
+          const response = await client.product.create(shopifyProduct);
+          console.log('Shopify API response structure:', Object.keys(response));
+          result = response;
         } else if (typeof client.create === 'function') {
           // Direct client structure
-          result = await client.create(shopifyProduct);
+          console.log('Using direct structure (client.create)');
+          const response = await client.create(shopifyProduct);
+          console.log('Shopify API response structure:', Object.keys(response));
+          result = response;
         } else {
           // Fallback to direct API call using Fetch
+          console.log('Using fallback direct fetch API call');
           const credentials = await getShopifyCredentials();
           
           if (!credentials || !credentials.accessToken || !credentials.storeUrl) {
+            console.error('Missing credentials for Shopify API call');
             throw new Error('Missing Shopify credentials for direct API call');
           }
           
           const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
           const accessToken = credentials.accessToken;
+          
+          console.log(`Making direct API call to ${storeUrl}/admin/api/2023-10/products.json`);
+          console.log('Shopify product data structure:', Object.keys(shopifyProduct));
           
           const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json`, {
             method: 'POST',
@@ -367,18 +381,43 @@ export class ShopifyService implements IMarketplaceService {
             body: JSON.stringify({ product: shopifyProduct })
           });
           
+          console.log('Shopify API direct fetch response status:', response.status);
+          
           if (!response.ok) {
             const errorText = await response.text();
+            console.error('Shopify API error response:', errorText);
             throw new Error(`Shopify API error (${response.status}): ${errorText}`);
           }
           
           const data = await response.json();
+          console.log('Shopify API response JSON structure:', Object.keys(data));
+          
+          if (!data.product) {
+            console.error('Shopify API response missing product data:', data);
+            throw new Error('Shopify API response missing product data');
+          }
+          
           result = data.product;
         }
       } catch (error) {
         const clientError = error as Error;
         console.error('Error in Shopify client.create:', clientError);
-        throw new Error(`Client create error: ${clientError.message || 'Unknown error'}`);
+        console.error('Full error details:', {
+          message: clientError.message,
+          stack: clientError.stack,
+          name: clientError.name
+        });
+        
+        // Check for specific Shopify error patterns
+        if (clientError.message && clientError.message.includes('401')) {
+          throw new Error(`Shopify authentication error: Invalid or expired token. Please update your Shopify credentials.`);
+        } else if (clientError.message && clientError.message.includes('422')) {
+          throw new Error(`Invalid product data: ${clientError.message}`);
+        } else if (clientError.message && clientError.message.includes('429')) {
+          throw new Error(`Shopify rate limit exceeded. Please try again later.`);
+        } else {
+          throw new Error(`Client create error: ${clientError.message || 'Unknown error'}`);
+        }
       }
       
       // Verify that we have a valid result before proceeding
