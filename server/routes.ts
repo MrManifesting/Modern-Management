@@ -110,7 +110,7 @@ import {
   processBreakdown, 
   generateStandardBreakdownTargets 
 } from "./services/inventory-breakdown";
-import { generateSKU } from "./services/sku-generator";
+import { generateSKU, generateQuantitySKU } from "./services/sku-generator";
 import { 
   prepareItemForShopify, 
   getPushStatus, 
@@ -518,7 +518,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate SKU if not provided
       if (!itemData.sku) {
-        itemData.sku = generateSKU(itemData);
+        // Use quantity-specific SKU generator if quantity > 1
+        if (itemData.quantity && itemData.quantity > 1) {
+          itemData.sku = generateSKU(itemData, { quantity: itemData.quantity });
+        } else {
+          itemData.sku = generateSKU(itemData);
+        }
       }
       
       // Generate barcode data
