@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { 
   Plus, 
   UploadCloud, 
@@ -22,7 +22,11 @@ import {
   Percent,
   Tags,
   ClipboardList,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Printer,
+  ChevronDown,
+  Store,
+  PackageOpen
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -192,12 +196,16 @@ const ProductsInventoryPage: React.FC = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
+  const [selectedItem, setSelectedItem] = useState<Product | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [deleteAllConfirmation, setDeleteAllConfirmation] = useState("");
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   
   // Fetch items from API
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
@@ -314,10 +322,56 @@ const ProductsInventoryPage: React.FC = () => {
     return "bg-gray-400 text-white";
   };
 
+  // Handle viewing product details
+  const handleViewClick = (id: number) => {
+    // Navigate to product details page
+    navigate(`/inventory/${id}`);
+  };
+
+  // Handle editing product
+  const handleEditClick = (product: Product) => {
+    setAddItemModalOpen(true);
+    // Pass the product to the item form component
+    setSelectedItem(product);
+  };
+
   // Handle product deletion
   const handleDeleteClick = (id: number) => {
     setProductIdToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  // Handle quick breakdown
+  const handleQuickBreakdownClick = (id: number) => {
+    const itemToBreakdown = products.find((item: Product) => item.id === id);
+    if (itemToBreakdown) {
+      setSelectedItem(itemToBreakdown);
+      setIsBreakdownModalOpen(true);
+    }
+  };
+
+  // Handle barcode printing
+  const handlePrintBarcodeClick = (id: number) => {
+    const itemToPrint = products.find((item: Product) => item.id === id);
+    if (itemToPrint) {
+      setSelectedItem(itemToPrint);
+      setIsPrintModalOpen(true);
+    }
+  };
+
+  // Handle viewing in Shopify
+  const handleViewShopifyClick = (id: number) => {
+    // Navigate to Shopify view page or open Shopify preview
+    const itemToView = products.find((item: Product) => item.id === id);
+    if (itemToView && itemToView.shopifyId) {
+      window.open(`/api/items/${id}/shopify-store-view`, '_blank');
+    } else {
+      toast({
+        title: "Not available",
+        description: "This item is not yet available in Shopify.",
+        variant: "destructive"
+      });
+    }
   };
 
   const confirmDelete = () => {
