@@ -356,8 +356,11 @@ const ProductsInventoryPage: React.FC = () => {
   // Handle quick breakdown
   const handleQuickBreakdownClick = (id: number) => {
     const itemToBreakdown = products.find((item: Product) => item.id === id);
-    if (itemToBreakdown) {
-      setSelectedItem(itemToBreakdown);
+    if (itemToBreakdown && itemToBreakdown.id) { // Ensure id is defined
+      setSelectedItem({
+        ...itemToBreakdown,
+        id: itemToBreakdown.id // Ensure id is passed
+      });
       setIsBreakdownModalOpen(true);
     }
   };
@@ -365,8 +368,11 @@ const ProductsInventoryPage: React.FC = () => {
   // Handle barcode printing
   const handlePrintBarcodeClick = (id: number) => {
     const itemToPrint = products.find((item: Product) => item.id === id);
-    if (itemToPrint) {
-      setSelectedItem(itemToPrint);
+    if (itemToPrint && itemToPrint.id) { // Ensure id is defined
+      setSelectedItem({
+        ...itemToPrint,
+        id: itemToPrint.id // Ensure id is passed
+      });
       setIsPrintModalOpen(true);
     }
   };
@@ -737,7 +743,7 @@ const ProductsInventoryPage: React.FC = () => {
       )}
       
       {/* Quick Breakdown Dialog */}
-      {selectedItem && (
+      {selectedItem && selectedItem.id && (
         <Dialog open={isBreakdownModalOpen} onOpenChange={setIsBreakdownModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -748,7 +754,15 @@ const ProductsInventoryPage: React.FC = () => {
             </DialogHeader>
             <div className="p-4">
               <QuickBreakdown 
-                item={selectedItem}
+                item={{
+                  id: selectedItem.id,
+                  name: selectedItem.name,
+                  category: selectedItem.category,
+                  price: selectedItem.price,
+                  quantity: selectedItem.quantity,
+                  weight: selectedItem.weight,
+                  sku: selectedItem.sku
+                }}
                 onClose={() => setIsBreakdownModalOpen(false)}
               />
             </div>
@@ -757,7 +771,7 @@ const ProductsInventoryPage: React.FC = () => {
       )}
 
       {/* Barcode Print Dialog */}
-      {selectedItem && (
+      {selectedItem && selectedItem.id && (
         <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -768,7 +782,14 @@ const ProductsInventoryPage: React.FC = () => {
             </DialogHeader>
             <div className="p-4">
               <BarcodePrint 
-                item={selectedItem}
+                item={{
+                  id: selectedItem.id,
+                  name: selectedItem.name,
+                  sku: selectedItem.sku,
+                  barcode: selectedItem.barcode,
+                  price: selectedItem.price,
+                  quantity: selectedItem.quantity
+                }}
                 onClose={() => setIsPrintModalOpen(false)}
               />
             </div>
