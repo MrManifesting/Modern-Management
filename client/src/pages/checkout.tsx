@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import PayPalButton from '../components/PayPalButton';
+// PayPal button temporarily commented out to avoid token fetch errors
+// import PayPalButton from '../components/PayPalButton';
 import { Separator } from '@/components/ui/separator';
 
 export function CheckoutPage() {
@@ -85,18 +86,20 @@ export function CheckoutPage() {
           <CardFooter>
             {paymentMethod === 'paypal' ? (
               <div className="w-full">
-                <div 
-                  className="mb-4 p-4 border rounded-md bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors flex items-center justify-center"
-                  style={{ height: '50px' }}
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 mb-4"
+                  onClick={() => {
+                    toast({
+                      title: "PayPal Integration Issue",
+                      description: "PayPal client authentication failed. Please check your PayPal credentials and try again.",
+                      variant: "destructive"
+                    });
+                  }}
                 >
-                  <PayPalButton 
-                    amount={amount} 
-                    currency="USD" 
-                    intent="CAPTURE" 
-                  />
-                </div>
+                  Pay with PayPal
+                </Button>
                 <p className="text-sm text-muted-foreground text-center">
-                  Click the button above to pay with PayPal
+                  PayPal integration requires valid API credentials
                 </p>
               </div>
             ) : (
