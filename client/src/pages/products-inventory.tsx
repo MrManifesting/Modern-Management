@@ -335,7 +335,8 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Handle viewing product details
-  const handleViewClick = (id: number) => {
+  const handleViewClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
     // Navigate to product details page
     navigate(`/inventory/${id}`);
   };
@@ -348,13 +349,15 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Handle product deletion
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
     setProductIdToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   // Handle quick breakdown
-  const handleQuickBreakdownClick = (id: number) => {
+  const handleQuickBreakdownClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
     const itemToBreakdown = products.find((item: Product) => item.id === id);
     if (itemToBreakdown && itemToBreakdown.id) { // Ensure id is defined
       setSelectedItem({
@@ -366,7 +369,8 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Handle barcode printing
-  const handlePrintBarcodeClick = (id: number) => {
+  const handlePrintBarcodeClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
     const itemToPrint = products.find((item: Product) => item.id === id);
     if (itemToPrint && itemToPrint.id) { // Ensure id is defined
       setSelectedItem({
@@ -378,7 +382,8 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Handle viewing in Shopify
-  const handleViewShopifyClick = (id: number) => {
+  const handleViewShopifyClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
     // Navigate to Shopify view page or open Shopify preview
     const itemToView = products.find((item: Product) => item.id === id);
     if (itemToView && itemToView.shopifyId) {
@@ -1520,7 +1525,7 @@ const ProductsInventoryPage: React.FC = () => {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleViewClick(product.id)}
+                                    onClick={() => product.id && handleViewClick(product.id)}
                                   >
                                     <Eye className="h-3 w-3 mr-1" />
                                     View
@@ -1543,12 +1548,12 @@ const ProductsInventoryPage: React.FC = () => {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem 
                                         className="flex items-center cursor-pointer"
-                                        onClick={() => handlePrintBarcodeClick(product.id)}
+                                        onClick={() => product.id && handlePrintBarcodeClick(product.id)}
                                       >
                                         <Printer className="mr-2 h-4 w-4" />
                                         Print Barcode/QR
                                       </DropdownMenuItem>
-                                      {product.weight && (
+                                      {product.weight && product.id && (
                                         <DropdownMenuItem 
                                           className="flex items-center cursor-pointer"
                                           onClick={() => handleQuickBreakdownClick(product.id)}
@@ -1557,7 +1562,7 @@ const ProductsInventoryPage: React.FC = () => {
                                           Quick Breakdown
                                         </DropdownMenuItem>
                                       )}
-                                      {product.shopifyId && (
+                                      {product.shopifyId && product.id && (
                                         <DropdownMenuItem
                                           className="flex items-center cursor-pointer"
                                           onClick={() => handleViewShopifyClick(product.id)}
@@ -1568,7 +1573,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem 
-                                        onClick={() => handleDeleteClick(product.id)}
+                                        onClick={() => product.id && handleDeleteClick(product.id)}
                                         className="flex items-center cursor-pointer text-red-600"
                                       >
                                         <Trash2 className="mr-2 h-4 w-4" />
