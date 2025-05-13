@@ -310,11 +310,11 @@ const BulkBreakdownContent: React.FC = () => {
   const hasBreakdownProducts = Object.values(targetItems).some(items => items.length > 0);
   
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Bulk Product Breakdown</h1>
+    <div className="container mx-auto p-2 sm:p-4 pb-16">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Bulk Product Breakdown</h1>
       
       <Tabs defaultValue="bulk" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4 max-w-md">
+        <TabsList className="grid grid-cols-3 mb-4 max-w-full sm:max-w-md overflow-x-auto">
           <TabsTrigger value="bulk">Bulk Inventory</TabsTrigger>
           <TabsTrigger value="waiting">Waiting Area</TabsTrigger>
           <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
@@ -322,7 +322,7 @@ const BulkBreakdownContent: React.FC = () => {
         
         {/* Bulk Inventory Tab */}
         <TabsContent value="bulk" className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto max-h-[calc(100vh-200px)] pb-6">
             {bulkItems?.length > 0 ? (
               bulkItems.map((item: Item) => (
                 <div key={item.id} className="relative">
@@ -348,7 +348,7 @@ const BulkBreakdownContent: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div className="col-span-3 flex flex-col items-center justify-center p-8 bg-muted rounded-md">
+              <div className="col-span-full flex flex-col items-center justify-center p-8 bg-muted rounded-md">
                 <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-medium mb-2">No Bulk Items</h3>
                 <p className="text-muted-foreground text-center max-w-md">
@@ -361,13 +361,13 @@ const BulkBreakdownContent: React.FC = () => {
         
         {/* Waiting Area Tab */}
         <TabsContent value="waiting" className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto max-h-[calc(100vh-200px)] pb-6">
             {waitingItems.length > 0 ? (
               waitingItems.map((item) => (
                 <DraggableInventoryItem key={item.id} item={item} />
               ))
             ) : (
-              <div className="col-span-3 flex flex-col items-center justify-center p-8 bg-muted rounded-md">
+              <div className="col-span-full flex flex-col items-center justify-center p-8 bg-muted rounded-md">
                 <Package className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-medium mb-2">Waiting Area Empty</h3>
                 <p className="text-muted-foreground text-center max-w-md">
@@ -402,7 +402,7 @@ const BulkBreakdownContent: React.FC = () => {
             </Button>
           </div>
           
-          <div className="grid md:grid-cols-5 gap-4 h-[calc(100vh-280px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 h-auto md:h-[500px] max-h-[calc(100vh-280px)] overflow-y-auto pb-6">
             {/* 7 Gram Category */}
             <DroppableWeightCategory
               name={WEIGHT_BRACKETS.SEVEN_GRAM.name}
