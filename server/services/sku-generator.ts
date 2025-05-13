@@ -10,9 +10,18 @@ import { InsertItem, Item } from "@shared/schema";
  * Generate a SKU (Stock Keeping Unit) for an item
  * 
  * @param item The item data to generate a SKU for
+ * @param options Optional configuration for SKU generation
  * @returns A unique SKU string
  */
-export function generateSKU(item: Partial<InsertItem> | Item): string {
+export function generateSKU(
+  item: Partial<InsertItem> | Item, 
+  options?: { 
+    quantity?: number, 
+    weight?: number, 
+    weightUnit?: string,
+    parentSku?: string
+  }
+): string {
   // Start with a category prefix (max 3 chars)
   const categoryPrefix = getCategoryPrefix(item.category || 'MISC');
   
@@ -30,22 +39,111 @@ export function generateSKU(item: Partial<InsertItem> | Item): string {
   // Add a timestamp for uniqueness
   const timestamp = Date.now().toString().substring(7);
   
-  // Combine all parts
-  return `${categoryPrefix}-${brandPrefix}-${namePart}-${timestamp}`;
+  // Base SKU
+  let sku = `${categoryPrefix}-${brandPrefix}-${namePart}-${timestamp}`;
+  
+  // If we have options for quantity or weight, incorporate them into the SKU
+  if (options) {
+    // If this is a breakdown or derived item with quantity/weight
+    if (options.parentSku) {
+      // Use parent SKU as base
+      sku = options.parentSku;
+      
+      // Add a weight suffix if provided
+      if (options.weight && options.weightUnit) {
+        sku = `${sku}-${options.weight}${options.weightUnit}`;
+      }
+      
+      // For multiple quantities of the same weight, add a sequence number
+      if (options.quantity && options.quantity > 1) {
+        sku = `${sku}-${options.quantity}`;
+      }
+    }
+    // If this is a standalone item with quantity variations
+    else if (options.quantity && options.quantity > 1) {
+      sku = `${sku}-QTY${options.quantity}`;
+    }
+  }
+  
+  return sku;
 }
 
 /**
  * Generate SKUs in batch for multiple items
  * 
  * @param items Array of items to generate SKUs for
+ * @param options Optional configuration for SKU generation, keyed by item ID
  * @returns Map of item IDs to generated SKUs
  */
-export function generateSKUBatch(items: Item[]): Map<number, string> {
+export function generateSKUBatch(
+  items: Item[], 
+  options?: Record<number, { 
+    quantity?: number, 
+    weight?: number, 
+    weightUnit?: string,
+    parentSku?: string
+  }>
+): Map<number, string> {
   const skuMap = new Map<number, string>();
   
   for (const item of items) {
     if (item.id) {
-      skuMap.set(item.id, generateSKU(item));
+      const itemOptions = options?.[item.id];
+      skuMap.set(item.id, generateSKU(item, itemOptions));
+    }
+  }
+  
+  return skuMap;
+}
+
+/**
+ * Generate a quantity-specific SKU for an item
+ * 
+ * @param item The base item
+ * @param quantity The specific quantity
+ * @returns A quantity-specific SKU
+ */
+export function generateQuantitySKU(item: Item, quantity: number): string {
+  // Generate a SKU that includes the quantity
+  return generateSKU(item, { quantity });
+}
+
+/**
+ * Generate SKUs for a breakdown of an item
+ * 
+ * @param parentItem The parent/bulk item
+ * @param weights Array of weight breakdowns (e.g., [7, 14, 28])
+ * @param weightUnit The unit of weight (e.g., 'g')
+ * @returns Map of weights to generated SKUs
+ */
+export function generateBreakdownSKUs(
+  parentItem: Item, 
+  weights: number[], 
+  weightUnit: string
+): Map<number, string> {
+  const skuMap = new Map<number, string>();
+  
+  if (!parentItem.sku) {
+    // Generate a parent SKU if it doesn't exist
+    const parentSku = generateSKU(parentItem);
+    
+    for (const weight of weights) {
+      const sku = generateSKU(parentItem, {
+        weight,
+        weightUnit,
+        parentSku
+      });
+      skuMap.set(weight, sku);
+    }
+  } else {
+    // Use the existing parent SKU
+    for (const weight of weights) {
+      const sku = generateSKU(parentItem, {
+        weight,
+        weightUnit,
+        parentSku: parentItem.sku
+      });
+      skuMap.set(weight, sku);
     }
   }
   

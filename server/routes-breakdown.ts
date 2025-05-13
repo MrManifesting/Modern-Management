@@ -8,7 +8,7 @@ import { z } from "zod";
 import { ItemType, BreakdownStatus } from "@shared/schema";
 import { generateBarcodeData } from "./services/barcode";
 import { generateQRCodeDataURL } from "./services/qrcode";
-import { generateSKU } from "./services/sku-generator";
+import { generateSKU, generateBreakdownSKUs } from "./services/sku-generator";
 
 // Define a schema for breakdown targets
 const breakdownTargetSchema = z.object({
@@ -74,11 +74,26 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
       
       // Create the breakdown items
       const createdItems = [];
+      
+      // Group targets by weight for organized SKU generation
+      const targetWeights = validTargets.map(target => target.weight);
+      const uniqueWeights = [...new Set(targetWeights)];
+      
+      // Generate SKUs for all weights at once
+      const skuMap = generateBreakdownSKUs(
+        parentItem, 
+        uniqueWeights, 
+        validTargets[0].weightUnit // Assuming all targets use the same weight unit
+      );
+      
       for (const target of validTargets) {
-        const baseSku = parentItem.sku || generateSKU(parentItem);
-        
-        // Generate SKU for the breakdown item
-        const breakdownSku = `${baseSku}-${target.weight}${target.weightUnit}`;
+        // Use the pre-generated SKU for this weight
+        const breakdownSku = skuMap.get(target.weight) || 
+          generateSKU(parentItem, {
+            weight: target.weight,
+            weightUnit: target.weightUnit,
+            parentSku: parentItem.sku
+          });
         
         // Prepare breakdown item data
         const breakdownItemData = {
