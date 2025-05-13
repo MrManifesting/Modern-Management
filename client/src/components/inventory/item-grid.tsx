@@ -74,7 +74,8 @@ export default function ItemGrid({
     : items.filter((item: Item) => item.category === selectedCategory);
 
   // Get unique categories from items
-  const categories = ["all", ...new Set(items.map((item: Item) => item.category))];
+  const uniqueCategories = Array.from(new Set(items.map((item: Item) => item.category)));
+  const categories = ["all", ...uniqueCategories];
   
   // Sort items - newest items first, then in stock items, then alphabetically
   const sortedItems = [...filteredItems].sort((a, b) => {

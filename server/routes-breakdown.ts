@@ -86,7 +86,7 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
           description: `${target.weight}${target.weightUnit} breakdown from ${parentItem.name}`,
           sku: breakdownSku,
           basePrice: target.price,
-          costPrice: parentItem.costPrice * (target.weight / (parentItem.weight || 1)),
+          costPrice: parentItem.costPrice ? parentItem.costPrice * (target.weight / (parentItem.weight || 1)) : 0,
           category: parentItem.category,
           subcategory: parentItem.subcategory,
           brand: parentItem.brand,
@@ -96,8 +96,9 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
           weightUnit: target.weightUnit,
           itemType: ItemType.BREAKDOWN,
           parentItemId: target.parentItemId,
-          images: parentItem.images, // Inherit images from parent
-          tags: parentItem.tags, // Inherit tags from parent
+          // Cast images and tags to ensure proper typing
+          images: (parentItem.images || []) as any,
+          tags: (parentItem.tags || []) as any,
           breakdownStatus: BreakdownStatus.COMPLETED,
           status: parentItem.status, // Inherit status from parent
         };
