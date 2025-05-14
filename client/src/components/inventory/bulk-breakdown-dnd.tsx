@@ -188,22 +188,25 @@ export function BulkBreakdownDnd({ item, onComplete }: BulkBreakdownDndProps) {
 
     try {
       // Create a breakdown API request
-      const response = await apiRequest<{
+      const response = await apiRequest(
+        "POST",
+        `/api/items/${item.id}/drag-drop-breakdown`, 
+        {
+          targetWeight: weight,
+          targetUnit: unit,
+          quantity: quantity,
+        }
+      );
+
+      const data = await response.json() as {
         success: boolean;
         message: string;
         newItemId?: number;
         newSku?: string;
         remainingQuantity?: number;
-      }>(`/api/items/${item.id}/drag-drop-breakdown`, {
-        method: "POST",
-        data: {
-          targetWeight: weight,
-          targetUnit: unit,
-          quantity: quantity,
-        },
-      });
+      };
 
-      if (response && response.success) {
+      if (data && data.success) {
         // Add the new breakdown to results
         setResults((prev) => [
           ...prev,
@@ -211,14 +214,14 @@ export function BulkBreakdownDnd({ item, onComplete }: BulkBreakdownDndProps) {
             weight,
             unit,
             quantity,
-            newSku: response.newSku,
-            newItemId: response.newItemId,
+            newSku: data.newSku,
+            newItemId: data.newItemId,
           },
         ]);
 
         // Update local item quantity if response includes it
-        if (response.remainingQuantity !== undefined) {
-          item.quantity = response.remainingQuantity;
+        if (data.remainingQuantity !== undefined) {
+          item.quantity = data.remainingQuantity;
         }
 
         toast({
