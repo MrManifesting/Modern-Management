@@ -24,6 +24,7 @@ import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
 import { registerSyncRoutes } from "./routes-sync";
 import { registerBreakdownRoutes } from "./routes-breakdown";
+import { registerBarcodeRoutes } from "./routes-barcode";
 import { setupAuth } from "./auth";
 import { 
   insertItemSchema, 
@@ -3695,6 +3696,9 @@ ${topCustomersCsv}`;
   
   // Register inventory breakdown routes
   registerBreakdownRoutes(app, storage);
+  
+  // Register color-coded barcode routes
+  registerBarcodeRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
