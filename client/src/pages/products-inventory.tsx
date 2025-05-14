@@ -1743,44 +1743,62 @@ const ProductsInventoryPage: React.FC = () => {
                                   </DialogContent>
                                 </Dialog>
                                 
-                                <Dialog>
-                                  <DialogTrigger asChild>
+                                {/* Action Dropdown Menu */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
                                     <Button size="sm" variant="outline">
-                                      <Edit className="h-3 w-3 mr-1" />
-                                      Edit
+                                      Actions <ChevronDown className="ml-1 h-3 w-3" />
                                     </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                      <DialogTitle>Edit Product</DialogTitle>
-                                      <DialogDescription>
-                                        Make changes to the product information
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <ItemFormComponent 
-                                      isEditing={true}
-                                      defaultValues={{
-                                        name: product.name,
-                                        description: product.description || "",
-                                        basePrice: product.price,
-                                        category: product.category,
-                                        condition: "Used",
-                                        status: product.status || "draft",
-                                        images: product.imageUrl ? [product.imageUrl] : [],
-                                        tags: [],
-                                        marketplace: [],
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleEditClick(product)}
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit Item
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handlePrintBarcodeClick(product.id || 0)}
+                                    >
+                                      <Printer className="mr-2 h-4 w-4" />
+                                      Print Barcode/QR
+                                    </DropdownMenuItem>
+                                    {product.weight && (
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleQuickBreakdownClick(product.id || 0)}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Quick Breakdown
+                                      </DropdownMenuItem>
+                                    )}
+                                    {product.shopifyId && (
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleViewShopifyClick(product.id || 0)}
+                                      >
+                                        <Store className="mr-2 h-4 w-4" />
+                                        View in Shopify
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer text-destructive"
+                                      onClick={() => {
+                                        setProductIdToDelete(product.id || null);
+                                        setDeleteDialogOpen(true);
                                       }}
-                                      onSubmit={(data) => {
-                                        console.log('Form data:', data);
-                                        // TODO: Implement actual product update with API
-                                        toast({
-                                          title: "Product updated",
-                                          description: "The product has been updated successfully."
-                                        });
-                                      }}
-                                    />
-                                  </DialogContent>
-                                </Dialog>
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Item
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                
+                                {/* Edit Dialog will be created separately */}
                                 
                                 <Button 
                                   size="sm" 
