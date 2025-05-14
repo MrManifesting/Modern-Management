@@ -7,11 +7,13 @@ import {
   FormItem, 
   FormLabel, 
   FormControl, 
-  FormMessage 
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -171,6 +173,38 @@ export default function ItemFormComponent({
     "THCA CLASSIC RESERVE", 
     "THCA DISCOUNTED FLOWER"
   ];
+  
+  // Flower categories
+  const flowerCategories = [
+    "Indica", 
+    "Sativa", 
+    "Hybrid", 
+    "CBD", 
+    "Delta-8", 
+    "Delta-9", 
+    "HHC"
+  ];
+  
+  // Exotic categorization
+  const exoticCategories = [
+    "Premium", 
+    "Top Shelf", 
+    "Limited Edition", 
+    "Rare", 
+    "Ultra Premium", 
+    "Special Reserve"
+  ];
+  
+  // Bulk categorization
+  const bulkCategories = [
+    "Pound", 
+    "Half Pound", 
+    "Quarter Pound", 
+    "Ounce", 
+    "Multi-Pound", 
+    "Wholesale", 
+    "Distribution"
+  ];
 
   return (
     <Form {...form}>
@@ -299,34 +333,123 @@ export default function ItemFormComponent({
             )}
           />
 
-          <FormItem>
-            <FormLabel>Flower Quality</FormLabel>
-            <Select 
-              onValueChange={(value) => {
-                // Store flower quality in attributes
-                const currentAttributes = form.getValues("attributes") || {};
-                form.setValue("attributes", {
-                  ...currentAttributes,
-                  flowerQuality: value
-                });
-              }}
-              defaultValue={(form.getValues("attributes") as any)?.flowerQuality || ""}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select flower quality" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {flowerQualities.map((quality) => (
-                  <SelectItem key={quality} value={quality}>
-                    {quality}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
+          <div className="sm:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormItem>
+              <FormLabel>Flower Quality</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  // Store flower quality in attributes
+                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                  form.setValue("attributes", {
+                    ...currentAttributes,
+                    flowerQuality: value
+                  } as any);
+                }}
+                defaultValue={(form.getValues("attributes") as any)?.flowerQuality || ""}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select flower quality" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {flowerQualities.map((quality) => (
+                    <SelectItem key={quality} value={quality}>
+                      {quality}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+            
+            <FormItem>
+              <FormLabel>Flower Category</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  // Store flower category in attributes
+                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                  form.setValue("attributes", {
+                    ...currentAttributes,
+                    flowerCategory: value
+                  } as any);
+                }}
+                defaultValue={(form.getValues("attributes") as any)?.flowerCategory || ""}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {flowerCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+            
+            <FormItem>
+              <FormLabel>Exotic Categorization</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  // Store exotic category in attributes
+                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                  form.setValue("attributes", {
+                    ...currentAttributes,
+                    exoticCategory: value
+                  } as any);
+                }}
+                defaultValue={(form.getValues("attributes") as any)?.exoticCategory || ""}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select exotic category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {exoticCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+            
+            <FormItem>
+              <FormLabel>Bulk Categorization</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  // Store bulk category in attributes
+                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                  form.setValue("attributes", {
+                    ...currentAttributes,
+                    bulkCategory: value
+                  } as any);
+                }}
+                defaultValue={(form.getValues("attributes") as any)?.bulkCategory || ""}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bulk category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {bulkCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </div>
 
           <FormField
             control={form.control}
@@ -373,6 +496,28 @@ export default function ItemFormComponent({
               </FormItem>
             )}
           />
+          
+          <FormItem className="flex flex-row items-start space-x-3 space-y-0 sm:col-span-2 border rounded-md p-4 bg-background">
+            <FormControl>
+              <Checkbox 
+                checked={(form.getValues("attributes") as any)?.allowDragDropBreakdown || false}
+                onCheckedChange={(checked) => {
+                  // Store in attributes object
+                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                  form.setValue("attributes", {
+                    ...currentAttributes,
+                    allowDragDropBreakdown: checked
+                  } as any);
+                }}
+              />
+            </FormControl>
+            <div className="space-y-1 leading-none">
+              <FormLabel>Enable Drag & Drop Breakdown</FormLabel>
+              <FormDescription>
+                Allow this bulk item to be broken down using the drag and drop interface
+              </FormDescription>
+            </div>
+          </FormItem>
 
           <div className="sm:col-span-2">
             <div className="flex justify-between items-center">
