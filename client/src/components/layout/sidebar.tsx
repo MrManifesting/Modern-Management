@@ -81,12 +81,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/products-inventory",
       subItems: [
         {
-          title: "Main Inventory",
+          title: "Gold Standard",
           path: "/products-inventory",
           className: "inventory-link primary-brand",
         },
         {
-          title: "Product Categories",
+          title: "Tree Masons",
           path: "/inventory/products",
           className: "inventory-link specialty-brand",
         },
