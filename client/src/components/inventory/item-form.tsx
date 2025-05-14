@@ -21,6 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  MAIN_CATEGORIES, 
+  FLOWER_QUALITY_GRADES, 
+  FLOWER_STRAIN_TYPES,
+  BULK_SIZES,
+  WEIGHT_OPTIONS,
+  getSubcategoriesForCategory
+} from "./category-data";
 import { itemFormSchema, ItemForm, Item } from "@shared/schema";
 import { useDropzone } from "react-dropzone";
 import { Zap, Image as ImageIcon, X, Upload, PlusCircle, Info } from "lucide-react";
@@ -139,19 +147,9 @@ export default function ItemFormComponent({
     }
   };
 
-  const categories = [
-    "Electronics",
-    "Clothing",
-    "Home Goods",
-    "Collectibles",
-    "Toys",
-    "Books",
-    "Jewelry",
-    "Art",
-    "Sporting Goods",
-    "Automotive",
-    "Other",
-  ];
+  // State to hold dynamic subcategories based on main category selection
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [weightOptions, setWeightOptions] = useState<string[]>([]);
 
   const conditions = [
     "New",
@@ -164,47 +162,36 @@ export default function ItemFormComponent({
 
   const statuses = ["draft", "listed", "sold"];
   
-  // THCA flower quality options
-  const flowerQualities = [
-    "THCA EXOTIC INDOOR", 
-    "THCA AA INDOOR SMALLS", 
-    "THCA TOP SHELF", 
-    "THCAAA INDOOR", 
-    "THCA CLASSIC RESERVE", 
-    "THCA DISCOUNTED FLOWER"
-  ];
-  
-  // Flower categories
-  const flowerCategories = [
-    "Indica", 
-    "Sativa", 
-    "Hybrid", 
-    "CBD", 
-    "Delta-8", 
-    "Delta-9", 
-    "HHC"
-  ];
-  
-  // Exotic categorization
-  const exoticCategories = [
-    "Premium", 
-    "Top Shelf", 
-    "Limited Edition", 
-    "Rare", 
-    "Ultra Premium", 
-    "Special Reserve"
-  ];
-  
-  // Bulk categorization
-  const bulkCategories = [
-    "Pound", 
-    "Half Pound", 
-    "Quarter Pound", 
-    "Ounce", 
-    "Multi-Pound", 
-    "Wholesale", 
-    "Distribution"
-  ];
+  // Effect to update subcategories when main category changes
+  useEffect(() => {
+    const selectedCategory = form.getValues("category");
+    if (selectedCategory) {
+      // Update subcategories based on selected main category
+      let subCats: string[] = [];
+      
+      // Handle different category types
+      if (selectedCategory.toLowerCase() === "flower") {
+        subCats = FLOWER_STRAIN_TYPES;
+        setWeightOptions(WEIGHT_OPTIONS.flower);
+      } else if (selectedCategory.toLowerCase() === "concentrates") {
+        subCats = getSubcategoriesForCategory("Concentrates");
+        setWeightOptions(WEIGHT_OPTIONS.concentrates);
+      } else if (selectedCategory.toLowerCase() === "pre-rolls") {
+        subCats = getSubcategoriesForCategory("Pre-Rolls");
+        setWeightOptions(WEIGHT_OPTIONS.prerolls);
+      } else if (selectedCategory.toLowerCase() === "bulk") {
+        subCats = BULK_SIZES;
+      } else {
+        subCats = getSubcategoriesForCategory(selectedCategory);
+        setWeightOptions([]);
+      }
+      
+      setSubcategories(subCats);
+      
+      // Clear subcategory selection when main category changes
+      form.setValue("subcategory", "");
+    }
+  }, [form.watch("category")]);
 
   return (
     <Form {...form}>
@@ -240,7 +227,7 @@ export default function ItemFormComponent({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {MAIN_CATEGORIES.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
@@ -251,6 +238,75 @@ export default function ItemFormComponent({
               </FormItem>
             )}
           />
+
+          {/* Subcategory field - appears when a main category is selected */}
+          {subcategories.length > 0 && (
+            <FormField
+              control={form.control}
+              name="subcategory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subcategory</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select subcategory" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subcategories.map((subcat: string) => (
+                        <SelectItem key={subcat} value={subcat}>
+                          {subcat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {/* Weight options field - appears for products that have standard weights */}
+          {weightOptions.length > 0 && (
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Weight</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      // Extract numeric part from weight option (e.g. "3.5g (Eighth)" -> 3.5)
+                      const numericWeight = parseFloat(value.split('g')[0]);
+                      if (!isNaN(numericWeight)) {
+                        field.onChange(numericWeight);
+                        form.setValue("weightUnit", "g");
+                      }
+                    }}
+                    defaultValue={field.value ? `${field.value}g` : undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select weight" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {weightOptions.map((option: string) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}
