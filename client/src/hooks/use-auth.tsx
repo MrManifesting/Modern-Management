@@ -42,6 +42,7 @@ interface LoginResponse {
   success: boolean;
   user: User;
   message?: string;
+  redirectTo?: string;
 }
 
 interface LogoutResponse {
@@ -80,17 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: LoginResponse) => {
       queryClient.setQueryData(["/api/user"], data);
+      
       toast({
         title: "Login successful",
         description: "Welcome back!",
         variant: "default",
       });
-      // Add navigation to dashboard (or inventory) after successful login
-      setTimeout(() => {
-        navigate("/");
-      }, 500); // Short delay to allow the toast to be seen
+      
+      console.log("Login successful. Redirecting to dashboard...");
+      
+      // Use the redirectTo from the server or default to dashboard
+      const redirectPath = data.redirectTo || "/";
+      
+      // Force immediate navigation without setTimeout
+      window.location.href = redirectPath;
     },
     onError: (error: Error) => {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
         description: error.message,
