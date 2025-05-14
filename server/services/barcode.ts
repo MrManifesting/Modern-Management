@@ -3,6 +3,7 @@
  */
 import * as bwipjs from 'bwip-js';
 import { Item } from '@shared/schema';
+import { getItemColorCodes, getCategoryColor } from './color-code';
 
 /**
  * Generate a barcode as a data URL
@@ -45,18 +46,37 @@ export function generateBarcodeData(text: string): string {
 
 /**
  * Generate a simple placeholder SVG barcode
+ * @param text The text to encode in the barcode
+ * @param primaryColor Optional primary color (category color)
+ * @param secondaryColor Optional secondary color (subcategory color)
  */
-function generatePlaceholderBarcode(text: string): string {
-  // Create a very basic SVG that just displays the text
+function generatePlaceholderBarcode(text: string, primaryColor: string = '#000000', secondaryColor: string = '#757575'): string {
+  // Create a very basic SVG that just displays the text with color-coding
   const svgContent = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="80">
-      <rect width="200" height="80" fill="white" stroke="black" stroke-width="1"/>
-      <text x="10" y="20" font-family="Arial" font-size="12">Barcode Placeholder</text>
-      <text x="10" y="40" font-family="monospace" font-size="12">${text}</text>
+    <svg xmlns="http://www.w3.org/2000/svg" width="220" height="100">
+      <!-- Color-coded border frame -->
+      <rect width="220" height="100" fill="white" stroke-width="0"/>
+      
+      <!-- Left and right colored bars -->
+      <rect x="0" y="0" width="10" height="100" fill="${primaryColor}" />
+      <rect x="210" y="0" width="10" height="100" fill="${secondaryColor}" />
+      
+      <!-- Light background gradient -->
+      <rect x="10" y="0" width="200" height="100" fill="white" stroke="black" stroke-width="1" 
+            style="fill: linear-gradient(90deg, ${primaryColor}10 0%, white 50%, ${secondaryColor}10 100%)" />
+      
+      <!-- Text content -->
+      <text x="15" y="20" font-family="Arial" font-size="12" font-weight="bold" fill="${primaryColor}">Barcode</text>
+      <text x="15" y="40" font-family="monospace" font-size="12" fill="#000000">${text}</text>
+      
+      <!-- Barcode lines -->
       <g>
-        <!-- Simplified barcode lines -->
         ${generateSimpleBarcodeLines(text)}
       </g>
+      
+      <!-- Color legend -->
+      <circle cx="190" cy="15" r="8" fill="${primaryColor}" />
+      <circle cx="205" cy="15" r="8" fill="${secondaryColor}" />
     </svg>
   `;
   
@@ -115,8 +135,72 @@ export function generateBarcodeSVG(text: string): string {
  * Generate a barcode for an item
  */
 export function generateBarcodeForItem(item: Item): string {
-  // Use the SKU as the barcode value
+  if (!item.sku) {
+    return '';
+  }
+  
+  // Get the color codes based on item category
+  const { primaryColor, secondaryColor } = getItemColorCodes(item);
+  
+  // If using placeholder barcodes, pass along color information
+  if (process.env.NODE_ENV !== 'production') {
+    return generatePlaceholderBarcode(item.sku, primaryColor, secondaryColor);
+  }
+  
+  // In production, use standard barcode generator (currently doesn't support color coding)
   return generateBarcodeData(item.sku);
+}
+
+/**
+ * Generate a color-coded barcode SVG for an item
+ */
+export function generateColorCodedBarcodeSVG(item: Item): string {
+  if (!item.sku) {
+    return '';
+  }
+  
+  // Get the color codes based on item category
+  const { primaryColor, secondaryColor } = getItemColorCodes(item);
+  
+  // Extract the barcode SVG
+  let barcodeSvg = generateBarcodeSVG(item.sku);
+  
+  // Add color coding to the SVG
+  const coloredBarcodeSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="220" height="120">
+      <!-- Color-coded border frame -->
+      <rect width="220" height="120" fill="white" stroke-width="0"/>
+      
+      <!-- Left and right colored bars -->
+      <rect x="0" y="0" width="10" height="120" fill="${primaryColor}" />
+      <rect x="210" y="0" width="10" height="120" fill="${secondaryColor}" />
+      
+      <!-- Light background gradient -->
+      <rect x="10" y="0" width="200" height="120" fill="white" stroke="black" stroke-width="1" 
+            style="fill: linear-gradient(90deg, ${primaryColor}10 0%, white 50%, ${secondaryColor}10 100%)" />
+      
+      <!-- Title with category -->
+      <text x="15" y="20" font-family="Arial" font-size="12" font-weight="bold" fill="${primaryColor}">
+        ${item.category || 'Item'} - ${item.subcategory || ''}
+      </text>
+      
+      <!-- Embedded barcode - using a foreignObject to embed the barcode SVG -->
+      <foreignObject x="10" y="30" width="200" height="60">
+        ${barcodeSvg}
+      </foreignObject>
+      
+      <!-- SKU Text -->
+      <text x="110" y="110" font-family="monospace" font-size="12" fill="#000000" text-anchor="middle">
+        ${item.sku}
+      </text>
+      
+      <!-- Color legend -->
+      <circle cx="190" cy="15" r="8" fill="${primaryColor}" />
+      <circle cx="205" cy="15" r="8" fill="${secondaryColor}" />
+    </svg>
+  `;
+  
+  return coloredBarcodeSvg;
 }
 
 /**
