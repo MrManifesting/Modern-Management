@@ -133,7 +133,7 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
             {/* Stock status badge */}
             <span className={`rounded-full px-2 py-1 text-xs font-medium text-white
               ${Number(item.quantity || 0) > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
-              {Number(item.quantity || 0) > 0 ? `In Stock (${Number(item.quantity)})` : 'Out of Stock'}
+              {Number(item.quantity || 0) > 0 ? `In Stock (${Number(item.quantity || 0)})` : 'Out of Stock'}
             </span>
             
             {/* Marketplace badge */}
@@ -179,12 +179,18 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                     <Printer className="mr-2 h-4 w-4" />
                     Print Barcode/QR
                   </DropdownMenuItem>
-                  {/* Show breakdown option if item has weight info */}
+                  {/* Show breakdown options if item has weight info */}
                   {item.weight && item.weight > 0 && (
-                    <DropdownMenuItem onClick={() => setIsBreakdownModalOpen(true)}>
-                      <PackageOpen className="mr-2 h-4 w-4" />
-                      Quick Breakdown
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={() => setIsBreakdownModalOpen(true)}>
+                        <PackageOpen className="mr-2 h-4 w-4" />
+                        Quick Breakdown
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsDndBreakdownOpen(true)}>
+                        <Layers className="mr-2 h-4 w-4" />
+                        Drag & Drop Breakdown
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {/* Only show View in Store for items that have a SKU and are listed */}
                   {item.sku && item.status === 'listed' && (
@@ -233,20 +239,32 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
       {/* Barcode Print Dialog */}
       <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
         <DialogContent className="sm:max-w-md">
-          <BarcodePrint item={item} onClose={() => setIsPrintModalOpen(false)} />
+          <BarcodePrint item={item as any} onClose={() => setIsPrintModalOpen(false)} />
         </DialogContent>
       </Dialog>
       
       {/* Quick Breakdown Dialog */}
       <QuickBreakdown 
-        item={item} 
+        item={item as any} 
         isOpen={isBreakdownModalOpen} 
         onClose={() => setIsBreakdownModalOpen(false)} 
       />
 
+      {/* Drag & Drop Breakdown Dialog */}
+      <BulkBreakdownDialog
+        item={item as any} 
+        open={isDndBreakdownOpen}
+        onOpenChange={setIsDndBreakdownOpen}
+        onComplete={() => {
+          setIsDndBreakdownOpen(false);
+          // Trigger a refetch of inventory data
+          window.dispatchEvent(new CustomEvent('refetch-inventory'));
+        }}
+      />
+
       {/* Hidden trigger for shopify preview */}
       <span className="hidden" id={`shopify-preview-${item.id}`}>
-        <ShopifyStorePreview item={item} />
+        <ShopifyStorePreview item={item as any} />
       </span>
     </>
   );
