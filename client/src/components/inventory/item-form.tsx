@@ -328,8 +328,11 @@ export default function ItemFormComponent({
                         step="0.01"
                         placeholder="0.00"
                         className="pl-7"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        value={field.value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                          field.onChange(isNaN(value) ? 0 : value);
+                        }}
                       />
                     </div>
                   </FormControl>
@@ -352,8 +355,11 @@ export default function ItemFormComponent({
                       min="1"
                       step="1"
                       placeholder="1"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 1 : parseInt(e.target.value);
+                        field.onChange(isNaN(value) ? 1 : value);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

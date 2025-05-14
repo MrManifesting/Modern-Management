@@ -326,12 +326,12 @@ export default function InventoryDetailPage() {
                       <CardContent className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Base Price:</span>
-                          <span className="font-semibold">${item.basePrice?.toFixed(2) || '0.00'}</span>
+                          <span className="font-semibold">${(item.basePrice || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Sale Price:</span>
                           <span className="font-semibold text-green-600">
-                            {item.salePrice ? `$${item.salePrice.toFixed(2)}` : 'N/A'}
+                            {item.salePrice ? `$${(item.salePrice || 0).toFixed(2)}` : 'N/A'}
                           </span>
                         </div>
                       </CardContent>
@@ -344,12 +344,12 @@ export default function InventoryDetailPage() {
                       <CardContent className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Cost Price:</span>
-                          <span className="font-semibold">${item.costPrice?.toFixed(2) || '0.00'}</span>
+                          <span className="font-semibold">${(item.costPrice || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Wholesale Price:</span>
                           <span className="font-semibold">
-                            {item.wholesalePrice ? `$${item.wholesalePrice.toFixed(2)}` : 'N/A'}
+                            {item.wholesalePrice ? `$${(item.wholesalePrice || 0).toFixed(2)}` : 'N/A'}
                           </span>
                         </div>
                       </CardContent>
@@ -368,7 +368,7 @@ export default function InventoryDetailPage() {
                               <span className="text-muted-foreground">Retail Margin:</span>
                               <span className="font-semibold">
                                 {item.basePrice && item.costPrice 
-                                  ? `${(((item.basePrice - item.costPrice) / item.basePrice) * 100).toFixed(2)}%` 
+                                  ? `${(((parseFloat(item.basePrice.toString()) - parseFloat(item.costPrice.toString())) / parseFloat(item.basePrice.toString())) * 100).toFixed(2)}%` 
                                   : 'N/A'}
                               </span>
                             </div>
@@ -376,7 +376,7 @@ export default function InventoryDetailPage() {
                               <div className="flex justify-between items-center">
                                 <span className="text-muted-foreground">Wholesale Margin:</span>
                                 <span className="font-semibold">
-                                  {`${(((item.wholesalePrice - item.costPrice) / item.wholesalePrice) * 100).toFixed(2)}%`}
+                                  {`${(((parseFloat(item.wholesalePrice.toString()) - parseFloat(item.costPrice.toString())) / parseFloat(item.wholesalePrice.toString())) * 100).toFixed(2)}%`}
                                 </span>
                               </div>
                             )}
