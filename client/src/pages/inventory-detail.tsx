@@ -28,9 +28,9 @@ import {
 } from "lucide-react";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { ColorBarcode, CategoryColorLegend } from "@/components/inventory/color-barcode";
-import { ShopifyStorePreview } from "@/components/inventory/shopify-store-preview";
+import ShopifyStorePreview from "@/components/inventory/shopify-store-preview";
 import { format } from "date-fns";
-import { AddItemModal } from "@/components/inventory/add-item-modal";
+import AddItemModal from "@/components/modals/add-item-modal";
 import { BulkBreakdownDialog } from "@/components/inventory/bulk-breakdown-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,9 +48,15 @@ export default function InventoryDetailPage() {
     isError, 
     error,
     refetch
-  } = useQuery<Item>({
+  } = useQuery({
     queryKey: ['/api/items', parseInt(id)],
-    queryFn: () => apiRequest(`/api/items/${id}`),
+    queryFn: async () => {
+      const response = await fetch(`/api/items/${id}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    },
     enabled: !!id
   });
 
@@ -74,9 +80,16 @@ export default function InventoryDetailPage() {
     }
     
     try {
-      await apiRequest(`/api/items/${id}`, {
-        method: 'DELETE'
+      const response = await fetch(`/api/items/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
       
       toast({
         title: "Item deleted",
@@ -484,25 +497,27 @@ export default function InventoryDetailPage() {
       {/* Edit Item Modal */}
       <AddItemModal 
         isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        editItem={item}
-        onSuccess={() => {
-          refetch();
+        onClose={() => {
           setIsEditModalOpen(false);
-        }}
+          refetch();
+          window.dispatchEvent(new CustomEvent('refetch-inventory'));
+        }} 
+        editItem={item}
       />
       
       {/* Breakdown Modal */}
-      <BulkBreakdownDialog
-        item={item}
-        open={isBreakdownModalOpen}
-        onOpenChange={setIsBreakdownModalOpen}
-        onComplete={() => {
-          setIsBreakdownModalOpen(false);
-          refetch();
-          window.dispatchEvent(new CustomEvent('refetch-inventory'));
-        }}
-      />
+      {item && (
+        <BulkBreakdownDialog
+          item={item}
+          open={isBreakdownModalOpen}
+          onOpenChange={setIsBreakdownModalOpen}
+          onComplete={() => {
+            setIsBreakdownModalOpen(false);
+            refetch();
+            window.dispatchEvent(new CustomEvent('refetch-inventory'));
+          }}
+        />
+      )}
     </div>
   );
 }
