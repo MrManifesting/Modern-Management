@@ -633,10 +633,154 @@ const ProductsInventoryPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/items'] });
     
     // Show success toast
-    toast({
-      title: "Bulk update complete",
-      description: "Selected items have been updated successfully."
-    });
+  };
+  
+  // Handle bulk SKU generation
+  const handleBulkGenerateSKUs = async () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to generate SKUs.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Show loading toast
+      toast({
+        title: "Generating SKUs",
+        description: `Generating SKUs for ${selectedItems.length} items...`
+      });
+      
+      // Call API to bulk generate SKUs
+      const response = await apiRequest('POST', '/api/items/generate-skus-bulk', {
+        ids: selectedItems.map(item => item.id)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "SKUs Generated",
+          description: `Successfully generated SKUs for ${selectedItems.length} items.`
+        });
+        // Refresh items to show new SKUs
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      } else {
+        throw new Error(result.message || "Failed to generate SKUs");
+      }
+    } catch (error) {
+      console.error("Bulk SKU generation error:", error);
+      toast({
+        title: "Error",
+        description: "There was an error generating SKUs for the selected items.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle bulk QR code generation
+  const handleBulkGenerateQRCodes = async () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to generate QR codes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Show loading toast
+      toast({
+        title: "Generating QR Codes",
+        description: `Generating QR codes for ${selectedItems.length} items...`
+      });
+      
+      // Call API to bulk generate QR codes
+      const response = await apiRequest('POST', '/api/items/generate-qrcodes-bulk', {
+        ids: selectedItems.map(item => item.id)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "QR Codes Generated",
+          description: `Successfully generated QR codes for ${selectedItems.length} items.`
+        });
+        // Refresh items to show new QR codes
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      } else {
+        throw new Error(result.message || "Failed to generate QR codes");
+      }
+    } catch (error) {
+      console.error("Bulk QR code generation error:", error);
+      toast({
+        title: "Error",
+        description: "There was an error generating QR codes for the selected items.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle bulk barcode generation
+  const handleBulkGenerateBarcodes = async () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to generate barcodes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Show loading toast
+      toast({
+        title: "Generating Barcodes",
+        description: `Generating barcodes for ${selectedItems.length} items...`
+      });
+      
+      // Call API to bulk generate barcodes
+      const response = await apiRequest('POST', '/api/items/generate-barcodes-bulk', {
+        ids: selectedItems.map(item => item.id)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "Barcodes Generated",
+          description: `Successfully generated barcodes for ${selectedItems.length} items.`
+        });
+        // Refresh items to show new barcodes
+        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      } else {
+        throw new Error(result.message || "Failed to generate barcodes");
+      }
+    } catch (error) {
+      console.error("Bulk barcode generation error:", error);
+      toast({
+        title: "Error",
+        description: "There was an error generating barcodes for the selected items.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle bulk print function
+  const handleBulkPrintBarcodes = () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to print barcodes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Set selected items for printing and open print modal
+    setSelectedItem(null); // Clear single item selection
+    setIsPrintModalOpen(true);
   };
 
   // Render mobile product card
@@ -929,7 +1073,7 @@ const ProductsInventoryPage: React.FC = () => {
             </div>
             
             {/* Mobile: Show only primary actions */}
-            <div className="flex md:hidden gap-2">
+            <div className="flex md:hidden flex-wrap gap-2">
               <Button 
                 className="gap-1.5 flex-1" 
                 size="sm"
@@ -947,6 +1091,52 @@ const ProductsInventoryPage: React.FC = () => {
                 <ClipboardList className="h-4 w-4" />
                 {bulkSelectMode ? (selectedItems.length > 0 ? "Edit Items" : "Exit") : "Bulk Edit"}
               </Button>
+              
+              {/* Mobile bulk action buttons */}
+              {bulkSelectMode && selectedItems.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="gap-1 flex-1"
+                    size="sm"
+                    onClick={handleBulkGenerateSKUs}
+                  >
+                    <Tags className="h-4 w-4" />
+                    SKUs
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1 flex-1"
+                    size="sm"
+                    onClick={handleBulkGenerateQRCodes}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    QR
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1 flex-1"
+                    size="sm"
+                    onClick={handleBulkGenerateBarcodes}
+                  >
+                    <Barcode className="h-4 w-4" />
+                    Barcodes
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1 flex-1"
+                    size="sm"
+                    onClick={handleBulkPrintBarcodes}
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </Button>
+                </>
+              )}
+              
               <Button 
                 variant="outline" 
                 className="gap-1.5 flex-1" 
@@ -1011,6 +1201,47 @@ const ProductsInventoryPage: React.FC = () => {
                   </>
                 )}
               </Button>
+              
+              {/* Show additional bulk action buttons when in bulk select mode and items are selected */}
+              {bulkSelectMode && selectedItems.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={handleBulkGenerateSKUs}
+                  >
+                    <Tags className="h-4 w-4" />
+                    Generate SKUs
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={handleBulkGenerateQRCodes}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    Generate QR Codes
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={handleBulkGenerateBarcodes}
+                  >
+                    <Barcode className="h-4 w-4" />
+                    Generate Barcodes
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={handleBulkPrintBarcodes}
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Barcodes
+                  </Button>
+                </>
+              )}
               
               <Button 
                 variant="outline" 
