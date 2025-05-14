@@ -14,6 +14,7 @@ import {
   logShopifyOperation
 } from './services/shopify-safety';
 import { generateSKU, generateSKUBatch } from './services/sku-generator';
+import { generateBarcodeData, generateQRCodeDataURL } from './services/barcode';
 import { IStorage } from './storage';
 
 /**
@@ -235,6 +236,136 @@ export function registerShopifySafetyRoutes(app: Express, storage: IStorage) {
       console.error("Failed to generate SKUs in bulk:", error);
       res.status(500).json({ 
         error: "Failed to generate SKUs in bulk", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Bulk generate QR codes for items
+  app.post("/api/items/generate-qrcodes-bulk", async (req: Request, res: Response) => {
+    try {
+      const { ids = [] } = req.body;
+      
+      if (!ids || ids.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "No item IDs provided" 
+        });
+      }
+      
+      // Get items from storage
+      const items = [];
+      for (const id of ids) {
+        const item = await storage.getItem(id);
+        if (item) {
+          items.push(item);
+        }
+      }
+      
+      if (items.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "No valid items found with the provided IDs" 
+        });
+      }
+      
+      // Generate QR codes for each item
+      const qrCodeMap: Record<number, string> = {};
+      for (const item of items) {
+        if (!item.id) continue;
+        
+        // Generate QR code
+        const qrCode = await generateQRCodeDataURL({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          price: item.price
+        });
+        
+        qrCodeMap[item.id] = qrCode;
+        
+        // Update item with QR code
+        await storage.updateItem(item.id, {
+          ...item,
+          qrCode
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated QR codes for ${Object.keys(qrCodeMap).length} items`,
+        qrCodeMap,
+        updatedItems: items
+      });
+    } catch (error) {
+      console.error("Failed to generate QR codes in bulk:", error);
+      res.status(500).json({ 
+        error: "Failed to generate QR codes in bulk", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Bulk generate barcodes for items
+  app.post("/api/items/generate-barcodes-bulk", async (req: Request, res: Response) => {
+    try {
+      const { ids = [] } = req.body;
+      
+      if (!ids || ids.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "No item IDs provided" 
+        });
+      }
+      
+      // Get items from storage
+      const items = [];
+      for (const id of ids) {
+        const item = await storage.getItem(id);
+        if (item) {
+          items.push(item);
+        }
+      }
+      
+      if (items.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "No valid items found with the provided IDs" 
+        });
+      }
+      
+      // Generate barcodes for each item
+      const barcodeMap: Record<number, string> = {};
+      for (const item of items) {
+        if (!item.id) continue;
+        
+        // Skip items without a SKU
+        if (!item.sku) {
+          continue;
+        }
+        
+        // Generate barcode from SKU
+        const barcode = generateBarcodeData(item.sku);
+        
+        barcodeMap[item.id] = barcode;
+        
+        // Update item with barcode
+        await storage.updateItem(item.id, {
+          ...item,
+          barcode
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated barcodes for ${Object.keys(barcodeMap).length} items`,
+        barcodeMap,
+        updatedItems: items
+      });
+    } catch (error) {
+      console.error("Failed to generate barcodes in bulk:", error);
+      res.status(500).json({ 
+        error: "Failed to generate barcodes in bulk", 
         message: error instanceof Error ? error.message : "Unknown error" 
       });
     }
