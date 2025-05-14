@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Login form
   const loginForm = useForm({
@@ -61,7 +62,18 @@ export default function AuthPage() {
 
   // Handle login submission
   const onLoginSubmit = loginForm.handleSubmit((data) => {
-    loginMutation.mutate(data);
+    loginMutation.mutate(data, {
+      onSuccess: () => {
+        console.log("Auth page: Login successful, navigating directly...");
+        // Show redirecting state
+        setIsRedirecting(true);
+        
+        // Force navigation directly from auth page
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1500);
+      }
+    });
   });
 
   // Handle registration submission
@@ -72,6 +84,19 @@ export default function AuthPage() {
   // If the user is already authenticated, redirect to the home page
   if (user) {
     return <Redirect to="/" />;
+  }
+  
+  // If user has successfully logged in and we're waiting for redirection
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-white mb-2">Login Successful!</h2>
+          <p className="text-gray-300">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
