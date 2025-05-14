@@ -7,6 +7,7 @@ import {
 import { User, insertUserSchema } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { z } from "zod";
 
 type AuthContextType = {
@@ -58,6 +59,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   
   const {
     data: result,
@@ -83,6 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Welcome back!",
         variant: "default",
       });
+      // Add navigation to dashboard (or inventory) after successful login
+      setTimeout(() => {
+        navigate("/");
+      }, 500); // Short delay to allow the toast to be seen
     },
     onError: (error: Error) => {
       toast({
