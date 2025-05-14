@@ -331,7 +331,7 @@ const ProductsInventoryPage: React.FC = () => {
       return matchesSearch && matchesCategory;
     })
     // Sort in-stock items first, then by newest first (recent items first based on ID)
-    .sort((a, b) => {
+    .sort((a: Product, b: Product) => {
       // First prioritize in-stock items
       const aInStock = a.quantity && a.quantity > 0;
       const bInStock = b.quantity && b.quantity > 0;

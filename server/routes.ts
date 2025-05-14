@@ -516,14 +516,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         itemData[field] = String(itemData[field]);
       }
       
-      // Generate SKU if not provided
-      if (!itemData.sku) {
-        // Use quantity-specific SKU generator if quantity > 1
-        if (itemData.quantity && itemData.quantity > 1) {
-          itemData.sku = generateSKU(itemData, { quantity: itemData.quantity });
-        } else {
-          itemData.sku = generateSKU(itemData);
-        }
+      // Always generate SKU for new items, regardless of whether one was provided
+      // This ensures all items have a consistent SKU format
+      // Use quantity-specific SKU generator if quantity > 1
+      if (itemData.quantity && itemData.quantity > 1) {
+        itemData.sku = generateSKU(itemData, { quantity: itemData.quantity });
+      } else {
+        itemData.sku = generateSKU(itemData);
       }
       
       // Generate barcode data
