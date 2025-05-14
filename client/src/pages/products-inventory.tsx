@@ -1742,7 +1742,7 @@ const ProductsInventoryPage: React.FC = () => {
                                     </div>
                                   </DialogContent>
                                 </Dialog>
-                                
+
                                 {/* Action Dropdown Menu */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -1820,7 +1820,6 @@ const ProductsInventoryPage: React.FC = () => {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                                  <DropdownMenuContent align="end" className="w-48">
                                     <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
                                     <DropdownMenuItem 
                                       className="flex items-center cursor-pointer"
@@ -1831,7 +1830,7 @@ const ProductsInventoryPage: React.FC = () => {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                       className="flex items-center cursor-pointer"
-                                      onClick={() => handlePrintBarcodeClick(product.id || 0)}
+                                      onClick={() => handlePrintBarcodeClick(product.id)}
                                     >
                                       <Printer className="mr-2 h-4 w-4" />
                                       Print Barcode/QR
@@ -1839,11 +1838,60 @@ const ProductsInventoryPage: React.FC = () => {
                                     {product.weight && (
                                       <DropdownMenuItem 
                                         className="flex items-center cursor-pointer"
-                                        onClick={() => handleQuickBreakdownClick(product.id || 0)}
+                                        onClick={() => handleQuickBreakdownClick(product.id)}
                                       >
                                         <PackageOpen className="mr-2 h-4 w-4" />
                                         Quick Breakdown
                                       </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateSKU(product.id)}
+                                    >
+                                      <Tag className="mr-2 h-4 w-4" />
+                                      Generate SKU
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateBarcode(product.id)}
+                                    >
+                                      <Barcode className="mr-2 h-4 w-4" />
+                                      Generate Barcode
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateQRCode(product.id)}
+                                    >
+                                      <QrCode className="mr-2 h-4 w-4" />
+                                      Generate QR Code
+                                    </DropdownMenuItem>
+                                    
+                                    {product.shopifyId && (
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleViewShopifyClick(product.id)}
+                                      >
+                                        <Store className="mr-2 h-4 w-4" />
+                                        View in Shopify
+                                      </DropdownMenuItem>
+                                    )}
+                                    
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer text-destructive"
+                                      onClick={() => handleDeleteClick(product.id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Item
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
                                     )}
                                     {product.shopifyId && (
                                       <DropdownMenuItem
