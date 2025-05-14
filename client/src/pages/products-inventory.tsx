@@ -320,15 +320,28 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   // Filter products based on search term and category
-  const filteredProducts = products.filter((product: Product) => {
-    const matchesSearch = 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = products
+    .filter((product: Product) => {
+      const matchesSearch = 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.sku ? product.sku.toLowerCase().includes(searchTerm.toLowerCase()) : false);
+      
+      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    })
+    // Sort in-stock items first, then by newest first (recent items first based on ID)
+    .sort((a, b) => {
+      // First prioritize in-stock items
+      const aInStock = a.quantity && a.quantity > 0;
+      const bInStock = b.quantity && b.quantity > 0;
+      
+      if (aInStock && !bInStock) return -1;
+      if (!aInStock && bInStock) return 1;
+      
+      // Then sort by newest items (highest ID) first
+      return (b.id || 0) - (a.id || 0);
+    });
 
   // Get status badge color
   const getStatusBadgeClass = (status: string = "") => {
