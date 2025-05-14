@@ -27,10 +27,11 @@ interface BreakdownOption {
 
 interface QuickBreakdownProps {
   item: Item;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, onClose }) => {
+const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }) => {
   const [options, setOptions] = useState<BreakdownOption[]>([
     { weight: 1, quantity: 1, price: item.price / (item.weight || 1) },
   ]);
