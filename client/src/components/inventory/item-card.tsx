@@ -9,7 +9,8 @@ import {
   QrCode,
   Barcode,
   Store,
-  PackageOpen
+  PackageOpen,
+  Layers
 } from "lucide-react";
 import ImageCarousel from "./image-carousel";
 import { 
@@ -30,6 +31,7 @@ import {
 import BarcodePrint from "./barcode-print";
 import ShopifyStorePreview from "./shopify-store-preview";
 import QuickBreakdown from "./quick-breakdown";
+import { BulkBreakdownDialog } from "./bulk-breakdown-dialog";
 import { Item } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -43,6 +45,7 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [isDndBreakdownOpen, setIsDndBreakdownOpen] = useState(false);
   const [, navigate] = useLocation();
 
   // Format date for display with error handling
