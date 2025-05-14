@@ -25,6 +25,7 @@ import {
   MAIN_CATEGORIES, 
   FLOWER_QUALITY_GRADES, 
   FLOWER_STRAIN_TYPES,
+  EXOTIC_CATEGORIES,
   BULK_SIZES,
   WEIGHT_OPTIONS,
   getSubcategoriesForCategory
@@ -409,7 +410,7 @@ export default function ItemFormComponent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {flowerQualities.map((quality) => (
+                  {FLOWER_QUALITY_GRADES.map((quality) => (
                     <SelectItem key={quality} value={quality}>
                       {quality}
                     </SelectItem>
@@ -438,7 +439,7 @@ export default function ItemFormComponent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {flowerCategories.map((category) => (
+                  {FLOWER_STRAIN_TYPES.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>

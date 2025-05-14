@@ -104,6 +104,16 @@ export const WEIGHT_OPTIONS = {
   prerolls: ['0.5g', '0.75g', '1g', '1.5g', '2g']
 };
 
+// Exotic product quality grades
+export const EXOTIC_CATEGORIES = [
+  'Premium',
+  'Top Shelf',
+  'Limited Edition',
+  'Rare',
+  'Ultra Premium',
+  'Special Reserve'
+];
+
 // Export structured category map for easier access
 export const CATEGORY_MAP = {
   'Flower': {
