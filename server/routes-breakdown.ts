@@ -22,10 +22,129 @@ const breakdownTargetSchema = z.object({
 
 type BreakdownTarget = z.infer<typeof breakdownTargetSchema>;
 
+// Schema for the drag and drop breakdown request
+const dragDropBreakdownSchema = z.object({
+  targetWeight: z.number().positive(),
+  targetUnit: z.string(),
+  quantity: z.number().int().positive(),
+});
+
 /**
  * Register breakdown routes
  */
 export function registerBreakdownRoutes(app: Express, storage: IStorage) {
+  /**
+   * Create a bulk item breakdown using drag and drop
+   */
+  app.post("/api/items/:id/drag-drop-breakdown", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ success: false, message: "Invalid item ID" });
+      }
+
+      // Validate request body
+      const parseResult = dragDropBreakdownSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid breakdown parameters", 
+          errors: parseResult.error.errors 
+        });
+      }
+
+      const { targetWeight, targetUnit, quantity } = parseResult.data;
+
+      // Get the parent item
+      const parentItem = await storage.getItem(itemId);
+      if (!parentItem) {
+        return res.status(404).json({ success: false, message: "Item not found" });
+      }
+
+      // Check if item has enough quantity
+      if (parentItem.quantity <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Insufficient quantity for breakdown" 
+        });
+      }
+
+      // Generate a name for the new breakdown item
+      const newItemName = `${parentItem.name} (${targetWeight}${targetUnit})`;
+
+      // Calculate price based on weight proportion
+      let newPrice = parentItem.basePrice;
+      if (parentItem.weight && parentItem.weight > 0) {
+        // Convert weights to same unit for calculation (simplified)
+        const weightFactor = targetWeight / parentItem.weight;
+        newPrice = parentItem.basePrice * weightFactor;
+      }
+
+      // Generate SKU for the breakdown item
+      const breakdownSku = generateSKU(parentItem, {
+        weight: targetWeight,
+        weightUnit: targetUnit,
+        parentSku: parentItem.sku
+      });
+
+      // Create the breakdown item
+      const breakdownItemData = {
+        name: newItemName,
+        description: `${targetWeight}${targetUnit} breakdown from ${parentItem.name}`,
+        sku: breakdownSku,
+        basePrice: newPrice,
+        costPrice: parentItem.costPrice ? parentItem.costPrice * (targetWeight / (parentItem.weight || 1)) : 0,
+        category: parentItem.category,
+        subcategory: parentItem.subcategory,
+        brand: parentItem.brand,
+        condition: parentItem.condition,
+        quantity: quantity,
+        weight: targetWeight,
+        weightUnit: targetUnit,
+        itemType: ItemType.BREAKDOWN,
+        parentItemId: itemId,
+        images: (parentItem.images || []) as any,
+        tags: (parentItem.tags || []) as any,
+        attributes: parentItem.attributes as any, // Copy attributes
+        breakdownStatus: BreakdownStatus.COMPLETED,
+        status: parentItem.status, // Inherit status from parent
+      };
+      
+      // Create the breakdown item
+      const newItem = await storage.createItem(breakdownItemData);
+      
+      // Generate barcode and QR code for the item
+      newItem.barcode = generateBarcodeData(breakdownSku);
+      newItem.qrCode = await generateQRCodeDataURL(newItem);
+      
+      // Update with barcode and QR code
+      await storage.updateItem(newItem.id, {
+        barcode: newItem.barcode,
+        qrCode: newItem.qrCode
+      });
+
+      // Update the parent item's quantity
+      // Simple approach: decrement by the number of items created
+      const newQuantity = Math.max(0, parentItem.quantity - 1);
+      await storage.updateItem(itemId, { quantity: newQuantity });
+
+      return res.status(200).json({
+        success: true,
+        message: "Breakdown successful",
+        newItemId: newItem.id,
+        newSku: newItem.sku,
+        remainingQuantity: newQuantity
+      });
+    } catch (error) {
+      console.error("Error in drag and drop breakdown:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error creating breakdown item",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   /**
    * Create a quick breakdown for a bulk item
    */
