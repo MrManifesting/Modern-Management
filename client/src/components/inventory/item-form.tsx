@@ -52,6 +52,7 @@ export default function ItemFormComponent({
     images: [],
     tags: [],
     marketplace: [],
+    attributes: {}, // Will store flowerQuality, flowerCategory, and other custom attributes
   },
   onSubmit,
   isLoading = false,
@@ -160,6 +161,16 @@ export default function ItemFormComponent({
   ];
 
   const statuses = ["draft", "listed", "sold"];
+  
+  // THCA flower quality options
+  const flowerQualities = [
+    "THCA EXOTIC INDOOR", 
+    "THCA AA INDOOR SMALLS", 
+    "THCA TOP SHELF", 
+    "THCAAA INDOOR", 
+    "THCA CLASSIC RESERVE", 
+    "THCA DISCOUNTED FLOWER"
+  ];
 
   return (
     <Form {...form}>
@@ -287,6 +298,35 @@ export default function ItemFormComponent({
               </FormItem>
             )}
           />
+
+          <FormItem>
+            <FormLabel>Flower Quality</FormLabel>
+            <Select 
+              onValueChange={(value) => {
+                // Store flower quality in attributes
+                const currentAttributes = form.getValues("attributes") || {};
+                form.setValue("attributes", {
+                  ...currentAttributes,
+                  flowerQuality: value
+                });
+              }}
+              defaultValue={(form.getValues("attributes") as any)?.flowerQuality || ""}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select flower quality" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {flowerQualities.map((quality) => (
+                  <SelectItem key={quality} value={quality}>
+                    {quality}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
 
           <FormField
             control={form.control}
