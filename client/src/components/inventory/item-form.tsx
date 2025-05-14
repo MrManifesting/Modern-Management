@@ -250,7 +250,7 @@ export default function ItemFormComponent({
                   <FormLabel>Subcategory</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    defaultValue={field.value?.toString() || ""}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -468,7 +468,7 @@ export default function ItemFormComponent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {exoticCategories.map((category) => (
+                  {EXOTIC_CATEGORIES.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -497,7 +497,7 @@ export default function ItemFormComponent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {bulkCategories.map((category) => (
+                  {BULK_SIZES.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
