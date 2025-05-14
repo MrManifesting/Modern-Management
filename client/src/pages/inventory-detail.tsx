@@ -188,7 +188,7 @@ export default function InventoryDetailPage() {
             variant="outline" 
             size="sm"
             onClick={() => setIsBreakdownModalOpen(true)}
-            disabled={!item.isBulk}
+            disabled={!item.itemType || item.itemType !== 'bulk'}
           >
             <LayoutGrid className="mr-2 h-4 w-4" />
             Breakdown
@@ -274,7 +274,7 @@ export default function InventoryDetailPage() {
                     
                     <div>
                       <h3 className="text-sm font-medium text-muted-foreground">Supplier</h3>
-                      <p className="mt-1">{item.supplier || "No supplier"}</p>
+                      <p className="mt-1">{item.metadata?.supplier || "No supplier"}</p>
                     </div>
                   </div>
                   
@@ -441,7 +441,7 @@ export default function InventoryDetailPage() {
                     </Badge>
                   </div>
                   
-                  {item.isBulk && (
+                  {item.itemType === 'bulk' && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <PackageOpen className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -464,7 +464,7 @@ export default function InventoryDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-2">
                   {Array.isArray(item.images) && item.images.length > 0 ? (
-                    item.images.map((image, index) => (
+                    item.images.map((image: string, index: number) => (
                       <div key={index} className="aspect-square bg-muted rounded-md overflow-hidden">
                         <img 
                           src={image} 
