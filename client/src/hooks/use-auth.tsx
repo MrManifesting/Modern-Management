@@ -80,21 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: LoginResponse) => {
+      // Update the cache with user data
       queryClient.setQueryData(["/api/user"], data);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
+      // Show success message
       toast({
         title: "Login successful",
         description: "Welcome back!",
         variant: "default",
       });
       
-      console.log("Login successful. Redirecting to dashboard...");
+      console.log("Login successful in auth hook. User data received:", data.user?.username);
       
-      // Use the redirectTo from the server or default to dashboard
-      const redirectPath = data.redirectTo || "/";
-      
-      // Force immediate navigation without setTimeout
-      window.location.href = redirectPath;
+      // Navigation handled in auth-page.tsx component
     },
     onError: (error: Error) => {
       console.error("Login error:", error);
