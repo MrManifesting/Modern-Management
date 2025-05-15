@@ -66,10 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: result,
     error,
     isLoading,
-  } = useQuery<{ success: boolean, user: User, message?: string }, Error>({
+  } = useQuery({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const user = result?.user || null;
