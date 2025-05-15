@@ -68,10 +68,8 @@ export default function AuthPage() {
         // Show redirecting state
         setIsRedirecting(true);
         
-        // Force navigation directly from auth page
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1500);
+        // Force navigation directly from auth page - immediate redirect
+        window.location.href = "/products-inventory";
       }
     });
   });

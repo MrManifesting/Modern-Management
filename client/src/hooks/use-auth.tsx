@@ -80,8 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: LoginResponse) => {
-      // Update the cache with user data
-      queryClient.setQueryData(["/api/user"], data);
+      // Update the cache with user data - correctly format the data
+      queryClient.setQueryData(["/api/user"], { 
+        success: true, 
+        user: data.user 
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
       // Show success message
@@ -113,12 +116,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: RegisterResponse) => {
-      queryClient.setQueryData(["/api/user"], data);
+      queryClient.setQueryData(["/api/user"], { 
+        success: true, 
+        user: data.user 
+      });
       toast({
         title: "Registration successful",
         description: "Your account has been created.",
         variant: "default",
       });
+      
+      console.log("Registration successful. User data received:", data.user?.username);
+      
+      // Force navigation to main dashboard
+      window.location.href = "/products-inventory";
     },
     onError: (error: Error) => {
       toast({
