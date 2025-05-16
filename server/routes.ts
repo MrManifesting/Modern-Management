@@ -26,6 +26,7 @@ import { registerSyncRoutes } from "./routes-sync";
 import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
+import { registerBulkOperationRoutes } from "./routes-bulk";
 // Import our new auth system that bypasses complex authentication
 // Import the original auth system but we'll create a simpler auth mechanism
 import { setupAuth as originalSetupAuth } from "./auth";
