@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { BulkActionProvider, BulkActionBar, SelectableItem } from '@/components/inventory/bulk-action-selector';
+import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
 import { 
   Plus, 
   UploadCloud, 
@@ -212,6 +212,124 @@ const ProductsInventoryPage: React.FC = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  
+  // Handlers for bulk actions
+  const toggleSelectionMode = () => {
+    setSelectionMode(prev => !prev);
+    if (selectionMode) {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleItemSelection = (itemId: number) => {
+    const item = products.find(p => p.id === itemId);
+    if (!item) return;
+
+    setSelectedItems(prev => {
+      const isSelected = prev.some(i => i.id === itemId);
+      if (isSelected) {
+        return prev.filter(i => i.id !== itemId);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) return;
+    
+    const itemIds = selectedItems.map(item => item.id).filter(Boolean) as number[];
+    
+    try {
+      await apiRequest('POST', '/api/items/bulk-delete', { itemIds });
+      toast({
+        title: "Items Deleted",
+        description: `Successfully deleted ${itemIds.length} items.`,
+      });
+      setSelectedItems([]);
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete items. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkPublish = async () => {
+    if (selectedItems.length === 0) return;
+    
+    const itemIds = selectedItems.map(item => item.id).filter(Boolean) as number[];
+    
+    try {
+      setSyncLoading(true);
+      await apiRequest('POST', '/api/items/bulk-publish', { 
+        itemIds, 
+        marketplaceId: 1 // Assuming 1 is Shopify's marketplace ID
+      });
+      toast({
+        title: "Items Published",
+        description: `Successfully published ${itemIds.length} items to marketplace.`,
+      });
+      setSelectedItems([]);
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to publish items. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleBulkPrint = () => {
+    if (selectedItems.length === 0) return;
+    
+    // Open print modal or redirect to print page with selected items
+    toast({
+      title: "Print Requested",
+      description: `Preparing to print labels for ${selectedItems.length} items.`,
+    });
+  };
+
+  const handleBulkExport = async () => {
+    if (selectedItems.length === 0) return;
+    
+    const itemIds = selectedItems.map(item => item.id).filter(Boolean) as number[];
+    
+    try {
+      const response = await apiRequest('POST', '/api/export-csv', { itemIds });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `exported-items-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export Complete",
+        description: `Successfully exported ${itemIds.length} items to CSV.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export items. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedItems([]);
+    setSelectionMode(false);
+  };
   const [selectedItem, setSelectedItem] = useState<Product | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
@@ -617,13 +735,7 @@ const ProductsInventoryPage: React.FC = () => {
     }
   };
 
-  const handleItemSelection = (product: Product, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedItems(prev => [...prev, product]);
-    } else {
-      setSelectedItems(prev => prev.filter(item => item.id !== product.id));
-    }
-  };
+  // This function is already implemented above, so we're removing the duplicate
 
   const handleBulkSelectAll = (select: boolean) => {
     if (select) {
