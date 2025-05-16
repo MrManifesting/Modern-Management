@@ -1049,7 +1049,7 @@ const ProductsInventoryPage: React.FC = () => {
   }
 
   return (
-    <BulkActionProvider>
+    <>
         {/* Loading overlays */}
       <LoadingOverlay 
         isLoading={syncLoading} 
@@ -1209,13 +1209,22 @@ const ProductsInventoryPage: React.FC = () => {
                 Add
               </Button>
               <Button 
-                className="gap-1.5 flex-1" 
+                className={`gap-1.5 flex-1 ${bulkSelectMode ? "bg-green-600 hover:bg-green-700" : ""}`} 
                 size="sm"
                 onClick={bulkSelectMode && selectedItems.length > 0 ? openBulkEditPanel : toggleBulkSelectMode}
-                variant={bulkSelectMode ? "secondary" : "outline"}
+                variant={bulkSelectMode ? "default" : "outline"}
               >
-                <ClipboardList className="h-4 w-4" />
-                {bulkSelectMode ? (selectedItems.length > 0 ? "Edit Items" : "Exit") : "Bulk Edit"}
+                {bulkSelectMode ? (
+                  <>
+                    <CheckSquare className="h-4 w-4" />
+                    {selectedItems.length > 0 ? "Edit Items" : "Exit Selection"}
+                  </>
+                ) : (
+                  <>
+                    <ClipboardList className="h-4 w-4" />
+                    Select Items
+                  </>
+                )}
               </Button>
               
               {/* Mobile bulk action buttons */}
@@ -2198,8 +2207,24 @@ const ProductsInventoryPage: React.FC = () => {
       </AlertDialog>
       
       {/* Bulk Action Bar component */}
-      <BulkActionBar />
-    </BulkActionProvider>
+      {selectionMode && (
+        <BulkActionBar
+          selectedItems={selectedItems}
+          onBulkPublish={handleBulkPublish}
+          onBulkDelete={handleBulkDelete}
+          onBulkPrint={handleBulkPrint}
+          onBulkExport={handleBulkExport}
+          onBulkCopy={() => {
+            toast({
+              title: "Copying items",
+              description: `Creating copies of ${selectedItems.length} items.`
+            });
+            // Implement copy functionality here
+          }}
+          onClearSelection={clearSelection}
+        />
+      )}
+    </div>
   );
 };
 
