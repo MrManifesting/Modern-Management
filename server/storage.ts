@@ -13,6 +13,11 @@ import {
   users, items, marketplaces, sales, employees, inventoryActions, productBreakdowns,
   affiliates, qrCodes, affiliateTransactions
 } from "@shared/schema";
+
+// Import Telegram photo schema
+import {
+  TelegramPhoto, InsertTelegramPhoto, telegramPhotos
+} from "@shared/schema-telegram";
 import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
 import memoryStoreModule from 'memorystore';
@@ -143,6 +148,15 @@ export interface IStorage {
   getAffiliateTransactionsBySaleId(saleId: number): Promise<AffiliateTransaction[]>;
   createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction>;
   updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined>;
+  
+  // Telegram Photos methods
+  getTelegramPhotos(): Promise<TelegramPhoto[]>;
+  getTelegramPhotoById(id: number): Promise<TelegramPhoto | undefined>;
+  getTelegramPhotosByItemId(itemId: number): Promise<TelegramPhoto[]>;
+  getUnassignedTelegramPhotos(): Promise<TelegramPhoto[]>;
+  addTelegramPhoto(photo: InsertTelegramPhoto): Promise<TelegramPhoto>;
+  updateTelegramPhoto(id: number, photo: Partial<InsertTelegramPhoto>): Promise<TelegramPhoto | undefined>;
+  deleteTelegramPhoto(id: number): Promise<boolean>;
 }
 
 // Memory storage implementation
