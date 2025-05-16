@@ -1868,29 +1868,118 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createItem(item: InsertItem): Promise<Item> {
-    const [newItem] = await db.insert(items).values(item).returning();
-    return newItem;
+    try {
+      // Use a raw SQL approach to avoid column mismatch issues
+      const keys = Object.keys(item);
+      const values = Object.values(item);
+      
+      // Create placeholders for the SQL query
+      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+      const columnNames = keys.join(', ');
+      
+      // Execute the SQL query
+      const result = await db.execute(
+        `INSERT INTO items (${columnNames}) VALUES (${placeholders}) RETURNING *`,
+        values
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error('Failed to create item');
+      }
+      
+      const row = result.rows[0];
+      
+      // Map the raw result to Item type
+      return {
+        ...row,
+        id: Number(row.id),
+        quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        tags: row.tags || [],
+        images: row.images || []
+      };
+    } catch (error) {
+      console.error("Error creating item:", error);
+      throw error;
+    }
   }
   
   async updateItem(id: number, item: Partial<InsertItem>): Promise<Item | undefined> {
-    const now = new Date();
-    const [updatedItem] = await db
-      .update(items)
-      .set({ ...item, updatedAt: now })
-      .where(eq(items.id, id))
-      .returning();
-    
-    return updatedItem;
+    try {
+      // Add updated timestamp
+      const updateData = { ...item, updatedAt: new Date() };
+      
+      // Build the SET clause parts
+      const updateFields = Object.entries(updateData).map(([key, _], index) => 
+        `${key} = $${index + 2}`
+      ).join(', ');
+      
+      // Execute the raw SQL update query
+      const result = await db.execute(
+        `UPDATE items SET ${updateFields} WHERE id = $1 RETURNING *`,
+        [id, ...Object.values(updateData)]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map the raw result to Item type
+      return {
+        ...row,
+        id: Number(row.id),
+        quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        tags: row.tags || [],
+        images: row.images || []
+      };
+    } catch (error) {
+      console.error("Error updating item:", error);
+      return undefined;
+    }
   }
   
   async deleteItem(id: number): Promise<boolean> {
-    const result = await db.delete(items).where(eq(items.id, id));
-    return result.rowCount > 0;
+    try {
+      // Use raw SQL for more reliability with schema variations
+      const result = await db.execute(
+        `DELETE FROM items WHERE id = $1 RETURNING id`,
+        [id]
+      );
+      
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      return false;
+    }
   }
   
   async getItemBySku(sku: string): Promise<Item | undefined> {
-    const [item] = await db.select().from(items).where(eq(items.sku, sku));
-    return item;
+    try {
+      // Use raw SQL for more reliability with schema variations
+      const result = await db.execute(
+        `SELECT * FROM items WHERE sku = $1 LIMIT 1`,
+        [sku]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map the raw result to Item type
+      return {
+        ...row,
+        id: Number(row.id),
+        quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        tags: row.tags || [],
+        images: row.images || []
+      };
+    } catch (error) {
+      console.error("Error fetching item by SKU:", error);
+      return undefined;
+    }
   }
   
   async getBulkItems(): Promise<Item[]> {
