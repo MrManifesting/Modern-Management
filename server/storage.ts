@@ -1844,10 +1844,10 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use SQL with proper escaping to prevent SQL injection
+      // Use direct query with numeric parameter instead of parameterized query
+      // to avoid parameter binding issues with some database drivers
       const result = await db.execute(
-        `SELECT * FROM items WHERE id = $1`,
-        [id]
+        `SELECT * FROM items WHERE id = ${id}`
       );
       
       if (!result || result.rows.length === 0) {
