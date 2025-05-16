@@ -490,22 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/items/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const item = await storage.getItem(id);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-      
-      res.json(item);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch item" });
-    }
-  });
-  
-  // Get item by barcode
+  // Get item by barcode - must be defined BEFORE the general /api/items/:id route
   app.get("/api/items/barcode/:barcode", async (req: Request, res: Response) => {
     try {
       const barcode = req.params.barcode;
@@ -543,6 +528,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get item by SKU
+  // General item by ID route - defined AFTER the more specific routes
+  app.get("/api/items/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      console.log(`Fetching item with ID: ${id}`);
+      
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        console.log(`Item with ID ${id} not found`);
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      console.log(`Successfully fetched item: ${item.name}`);
+      res.json(item);
+    } catch (error) {
+      console.error(`Error fetching item ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to fetch item" });
+    }
+  });
+
   app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
     try {
       const sku = req.params.sku;
