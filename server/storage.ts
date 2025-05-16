@@ -1815,7 +1815,24 @@ export class DatabaseStorage implements IStorage {
   // Item methods
   async getItems(): Promise<Item[]> {
     try {
-      return await db.select().from(items);
+      // Use a raw SQL query to avoid column mismatch issues
+      const result = await db.execute(`
+        SELECT * FROM items 
+        ORDER BY 
+          CASE WHEN quantity > 0 THEN 0 ELSE 1 END, 
+          id DESC
+      `);
+      
+      // Map the raw results to Item type
+      return result.rows.map(row => {
+        return {
+          ...row,
+          id: Number(row.id),
+          quantity: row.quantity !== null ? Number(row.quantity) : 0,
+          tags: row.tags || [],
+          images: row.images || []
+        };
+      });
     } catch (error) {
       console.error("Error fetching items:", error);
       // Return empty array instead of failing completely
@@ -1825,8 +1842,25 @@ export class DatabaseStorage implements IStorage {
   
   async getItem(id: number): Promise<Item | undefined> {
     try {
-      const [item] = await db.select().from(items).where(eq(items.id, id));
-      return item;
+      // Use a raw SQL query to avoid column mismatch issues
+      const result = await db.execute(`
+        SELECT * FROM items WHERE id = $1
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map the raw result to Item type
+      return {
+        ...row,
+        id: Number(row.id),
+        quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        tags: row.tags || [],
+        images: row.images || []
+      };
     } catch (error) {
       console.error("Error fetching item:", error);
       return undefined;
