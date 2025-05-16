@@ -349,10 +349,15 @@ export type SalesReport = {
 };
 
 export const forecastRequestSchema = z.object({
-  days: z.number().int().min(1).max(365).default(30),
-  item_id: z.number().optional(),
-  category: z.string().optional(),
-  includeHistorical: z.boolean().default(true)
+  historicalPeriods: z.number().int().min(1).max(24).default(3),
+  forecastPeriods: z.number().int().min(1).max(12).default(3),
+  categories: z.array(z.string()).optional(),
+  weights: z.array(z.string()).optional(),
+  groupBy: z.enum(['day', 'week', 'month']).default('month'),
+  compareYOY: z.boolean().default(false),
+  priceAdjustment: z.number().min(-20).max(20).default(0),
+  specificStrain: z.string().optional(),
+  brand: z.string().optional()
 });
 
 export type TimeSeriesData = {
