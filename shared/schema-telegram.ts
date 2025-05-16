@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,8 +8,8 @@ import { z } from "zod";
  */
 export const telegramPhotos = pgTable("telegram_photos", {
   id: serial("id").primaryKey(),
-  fileId: text("file_id").notNull(),
-  filePath: text("file_path").notNull(),
+  fileId: varchar("file_id", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 255 }).notNull(),
   caption: text("caption"),
   associatedItemId: integer("associated_item_id"),
   timestamp: timestamp("timestamp").defaultNow(),
@@ -20,8 +20,9 @@ export const telegramPhotos = pgTable("telegram_photos", {
 export type TelegramPhoto = typeof telegramPhotos.$inferSelect;
 export type InsertTelegramPhoto = typeof telegramPhotos.$inferInsert;
 
-// Schema for inserting a new telegram photo
 export const insertTelegramPhotoSchema = createInsertSchema(telegramPhotos, {
-  caption: z.string().optional(),
-  associatedItemId: z.number().optional(),
+  fileId: z.string().min(1, "File ID is required"),
+  filePath: z.string().min(1, "File path is required"),
+  caption: z.string().nullable().optional(),
+  associatedItemId: z.number().int().positive().nullable().optional(),
 });
