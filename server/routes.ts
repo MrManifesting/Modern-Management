@@ -2782,10 +2782,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(forecast);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
+        return res.status(400).json({ 
+          error: "Invalid forecast parameters", 
+          details: error.errors,
+          message: "Please check your input parameters and try again."
+        });
       }
+      
       console.error("Failed to generate forecast:", error);
-      res.status(500).json({ error: "Failed to generate sales forecast" });
+      
+      // Provide a more helpful error message
+      let errorMessage = "Could not generate forecast data at this time.";
+      
+      if (error instanceof Error) {
+        // Include original error message if available
+        errorMessage = `Forecasting error: ${error.message}`;
+        
+        // Check for specific error types for better handling
+        if (error.message.includes("getSalesTimeSeries")) {
+          errorMessage = "Could not retrieve sales data. Please try again later.";
+        } else if (error.message.includes("generateForecast")) {
+          errorMessage = "Error calculating forecast predictions. This could be due to insufficient data.";
+        }
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to generate sales forecast",
+        message: errorMessage
+      });
     }
   });
 
