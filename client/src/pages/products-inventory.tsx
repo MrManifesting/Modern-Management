@@ -705,13 +705,18 @@ const ProductsInventoryPage: React.FC = () => {
   // Bulk selection handling
   const toggleBulkSelectMode = () => {
     setBulkSelectMode(prev => {
+      const newMode = !prev;
+      
+      // Also update selection mode for cannabis cursor
+      setSelectionMode(newMode);
+      
       if (prev) {
         // If turning off, clear selections
         setSelectedItems([]);
         // Also close the bulk edit panel if it's open
         setBulkEditOpen(false);
       }
-      return !prev;
+      return newMode;
     });
   };
   

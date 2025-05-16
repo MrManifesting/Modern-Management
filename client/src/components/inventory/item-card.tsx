@@ -133,8 +133,7 @@ export default function ItemCard({
         ref={cardRef}
         className={`group overflow-hidden transition-all ${
           item.quantity <= 0 ? 'border-red-200 bg-red-50/30' : ''
-        } ${(selectionMode) ? 'cannabis-cursor' : 'cursor-pointer'} 
-          ${isSelected ? 'selectable-item selected' : 'selectable-item'}`}
+        } ${isSelected ? 'selectable-item selected' : 'selectable-item'}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleCardClick}
