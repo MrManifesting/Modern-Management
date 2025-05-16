@@ -1652,20 +1652,33 @@ export class DatabaseStorage implements IStorage {
   
   private async initializeData() {
     try {
-      // Check if there are any users
-      const existingUsers = await db.select().from(users);
-      
-      if (existingUsers.length === 0) {
-        // Initialize with a default admin user
-        await this.initializeUsers();
+      // Check for database schema compatibility
+      try {
+        // Check if there are any users
+        const existingUsers = await db.select().from(users);
+        
+        if (existingUsers.length === 0) {
+          // Initialize with a default admin user
+          await this.initializeUsers();
+        }
+      } catch (error) {
+        // If we encounter a column error, log it but don't break the application
+        console.error("Warning: Unable to initialize users due to schema mismatch:", error);
+        console.log("Try running migrations to update your database schema");
       }
       
-      // Check if there are any marketplaces
-      const existingMarketplaces = await db.select().from(marketplaces);
-      
-      if (existingMarketplaces.length === 0) {
-        // Initialize with default marketplaces
-        await this.initializeMarketplaces();
+      try {
+        // Check if there are any marketplaces
+        const existingMarketplaces = await db.select().from(marketplaces);
+        
+        if (existingMarketplaces.length === 0) {
+          // Initialize with default marketplaces
+          await this.initializeMarketplaces();
+        }
+      } catch (error) {
+        // If we encounter a column error, log it but don't break the application
+        console.error("Warning: Unable to initialize marketplaces due to schema mismatch:", error);
+        console.log("Try running migrations to update your database schema");
       }
       
       // Check if there are any employees
