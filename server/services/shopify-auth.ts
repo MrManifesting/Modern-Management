@@ -351,7 +351,9 @@ export async function createShopifyClient() {
               if (isStorefrontToken) {
                 headers['X-Shopify-Storefront-Access-Token'] = credentials.storefrontToken || credentials.accessToken;
               } else {
-                headers['X-Shopify-Access-Token'] = credentials.accessToken;
+                // Ensure there are no invalid characters in the header key
+                // Clean the token to remove any invalid characters that might cause header issues
+                headers['X-Shopify-Access-Token'] = credentials.accessToken.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
               }
               
               log(`Making API request to: ${cleanShopUrl}${apiPath} with token type: ${isStorefrontToken ? 'Storefront' : 'Admin'}`, 'shopify-details');
