@@ -274,7 +274,7 @@ export default function InventoryDetailPage() {
                     
                     <div>
                       <h3 className="text-sm font-medium text-muted-foreground">Supplier</h3>
-                      <p className="mt-1">{typeof item.metadata === 'object' && item.metadata !== null ? (item.metadata.supplier || "No supplier") : "No supplier"}</p>
+                      <p className="mt-1">{typeof item.metadata === 'object' && item.metadata !== null && item.metadata.supplier ? String(item.metadata.supplier) : "No supplier"}</p>
                     </div>
                   </div>
                   
@@ -308,7 +308,7 @@ export default function InventoryDetailPage() {
                           {Object.entries(item.attributes as Record<string, any>).map(([key, value]) => (
                             <div key={key}>
                               <h4 className="text-xs font-medium text-muted-foreground capitalize">{key}</h4>
-                              <p className="mt-1">{typeof value === 'object' ? JSON.stringify(value) : (value?.toString() || "")}</p>
+                              <p className="mt-1">{typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value || "")}</p>
                             </div>
                           ))}
                         </div>
