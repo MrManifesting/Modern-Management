@@ -937,8 +937,8 @@ const ProductsInventoryPage: React.FC = () => {
   }
 
   return (
-    <>
-      {/* Loading overlays */}
+    <BulkActionProvider>
+        {/* Loading overlays */}
       <LoadingOverlay 
         isLoading={syncLoading} 
         message="Syncing with Shopify..."
@@ -2084,7 +2084,10 @@ const ProductsInventoryPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+      
+      {/* Bulk Action Bar component */}
+      <BulkActionBar />
+    </BulkActionProvider>
   );
 };
 
