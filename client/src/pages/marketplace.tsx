@@ -38,7 +38,7 @@ export default function MarketplacePage() {
     },
   });
 
-  const connectedMarketplaces = marketplaces?.filter(m => m.isConnected) || [];
+  const connectedMarketplaces = Array.isArray(marketplaces) ? marketplaces.filter(m => m.isConnected) : [];
   const hasConnectedMarketplaces = connectedMarketplaces.length > 0;
 
   return (
