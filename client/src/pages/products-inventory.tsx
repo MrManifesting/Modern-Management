@@ -1049,8 +1049,8 @@ const ProductsInventoryPage: React.FC = () => {
   }
 
   return (
-    <>
-        {/* Loading overlays */}
+    <div className={`products-inventory-page ${selectionMode ? 'selection-mode' : ''}`}>
+      {/* Loading overlays */}
       <LoadingOverlay 
         isLoading={syncLoading} 
         message="Syncing with Shopify..."
