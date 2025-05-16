@@ -77,23 +77,25 @@ export default function ItemGrid({
   const uniqueCategories = Array.from(new Set(items.map((item: Item) => item.category)));
   const categories = ["all", ...uniqueCategories];
   
-  // Sort items - newest items first, then in stock items, then alphabetically
+  // Sort items - in stock items first, then newest items, then alphabetically
   const sortedItems = [...filteredItems].sort((a, b) => {
-    // First prioritize newest items based on creation date
+    // First sort by stock status (in stock first)
+    const aQuantity = a.quantity ?? 0;
+    const bQuantity = b.quantity ?? 0;
+    
+    if (aQuantity > 0 && bQuantity <= 0) return -1;
+    if (aQuantity <= 0 && bQuantity > 0) return 1;
+    
+    // Within each stock group, sort by newest first based on creation date
     const dateA = new Date(a.createdAt || 0);
     const dateB = new Date(b.createdAt || 0);
     
-    // Sort by newest first (newest items appear at the top)
     if (dateB.getTime() !== dateA.getTime()) {
       return dateB.getTime() - dateA.getTime();
     }
     
-    // Then sort by stock status (in stock first)
-    if (a.quantity > 0 && b.quantity <= 0) return -1;
-    if (a.quantity <= 0 && b.quantity > 0) return 1;
-    
     // Then sort alphabetically within each group
-    return a.name.localeCompare(b.name);
+    return (a.name || '').localeCompare(b.name || '');
   });
 
   // Limit the number of items to display
