@@ -1198,9 +1198,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Failed to sync inventory from Shopify:", error);
+      
+      // Provide a more user-friendly error message
+      let errorMessage = "Could not sync with Shopify at this time. Please try again later.";
+      
+      // If the error contains specific Shopify API information, include it
+      if (error instanceof Error) {
+        // Check if it's a Shopify API error with more details
+        if (error.message.includes("Shopify") || error.message.includes("API")) {
+          errorMessage = error.message;
+        }
+      }
+      
       res.status(500).json({
         success: false,
-        message: `Failed to sync inventory from Shopify: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: errorMessage
       });
     }
   });
