@@ -130,23 +130,26 @@ export default function ItemGrid({
           </h2>
           <div className="flex space-x-2">
             <div className="relative">
-              <Select 
-                value={selectedCategory} 
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="min-w-[150px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category === "all" 
-                        ? "All Categories" 
-                        : category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="category-filter" className="text-sm font-medium mb-1">Category</label>
+                <Select 
+                  value={selectedCategory} 
+                  onValueChange={setSelectedCategory}
+                >
+                  <SelectTrigger id="category-filter" className="min-w-[150px]">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category === "all" 
+                          ? "All Categories" 
+                          : category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             {/* View All button */}
