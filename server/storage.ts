@@ -1873,9 +1873,46 @@ export class DatabaseStorage implements IStorage {
   
   async createItem(item: InsertItem): Promise<Item> {
     try {
-      // Use a raw SQL approach to avoid column mismatch issues
-      const keys = Object.keys(item);
-      const values = Object.values(item);
+      // Map camelCase properties to snake_case database columns
+      const mappedItem: Record<string, any> = {};
+      
+      // Handle special case mappings
+      const columnMappings: Record<string, string> = {
+        'basePrice': 'base_price',
+        'salePrice': 'sale_price',
+        'costPrice': 'cost_price',
+        'wholesalePrice': 'wholesale_price',
+        'lowStockThreshold': 'low_stock_threshold',
+        'qrCode': 'qr_code',
+        'itemType': 'item_type',
+        'weightUnit': 'weight_unit',
+        'parentItemId': 'parent_item_id',
+        'sourceItemId': 'source_item_id',
+        'publishStatus': 'publish_status',
+        'processingStatus': 'processing_status',
+        'breakdownStatus': 'breakdown_status',
+        'packageSize': 'package_size',
+        'lastRestockDate': 'last_restock_date',
+        'syncedToMarketplaces': 'synced_to_marketplaces',
+        'marketplaceIds': 'marketplace_ids',
+        'marketplaceId': 'marketplace_id',
+        'reorderPoint': 'reorder_point',
+        'reorderQuantity': 'reorder_quantity',
+        'stockAlerts': 'stock_alerts',
+        'bundlePlan': 'bundle_plan',
+        'createdAt': 'created_at',
+        'updatedAt': 'updated_at'
+      };
+      
+      // Map properties
+      for (const [key, value] of Object.entries(item)) {
+        const dbColumn = columnMappings[key] || key;
+        mappedItem[dbColumn] = value;
+      }
+      
+      // Use a raw SQL approach with properly mapped column names
+      const keys = Object.keys(mappedItem);
+      const values = Object.values(mappedItem);
       
       // Create placeholders for the SQL query
       const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
