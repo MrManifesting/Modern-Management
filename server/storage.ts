@@ -1842,16 +1842,20 @@ export class DatabaseStorage implements IStorage {
   
   async getItem(id: number): Promise<Item | undefined> {
     try {
-      // Use a raw SQL query to avoid column mismatch issues
-      const result = await db.execute(`
-        SELECT * FROM items WHERE id = $1
-      `, [id]);
+      console.log(`Trying to fetch item with ID: ${id}`);
       
-      if (result.rows.length === 0) {
+      // Use simpler SQL without parameters since there seems to be an issue
+      const result = await db.execute(
+        `SELECT * FROM items WHERE id = ${id}`
+      );
+      
+      if (!result || result.rows.length === 0) {
+        console.log(`No item found with ID ${id}`);
         return undefined;
       }
       
       const row = result.rows[0];
+      console.log(`Found item: ${row.name}`);
       
       // Map the raw result to Item type
       return {
