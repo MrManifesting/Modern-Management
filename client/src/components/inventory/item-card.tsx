@@ -146,18 +146,43 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
             
             {/* Marketplace badge */}
             {(() => {
-              if (item.marketplace && Array.isArray(item.marketplace) && item.marketplace.length > 0) {
-                const marketplaceName = typeof item.marketplace[0] === 'string' 
-                  ? String(item.marketplace[0])
-                  : String((item.marketplace[0] as any)?.name || 'unknown');
-                
-                const badgeClass = getMarketplaceBadgeClass(marketplaceName);
-                
-                return (
-                  <span className={`rounded-full ${badgeClass} px-2 py-1 text-xs font-medium text-white`}>
-                    {marketplaceName}
-                  </span>
-                );
+              // Add null safety checks for marketplace
+              if (item.marketplace) {
+                // Handle different marketplace data formats
+                if (Array.isArray(item.marketplace) && item.marketplace.length > 0) {
+                  // If marketplace is an array with items
+                  const marketplaceItem = item.marketplace[0];
+                  const marketplaceName = typeof marketplaceItem === 'string' 
+                    ? String(marketplaceItem)
+                    : String((marketplaceItem as any)?.name || 'unknown');
+                  
+                  const badgeClass = getMarketplaceBadgeClass(marketplaceName);
+                  
+                  return (
+                    <span className={`rounded-full ${badgeClass} px-2 py-1 text-xs font-medium text-white`}>
+                      {marketplaceName}
+                    </span>
+                  );
+                } else if (typeof item.marketplace === 'string') {
+                  // If marketplace is a string
+                  const badgeClass = getMarketplaceBadgeClass(item.marketplace);
+                  
+                  return (
+                    <span className={`rounded-full ${badgeClass} px-2 py-1 text-xs font-medium text-white`}>
+                      {item.marketplace}
+                    </span>
+                  );
+                } else if (typeof item.marketplace === 'object') {
+                  // If marketplace is a single object
+                  const marketplaceName = (item.marketplace as any)?.name || 'unknown';
+                  const badgeClass = getMarketplaceBadgeClass(marketplaceName);
+                  
+                  return (
+                    <span className={`rounded-full ${badgeClass} px-2 py-1 text-xs font-medium text-white`}>
+                      {marketplaceName}
+                    </span>
+                  );
+                }
               }
               return null;
             })()}
