@@ -44,6 +44,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import BulkUpload from "./bulk-upload";
+import TelegramPhotos from "./telegram-photos";
 
 interface ItemFormProps {
   defaultValues?: Partial<ItemForm>;
