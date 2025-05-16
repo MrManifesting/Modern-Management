@@ -1537,23 +1537,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all items
       const items = await storage.getItems();
       
-      // Transform data for price sheet
-      const priceSheetData = items.map(item => ({
-        Name: item.name,
-        SKU: item.sku || "",
-        RetailPrice: item.basePrice.toString(),
-        WholesalePrice: item.wholesalePrice?.toString() || "",
-        Category: item.category,
-        Strain: item.strain || "",
-        Type: item.type || "",
-        Potency: item.potency || "",
-        Size: item.volume || "",
-        Stock: item.quantity.toString()
-      }));
+      // Transform data for price sheet using available fields from the schema
+      const priceSheetData = items.map(item => {
+        // Safely access metadata for additional fields
+        const metadata = item.metadata ? (typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata) : {};
+        
+        return {
+          Name: item.name || "",
+          SKU: item.sku || "",
+          RetailPrice: item.basePrice?.toString() || "0",
+          WholesalePrice: item.wholesalePrice?.toString() || "",
+          Category: item.category || "general",
+          Weight: item.weight?.toString() || "",
+          Location: item.location || "",
+          Condition: item.condition || "",
+          ItemType: item.itemType || "standard",
+          StrainType: item.strainType || "",
+          Tier: item.tier || "",
+          Status: item.status || "active",
+          Stock: item.quantity?.toString() || "0"
+        };
+      });
       
-      // Generate CSV
+      // Generate CSV with updated fields
       const parser = new Parser({
-        fields: ["Name", "SKU", "RetailPrice", "WholesalePrice", "Category", "Strain", "Type", "Potency", "Size", "Stock"]
+        fields: [
+          "Name", "SKU", "RetailPrice", "WholesalePrice", "Category", 
+          "Weight", "Location", "Condition", "ItemType", "StrainType", 
+          "Tier", "Status", "Stock"
+        ]
       });
       const csv = parser.parse(priceSheetData);
       
@@ -1562,7 +1574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).send(csv);
     } catch (error) {
       console.error("Error generating price sheet:", error);
-      res.status(500).json({ error: "Failed to generate price sheet" });
+      res.status(500).json({ 
+        error: "Failed to generate price sheet", 
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
