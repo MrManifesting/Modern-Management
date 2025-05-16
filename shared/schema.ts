@@ -370,16 +370,34 @@ export const itemFormSchema = z.object({
   description: z.string().optional().nullable(),
   sku: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
-  costPrice: z.string().optional().nullable(),
-  basePrice: z.string().optional().nullable(),
-  salePrice: z.string().optional().nullable(),
-  wholesalePrice: z.string().optional().nullable(),
+  costPrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  basePrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  salePrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  wholesalePrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
   category: z.string().default("general"),
   tags: z.array(z.string()).optional().nullable(),
-  quantity: z.string().optional().nullable().transform(val => val ? Number(val) : 0),
+  quantity: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return 0;
+    return typeof val === 'string' ? Number(val) || 0 : val;
+  }),
   status: z.string().default("active"),
   barcode: z.string().optional().nullable(),
-  weight: z.string().optional().nullable(),
+  weight: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
   dimensions: z.string().optional().nullable(),
   condition: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
