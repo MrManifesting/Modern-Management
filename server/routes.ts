@@ -3805,6 +3805,42 @@ ${topCustomersCsv}`;
   // Register Shopify credentials routes
   registerShopifyCredentialsRoutes(app, storage);
   
+  // Shopify Admin redirect endpoint
+  app.get("/api/shopify/redirect-to-admin/:productId", async (req: Request, res: Response) => {
+    try {
+      const productId = req.params.productId;
+      const shopName = process.env.SHOPIFY_STORE;
+      
+      if (!shopName) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Shopify store name not configured"
+        });
+      }
+      
+      // Clean up the store name to ensure proper format
+      let cleanedShopName = shopName;
+      // Remove http/https protocol if present
+      cleanedShopName = cleanedShopName.replace(/^https?:\/\//i, '');
+      // Remove trailing slashes
+      cleanedShopName = cleanedShopName.replace(/\/+$/, '');
+      
+      // Create the Shopify admin URL for the product
+      const adminUrl = `https://${cleanedShopName}/admin/products/${productId}`;
+      
+      console.log(`Redirecting to Shopify admin: ${adminUrl}`);
+      
+      // Redirect to the Shopify admin
+      return res.redirect(adminUrl);
+    } catch (error) {
+      console.error("Error redirecting to Shopify admin:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to redirect to Shopify admin"
+      });
+    }
+  });
+  
   // Register marketplace routes for multi-marketplace support
   registerMarketplaceRoutes(app, storage);
   
