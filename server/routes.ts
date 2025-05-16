@@ -527,7 +527,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get item by SKU
+  // Get item by SKU route - Must be defined BEFORE the general item ID route
+  app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
+    try {
+      const sku = req.params.sku;
+      console.log(`API request for item with SKU: ${sku}`);
+      
+      const items = await storage.getItems();
+      const item = items.find(i => i.sku === sku);
+      
+      if (!item) {
+        console.log(`Item with SKU ${sku} not found`);
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      console.log(`Successfully fetched item by SKU: ${item.name}`);
+      res.json(item);
+    } catch (error) {
+      console.error(`Error fetching item with SKU ${req.params.sku}:`, error);
+      res.status(500).json({ error: "Failed to get item by SKU" });
+    }
+  });
+  
   // General item by ID route - defined AFTER the more specific routes
   app.get("/api/items/:id", async (req: Request, res: Response) => {
     try {
@@ -546,27 +567,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error(`Error fetching item ${req.params.id}:`, error);
       res.status(500).json({ error: "Failed to fetch item" });
-    }
-  });
-
-  app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
-    try {
-      const sku = req.params.sku;
-      console.log(`API request for item with SKU: ${sku}`);
-      
-      // Use the dedicated getItemBySku method for better performance and logging
-      const item = await storage.getItemBySku(sku);
-      
-      if (!item) {
-        console.log(`API: Item not found with SKU ${sku}`);
-        return res.status(404).json({ error: "Item not found with the provided SKU" });
-      }
-      
-      console.log(`API: Successfully retrieved item with SKU ${sku}: ${item.name} (ID: ${item.id})`);
-      res.json(item);
-    } catch (error) {
-      console.error("Error getting item by SKU:", error);
-      res.status(500).json({ error: "Failed to get item by SKU" });
     }
   });
 
