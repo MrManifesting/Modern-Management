@@ -326,12 +326,12 @@ export default function InventoryDetailPage() {
                       <CardContent className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Base Price:</span>
-                          <span className="font-semibold">${(item.basePrice || 0).toFixed(2)}</span>
+                          <span className="font-semibold">${typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : (parseFloat(String(item.basePrice || 0)).toFixed(2))}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Sale Price:</span>
                           <span className="font-semibold text-green-600">
-                            {item.salePrice ? `$${(item.salePrice || 0).toFixed(2)}` : 'N/A'}
+                            {item.salePrice ? `$${typeof item.salePrice === 'number' ? item.salePrice.toFixed(2) : (parseFloat(String(item.salePrice)).toFixed(2))}` : 'N/A'}
                           </span>
                         </div>
                       </CardContent>
