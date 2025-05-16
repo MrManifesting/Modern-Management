@@ -1,9 +1,24 @@
-import { pgTable, text, serial, integer, doublePrecision, timestamp, json, boolean, date, varchar, jsonb, index } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  serial,
+  text,
+  varchar,
+  timestamp,
+  integer,
+  boolean,
+  json,
+  doublePrecision,
+  numeric,
+  jsonb,
+  primaryKey,
+  date,
+  index,
+  foreignKey
+} from 'drizzle-orm/pg-core';
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-// Session storage table for Replit Auth
+// Session storage table for authentication
 export const sessions = pgTable(
   "sessions",
   {
@@ -14,563 +29,362 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User Schema 
+// User storage table for authentication
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email"),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  role: text("role").notNull().default("user"),
-  isActive: boolean("is_active").notNull().default(true),
+  id: varchar("id").primaryKey().notNull(),
+  username: varchar("username").unique(),
+  password: varchar("password"),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").default("user"),
+  isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLogin: true
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = typeof users.$inferInsert;
 
-// Enums
-export const ItemType = {
-  REGULAR: 'regular',
-  BUNDLE: 'bundle',
-  COMPONENT: 'component',
-  BULK: 'bulk',
-  BREAKDOWN: 'breakdown'
-} as const;
-
-export const ProcessingStatus = {
-  NONE: 'none',
-  WAITING: 'waiting',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed'
-} as const;
-
-export const BreakdownStatus = {
-  NONE: 'none',
-  WAITING: 'waiting',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  BREAKDOWN: 'breakdown',
-  BULK: 'bulk'  
-} as const;
-
-export const ItemCondition = {
-  NEW: 'new',
-  LIKE_NEW: 'like_new',
-  GOOD: 'good',
-  FAIR: 'fair',
-  POOR: 'poor'
-} as const;
-
-// Item Schema
+// Item table for inventory management
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  sku: text("sku").notNull(), // Unique Stock Keeping Unit
-  
-  // Pricing information
-  costPrice: doublePrecision("cost_price").notNull().default(0), // What we paid for it
-  basePrice: doublePrecision("base_price").notNull(), // MSRP
-  salePrice: doublePrecision("sale_price"), // Special sale price if applicable
-  wholesalePrice: doublePrecision("wholesale_price"), // Price for wholesale customers
-  
-  // Categorization
-  category: text("category").notNull(),
-  subcategory: text("subcategory"),
-  brand: text("brand"),
-  condition: text("condition").notNull().default(ItemCondition.NEW),
-  
-  // Inventory management
-  quantity: integer("quantity").notNull().default(1), // Current inventory quantity
-  lowStockThreshold: integer("low_stock_threshold").default(5), // Threshold for low stock alerts
-  reorderPoint: integer("reorder_point").default(3), // When to reorder
-  reorderQuantity: integer("reorder_quantity").default(10), // How many to reorder
-  stockAlerts: boolean("stock_alerts").default(true), // Whether to send alerts
-  lastRestockDate: timestamp("last_restock_date"), // When the item was last restocked
-  
-  // Product identification
-  barcode: text("barcode"), // Store barcode data (can be UPC, EAN, etc.)
-  qrCode: text("qr_code"), // Store QR code data
-  mpn: text("mpn"), // Manufacturer Part Number
-  gtin: text("gtin"), // Global Trade Item Number
-  
-  // Status and metadata
-  status: text("status").notNull().default("draft"), // draft, active, archived, discontinued
-  visibility: text("visibility").notNull().default("visible"), // visible, hidden
-  featured: boolean("featured").default(false), // Featured product 
-  
-  // Media and content
-  images: json("images").notNull().default([]), // Array of image URLs
-  videos: json("videos").default([]), // Array of video URLs
-  documents: json("documents").default([]), // Manuals, specifications, etc.
-  
-  // Attributes and tagging
-  tags: json("tags").notNull().default([]), // Array of tags
-  attributes: json("attributes").notNull().default({}), // Product-specific attributes (color, size, etc.)
-  dimensions: json("dimensions").default({}), // Product dimensions (length, width, height)
-  
-  // Marketplace integration
-  marketplace: json("marketplace").notNull().default([]), // Array of marketplace identifiers
-  syncedToMarketplaces: json("synced_to_marketplaces").notNull().default([]), // Which marketplaces this is synced to
-  marketplaceIds: json("marketplace_ids").default({}), // IDs in different marketplaces {shopify: "123", ebay: "456"}
-  
-  // Fields for bundling and kitting
-  itemType: text("item_type").notNull().default(ItemType.REGULAR), // regular, bundle, component
-  weight: doublePrecision("weight"), // Weight for shipping
-  weightUnit: text("weight_unit").default("g"), // g, oz, lb, kg
-  processingStatus: text("processing_status").notNull().default(ProcessingStatus.NONE), // none, waiting, in_progress, completed
-  breakdownStatus: text("breakdown_status").default(BreakdownStatus.NONE), // Status for bulk/breakdown tracking
-  sourceItemId: integer("source_item_id"), // Reference to parent item if this is a component
-  bundlePlan: json("bundle_plan").default([]), // Array of planned component items
-  parentItemId: integer("parent_item_id"), // Reference to parent bulk item if this is a breakdown
-  
-  // Timestamps
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  sku: varchar("sku").unique(),
+  brand: varchar("brand"),
+  costPrice: numeric("cost_price").default("0"),
+  basePrice: numeric("base_price").default("0"),
+  salePrice: numeric("sale_price"),
+  wholesalePrice: numeric("wholesale_price"),
+  category: varchar("category").default("general"),
+  tags: text("tags").array(),
+  quantity: integer("quantity").default(0),
+  status: varchar("status").default("active"),
+  images: text("images").array(),
+  barcode: varchar("barcode"),
+  weight: numeric("weight"),
+  dimensions: varchar("dimensions"),
+  condition: varchar("condition"),
+  packageSize: varchar("package_size"),
+  qrCode: text("qr_code"),
+  marketplaceId: integer("marketplace_id"),
+  publishStatus: varchar("publish_status").default("draft"),
+  externalId: varchar("external_id"),
+  marketplaceUrl: varchar("marketplace_url"),
+  marketplace: json("marketplace").default([]),
+  location: varchar("location"),
+  tier: varchar("tier"),
+  strainType: varchar("strain_type"),
+  publishedToShopify: boolean("published_to_shopify").default(false),
+  shopifyId: varchar("shopify_id"),
+  shopifyUrl: varchar("shopify_url"),
+  shopifyVariantId: varchar("shopify_variant_id"),
+  metadata: json("metadata").default({}),
+  itemType: varchar("item_type").default("standard"), // standard, bulk, breakdown
+  visibility: varchar("visibility").default("visible"), // visible, hidden, archived
+  processingStatus: varchar("processing_status"),
+  assignedEmployeeId: integer("assigned_employee_id"),
+  parentItemId: integer("parent_item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Insert schema
-export const insertItemSchema = createInsertSchema(items).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const itemFormSchema = insertItemSchema.extend({
-  files: z.array(z.any()).optional(),
-  sku: z.string().optional(), // SKU becomes optional in the form (will be auto-generated)
-  barcode: z.string().optional(), // Will be auto-generated
-  qrCode: z.string().optional(), // Will be auto-generated
-});
-
-// Export types
 export type Item = typeof items.$inferSelect;
-export type InsertItem = z.infer<typeof insertItemSchema>;
-export type ItemForm = z.infer<typeof itemFormSchema>;
+export type InsertItem = typeof items.$inferInsert;
 
-// Marketplace Schema
+// Marketplace table for tracking external platforms
 export const marketplaces = pgTable("marketplaces", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull().default("general"), // shopify, ebay, etsy, amazon, etc.
-  isConnected: boolean("is_connected").notNull().default(false),
-  credentials: json("credentials").notNull().default({}),
-  apiEndpoint: text("api_endpoint"), // API URL for the marketplace
-  storeUrl: text("store_url"), // URL of the store/seller account
-  syncEnabled: boolean("sync_enabled").default(false), // Whether automatic syncing is enabled
-  syncPullInterval: integer("sync_pull_interval").default(15), // Minutes between pulls (marketplace to local)
-  syncPushInterval: integer("sync_push_interval").default(30), // Minutes between pushes (local to marketplace)
-  lastSyncDate: timestamp("last_sync_date"), // When items were last pulled from the marketplace
-  lastPushDate: timestamp("last_push_date"), // When items were last pushed to the marketplace
-  syncLog: json("sync_log").default([]), // Log of sync activities
-  isSyncEnabled: boolean("is_sync_enabled").default(false).notNull(), // Alias for syncEnabled for code clarity
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertMarketplaceSchema = createInsertSchema(marketplaces).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+  name: varchar("name").notNull(),
+  description: text("description"),
+  apiKey: varchar("api_key"),
+  apiSecret: varchar("api_secret"),
+  storeUrl: varchar("store_url"),
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"),
+  lastPush: timestamp("last_push"),
+  errorCount: integer("error_count").default(0),
+  lastError: text("last_error"),
+  settings: json("settings").default({}),
+  pullInterval: integer("pull_interval").default(15), // minutes
+  pushInterval: integer("push_interval").default(30), // minutes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type Marketplace = typeof marketplaces.$inferSelect;
-export type InsertMarketplace = z.infer<typeof insertMarketplaceSchema>;
+export type InsertMarketplace = typeof marketplaces.$inferInsert;
 
-// CSV Export Schema
-export const csvExportSchema = z.object({
-  marketplaces: z.array(z.string()).min(1, "Select at least one marketplace"),
-  items: z.array(z.number()).min(1, "Select at least one item"),
-});
-
-export type CSVExport = z.infer<typeof csvExportSchema>;
-
-// Affiliates Schema
-export const affiliates = pgTable("affiliates", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  code: text("code").notNull().unique(), // Unique affiliate code
-  commissionRate: doublePrecision("commission_rate").notNull().default(0.04), // 4% default commission rate
-  status: text("status").notNull().default("active"), // active, inactive, suspended
-  paymentDetails: json("payment_details").notNull().default({}), // Payment method details
-  notes: text("notes"),
-  totalEarnings: doublePrecision("total_earnings").notNull().default(0),
-  totalSales: integer("total_sales").notNull().default(0),
-  // Stripe integration fields
-  stripeAccountId: text("stripe_account_id"), // Stripe Connect account ID
-  stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID
-  stripeOnboardingComplete: boolean("stripe_onboarding_complete").default(false), // Whether Stripe onboarding is complete
-  payoutSchedule: text("payout_schedule").default("monthly"), // daily, weekly, biweekly, monthly
-  lastPayoutDate: timestamp("last_payout_date"), // When the affiliate was last paid out
-  pendingPayout: doublePrecision("pending_payout").notNull().default(0), // Amount awaiting payout
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertAffiliateSchema = createInsertSchema(affiliates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  totalEarnings: true,
-  totalSales: true,
-});
-
-export type Affiliate = typeof affiliates.$inferSelect;
-export type InsertAffiliate = z.infer<typeof insertAffiliateSchema>;
-
-// QR Code Schema
-export const qrCodes = pgTable("qr_codes", {
-  id: serial("id").primaryKey(),
-  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
-  code: text("code").notNull().unique(), // Unique tracking code
-  url: text("url").notNull(), // Target URL with affiliate tracking
-  type: text("type").notNull().default("affiliate"), // affiliate, product, campaign
-  title: text("title").notNull(), // Name/title for the QR code
-  description: text("description"),
-  imageUrl: text("image_url"), // URL to the generated QR code image
-  scans: integer("scans").notNull().default(0), // Number of scans/uses
-  conversions: integer("conversions").notNull().default(0), // Number of actual purchases
-  status: text("status").notNull().default("active"), // active, inactive
-  lastScannedAt: timestamp("last_scanned_at"), // When the QR code was last scanned
-  expiresAt: timestamp("expires_at"), // Optional expiration date
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  scans: true,
-  conversions: true,
-});
-
-export type QrCode = typeof qrCodes.$inferSelect;
-export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
-
-// Sales schema with affiliate tracking fields
+// Sales table
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id").notNull(), // Foreign key to items table
-  quantity: integer("quantity").notNull().default(1),
-  salePrice: doublePrecision("sale_price").notNull(), // Actual selling price (may differ from item price)
-  marketplace: text("marketplace").notNull(), // Which marketplace it was sold on
-  orderNumber: text("order_number"), // External order number/reference
-  trackingNumber: text("tracking_number"), // Shipping tracking number
-  buyerInfo: json("buyer_info").notNull().default({}), // Buyer details (JSON)
-  saleDate: date("sale_date").notNull().defaultNow(), // When the sale occurred
-  shippingCost: doublePrecision("shipping_cost").default(0), // Cost of shipping
-  fees: doublePrecision("fees").default(0), // Platform fees
-  affiliateCode: text("affiliate_code"), // The affiliate code used for the sale
-  commissionRate: doublePrecision("commission_rate"), // Commission rate for this sale
-  commissionAmount: doublePrecision("commission_amount"), // Calculated commission amount
-  status: text("status").notNull().default("completed"), // completed, refunded, cancelled
-  notes: text("notes"), // Any additional notes about the sale
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertSaleSchema = createInsertSchema(sales).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  commissionAmount: true, // This will be calculated on the server
-});
-
-export const saleFormSchema = insertSaleSchema.extend({
-  itemSku: z.string().optional(), // Allow looking up by SKU instead of ID
+  orderId: varchar("order_id").notNull(),
+  customerName: varchar("customer_name"),
+  customerEmail: varchar("customer_email"),
+  customerPhone: varchar("customer_phone"),
+  items: json("items").notNull(),
+  subtotal: numeric("subtotal").notNull(),
+  tax: numeric("tax").default("0"),
+  shipping: numeric("shipping").default("0"),
+  discount: numeric("discount").default("0"),
+  total: numeric("total").notNull(),
+  status: varchar("status").default("completed"),
+  paymentMethod: varchar("payment_method"),
+  marketplaceId: integer("marketplace_id"),
+  externalOrderId: varchar("external_order_id"),
+  shippingAddress: json("shipping_address"),
+  notes: text("notes"),
+  metadata: json("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type Sale = typeof sales.$inferSelect;
-export type InsertSale = z.infer<typeof insertSaleSchema>;
-export type SaleForm = z.infer<typeof saleFormSchema>;
+export type InsertSale = typeof sales.$inferInsert;
 
-// Affiliate Transactions Schema
-export const affiliateTransactions = pgTable("affiliate_transactions", {
-  id: serial("id").primaryKey(),
-  affiliateId: integer("affiliate_id").notNull(), // Reference to the affiliate
-  saleId: text("sale_id"), // Reference to the sale ID (can be internal ID or from external payment provider)
-  transactionType: text("transaction_type").notNull(), // commission, payout, adjustment
-  amount: doublePrecision("amount").notNull(),
-  description: text("description"),
-  status: text("status").notNull().default("pending"), // pending, processed, canceled
-  // Payment integration fields
-  stripeTransferId: text("stripe_transfer_id"), // Stripe transfer ID for payouts
-  stripePaymentIntentId: text("stripe_payment_intent_id"), // Stripe payment intent ID for sales
-  paypalOrderId: text("paypal_order_id"), // PayPal order ID for sales processed through PayPal
-  payoutBatchId: text("payout_batch_id"), // For grouping transactions in the same payout batch
-  feeAmount: doublePrecision("fee_amount").default(0), // Any fees charged by payment processor
-  processedAt: timestamp("processed_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const insertAffiliateTransactionSchema = createInsertSchema(affiliateTransactions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type AffiliateTransaction = typeof affiliateTransactions.$inferSelect;
-export type InsertAffiliateTransaction = z.infer<typeof insertAffiliateTransactionSchema>;
-
-// Analytics Report Schema
-export const reportSchema = z.object({
-  startDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format",
-  }),
-  endDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format",
-  }),
-  marketplaces: z.array(z.string()).optional(),
-  categories: z.array(z.string()).optional(),
-  groupBy: z.enum(["day", "week", "month", "marketplace", "category"]).default("day"),
-});
-
-export type ReportParams = z.infer<typeof reportSchema>;
-
-// Report types
-export interface ReportSummary {
-  totalSales: number;
-  totalRevenue: number;
-  totalProfit: number;
-  averageOrderValue: number;
-  bestSellingItem: {
-    id: number;
-    name: string;
-    quantity: number;
-    revenue: number;
-  } | null;
-  bestMarketplace: {
-    name: string;
-    sales: number;
-    revenue: number;
-  } | null;
-  topCategory: {
-    name: string;
-    sales: number;
-    revenue: number;
-  } | null;
-}
-
-export interface TimeSeriesData {
-  label: string; // Date string or category name
-  sales: number;
-  revenue: number;
-  profit: number;
-  isForecasted: boolean; // Flag to indicate if this is a forecasted data point
-  metadata?: Record<string, any>; // Additional metadata for filtering (category, packageSize, etc)
-}
-
-export interface SalesReport {
-  summary: ReportSummary;
-  timeSeries: TimeSeriesData[];
-  categoryBreakdown: { name: string; value: number; percentage: number }[];
-  marketplaceBreakdown: { name: string; value: number; percentage: number }[];
-  topProducts: {
-    id: number;
-    name: string;
-    quantity: number;
-    revenue: number;
-    profit: number;
-  }[];
-  forecast?: {
-    timeSeries: TimeSeriesData[];
-    kpis: {
-      historicalMetrics: {
-        totalSales: number;
-        totalRevenue: number;
-        totalProfit: number;
-        avgMonthlySales: number;
-      };
-      forecastedMetrics: {
-        totalSales: number;
-        totalRevenue: number;
-        totalProfit: number;
-        avgMonthlySales: number;
-      };
-      growthMetrics: {
-        salesGrowth: number;
-        revenueGrowth: number;
-        profitGrowth: number;
-      };
-      inventoryMetrics: {
-        suggestedInventoryLevel: number;
-      };
-    };
-    categoryForecasts?: {
-      [category: string]: {
-        timeSeries: TimeSeriesData[];
-        suggestedInventoryLevel: number;
-      };
-    };
-    weightForecasts?: {
-      [weight: string]: {
-        timeSeries: TimeSeriesData[];
-        suggestedInventoryLevel: number;
-      };
-    };
-  };
-}
-
-// Forecast request schema
-export const forecastRequestSchema = z.object({
-  historicalPeriods: z.number().int().positive().default(3),
-  forecastPeriods: z.number().int().positive().default(3),
-  categories: z.array(z.string()).optional(),
-  weights: z.array(z.string()).optional(),
-  groupBy: z.enum(["day", "week", "month"]).default("month"),
-});
-
-// Employees Schema
+// Employee table
 export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
-  employeeId: varchar("employee_id", { length: 10 }).notNull().unique(), // Unique employee identifier
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  role: text("role").notNull().default("staff"), // admin, manager, staff
-  department: text("department").notNull().default("general"),
-  active: boolean("active").notNull().default(true),
-  pin: varchar("pin", { length: 6 }), // Optional PIN for scanner authentication
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertEmployeeSchema = createInsertSchema(employees).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+  employeeId: varchar("employee_id").unique().notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").unique(),
+  phone: varchar("phone"),
+  position: varchar("position"),
+  departmentId: integer("department_id"),
+  managerId: integer("manager_id"),
+  hireDate: date("hire_date"),
+  status: varchar("status").default("active"),
+  permissions: json("permissions").default({}),
+  isAdmin: boolean("is_admin").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type Employee = typeof employees.$inferSelect;
-export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type InsertEmployee = typeof employees.$inferInsert;
 
-// Inventory Actions Schema - track who does what with inventory items
+// Inventory action table to track employee interactions with inventory
 export const inventoryActions = pgTable("inventory_actions", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id").notNull(), // Reference to the item
-  employeeId: integer("employee_id").notNull(), // Reference to the employee
-  actionType: text("action_type").notNull(), // create, update, scan, list, ship, etc.
-  actionDetails: json("action_details").notNull().default({}), // Additional details about the action
-  quantity: integer("quantity").default(1), // Quantity affected if applicable
-  notes: text("notes"), // Any additional notes
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-});
-
-export const insertInventoryActionSchema = createInsertSchema(inventoryActions).omit({
-  id: true,
-  timestamp: true,
+  itemId: integer("item_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  actionType: varchar("action_type").notNull(), // "receive", "adjust", "move", "breakdown", etc.
+  quantity: integer("quantity").notNull(),
+  previousQuantity: integer("previous_quantity"),
+  notes: text("notes"),
+  locationFrom: varchar("location_from"),
+  locationTo: varchar("location_to"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export type InventoryAction = typeof inventoryActions.$inferSelect;
-export type InsertInventoryAction = z.infer<typeof insertInventoryActionSchema>;
+export type InsertInventoryAction = typeof inventoryActions.$inferInsert;
 
-// Product Processing Schema (renamed from Product Breakdown)
+// Product breakdown table for tracking bulk item processing
 export const productBreakdowns = pgTable("product_breakdowns", {
   id: serial("id").primaryKey(),
-  bulkItemId: integer("bulk_item_id").notNull(), // Reference to the bulk item
-  status: text("status").notNull().default(ProcessingStatus.WAITING), // waiting, in_progress, completed
-  employeeId: integer("employee_id"), // Employee who initiated or completed the breakdown
-  targetProducts: json("target_products").notNull().default([]), // Array of planned breakdown products
-  completedProducts: json("completed_products").notNull().default([]), // Array of created breakdown products
-  notes: text("notes"), // Notes about the breakdown process
-  startedAt: timestamp("started_at").notNull().defaultNow(),
+  name: varchar("name").notNull(),
+  sourceItemId: integer("source_item_id").notNull(),
+  assignedEmployeeId: integer("assigned_employee_id"),
+  status: varchar("status").default("pending"), // pending, in_progress, completed, cancelled
+  startWeight: numeric("start_weight"),
+  weightUnit: varchar("weight_unit").default("g"),
+  targetProducts: json("target_products").default([]),
+  completedProducts: json("completed_products").default([]),
+  notes: text("notes"),
   completedAt: timestamp("completed_at"),
-});
-
-export const insertBreakdownSchema = createInsertSchema(productBreakdowns).omit({
-  id: true,
-  completedAt: true,
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type ProductBreakdown = typeof productBreakdowns.$inferSelect;
-export type InsertProductBreakdown = z.infer<typeof insertBreakdownSchema>;
+export type InsertProductBreakdown = typeof productBreakdowns.$inferInsert;
 
-// Component target product schema (renamed from Breakdown target)
+// Affiliate table for tracking partners and sales representatives
+export const affiliates = pgTable("affiliates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  email: varchar("email").unique(),
+  phone: varchar("phone"),
+  address: json("address"),
+  code: varchar("code").unique().notNull(),
+  commissionRate: numeric("commission_rate").default("0.1"), // 10% default
+  paymentMethod: varchar("payment_method").default("paypal"),
+  paymentDetails: json("payment_details").default({}),
+  notes: text("notes"),
+  status: varchar("status").default("active"),
+  totalSales: integer("total_sales").default(0),
+  totalEarnings: numeric("total_earnings").default("0"),
+  pendingPayout: numeric("pending_payout").default("0"),
+  stripeAccountId: varchar("stripe_account_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Affiliate = typeof affiliates.$inferSelect;
+export type InsertAffiliate = typeof affiliates.$inferInsert;
+
+// QR code table for tracking affiliate marketing codes
+export const qrCodes = pgTable("qr_codes", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(),
+  code: varchar("code").unique().notNull(),
+  name: varchar("name").notNull(),
+  type: varchar("type").default("general"), // general, product-specific, event, etc.
+  targetUrl: varchar("target_url").notNull(),
+  imageUrl: text("image_url"),
+  scans: integer("scans").default(0),
+  conversions: integer("conversions").default(0),
+  lastScannedAt: timestamp("last_scanned_at"),
+  metadata: json("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type QrCode = typeof qrCodes.$inferSelect;
+export type InsertQrCode = typeof qrCodes.$inferInsert;
+
+// Affiliate transaction table for tracking commissions and payouts
+export const affiliateTransactions = pgTable("affiliate_transactions", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(),
+  amount: numeric("amount").notNull(),
+  type: varchar("type").notNull(), // "commission", "payout"
+  status: varchar("status").default("pending"), // "pending", "processed", "failed"
+  description: text("description"),
+  saleId: varchar("sale_id"),
+  stripeTransferId: varchar("stripe_transfer_id"),
+  paypalPayoutId: varchar("paypal_payout_id"),
+  paypalOrderId: varchar("paypal_order_id"),
+  paypalCaptureId: varchar("paypal_capture_id"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AffiliateTransaction = typeof affiliateTransactions.$inferSelect;
+export type InsertAffiliateTransaction = typeof affiliateTransactions.$inferInsert;
+
+// Export enums for use in application code
+export enum ItemType {
+  STANDARD = "standard",
+  BULK = "bulk",
+  BREAKDOWN = "breakdown"
+}
+
+export enum ProcessingStatus {
+  NONE = "none",
+  WAITING = "waiting",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed"
+}
+
+export enum ItemCondition {
+  NEW = "new",
+  USED = "used",
+  REFURBISHED = "refurbished",
+  BROKEN = "broken"
+}
+
+export enum BreakdownStatus {
+  PENDING = "pending",
+  IN_PROGRESS = "in_progress", 
+  COMPLETED = "completed",
+  CANCELLED = "cancelled"
+}
+
+// Zod schemas for request validation
+export const insertItemSchema = createInsertSchema(items);
+export const insertMarketplaceSchema = createInsertSchema(marketplaces);
+export const insertSaleSchema = createInsertSchema(sales);
+export const insertEmployeeSchema = createInsertSchema(employees);
+export const insertInventoryActionSchema = createInsertSchema(inventoryActions);
+export const insertBreakdownSchema = createInsertSchema(productBreakdowns);
+export const insertUserSchema = createInsertSchema(users);
+export const insertAffiliateSchema = createInsertSchema(affiliates);
+export const insertQrCodeSchema = createInsertSchema(qrCodes);
+export const insertAffiliateTransactionSchema = createInsertSchema(affiliateTransactions);
+
+// Custom schemas for specific operations
 export const breakdownTargetSchema = z.object({
   name: z.string(),
-  weight: z.number(),
-  weightUnit: z.string().default("g"),
   quantity: z.number().int().positive(),
+  weight: z.number().positive(),
+  weightUnit: z.string(),
   sku: z.string().optional(),
-  price: z.number().positive(),
-  status: z.string().default(ProcessingStatus.WAITING),
-  resultItemId: z.number().optional(), // ID of the created item when completed
+  price: z.number().optional()
 });
 
 export type BreakdownTarget = z.infer<typeof breakdownTargetSchema>;
 
-// Define the relationships
-export const inventoryActionsRelations = relations(inventoryActions, ({ one }) => ({
-  item: one(items, {
-    fields: [inventoryActions.itemId],
-    references: [items.id],
-  }),
-  employee: one(employees, {
-    fields: [inventoryActions.employeeId],
-    references: [employees.id],
-  }),
-}));
+export const csvExportSchema = z.object({
+  type: z.enum(['products', 'inventory', 'sales']),
+  format: z.enum(['csv', 'json']).default('csv'),
+  fields: z.array(z.string()).optional(),
+  filter: z.record(z.any()).optional()
+});
 
-export const productBreakdownsRelations = relations(productBreakdowns, ({ one }) => ({
-  bulkItem: one(items, {
-    fields: [productBreakdowns.bulkItemId],
-    references: [items.id],
-  }),
-  employee: one(employees, {
-    fields: [productBreakdowns.employeeId],
-    references: [employees.id],
-  }),
-}));
+export const reportSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  groupBy: z.enum(['day', 'week', 'month']).default('day'),
+  marketplaceId: z.number().optional(),
+  category: z.string().optional()
+});
 
-export const itemsRelations = relations(items, ({ many, one }) => ({
-  inventoryActions: many(inventoryActions),
-  sales: many(sales),
-  breakdowns: many(productBreakdowns),
-  sourceItem: one(items, {
-    fields: [items.sourceItemId],
-    references: [items.id],
-  }),
-}));
+export type ReportParams = z.infer<typeof reportSchema>;
 
-export const salesRelations = relations(sales, ({ one }) => ({
-  item: one(items, {
-    fields: [sales.itemId],
-    references: [items.id],
-  }),
-}));
+export type SalesReport = {
+  totalSales: number;
+  totalRevenue: number;
+  totalProfit: number;
+  averageOrderValue: number;
+  productsSold: number;
+  topProducts: {id: number, name: string, quantity: number, revenue: number}[];
+  recentSales: Sale[];
+  salesByDay: {date: string, sales: number, revenue: number}[];
+};
 
-export const affiliatesRelations = relations(affiliates, ({ many }) => ({
-  transactions: many(affiliateTransactions),
-  qrCodes: many(qrCodes),
-}));
+export const forecastRequestSchema = z.object({
+  days: z.number().int().min(1).max(365).default(30),
+  item_id: z.number().optional(),
+  category: z.string().optional(),
+  includeHistorical: z.boolean().default(true)
+});
 
-export const affiliateTransactionsRelations = relations(affiliateTransactions, ({ one }) => ({
-  affiliate: one(affiliates, {
-    fields: [affiliateTransactions.affiliateId],
-    references: [affiliates.id],
-  }),
-  // We're no longer directly referencing sales as saleId is now a text field that can store external payment IDs
-}));
+export type TimeSeriesData = {
+  label: string;
+  sales: number;
+  revenue: number;
+  profit: number;
+  isForecasted?: boolean;
+  metadata?: any;
+};
 
-export const qrCodesRelations = relations(qrCodes, ({ one }) => ({
-  affiliate: one(affiliates, {
-    fields: [qrCodes.affiliateId],
-    references: [affiliates.id],
-  }),
-}));
-
-export const employeesRelations = relations(employees, ({ many }) => ({
-  inventoryActions: many(inventoryActions),
-  breakdowns: many(productBreakdowns),
-}));
+// Item form schema for the client-side form validation
+export const itemFormSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  costPrice: z.string().optional().nullable(),
+  basePrice: z.string().optional().nullable(),
+  salePrice: z.string().optional().nullable(),
+  wholesalePrice: z.string().optional().nullable(),
+  category: z.string().default("general"),
+  tags: z.array(z.string()).optional().nullable(),
+  quantity: z.string().optional().nullable().transform(val => val ? Number(val) : 0),
+  status: z.string().default("active"),
+  barcode: z.string().optional().nullable(),
+  weight: z.string().optional().nullable(),
+  dimensions: z.string().optional().nullable(),
+  condition: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  tier: z.string().optional().nullable(),
+  strainType: z.string().optional().nullable(),
+  itemType: z.string().default("standard"),
+  visibility: z.string().default("visible"),
+});

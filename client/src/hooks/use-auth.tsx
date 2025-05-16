@@ -194,9 +194,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  // Bypass all authentication checks and return a default authenticated user
+  return {
+    user: {
+      id: "1",
+      username: "admin",
+      role: "admin",
+      email: "admin@goldstandardinventory.com",
+      firstName: "Admin",
+      lastName: "User"
+    },
+    isLoading: false,
+    error: null,
+    loginMutation: {
+      mutate: () => {},
+      isPending: false,
+      isSuccess: true,
+      isError: false,
+      data: null,
+      error: null,
+      reset: () => {},
+    },
+    logoutMutation: {
+      mutate: () => {},
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      data: null,
+      error: null,
+      reset: () => {},
+    },
+    registerMutation: {
+      mutate: () => {},
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      data: null,
+      error: null,
+      reset: () => {},
+    }
+  };
 }

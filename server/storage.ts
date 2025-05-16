@@ -25,11 +25,12 @@ import { pool } from './db';
 export interface IStorage {
   // User authentication methods
   getUsers(): Promise<User[]>;
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: number | string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
+  updateUser(id: number | string, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number | string): Promise<boolean>;
+  upsertUser(user: any): Promise<User>;
   
   // Session store for authentication
   sessionStore: any;
