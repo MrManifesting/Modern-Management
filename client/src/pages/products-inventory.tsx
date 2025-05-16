@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
+import { BulkActionProvider, BulkActionBar, SelectableItem } from '@/components/inventory/bulk-action-selector';
 import { 
   Plus, 
   UploadCloud, 
