@@ -70,11 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchInterval: false
   });
 
-  const user = result?.user || null;
+  // Safely extract user data with proper null checking
+  const user = result && result.success === true ? result.user : null;
 
   const loginMutation = useMutation<LoginResponse, Error, LoginData>({
     mutationFn: async (credentials: LoginData) => {
@@ -82,23 +84,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: LoginResponse) => {
-      // Update the cache with user data - correctly format the data
-      queryClient.setQueryData(["/api/user"], { 
-        success: true, 
-        user: data.user 
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
-      // Show success message
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-        variant: "default",
-      });
-      
-      console.log("Login successful in auth hook. User data received:", data.user?.username);
-      
-      // Navigation handled in auth-page.tsx component
+      if (data.success && data.user) {
+        // Update the cache with user data
+        queryClient.setQueryData(["/api/user"], { 
+          success: true, 
+          user: data.user 
+        });
+        
+        // Invalidate the user query to trigger a refetch
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        
+        // Show success message
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+          variant: "default",
+        });
+        
+        console.log("Login successful in auth hook. User data received:", data.user.username);
+        // Navigation handled in auth-page.tsx component
+      } else {
+        // Handle unexpected response format
+        console.error("Login response missing user data:", data);
+        toast({
+          title: "Login error",
+          description: "Unexpected server response",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       console.error("Login error:", error);
