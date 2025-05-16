@@ -64,19 +64,34 @@ export default function AuthPage() {
   const onLoginSubmit = loginForm.handleSubmit((data) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
-        console.log("Auth page: Login successful, navigating directly...");
+        console.log("Auth page: Login successful, navigating...");
         // Show redirecting state
         setIsRedirecting(true);
         
-        // Force navigation directly from auth page - immediate redirect
-        window.location.href = "/products-inventory";
+        // Add a small delay to ensure state updates first
+        setTimeout(() => {
+          // Force navigation directly to main inventory page
+          window.location.replace("/products-inventory");
+        }, 300);
       }
     });
   });
 
   // Handle registration submission
   const onRegisterSubmit = registerForm.handleSubmit((data) => {
-    registerMutation.mutate(data);
+    registerMutation.mutate(data, {
+      onSuccess: () => {
+        console.log("Auth page: Registration successful, navigating...");
+        // Show redirecting state
+        setIsRedirecting(true);
+        
+        // Add a small delay to ensure state updates first
+        setTimeout(() => {
+          // Force navigation directly to main inventory page
+          window.location.replace("/products-inventory");
+        }, 300);
+      }
+    });
   });
 
   // If the user is already authenticated, redirect to the home page
