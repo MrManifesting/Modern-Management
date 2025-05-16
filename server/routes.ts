@@ -3828,6 +3828,9 @@ ${topCustomersCsv}`;
   
   // Register color-coded barcode routes
   registerBarcodeRoutes(app, storage);
+  
+  // Register Telegram photo integration routes
+  registerTelegramRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
