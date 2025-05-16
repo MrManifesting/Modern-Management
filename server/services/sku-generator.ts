@@ -83,13 +83,13 @@ export function generateSKUBatch(
     weightUnit?: string,
     parentSku?: string
   }>
-): Map<number, string> {
-  const skuMap = new Map<number, string>();
+): Record<number, string> {
+  const skuMap: Record<number, string> = {};
   
   for (const item of items) {
     if (item.id) {
       const itemOptions = options?.[item.id];
-      skuMap.set(item.id, generateSKU(item, itemOptions));
+      skuMap[item.id] = generateSKU(item, itemOptions);
     }
   }
   
@@ -120,8 +120,8 @@ export function generateBreakdownSKUs(
   parentItem: Item, 
   weights: number[], 
   weightUnit: string
-): Map<number, string> {
-  const skuMap = new Map<number, string>();
+): Record<number, string> {
+  const skuMap: Record<number, string> = {};
   
   if (!parentItem.sku) {
     // Generate a parent SKU if it doesn't exist
@@ -133,7 +133,7 @@ export function generateBreakdownSKUs(
         weightUnit,
         parentSku
       });
-      skuMap.set(weight, sku);
+      skuMap[weight] = sku;
     }
   } else {
     // Use the existing parent SKU
@@ -143,7 +143,7 @@ export function generateBreakdownSKUs(
         weightUnit,
         parentSku: parentItem.sku
       });
-      skuMap.set(weight, sku);
+      skuMap[weight] = sku;
     }
   }
   
@@ -186,7 +186,17 @@ function getCategoryPrefix(category: string): string {
     'Baby': 'BBY',
     'Medicine': 'MED',
     'Supplements': 'SUP',
-    'Misc': 'MSC'
+    'Misc': 'MSC',
+    'Flower': 'FLW',
+    'Concentrate': 'CON',
+    'Edible': 'EDB',
+    'Topical': 'TOP',
+    'Accessory': 'ACS',
+    'Bulk': 'BLK',
+    'Exotic': 'EXO',
+    'Indoor': 'IND',
+    'Outdoor': 'ODR',
+    'THCA': 'THA'
   };
   
   // Normalize the category name
