@@ -1787,12 +1787,23 @@ export class DatabaseStorage implements IStorage {
   
   // Item methods
   async getItems(): Promise<Item[]> {
-    return await db.select().from(items);
+    try {
+      return await db.select().from(items);
+    } catch (error) {
+      console.error("Error fetching items:", error);
+      // Return empty array instead of failing completely
+      return [];
+    }
   }
   
   async getItem(id: number): Promise<Item | undefined> {
-    const [item] = await db.select().from(items).where(eq(items.id, id));
-    return item;
+    try {
+      const [item] = await db.select().from(items).where(eq(items.id, id));
+      return item;
+    } catch (error) {
+      console.error("Error fetching item:", error);
+      return undefined;
+    }
   }
   
   async createItem(item: InsertItem): Promise<Item> {
