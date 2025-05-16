@@ -601,38 +601,18 @@ export default function ItemFormComponent({
                   </DialogContent>
                 </Dialog>
                 
-                {/* Telegram integration button */}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-1.5"
-                  onClick={() => {
-                    // Open telegram photo selection dialog
-                    window.open('https://t.me/share/url?url=' + encodeURIComponent(window.location.href), '_blank');
+                {/* Telegram integration component */}
+                <TelegramPhotos 
+                  onSelectPhoto={(photoUrl) => {
+                    // Add the selected photo to our image URLs
+                    setImageUrls(prevUrls => [...prevUrls, photoUrl]);
+                    
                     toast({
-                      title: "Telegram Integration",
-                      description: "Send photos to your bot and they'll appear in the app. Copy the item name first for auto-matching.",
+                      title: "Photo Added",
+                      description: "Telegram photo added to this item.",
                     });
                   }}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    className="h-4 w-4 mr-1"
-                  >
-                    <path d="M21.5 8.5V6.2c0-1.8-1.4-3.2-3.2-3.2H5.2C3.5 3 2 4.5 2 6.2v11.5c0 1.7 1.5 3.3 3.2 3.3h16.2c.5 0 .9-.4.9-1v-7.5"></path>
-                    <path d="M21.5 8.5C14 8.5 14 20 14 20"></path>
-                    <path d="M17 20V8.5h4.5"></path>
-                  </svg>
-                  From Telegram
-                </Button>
+                />
               </div>
             </div>
             <div className="mt-1">
