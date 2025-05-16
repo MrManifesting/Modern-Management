@@ -160,7 +160,7 @@ export default function ItemGrid({
                 variant="outline" 
                 size="sm"
                 className="flex items-center"
-                onClick={() => navigate("/inventory")}
+                onClick={() => navigate("/products-inventory")}
               >
                 View All
                 <ArrowRight className="ml-1 h-4 w-4" />
