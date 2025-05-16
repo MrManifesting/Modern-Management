@@ -6,6 +6,8 @@ import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { log } from "./vite";
 import { analyzeProductImage, generateProductDescription } from "./services/openai";
+import { generateSKU, generateSKUBatch } from "./services/sku-generator";
+import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode-generator";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 // Inventory breakdown functions are imported below
 import { 
