@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, ImageIcon, CheckCircle, XCircle } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// Type for Telegram photos
 type TelegramPhoto = {
   id: number;
   fileId: string;
@@ -26,7 +25,6 @@ type TelegramPhoto = {
   createdAt: string;
 };
 
-// Props for the TelegramPhotos component
 interface TelegramPhotosProps {
   itemId?: number;
   onSelectPhoto?: (photoUrl: string) => void;
@@ -34,228 +32,168 @@ interface TelegramPhotosProps {
 
 export default function TelegramPhotos({ itemId, onSelectPhoto }: TelegramPhotosProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<TelegramPhoto | null>(null);
 
-  // Check if Telegram integration is available
+  // Check if Telegram bot is configured
   const { data: telegramStatus, isLoading: isStatusLoading } = useQuery({
     queryKey: ['/api/telegram/status'],
     retry: false,
   });
 
-  // Fetch unassigned Telegram photos
-  const { 
-    data: photos = [], 
-    isLoading: isPhotosLoading,
-    refetch: refetchPhotos
-  } = useQuery<TelegramPhoto[]>({
+  // Fetch telegram photos
+  const {
+    data: photos = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
     queryKey: ['/api/telegram/photos'],
-    enabled: !!telegramStatus?.configured,
-  });
-  
-  // Filter photos that are not yet assigned to any item
-  const unassignedPhotos = photos.filter(photo => !photo.associatedItemId);
-
-  // Assign photo to the current item
-  const assignPhotoMutation = useMutation({
-    mutationFn: async ({ photoId, itemId }: { photoId: number, itemId: number }) => {
-      await apiRequest("POST", "/api/telegram/photos/assign", { photoId, itemId });
-      return { photoId, itemId };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/telegram/photos'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/items', itemId] });
-      toast({
-        title: "Success",
-        description: "Photo successfully assigned to the item.",
-      });
-      setIsDialogOpen(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to assign photo. Please try again.",
-        variant: "destructive",
-      });
-    },
+    enabled: isOpen, // Only fetch when dialog is open
+    refetchOnWindowFocus: false,
   });
 
-  // Delete a Telegram photo
-  const deletePhotoMutation = useMutation({
-    mutationFn: async (photoId: number) => {
-      await apiRequest("DELETE", `/api/telegram/photos/${photoId}`);
-      return photoId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/telegram/photos'] });
-      toast({
-        title: "Success",
-        description: "Photo successfully deleted.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete photo. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle photo assignment
-  const handleAssignPhoto = (photo: TelegramPhoto) => {
-    if (itemId) {
-      assignPhotoMutation.mutate({ photoId: photo.id, itemId });
-    } else if (onSelectPhoto) {
+  const handleSelectPhoto = (photo: TelegramPhoto) => {
+    setSelectedPhoto(photo);
+    
+    if (onSelectPhoto) {
       onSelectPhoto(photo.filePath);
-      setIsDialogOpen(false);
+    }
+    
+    // If we have an item ID, assign the photo to this item
+    if (itemId) {
+      assignPhotoToItem(photo.id, itemId);
+    }
+    
+    setIsOpen(false);
+  };
+
+  const assignPhotoToItem = async (photoId: number, itemId: number) => {
+    try {
+      await fetch('/api/telegram/photos/assign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ photoId, itemId }),
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/telegram/photos'] });
+      
+      toast({
+        title: "Photo assigned",
+        description: "The photo has been assigned to this item",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not assign photo to item",
+      });
     }
   };
 
-  // Handle photo deletion
-  const handleDeletePhoto = (photoId: number) => {
-    deletePhotoMutation.mutate(photoId);
-  };
-
-  // Content showing inside the dialog
-  const dialogContent = (
-    <>
-      {isStatusLoading || isPhotosLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : !telegramStatus?.configured ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">
-            Telegram integration is not configured. Ask your administrator to set up the Telegram bot.
-          </p>
-        </div>
-      ) : unassignedPhotos.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">
-            No photos available from Telegram. Send photos to your Telegram bot to see them here.
-          </p>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              window.open('https://t.me/share/url?url=' + encodeURIComponent(window.location.href), '_blank');
-            }}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Open Telegram
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 max-h-[400px] overflow-y-auto p-2">
-            {unassignedPhotos.map((photo) => (
-              <Card key={photo.id} className="overflow-hidden">
-                <div className="relative h-32 bg-muted">
-                  <img
-                    src={photo.filePath}
-                    alt={photo.caption || 'Telegram photo'}
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2 flex space-x-1">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      onClick={() => handleDeletePhoto(photo.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardContent className="p-3">
-                  {photo.caption && (
-                    <p className="text-xs text-muted-foreground truncate mb-2">
-                      {photo.caption}
-                    </p>
-                  )}
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleAssignPhoto(photo)}
-                  >
-                    {itemId ? 'Add to Item' : 'Select'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <DialogFooter className="mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                window.open('https://t.me/share/url?url=' + encodeURIComponent(window.location.href), '_blank');
-                toast({
-                  title: "Telegram opened",
-                  description: "Send photos to your bot and they'll appear here.",
-                });
-              }}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send More Photos
-            </Button>
-            <Button onClick={() => refetchPhotos()}>
-              Refresh Photos
-            </Button>
-          </DialogFooter>
-        </>
-      )}
-    </>
-  );
-
-  // If used as a button with dialog
-  if (!itemId || !onSelectPhoto) {
+  // If Telegram is not configured, show setup instructions
+  if (!isStatusLoading && telegramStatus && !telegramStatus.configured) {
     return (
-      <>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-1.5"
-          onClick={() => setIsDialogOpen(true)}
-        >
-          <svg 
-            className="h-4 w-4" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path 
-              d="M12 20.5C16.6944 20.5 20.5 16.6944 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 16.6944 7.30558 20.5 12 20.5Z" 
-              fill="#039BE5"
-            />
-            <path 
-              d="M8.22501 14.775L8.80001 11.65L13.4 7.65C13.6 7.475 13.825 7.575 13.675 7.8L12.175 11.65H15.775C16.2 11.65 16.25 11.9 15.925 12.2L8.95001 18.125C8.70001 18.35 8.50001 18.2 8.57501 17.875L9.57501 14.775H8.22501Z" 
-              fill="white"
-            />
-          </svg>
-          From Telegram
-        </Button>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Telegram Photos</DialogTitle>
-              <DialogDescription>
-                Select photos from your Telegram bot to add to this item.
-              </DialogDescription>
-            </DialogHeader>
-            {dialogContent}
-          </DialogContent>
-        </Dialog>
-      </>
+      <Card className="border-dashed border-2 border-gray-300 bg-gray-50">
+        <CardContent className="p-6 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+            <h3 className="text-lg font-medium">Telegram Integration Not Configured</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Ask your administrator to set up the Telegram bot integration to use this feature.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
-  // If used inline within a form or another component
   return (
-    <div className="mt-4">
-      <h4 className="text-sm font-medium mb-2">Telegram Photos</h4>
-      {dialogContent}
+    <div>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full justify-start">
+            <ImageIcon className="h-4 w-4 mr-2" />
+            Select from Telegram Photos
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[725px]">
+          <DialogHeader>
+            <DialogTitle>Telegram Photos</DialogTitle>
+            <DialogDescription>
+              Select a photo from your Telegram messages or send a new photo to your bot.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="text-center text-destructive p-4">
+              Error loading photos. Please try again.
+            </div>
+          ) : photos.length === 0 ? (
+            <div className="text-center p-4">
+              <p className="mb-2">No photos found</p>
+              <p className="text-sm text-gray-500">
+                {telegramStatus && telegramStatus.configured ? 
+                  "Send some photos to your Telegram bot to see them here." :
+                  "Telegram integration not properly configured."}
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {photos.map((photo) => (
+                  <div 
+                    key={photo.id} 
+                    className={`relative cursor-pointer rounded-md overflow-hidden border-2 hover:border-primary transition-all ${
+                      photo.associatedItemId ? 'border-gray-300' : 'border-transparent'
+                    }`}
+                    onClick={() => handleSelectPhoto(photo)}
+                  >
+                    <img 
+                      src={photo.filePath} 
+                      alt={photo.caption || "Telegram photo"} 
+                      className="object-cover w-full h-40"
+                    />
+                    
+                    {photo.associatedItemId && (
+                      <div className="absolute top-2 right-2 bg-black bg-opacity-50 rounded-full p-1">
+                        {photo.associatedItemId === itemId ? (
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-yellow-400" />
+                        )}
+                      </div>
+                    )}
+                    
+                    {photo.caption && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2">
+                        <p className="text-white text-xs truncate">{photo.caption}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {selectedPhoto && (
+        <div className="mt-2 relative h-32 border rounded-md overflow-hidden">
+          <img 
+            src={selectedPhoto.filePath} 
+            alt={selectedPhoto.caption || "Selected photo"} 
+            className="object-cover w-full h-full"
+          />
+        </div>
+      )}
     </div>
   );
 }
