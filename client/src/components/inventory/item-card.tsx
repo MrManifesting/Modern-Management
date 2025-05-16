@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { 
   Edit,
@@ -10,7 +10,8 @@ import {
   Barcode,
   Store,
   PackageOpen,
-  Layers
+  Layers,
+  Check
 } from "lucide-react";
 import ImageCarousel from "./image-carousel";
 import { 
@@ -39,13 +40,24 @@ type ItemCardProps = {
   item: Item;
   onEdit: (item: Item) => void;
   onDelete: (id: number) => void;
+  isSelected?: boolean;
+  onSelect?: (id: number) => void;
+  selectionMode?: boolean;
 };
 
-export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
+export default function ItemCard({ 
+  item, 
+  onEdit, 
+  onDelete, 
+  isSelected = false, 
+  onSelect, 
+  selectionMode = false 
+}: ItemCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [isDndBreakdownOpen, setIsDndBreakdownOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [, navigate] = useLocation();
 
   // Format date for display with error handling
@@ -104,15 +116,28 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
     return classes[status as keyof typeof classes] || classes.default;
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only handle as selection if Ctrl/Cmd key is pressed or in selection mode
+    if ((e.ctrlKey || e.metaKey || selectionMode) && onSelect && item.id) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSelect(item.id);
+    } else {
+      handleViewDetails();
+    }
+  };
+
   return (
     <>
       <Card 
-        className={`group overflow-hidden transition-all cursor-pointer ${
+        ref={cardRef}
+        className={`group overflow-hidden transition-all ${
           item.quantity <= 0 ? 'border-red-200 bg-red-50/30' : ''
-        }`}
+        } ${(selectionMode) ? 'cannabis-cursor' : 'cursor-pointer'} 
+          ${isSelected ? 'selectable-item selected' : 'selectable-item'}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={handleViewDetails}
+        onClick={handleCardClick}
       >
         <div className="relative h-48 bg-gray-200">
           {/* Item image carousel */}
