@@ -1844,9 +1844,10 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use simpler SQL without parameters since there seems to be an issue
+      // Use SQL with proper escaping to prevent SQL injection
       const result = await db.execute(
-        `SELECT * FROM items WHERE id = ${id}`
+        `SELECT * FROM items WHERE id = $1`,
+        [id]
       );
       
       if (!result || result.rows.length === 0) {
@@ -1857,13 +1858,57 @@ export class DatabaseStorage implements IStorage {
       const row = result.rows[0];
       console.log(`Found item: ${row.name}`);
       
-      // Map the raw result to Item type
+      // Map snake_case database column names to camelCase property names
       return {
-        ...row,
         id: Number(row.id),
+        name: row.name,
+        description: row.description,
+        sku: row.sku,
+        category: row.category,
+        subcategory: row.subcategory,
+        brand: row.brand,
+        condition: row.condition,
         quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        basePrice: row.base_price !== null ? parseFloat(row.base_price) : 0,
+        salePrice: row.sale_price !== null ? parseFloat(row.sale_price) : null,
+        costPrice: row.cost_price !== null ? parseFloat(row.cost_price) : null,
+        wholesalePrice: row.wholesale_price !== null ? parseFloat(row.wholesale_price) : null,
+        lowStockThreshold: row.low_stock_threshold !== null ? Number(row.low_stock_threshold) : null,
+        featured: row.featured,
+        weight: row.weight,
+        weightUnit: row.weight_unit,
+        dimensions: row.dimensions,
+        barcode: row.barcode,
+        qrCode: row.qr_code,
+        mpn: row.mpn,
+        gtin: row.gtin,
+        status: row.status,
+        visibility: row.visibility,
+        itemType: row.item_type,
+        metadata: row.metadata || {},
         tags: row.tags || [],
-        images: row.images || []
+        images: row.images || [],
+        videos: row.videos || [],
+        documents: row.documents || [],
+        attributes: row.attributes || {},
+        packageSize: row.package_size,
+        processingStatus: row.processing_status,
+        breakdownStatus: row.breakdown_status,
+        parentItemId: row.parent_item_id,
+        sourceItemId: row.source_item_id,
+        marketplace: row.marketplace,
+        marketplaceId: row.marketplace_id,
+        marketplaceIds: row.marketplace_ids,
+        syncedToMarketplaces: row.synced_to_marketplaces,
+        publishStatus: row.publish_status,
+        reorderPoint: row.reorder_point,
+        reorderQuantity: row.reorder_quantity,
+        stockAlerts: row.stock_alerts,
+        lastRestockDate: row.last_restock_date,
+        bundlePlan: row.bundle_plan,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        tier: row.tier
       };
     } catch (error) {
       console.error("Error fetching item:", error);
