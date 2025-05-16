@@ -400,6 +400,55 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication system
   setupAuth(app);
+
+  // Force login endpoint - bypasses regular auth for testing
+  app.post("/api/force-login", async (req: Request, res: Response) => {
+    try {
+      // Find admin user or create one if needed
+      let adminUser = await storage.getUserByUsername("admin");
+      
+      if (!adminUser) {
+        // Create an admin user if none exists
+        adminUser = await storage.createUser({
+          username: "admin",
+          password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818", // admin123
+          email: "admin@inventorypro.com",
+          firstName: "Admin",
+          lastName: "User",
+          role: "admin",
+          isActive: true
+        });
+        
+        console.log("Created new admin user for force login");
+      }
+      
+      // Log in the user directly
+      req.login(adminUser, (err) => {
+        if (err) {
+          console.error("Force login error:", err);
+          return res.status(500).json({ 
+            success: false, 
+            message: "Login failed", 
+            error: err.message
+          });
+        }
+        
+        console.log("Force login successful for admin user");
+        return res.status(200).json({ 
+          success: true, 
+          user: adminUser, 
+          message: "Force login successful" 
+        });
+      });
+    } catch (error) {
+      console.error("Force login error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Force login failed", 
+        error: error.message 
+      });
+    }
+  });
   // Item Routes
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {
