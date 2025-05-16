@@ -230,18 +230,52 @@ export default function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {/* Only show View in Store for items that have a SKU and are listed */}
-                  {item.sku && item.status === 'listed' && (
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        document.getElementById(`shopify-preview-${item.id}`)?.click();
-                      }}
-                    >
-                      <Store className="mr-2 h-4 w-4" />
-                      View in Shopify Store
-                    </DropdownMenuItem>
+                  {/* Show Shopify options for any item with a SKU */}
+                  {item.sku && (
+                    <>
+                      {/* Active listing in Shopify */}
+                      {item.status === 'listed' && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            document.getElementById(`shopify-preview-${item.id}`)?.click();
+                          }}
+                        >
+                          <Store className="mr-2 h-4 w-4" />
+                          View Active Listing
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {/* View draft listing if available */}
+                      {item.shopifyId && item.status !== 'listed' && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Use the ShopifyStorePreview for drafts too
+                            document.getElementById(`shopify-preview-${item.id}`)?.click();
+                          }}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Draft in Shopify
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {/* Direct link to Shopify admin for this product */}
+                      {item.shopifyId && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(`https://${window.location.hostname}/api/shopify/redirect-to-admin/${item.shopifyId}`, '_blank');
+                          }}
+                        >
+                          <Store className="mr-2 h-4 w-4" />
+                          Open in Shopify Admin
+                        </DropdownMenuItem>
+                      )}
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
