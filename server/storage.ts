@@ -5,7 +5,7 @@ import {
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
   ItemType, ProcessingStatus, ItemCondition,
-  User, InsertUser,
+  User, UpsertUser,
   Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
   AffiliateTransaction, InsertAffiliateTransaction,
   
@@ -28,14 +28,9 @@ import { pool } from './db';
 
 // Interface for storage methods
 export interface IStorage {
-  // User authentication methods
-  getUsers(): Promise<User[]>;
-  getUser(id: number | string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number | string, user: Partial<InsertUser>): Promise<User | undefined>;
-  deleteUser(id: number | string): Promise<boolean>;
-  upsertUser(user: any): Promise<User>;
+  // User authentication methods for Replit Auth
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Session store for authentication
   sessionStore: any;
