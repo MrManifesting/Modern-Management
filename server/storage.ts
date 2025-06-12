@@ -1914,12 +1914,31 @@ export class DatabaseStorage implements IStorage {
       // Use raw SQL to avoid Drizzle mapping issues completely
       const result = await db.execute(`SELECT id, name, description, sku, quantity, base_price, category, status FROM items WHERE id = ${id} LIMIT 1`);
       
-      if (result.length === 0) {
+      console.log('Result type:', typeof result);
+      console.log('Result is array:', Array.isArray(result));
+      console.log('Result keys:', Object.keys(result || {}));
+      
+      // Handle different result structures
+      let rows;
+      if (Array.isArray(result)) {
+        rows = result;
+      } else if (result && result.rows) {
+        rows = result.rows;
+      } else if (result && typeof result === 'object') {
+        // Try different possible result structures
+        rows = result.results || result.data || [];
+      } else {
+        rows = [];
+      }
+      
+      console.log('Rows found:', rows.length);
+      
+      if (rows.length === 0) {
         console.log(`No item found with ID ${id}`);
         return undefined;
       }
       
-      const row = result[0];
+      const row = rows[0];
       console.log(`Found item: ${row.name}`);
       
       // Return simplified item object with available fields
@@ -1933,7 +1952,7 @@ export class DatabaseStorage implements IStorage {
         brand: '',
         condition: 'new',
         quantity: row.quantity || 0,
-        basePrice: Number(row.basePrice) || 0,
+        basePrice: Number(row.base_price) || 0,
         salePrice: null,
         costPrice: null,
         wholesalePrice: null,
