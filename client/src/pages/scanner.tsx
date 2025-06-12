@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScanLine, Barcode, QrCode } from 'lucide-react';
 import QuickScanner from '../components/scanner/quick-scanner';
 import UniversalScanner from '../components/scanner/universal-scanner';
+import { ErrorBoundary } from '../components/error-boundary';
 
 export default function ScannerPage() {
   const [scanMode, setScanMode] = useState<string>('quick');
@@ -105,7 +106,9 @@ export default function ScannerPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <UniversalScanner />
+              <ErrorBoundary>
+                <UniversalScanner />
+              </ErrorBoundary>
             </CardContent>
           </Card>
         </TabsContent>
