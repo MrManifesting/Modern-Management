@@ -2188,17 +2188,14 @@ export class DatabaseStorage implements IStorage {
   
   async getItemBySku(sku: string): Promise<Item | undefined> {
     try {
-      // Use raw SQL for more reliability with schema variations
-      const result = await db.execute(
-        `SELECT * FROM items WHERE sku = $1 LIMIT 1`,
-        [sku]
-      );
+      // Use Drizzle query builder for proper parameter handling
+      const result = await db.select().from(items).where(eq(items.sku, sku)).limit(1);
       
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return undefined;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       
       // Map the raw result to Item type
       return {
