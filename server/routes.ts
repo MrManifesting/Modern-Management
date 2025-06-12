@@ -28,6 +28,7 @@ import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate";
 import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
+import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerSyncRoutes } from "./routes-sync";
 import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
@@ -4268,7 +4269,7 @@ ${topCustomersCsv}`;
   });
 
   // Register Google Sheets integration routes
-  registerGoogleSheetsRoutes(app);
+  registerGoogleSheetsRoutes(app, storage);
 
   // Register enhanced Shopify integration routes
   registerShopifyEnhancedRoutes(app);
