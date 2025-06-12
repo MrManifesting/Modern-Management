@@ -435,7 +435,7 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
             name: productName,
             sku: skuIndex >= 0 && row[skuIndex] ? row[skuIndex].trim() : `SKU-${Date.now()}-${i+1}`,
             category: categoryIndex >= 0 && row[categoryIndex] ? row[categoryIndex].trim() : "Uncategorized",
-            basePrice: productPrice,
+            basePrice: String(productPrice),
             quantity: quantityIndex >= 0 && row[quantityIndex] ? parseInt(row[quantityIndex], 10) : 0,
             size: sizeIndex >= 0 && row[sizeIndex] ? row[sizeIndex].trim() : "",
             description: descriptionIndex >= 0 && row[descriptionIndex] ? row[descriptionIndex].trim() : "",

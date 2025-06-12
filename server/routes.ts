@@ -318,7 +318,7 @@ THC/CBD: Lab tested for potency and purity`;
       const itemData: InsertItem = {
         name: title,
         description,
-        price, // Calculated price based on tier and weight
+        basePrice: String(price), // Calculated price based on tier and weight
         quantity: parseInt(quantity) || 0,
         status: 'active',
         category,
@@ -590,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const itemData = {
         ...req.body,
         images: fileUrls,
-        basePrice: parseFloat(req.body.basePrice || 0),
+        basePrice: String(req.body.basePrice || '0'),
         quantity: parseInt(req.body.quantity || 1),
         tags: req.body.tags ? (typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags) : [],
         marketplace: req.body.marketplace ? (typeof req.body.marketplace === 'string' ? JSON.parse(req.body.marketplace) : req.body.marketplace) : [],
@@ -617,6 +617,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate barcode data
       itemData.barcode = generateBarcodeData(itemData.sku);
+      
+      // Ensure basePrice is always a string before validation
+      if (typeof itemData.basePrice === 'number') {
+        itemData.basePrice = String(itemData.basePrice);
+      }
       
       console.log("Prepared item data:", JSON.stringify(itemData, null, 2));
       
