@@ -141,28 +141,37 @@ export function registerShopifyFixRoutes(app: Express) {
 
       for (const item of validation.valid) {
         try {
-          // Create a simplified item for testing database compatibility
-          const simplifiedItem = {
+          // Use direct database insertion to bypass field mapping issues
+          const { db } = await import('../db');
+          const { items } = await import('../../shared/schema');
+          
+          const directItem = {
             name: item.name,
             sku: item.sku,
-            basePrice: item.basePrice,
-            quantity: item.quantity,
-            description: item.description,
-            category: item.category,
-            brand: item.brand,
-            barcode: item.barcode,
-            condition: item.condition,
-            location: item.location,
-            itemType: item.itemType,
-            status: item.status,
+            base_price: String(item.basePrice || 0),
+            quantity: item.quantity || 0,
+            description: item.description || '',
+            category: item.category || 'General',
+            brand: item.brand || 'Unknown',
+            barcode: item.barcode || '',
+            condition: item.condition || 'new',
+            location: item.location || 'warehouse',
+            item_type: item.itemType || 'standard',
+            status: item.status || 'active',
+            weight: String(item.weight || 0),
+            cost_price: String(item.costPrice || 0),
             tags: item.tags || [],
             images: item.images || [],
-            weight: item.weight || 0,
-            costPrice: item.costPrice || 0
+            metadata: {}
           };
 
-          const savedItem = await storage.createItem(simplifiedItem);
-          imported.push(savedItem);
+          const [result] = await db.insert(items).values(directItem).returning();
+          imported.push({
+            id: result.id,
+            name: result.name,
+            sku: result.sku,
+            imported: true
+          });
           console.log(`Successfully imported: ${item.name}`);
         } catch (error) {
           console.error(`Failed to save item ${item.name}:`, error);

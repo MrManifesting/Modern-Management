@@ -2132,8 +2132,17 @@ export class DatabaseStorage implements IStorage {
         
         // Handle JSON and array fields properly
         if (['tags', 'images', 'videos', 'documents', 'marketplace_ids', 'synced_to_marketplaces'].includes(dbColumn)) {
-          // Handle array fields - ensure they are arrays, not empty strings
-          mappedItem[dbColumn] = Array.isArray(value) ? value : (value ? [value] : []);
+          // Handle PostgreSQL array fields - ensure they are arrays
+          if (Array.isArray(value)) {
+            mappedItem[dbColumn] = value;
+          } else if (typeof value === 'string' && value.trim()) {
+            // Split string by comma if it contains multiple values
+            mappedItem[dbColumn] = value.split(',').map(v => v.trim()).filter(v => v);
+          } else if (value) {
+            mappedItem[dbColumn] = [String(value)];
+          } else {
+            mappedItem[dbColumn] = [];
+          }
         } else if (['marketplace', 'metadata'].includes(dbColumn)) {
           // Handle JSON fields - ensure valid JSON or empty object
           if (value === null || value === undefined || value === '') {
