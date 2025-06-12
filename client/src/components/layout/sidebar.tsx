@@ -140,6 +140,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/employees",
     },
     {
+      title: "Customers",
+      icon: <CreditCard className="h-5 w-5" />,
+      path: "/customers",
+    },
+    {
       title: "Reports",
       icon: <FileBarChart className="h-5 w-5" />,
       path: "/reports",

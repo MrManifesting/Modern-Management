@@ -388,6 +388,8 @@ export const insertUserSchema = createInsertSchema(users);
 export const insertAffiliateSchema = createInsertSchema(affiliates);
 export const insertQrCodeSchema = createInsertSchema(qrCodes);
 export const insertAffiliateTransactionSchema = createInsertSchema(affiliateTransactions);
+export const insertCustomerSchema = createInsertSchema(customers);
+export const insertCustomerTierSchema = createInsertSchema(customerTiers);
 
 // Custom schemas for specific operations
 export const breakdownTargetSchema = z.object({
