@@ -1887,16 +1887,11 @@ export class DatabaseStorage implements IStorage {
   // Item methods
   async getItems(): Promise<Item[]> {
     try {
-      // Use a raw SQL query to avoid column mismatch issues
-      const result = await db.execute(`
-        SELECT * FROM items 
-        ORDER BY 
-          CASE WHEN quantity > 0 THEN 0 ELSE 1 END, 
-          id DESC
-      `);
+      // Use Drizzle ORM with ordering
+      const result = await db.select().from(items).orderBy(desc(items.id));
       
-      // Map the raw results to Item type
-      return result.rows.map(row => {
+      // Map the results to Item type
+      return result.map(row => {
         return {
           ...row,
           id: Number(row.id),
@@ -2110,21 +2105,14 @@ export class DatabaseStorage implements IStorage {
       const keys = Object.keys(mappedItem);
       const values = Object.values(mappedItem);
       
-      // Create placeholders for the SQL query
-      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-      const columnNames = keys.join(', ');
+      // Use Drizzle ORM insert instead of raw SQL
+      const result = await db.insert(items).values(mappedItem).returning();
       
-      // Execute the SQL query
-      const result = await db.execute(
-        `INSERT INTO items (${columnNames}) VALUES (${placeholders}) RETURNING *`,
-        values
-      );
-      
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         throw new Error('Failed to create item');
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       
       // Map the raw result to Item type
       return {
@@ -2173,13 +2161,10 @@ export class DatabaseStorage implements IStorage {
   
   async deleteItem(id: number): Promise<boolean> {
     try {
-      // Use raw SQL for more reliability with schema variations
-      const result = await db.execute(
-        `DELETE FROM items WHERE id = $1 RETURNING id`,
-        [id]
-      );
+      // Use Drizzle ORM delete instead of raw SQL
+      const result = await db.delete(items).where(eq(items.id, id)).returning();
       
-      return result.rows.length > 0;
+      return result.length > 0;
     } catch (error) {
       console.error("Error deleting item:", error);
       return false;
