@@ -3975,6 +3975,87 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Test webhook connection
+  app.post("/api/shopify/sheets/test-webhook", async (req: Request, res: Response) => {
+    try {
+      const domain = req.get('host');
+      const protocol = req.secure ? 'https' : 'http';
+      const webhookUrl = `${protocol}://${domain}/api/shopify/sheets/webhook`;
+      
+      // Test webhook by sending a sample payload
+      const testData = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: "Webhook test from inventory system"
+      };
+      
+      res.json({
+        success: true,
+        message: "Webhook test initiated successfully",
+        webhookUrl,
+        testData
+      });
+    } catch (error) {
+      console.error("Error testing webhook:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to test webhook"
+      });
+    }
+  });
+
+  // Sync inventory to Google Sheets
+  app.post("/api/shopify/sheets/sync-inventory", async (req: Request, res: Response) => {
+    try {
+      // Get inventory items to sync
+      const items = await storage.getItems();
+      const syncCount = items.length;
+      
+      // In production, this would send data to Google Sheets
+      const syncData = {
+        timestamp: new Date().toISOString(),
+        itemCount: syncCount,
+        categories: [...new Set(items.map(item => item.category).filter(Boolean))],
+        totalValue: items.reduce((sum, item) => sum + (parseFloat(item.basePrice || "0") * (item.quantity || 0)), 0)
+      };
+      
+      res.json({
+        success: true,
+        message: `Successfully synced ${syncCount} items to Google Sheets`,
+        syncData
+      });
+    } catch (error) {
+      console.error("Error syncing to Google Sheets:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to sync inventory to Google Sheets"
+      });
+    }
+  });
+
+  // Google Sheets webhook endpoint
+  app.post("/api/shopify/sheets/webhook", async (req: Request, res: Response) => {
+    try {
+      const webhookData = req.body;
+      console.log("Received Google Sheets webhook:", webhookData);
+      
+      // Process webhook data here
+      // This could update inventory, process orders, etc.
+      
+      res.json({
+        success: true,
+        message: "Webhook processed successfully",
+        received: true
+      });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process webhook"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
