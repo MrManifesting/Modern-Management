@@ -1916,6 +1916,79 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  async getItemBySku(sku: string): Promise<Item | undefined> {
+    try {
+      console.log(`Trying to fetch item with SKU: ${sku}`);
+      
+      const result = await db.execute(
+        `SELECT * FROM items WHERE sku = '${sku}'`
+      );
+      
+      if (!result || result.rows.length === 0) {
+        console.log(`No item found with SKU ${sku}`);
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      console.log(`Found item: ${row.name}`);
+      
+      // Map snake_case database column names to camelCase property names
+      return {
+        id: Number(row.id),
+        name: row.name,
+        description: row.description,
+        sku: row.sku,
+        category: row.category,
+        subcategory: row.subcategory,
+        brand: row.brand,
+        condition: row.condition,
+        status: row.status,
+        visibility: row.visibility,
+        tags: row.tags,
+        images: row.images,
+        videos: row.videos,
+        basePrice: row.base_price,
+        salePrice: row.sale_price,
+        costPrice: row.cost_price,
+        wholesalePrice: row.wholesale_price,
+        quantity: row.quantity,
+        reservedQuantity: row.reserved_quantity,
+        weight: row.weight,
+        weightUnit: row.weight_unit,
+        dimensions: row.dimensions,
+        location: row.location,
+        lowStockThreshold: row.low_stock_threshold,
+        barcode: row.barcode,
+        qrCode: row.qr_code,
+        notes: row.notes,
+        metadata: row.metadata,
+        itemType: row.item_type,
+        parentItemId: row.parent_item_id,
+        sourceItemId: row.source_item_id,
+        publishStatus: row.publish_status,
+        processingStatus: row.processing_status,
+        breakdownStatus: row.breakdown_status,
+        packageSize: row.package_size,
+        marketplace: row.marketplace,
+        marketplaceId: row.marketplace_id,
+        marketplaceIds: row.marketplace_ids,
+        syncedToMarketplaces: row.synced_to_marketplaces,
+        publishStatus: row.publish_status,
+        reorderPoint: row.reorder_point,
+        reorderQuantity: row.reorder_quantity,
+        stockAlerts: row.stock_alerts,
+        lastRestockDate: row.last_restock_date,
+        bundlePlan: row.bundle_plan,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        tier: row.tier
+      };
+    } catch (error) {
+      console.error("Error fetching item by SKU:", error);
+      return undefined;
+    }
+  }
+  
   async createItem(item: InsertItem): Promise<Item> {
     try {
       // Map camelCase properties to snake_case database columns

@@ -29,6 +29,7 @@ import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
+import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 // Import our new auth system that bypasses complex authentication
 // Import the original auth system but we'll create a simpler auth mechanism
 import { setupAuth as originalSetupAuth } from "./auth";
@@ -3876,6 +3877,7 @@ ${topCustomersCsv}`;
   
   // Register Telegram photo integration routes
   registerTelegramRoutes(app, storage);
+  registerShopifyInventorySyncRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;

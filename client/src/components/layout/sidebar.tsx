@@ -193,6 +193,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/database-cleanup",
     },
     {
+      title: "Google Sheets",
+      icon: <FileSpreadsheet className="h-5 w-5" />,
+      path: "/google-sheets",
+      highlight: true,
+    },
+    {
       title: "Payment Testing",
       icon: <CreditCard className="h-5 w-5" />,
       path: "/checkout",

@@ -34,6 +34,7 @@ import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
 import CSVValidatorPage from "@/pages/csv-validator";
+import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import AuthPage from "@/pages/auth-page";
 import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
@@ -92,6 +93,7 @@ function Router() {
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
         <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
         <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
+        <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsIntegration />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
         <Route path="/auth" component={() => <AuthPage />} />
         <Route path="/login-debug" component={() => {
