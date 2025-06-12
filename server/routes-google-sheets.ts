@@ -1,186 +1,237 @@
-import type { Express } from "express";
-import { google } from 'googleapis';
-import { storage } from "./storage";
-import { googleSheetsService } from "./services/google-sheets-service";
+/**
+ * Google Sheets Integration Routes
+ * 
+ * Provides API endpoints for connecting and synchronizing inventory data with Google Sheets
+ */
 
-export function registerGoogleSheetsRoutes(app: Express) {
-  // Google Sheets status endpoint
-  app.get("/api/google/sheets/status", async (req, res) => {
+import type { Express, Request, Response } from "express";
+import { createGoogleSheetsService, GoogleSheetsConfig } from "./services/google-sheets";
+import { IStorage } from "./storage";
+
+export function registerGoogleSheetsRoutes(app: Express, storage: IStorage) {
+  
+  /**
+   * Test Google Sheets connection
+   */
+  app.get("/api/google-sheets/test-connection", async (req: Request, res: Response) => {
     try {
-      const isConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-      const sheetStatus = await googleSheetsService.getSheetStatus();
+      const { spreadsheetId, worksheetName } = req.query;
       
-      res.json({
-        success: true,
-        configured: isConfigured && sheetStatus.success,
-        isAuthenticated: req.isAuthenticated(),
-        authUrl: isConfigured ? "/api/auth/google" : null,
-        requiredEnvVars: isConfigured ? [] : ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
-        sheetUrl: sheetStatus.sheetUrl,
-        webAppUrl: sheetStatus.webAppUrl
-      });
-    } catch (error) {
-      console.error("Error checking Google Sheets status:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to check Google Sheets status"
-      });
-    }
-  });
-
-  // Create or connect to Google Sheet
-  app.post("/api/google/sheets/create", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required"
-      });
-    }
-
-    try {
-      // This would require storing OAuth tokens in the user record
-      // For now, return a success message with instructions
-      res.json({
-        success: true,
-        message: "Google Sheets integration ready. Use the sync endpoints to transfer data.",
-        sheetUrl: "https://docs.google.com/spreadsheets/"
-      });
-    } catch (error) {
-      console.error("Error creating Google Sheet:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to create Google Sheet"
-      });
-    }
-  });
-
-  // Sync inventory to Google Sheets
-  app.post("/api/google/sheets/sync/inventory", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required"
-      });
-    }
-
-    try {
-      const items = await storage.getItems();
-      const result = await googleSheetsService.syncInventoryToSheets(items);
-      
-      res.json(result);
-    } catch (error) {
-      console.error("Error syncing inventory to Google Sheets:", error);
-      res.status(500).json({
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to sync inventory to Google Sheets"
-      });
-    }
-  });
-
-  // Sync sales to Google Sheets
-  app.post("/api/google/sheets/sync/sales", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required"
-      });
-    }
-
-    try {
-      const sales = await storage.getSales();
-      const result = await googleSheetsService.syncSalesToSheets(sales);
-      
-      res.json(result);
-    } catch (error) {
-      console.error("Error syncing sales to Google Sheets:", error);
-      res.status(500).json({
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to sync sales to Google Sheets"
-      });
-    }
-  });
-
-  // Shopify webhook handler for order processing
-  app.post("/api/shopify/webhook/order", async (req, res) => {
-    try {
-      const orderData = req.body;
-      console.log('Received Shopify order webhook:', orderData.id);
-
-      // Process the order data
-      const processedOrder = {
-        orderId: orderData.id?.toString() || '',
-        customerEmail: orderData.email || '',
-        lineItems: orderData.line_items?.map((item: any) => ({
-          sku: item.sku || '',
-          title: item.title || '',
-          quantity: item.quantity || 0,
-          price: item.price || '0'
-        })) || [],
-        totalPrice: orderData.total_price || '0',
-        orderDate: orderData.created_at || new Date().toISOString()
-      };
-
-      // Send to Google Sheets for processing
-      const result = await googleSheetsService.processShopifyOrder(processedOrder);
-
-      // Update local inventory based on order
-      for (const lineItem of processedOrder.lineItems) {
-        if (lineItem.sku) {
-          try {
-            const items = await storage.getItems();
-            const item = items.find(i => i.sku === lineItem.sku);
-            
-            if (item && item.quantity >= lineItem.quantity) {
-              await storage.updateItem(item.id, { 
-                quantity: item.quantity - lineItem.quantity 
-              });
-              console.log(`Updated inventory for ${lineItem.sku}: ${item.quantity} -> ${item.quantity - lineItem.quantity}`);
-            } else {
-              console.warn(`Insufficient inventory for SKU ${lineItem.sku}. Available: ${item?.quantity || 0}, Required: ${lineItem.quantity}`);
-            }
-          } catch (error) {
-            console.error(`Error updating inventory for SKU ${lineItem.sku}:`, error);
-          }
-        }
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameters: spreadsheetId and worksheetName"
+        });
       }
 
+      const config: GoogleSheetsConfig = {
+        spreadsheetId: spreadsheetId as string,
+        worksheetName: worksheetName as string
+      };
+
+      const sheetsService = createGoogleSheetsService(config, storage);
+      const info = await sheetsService.getSpreadsheetInfo();
+
       res.json({
         success: true,
-        message: "Order processed successfully",
-        orderId: processedOrder.orderId
+        message: "Successfully connected to Google Sheets",
+        spreadsheet: info
       });
+
     } catch (error) {
-      console.error('Error processing Shopify webhook:', error);
+      console.error('Google Sheets connection test failed:', error);
       res.status(500).json({
         success: false,
-        message: "Failed to process order webhook"
+        error: error instanceof Error ? error.message : 'Connection test failed'
       });
     }
   });
 
-  // Webhook configuration helper
-  app.get("/api/shopify/webhook/url", (req, res) => {
-    const webhookUrl = `${req.protocol}://${req.get('host')}/api/shopify/webhook/order`;
-    res.json({
-      success: true,
-      webhookUrl,
-      instructions: "Add this URL as a webhook in your Shopify admin for order/paid events"
-    });
-  });
+  /**
+   * Create a new inventory spreadsheet
+   */
+  app.post("/api/google-sheets/create-spreadsheet", async (req: Request, res: Response) => {
+    try {
+      const { title } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({
+          success: false,
+          error: "Spreadsheet title is required"
+        });
+      }
 
-  // Import from Google Sheets (placeholder for future OAuth implementation)
-  app.post("/api/google/sheets/import", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({
+      const config: GoogleSheetsConfig = {
+        spreadsheetId: '', // Will be set after creation
+        worksheetName: 'Inventory'
+      };
+
+      const sheetsService = createGoogleSheetsService(config, storage);
+      const spreadsheetId = await sheetsService.createInventorySheet(title);
+
+      res.json({
+        success: true,
+        message: "Spreadsheet created successfully",
+        spreadsheetId,
+        worksheetName: 'Inventory'
+      });
+
+    } catch (error) {
+      console.error('Failed to create spreadsheet:', error);
+      res.status(500).json({
         success: false,
-        message: "Authentication required"
+        error: error instanceof Error ? error.message : 'Failed to create spreadsheet'
       });
     }
+  });
 
-    res.json({
-      success: false,
-      message: "Google Sheets import requires OAuth token storage. Please use CSV import for now.",
-      alternative: "/csv-validator"
-    });
+  /**
+   * Export inventory to Google Sheets
+   */
+  app.post("/api/google-sheets/export", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, worksheetName } = req.body;
+      
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameters: spreadsheetId and worksheetName"
+        });
+      }
+
+      const config: GoogleSheetsConfig = {
+        spreadsheetId,
+        worksheetName
+      };
+
+      const sheetsService = createGoogleSheetsService(config, storage);
+      const result = await sheetsService.exportToSheets();
+
+      res.json({
+        success: result.success,
+        message: result.success ? 
+          `Successfully exported ${result.syncedItems} items to Google Sheets` :
+          'Export failed',
+        syncedItems: result.syncedItems,
+        errors: result.errors
+      });
+
+    } catch (error) {
+      console.error('Export to Google Sheets failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Export failed'
+      });
+    }
+  });
+
+  /**
+   * Import data from Google Sheets
+   */
+  app.post("/api/google-sheets/import", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, worksheetName } = req.body;
+      
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameters: spreadsheetId and worksheetName"
+        });
+      }
+
+      const config: GoogleSheetsConfig = {
+        spreadsheetId,
+        worksheetName
+      };
+
+      const sheetsService = createGoogleSheetsService(config, storage);
+      const result = await sheetsService.importFromSheets();
+
+      res.json({
+        success: result.success,
+        message: result.success ? 
+          `Successfully imported ${result.syncedItems} items from Google Sheets` :
+          'Import failed',
+        syncedItems: result.syncedItems,
+        conflicts: result.conflicts,
+        errors: result.errors
+      });
+
+    } catch (error) {
+      console.error('Import from Google Sheets failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Import failed'
+      });
+    }
+  });
+
+  /**
+   * Perform bidirectional sync with Google Sheets
+   */
+  app.post("/api/google-sheets/sync", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, worksheetName } = req.body;
+      
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameters: spreadsheetId and worksheetName"
+        });
+      }
+
+      const config: GoogleSheetsConfig = {
+        spreadsheetId,
+        worksheetName
+      };
+
+      const sheetsService = createGoogleSheetsService(config, storage);
+      const result = await sheetsService.syncBidirectional();
+
+      res.json({
+        success: result.success,
+        message: result.success ? 
+          `Successfully synchronized ${result.syncedItems} items with Google Sheets` :
+          'Sync failed',
+        syncedItems: result.syncedItems,
+        conflicts: result.conflicts,
+        errors: result.errors
+      });
+
+    } catch (error) {
+      console.error('Google Sheets sync failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Sync failed'
+      });
+    }
+  });
+
+  /**
+   * Get Google Sheets connection status
+   */
+  app.get("/api/google-sheets/status", async (req: Request, res: Response) => {
+    try {
+      const hasCredentials = !!(
+        (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) ||
+        (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+      );
+
+      res.json({
+        success: true,
+        configured: hasCredentials,
+        authMethod: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ? 'service-account' : 'oauth2',
+        message: hasCredentials ? 
+          'Google Sheets integration is configured' : 
+          'Google Sheets credentials not found. Please configure authentication.'
+      });
+
+    } catch (error) {
+      console.error('Failed to check Google Sheets status:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to check configuration status'
+      });
+    }
   });
 }
