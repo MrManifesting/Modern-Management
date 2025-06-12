@@ -1,13 +1,13 @@
 import Shopify from 'shopify-api-node';
 import { googleSheetsService } from './google-sheets-service';
 
-// Shopify API Configuration from your provided credentials
+// Shopify API Configuration
 const SHOPIFY_CONFIG = {
-  shopName: 'mrlisterscurations',
-  apiKey: '68ec43584780d8b93ff60e05b89fb86e',
-  password: process.env.SHOPIFY_ACCESS_TOKEN || '', // This should be set in environment
+  shopName: process.env.SHOPIFY_STORE || 'mrlisterscurations',
+  apiKey: process.env.SHOPIFY_API_KEY || '68ec43584780d8b93ff60e05b89fb86e',
+  password: process.env.SHOPIFY_ACCESS_TOKEN || '',
   autoLimit: true,
-  apiVersion: '2024-04'
+  apiVersion: '2024-01'
 };
 
 export class ShopifyEnhancedService {
@@ -37,21 +37,49 @@ export class ShopifyEnhancedService {
 
   async testConnection() {
     if (!this.initialized) {
-      throw new Error('Shopify service not initialized');
+      throw new Error('Shopify service not initialized - missing credentials');
+    }
+
+    // Validate required credentials
+    if (!SHOPIFY_CONFIG.password) {
+      throw new Error('SHOPIFY_ACCESS_TOKEN environment variable is required');
+    }
+
+    if (!SHOPIFY_CONFIG.shopName) {
+      throw new Error('SHOPIFY_STORE environment variable is required');
     }
 
     try {
+      console.log(`Testing Shopify connection to: ${SHOPIFY_CONFIG.shopName}`);
       const shop = await this.shopify.shop.get();
+      
+      console.log(`Successfully connected to Shopify store: ${shop.name}`);
       return {
         success: true,
         shopName: shop.name,
         domain: shop.domain,
         email: shop.email,
-        currency: shop.currency
+        currency: shop.currency,
+        connected: true
       };
     } catch (error) {
       console.error('Shopify connection test failed:', error);
-      throw new Error(`Shopify connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide specific error guidance
+      let errorMessage = 'Unknown connection error';
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = 'Invalid API credentials - please check your SHOPIFY_ACCESS_TOKEN';
+        } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+          errorMessage = 'Store not found - please check your SHOPIFY_STORE name';
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          errorMessage = 'Access denied - please check API permissions';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      throw new Error(`Shopify connection failed: ${errorMessage}`);
     }
   }
 
