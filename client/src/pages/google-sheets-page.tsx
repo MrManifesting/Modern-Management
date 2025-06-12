@@ -353,7 +353,7 @@ export default function GoogleSheetsPage() {
                     {syncMutation.isPending ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <Sync className="h-5 w-5" />
+                      <RefreshCw className="h-5 w-5" />
                     )}
                     Two-Way Sync
                     <span className="text-xs text-muted-foreground">

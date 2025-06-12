@@ -11,7 +11,10 @@ import {
   Store,
   PackageOpen,
   Layers,
-  Check
+  Check,
+  Package,
+  Gem,
+  Settings
 } from "lucide-react";
 import ImageCarousel from "./image-carousel";
 import { 
@@ -24,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -114,6 +118,49 @@ export default function ItemCard({
     };
     
     return classes[status as keyof typeof classes] || classes.default;
+  };
+
+  // Quick breakdown handlers for streamlined preset options
+  const handleQuickBreakdown = (presetType: 'standard' | 'premium') => {
+    // Define preset weight configurations
+    const presets = {
+      standard: [
+        { weight: 1, unit: 'g', quantity: 8 },
+        { weight: 3.5, unit: 'g', quantity: 4 },
+        { weight: 7, unit: 'g', quantity: 2 },
+        { weight: 14, unit: 'g', quantity: 1 }
+      ],
+      premium: [
+        { weight: 0.5, unit: 'g', quantity: 12 },
+        { weight: 1, unit: 'g', quantity: 8 },
+        { weight: 2, unit: 'g', quantity: 4 }
+      ]
+    };
+
+    const selectedPreset = presets[presetType];
+    
+    // Auto-create breakdown based on preset
+    const breakdownData = selectedPreset.map((preset, index) => ({
+      name: `${item.name} - ${preset.weight}${preset.unit}`,
+      sku: `${item.sku}-${preset.weight}${preset.unit.toUpperCase()}`,
+      weight: preset.weight,
+      weightUnit: preset.unit,
+      quantity: preset.quantity,
+      basePrice: calculatePresetPrice(item.basePrice || 0, preset.weight),
+      description: `${preset.weight}${preset.unit} portion of ${item.name}`,
+      category: item.category,
+      condition: item.condition
+    }));
+
+    // Open the drag & drop breakdown with preset data
+    setIsDndBreakdownOpen(true);
+  };
+
+  // Calculate price based on weight for preset breakdowns
+  const calculatePresetPrice = (bulkPrice: number, targetWeight: number) => {
+    const bulkWeight = item.weight || 28; // Default to 1oz if no weight specified
+    const pricePerGram = bulkPrice / bulkWeight;
+    return Math.round(pricePerGram * targetWeight * 100) / 100; // Round to 2 decimal places
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -241,16 +288,26 @@ export default function ItemCard({
                     <Printer className="mr-2 h-4 w-4" />
                     Print Barcode/QR
                   </DropdownMenuItem>
-                  {/* Show breakdown options if item has weight info */}
+                  {/* Enhanced breakdown options with streamlined presets */}
                   {item.weight && item.weight > 0 && (
                     <>
-                      <DropdownMenuItem onClick={() => setIsBreakdownModalOpen(true)}>
-                        <PackageOpen className="mr-2 h-4 w-4" />
-                        Quick Breakdown
-                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Product Breakdown</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => setIsDndBreakdownOpen(true)}>
                         <Layers className="mr-2 h-4 w-4" />
-                        Drag & Drop Breakdown
+                        Smart Breakdown (Drag & Drop)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuickBreakdown('standard')}>
+                        <Package className="mr-2 h-4 w-4" />
+                        Standard Weights (1g, 3.5g, 7g, 14g)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuickBreakdown('premium')}>
+                        <Gem className="mr-2 h-4 w-4" />
+                        Premium Breakdown (0.5g, 1g, 2g)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsBreakdownModalOpen(true)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Custom Breakdown
                       </DropdownMenuItem>
                     </>
                   )}
