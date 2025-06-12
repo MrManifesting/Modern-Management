@@ -13,15 +13,30 @@ export function registerShopifyEnhancedRoutes(app: Express) {
         success: true,
         connected: true,
         shop: connectionTest,
-        message: "Shopify Enhanced service is connected and operational"
+        message: "Shopify Enhanced service is connected and operational",
+        store: connectionTest.shopName,
+        domain: connectionTest.domain
       });
     } catch (error) {
       console.error("Shopify Enhanced connection error:", error);
-      res.json({
+      
+      const errorMessage = error instanceof Error ? error.message : "Connection failed";
+      const isCredentialError = errorMessage.includes('credentials') || 
+                               errorMessage.includes('TOKEN') || 
+                               errorMessage.includes('401') ||
+                               errorMessage.includes('Unauthorized');
+      
+      res.status(isCredentialError ? 401 : 500).json({
         success: false,
         connected: false,
-        error: error instanceof Error ? error.message : "Connection failed",
-        message: "Shopify Enhanced service connection failed"
+        error: errorMessage,
+        message: "Shopify Enhanced service connection failed",
+        needsCredentials: isCredentialError,
+        troubleshooting: {
+          checkToken: "Verify SHOPIFY_ACCESS_TOKEN is set correctly",
+          checkStore: "Verify SHOPIFY_STORE name is correct",
+          checkPermissions: "Ensure API token has required permissions"
+        }
       });
     }
   });

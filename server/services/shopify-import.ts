@@ -10,6 +10,7 @@ import { storage } from '../storage';
 import { log } from '../vite';
 import { generateBarcodeData } from './barcode';
 import { generateQRCodeDataURL } from './qrcode';
+import { parseShopifyCSV, convertCSVRowToItem } from './csv-parser-enhanced';
 
 /**
  * Import products from Shopify API data
@@ -662,11 +663,11 @@ export async function importShopifyCSV(
         // Create description
         const description = createDescription(title, attributes.tier);
         
-        // Create item data
+        // Create item data with proper JSON structure
         const itemData: InsertItem = {
           name: title || 'Unnamed Product',
           description: description || 'No description available',
-          basePrice: attributes.price || 0, // Set default price to 0 to prevent null violations
+          basePrice: (attributes.price || 0).toString(), // Ensure string format for numeric
           sku: sku,
           quantity: quantity || 0,
           status: 'active',
@@ -674,11 +675,9 @@ export async function importShopifyCSV(
           condition: 'New', // Default condition
           tags: ['imported', attributes.brand?.toLowerCase().replace(/\s+/g, '-') || 'no-brand', attributes.tier?.toLowerCase().replace(/\s+/g, '-') || 'standard'],
           images: [],
-          marketplace: [{
-            name: 'Shopify',
-            isListed: true
-          }],
-          weight: attributes.weight || null,
+          marketplace: [], // Use empty array instead of object to prevent JSON errors
+          metadata: {}, // Ensure empty object for metadata
+          weight: attributes.weight ? attributes.weight.toString() : null,
         };
         
         console.log(`Creating item (${rowIndex + 1}/${rows.length}): ${itemData.name} (${itemData.sku}), Qty: ${itemData.quantity}`);
