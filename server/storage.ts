@@ -2098,7 +2098,13 @@ export class DatabaseStorage implements IStorage {
           continue;
         }
         const dbColumn = columnMappings[key] || key;
-        mappedItem[dbColumn] = value;
+        
+        // Handle array fields properly - ensure they are arrays, not empty strings
+        if (['tags', 'images', 'videos', 'documents', 'marketplace', 'marketplace_ids', 'synced_to_marketplaces'].includes(dbColumn)) {
+          mappedItem[dbColumn] = Array.isArray(value) ? value : (value ? [value] : []);
+        } else {
+          mappedItem[dbColumn] = value;
+        }
       }
       
       // Use a raw SQL approach with properly mapped column names
