@@ -2130,9 +2130,25 @@ export class DatabaseStorage implements IStorage {
         }
         const dbColumn = columnMappings[key] || key;
         
-        // Handle array fields properly - ensure they are arrays, not empty strings
-        if (['tags', 'images', 'videos', 'documents', 'marketplace', 'marketplace_ids', 'synced_to_marketplaces'].includes(dbColumn)) {
+        // Handle JSON and array fields properly
+        if (['tags', 'images', 'videos', 'documents', 'marketplace_ids', 'synced_to_marketplaces'].includes(dbColumn)) {
+          // Handle array fields - ensure they are arrays, not empty strings
           mappedItem[dbColumn] = Array.isArray(value) ? value : (value ? [value] : []);
+        } else if (['marketplace', 'metadata'].includes(dbColumn)) {
+          // Handle JSON fields - ensure valid JSON or empty object
+          if (value === null || value === undefined || value === '') {
+            mappedItem[dbColumn] = {};
+          } else if (typeof value === 'string') {
+            try {
+              mappedItem[dbColumn] = JSON.parse(value);
+            } catch {
+              mappedItem[dbColumn] = {};
+            }
+          } else if (typeof value === 'object') {
+            mappedItem[dbColumn] = value;
+          } else {
+            mappedItem[dbColumn] = {};
+          }
         } else {
           mappedItem[dbColumn] = value;
         }
