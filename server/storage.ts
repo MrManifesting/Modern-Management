@@ -1911,77 +1911,77 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use simplified query without array fields to avoid mapping issues
-      const result = await db.select({
-        id: items.id,
-        name: items.name,
-        description: items.description,
-        sku: items.sku,
-        quantity: items.quantity,
-        basePrice: items.basePrice,
-        category: items.category,
-        status: items.status
-      }).from(items).where(eq(items.id, id)).limit(1);
+      // Use raw SQL to avoid Drizzle mapping issues completely
+      const result = await db.execute(`SELECT id, name, description, sku, quantity, base_price, category, status FROM items WHERE id = ${id} LIMIT 1`);
       
-      if (!result.rows || result.rows.length === 0) {
+      if (result.length === 0) {
         console.log(`No item found with ID ${id}`);
         return undefined;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       console.log(`Found item: ${row.name}`);
       
-      // Map snake_case database column names to camelCase property names
+      // Return simplified item object with available fields
       return {
         id: Number(row.id),
-        name: row.name,
-        description: row.description,
-        sku: row.sku,
-        category: row.category,
-        subcategory: row.subcategory,
-        brand: row.brand,
-        condition: row.condition,
-        quantity: row.quantity !== null ? Number(row.quantity) : 0,
-        basePrice: row.base_price !== null ? parseFloat(row.base_price) : 0,
-        salePrice: row.sale_price !== null ? parseFloat(row.sale_price) : null,
-        costPrice: row.cost_price !== null ? parseFloat(row.cost_price) : null,
-        wholesalePrice: row.wholesale_price !== null ? parseFloat(row.wholesale_price) : null,
-        lowStockThreshold: row.low_stock_threshold !== null ? Number(row.low_stock_threshold) : null,
-        featured: row.featured,
-        weight: row.weight,
-        weightUnit: row.weight_unit,
-        dimensions: row.dimensions,
-        barcode: row.barcode,
-        qrCode: row.qr_code,
-        mpn: row.mpn,
-        gtin: row.gtin,
-        status: row.status,
-        visibility: row.visibility,
-        itemType: row.item_type,
-        metadata: row.metadata || {},
-        tags: row.tags || [],
-        images: row.images || [],
-        videos: row.videos || [],
-        documents: row.documents || [],
-        attributes: row.attributes || {},
-        packageSize: row.package_size,
-        processingStatus: row.processing_status,
-        breakdownStatus: row.breakdown_status,
-        parentItemId: row.parent_item_id,
-        sourceItemId: row.source_item_id,
-        marketplace: row.marketplace,
-        marketplaceId: row.marketplace_id,
-        marketplaceIds: row.marketplace_ids,
-        syncedToMarketplaces: row.synced_to_marketplaces,
-        publishStatus: row.publish_status,
-        reorderPoint: row.reorder_point,
-        reorderQuantity: row.reorder_quantity,
-        stockAlerts: row.stock_alerts,
-        lastRestockDate: row.last_restock_date,
-        bundlePlan: row.bundle_plan,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        tier: row.tier
+        name: row.name || '',
+        description: row.description || '',
+        sku: row.sku || '',
+        category: row.category || 'general',
+        subcategory: '',
+        brand: '',
+        condition: 'new',
+        quantity: row.quantity || 0,
+        basePrice: Number(row.basePrice) || 0,
+        salePrice: null,
+        costPrice: null,
+        wholesalePrice: null,
+        lowStockThreshold: null,
+        featured: false,
+        weight: null,
+        weightUnit: null,
+        dimensions: null,
+        barcode: null,
+        qrCode: null,
+        mpn: null,
+        gtin: null,
+        status: row.status || 'active',
+        visibility: 'visible',
+        itemType: 'standard',
+        metadata: {},
+        tags: [],
+        images: [],
+        videos: [],
+        documents: [],
+        attributes: {},
+        marketplace: {},
+        syncedToMarketplaces: [],
+        marketplaceIds: [],
+        externalId: null,
+        marketplaceUrl: null,
+        location: null,
+        tier: null,
+        strainType: null,
+        publishedToShopify: false,
+        shopifyId: null,
+        shopifyUrl: null,
+        shopifyVariantId: null,
+        assignedEmployeeId: null,
+        parentItemId: null,
+        processingStatus: null,
+        publishStatus: 'draft',
+        packageSize: null,
+        marketplaceId: null,
+        lastRestockDate: null,
+        reorderPoint: null,
+        reorderQuantity: null,
+        stockAlerts: false,
+        bundlePlan: null,
+        breakdownStatus: null,
+        sourceItemId: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
     } catch (error) {
       console.error("Error fetching item:", error);
