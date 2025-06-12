@@ -9,6 +9,13 @@ const bulkItemIdsSchema = z.object({
   itemIds: z.array(z.number()).min(1, "At least one item ID is required")
 });
 
+const bulkQuantityUpdateSchema = z.object({
+  updates: z.array(z.object({
+    id: z.number(),
+    quantity: z.number().min(0, "Quantity must be non-negative")
+  })).min(1, "At least one update is required")
+});
+
 /**
  * Register bulk operation routes
  */
@@ -141,6 +148,51 @@ export function registerBulkOperationRoutes(app: Express, storage: IStorage) {
       res.status(500).json({
         success: false,
         message: "Failed to update items"
+      });
+    }
+  });
+
+  /**
+   * Bulk update item quantities
+   */
+  app.post("/api/items/bulk-update-quantity", async (req: Request, res: Response) => {
+    try {
+      const { updates } = bulkQuantityUpdateSchema.parse(req.body);
+      
+      // Update each item's quantity
+      const results = await Promise.all(
+        updates.map(async ({ id, quantity }) => {
+          try {
+            const item = await storage.getItem(id);
+            if (!item) return { id, success: false, error: 'Item not found' };
+            
+            const updatedItem = await storage.updateItem(id, { quantity });
+            return { id, success: !!updatedItem, item: updatedItem };
+          } catch (error) {
+            return { id, success: false, error: error.message };
+          }
+        })
+      );
+      
+      // Count successful updates
+      const successCount = results.filter(r => r.success).length;
+      const failedUpdates = results.filter(r => !r.success);
+      
+      res.json({
+        success: true,
+        message: `Successfully updated quantities for ${successCount} of ${updates.length} items`,
+        results: {
+          total: updates.length,
+          successful: successCount,
+          failed: failedUpdates.length,
+          failedItems: failedUpdates
+        }
+      });
+    } catch (error) {
+      console.error("Error in bulk quantity update:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update item quantities"
       });
     }
   });
