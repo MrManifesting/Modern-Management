@@ -89,6 +89,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
+import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
 
 // Define the Product interface
 interface Product {
@@ -222,6 +223,7 @@ const ProductsInventoryPage: React.FC = () => {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [bulkQuantityEditOpen, setBulkQuantityEditOpen] = useState(false);
   
   // Handlers for bulk actions
   const toggleSelectionMode = () => {
@@ -336,6 +338,17 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   const clearSelection = () => {
+    setSelectedItems([]);
+    setSelectionMode(false);
+  };
+
+  const handleBulkQuantityEdit = () => {
+    if (selectedItems.length === 0) return;
+    setBulkQuantityEditOpen(true);
+  };
+
+  const handleBulkQuantityEditComplete = () => {
+    setBulkQuantityEditOpen(false);
     setSelectedItems([]);
     setSelectionMode(false);
   };

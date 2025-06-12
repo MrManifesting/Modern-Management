@@ -7,6 +7,7 @@ import {
   Share2,
   ShoppingCart,
   Printer,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Item } from '@shared/schema';
@@ -18,6 +19,7 @@ interface BulkActionBarProps {
   onBulkPrint: () => void;
   onBulkExport: () => void;
   onBulkCopy: () => void;
+  onBulkQuantityEdit: () => void;
   onClearSelection: () => void;
 }
 
@@ -28,6 +30,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   onBulkPrint,
   onBulkExport,
   onBulkCopy,
+  onBulkQuantityEdit,
   onClearSelection
 }) => {
   if (selectedItems.length === 0) return null;
