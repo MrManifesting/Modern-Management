@@ -7,7 +7,9 @@ const SHOPIFY_CONFIG = {
   apiKey: process.env.SHOPIFY_API_KEY || '68ec43584780d8b93ff60e05b89fb86e',
   password: process.env.SHOPIFY_ACCESS_TOKEN || '',
   autoLimit: true,
-  apiVersion: '2024-01'
+  apiVersion: '2023-10',
+  timeout: 30000,
+  maxRetries: 2
 };
 
 export class ShopifyEnhancedService {
@@ -20,15 +22,20 @@ export class ShopifyEnhancedService {
 
   private initializeShopify() {
     try {
+      // Clean shop name - remove .myshopify.com if present
+      const cleanShopName = SHOPIFY_CONFIG.shopName.replace('.myshopify.com', '');
+      
       this.shopify = new Shopify({
-        shopName: SHOPIFY_CONFIG.shopName,
+        shopName: cleanShopName,
         apiKey: SHOPIFY_CONFIG.apiKey,
         password: SHOPIFY_CONFIG.password,
         autoLimit: SHOPIFY_CONFIG.autoLimit,
-        apiVersion: SHOPIFY_CONFIG.apiVersion
+        apiVersion: SHOPIFY_CONFIG.apiVersion,
+        timeout: SHOPIFY_CONFIG.timeout,
+        maxRetries: SHOPIFY_CONFIG.maxRetries
       });
       this.initialized = true;
-      console.log('Shopify Enhanced Service initialized successfully');
+      console.log(`Shopify Enhanced Service initialized for store: ${cleanShopName}`);
     } catch (error) {
       console.error('Failed to initialize Shopify Enhanced Service:', error);
       this.initialized = false;
