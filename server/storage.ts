@@ -161,15 +161,6 @@ export interface IStorage {
   getItemsByParentId(parentId: number): Promise<Item[]>;
   getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]>;
   logInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
-  
-  // Telegram Photos methods
-  getTelegramPhotos(): Promise<TelegramPhoto[]>;
-  getTelegramPhotoById(id: number): Promise<TelegramPhoto | undefined>;
-  getTelegramPhotosByItemId(itemId: number): Promise<TelegramPhoto[]>;
-  getUnassignedTelegramPhotos(): Promise<TelegramPhoto[]>;
-  addTelegramPhoto(photo: InsertTelegramPhoto): Promise<TelegramPhoto>;
-  updateTelegramPhoto(id: number, photo: Partial<InsertTelegramPhoto>): Promise<TelegramPhoto | undefined>;
-  deleteTelegramPhoto(id: number): Promise<boolean>;
 }
 
 // Memory storage implementation
@@ -3428,6 +3419,80 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error getting items by external IDs:`, error);
       return {};
     }
+  }
+
+  // Telegram photo methods
+  async getTelegramPhotos(): Promise<TelegramPhoto[]> {
+    return await db.select().from(telegramPhotos);
+  }
+
+  async getTelegramPhotoById(id: number): Promise<TelegramPhoto | undefined> {
+    const [photo] = await db.select().from(telegramPhotos).where(eq(telegramPhotos.id, id));
+    return photo;
+  }
+
+  async getTelegramPhotosByItemId(itemId: number): Promise<TelegramPhoto[]> {
+    return await db.select().from(telegramPhotos).where(eq(telegramPhotos.itemId, itemId));
+  }
+
+  async addTelegramPhoto(photo: InsertTelegramPhoto): Promise<TelegramPhoto> {
+    const [newPhoto] = await db.insert(telegramPhotos).values(photo).returning();
+    return newPhoto;
+  }
+
+  async updateTelegramPhoto(id: number, photo: Partial<InsertTelegramPhoto>): Promise<TelegramPhoto | undefined> {
+    const [updatedPhoto] = await db
+      .update(telegramPhotos)
+      .set(photo)
+      .where(eq(telegramPhotos.id, id))
+      .returning();
+    return updatedPhoto;
+  }
+
+  async deleteTelegramPhoto(id: number): Promise<boolean> {
+    const result = await db.delete(telegramPhotos).where(eq(telegramPhotos.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Auto breakdown methods
+  async getItemsByParentId(parentId: number): Promise<Item[]> {
+    return await db.select().from(items).where(eq(items.parentItemId, parentId));
+  }
+
+  async getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]> {
+    if (actionType) {
+      return await db
+        .select()
+        .from(inventoryActions)
+        .where(and(eq(inventoryActions.itemId, itemId), eq(inventoryActions.actionType, actionType)))
+        .orderBy(desc(inventoryActions.createdAt));
+    }
+    return await db
+      .select()
+      .from(inventoryActions)
+      .where(eq(inventoryActions.itemId, itemId))
+      .orderBy(desc(inventoryActions.createdAt));
+  }
+
+  async logInventoryAction(action: InsertInventoryAction): Promise<InventoryAction> {
+    const [newAction] = await db.insert(inventoryActions).values(action).returning();
+    return newAction;
+  }
+
+  // Missing upsertUser method for Replit Auth
+  async upsertUser(userData: any): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 }
 
