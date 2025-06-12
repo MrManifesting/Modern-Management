@@ -39,6 +39,7 @@ import QuickBreakdown from "./quick-breakdown";
 import { BulkBreakdownDialog } from "./bulk-breakdown-dialog";
 import { Item } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 type ItemCardProps = {
   item: Item;
@@ -63,6 +64,7 @@ export default function ItemCard({
   const [isDndBreakdownOpen, setIsDndBreakdownOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   // Format date for display with error handling
   let formattedDate = "Recently added";
@@ -151,6 +153,12 @@ export default function ItemCard({
       category: item.category,
       condition: item.condition
     }));
+
+    // Show success toast notification
+    toast({
+      title: "Breakdown Template Ready",
+      description: `Created ${presetType} breakdown with ${selectedPreset.length} weight options`,
+    });
 
     // Open the drag & drop breakdown with preset data
     setIsDndBreakdownOpen(true);
