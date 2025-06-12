@@ -202,6 +202,24 @@ export function parseCSV(csvContent: string): ParsedCsvData {
   const rows: string[][] = [];
   const lines = csvContent.split(/\r?\n/);
   
+  // Detect delimiter by checking first few lines
+  let delimiter = ',';
+  if (lines.length > 0) {
+    const firstLine = lines[0];
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    
+    // Choose the most frequent delimiter
+    if (tabCount > commaCount && tabCount > semicolonCount) {
+      delimiter = '\t';
+    } else if (semicolonCount > commaCount && semicolonCount > tabCount) {
+      delimiter = ';';
+    }
+    
+    console.log(`Detected CSV delimiter: "${delimiter}" (commas: ${commaCount}, tabs: ${tabCount}, semicolons: ${semicolonCount})`);
+  }
+  
   for (const line of lines) {
     if (!line.trim()) continue;
     
@@ -214,7 +232,7 @@ export function parseCSV(csvContent: string): ParsedCsvData {
       
       if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
         inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === delimiter && !inQuotes) {
         row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
         cell = '';
       } else {
@@ -237,33 +255,47 @@ export function parseCSV(csvContent: string): ParsedCsvData {
  * Determine CSV format based on headers
  */
 export function determineCSVFormat(headers: string[]): 'product' | 'inventory' | 'unknown' {
+  console.log(`Analyzing CSV format with headers: ${JSON.stringify(headers)}`);
+  
+  // Handle single-column cases (likely parsing issues)
+  if (headers.length === 1) {
+    const singleHeader = headers[0]?.toLowerCase() || '';
+    console.log(`Single column detected: "${singleHeader}"`);
+    
+    // If the single header contains multiple field names separated by spaces or other characters,
+    // it might be a parsing issue where the entire first row became one header
+    if (singleHeader.includes('handle') || singleHeader.includes('title') || singleHeader.includes('sku')) {
+      console.log('Single header contains Shopify field names, treating as malformed product export');
+      return 'product';
+    }
+    
+    return 'unknown';
+  }
+  
   // Standard Shopify product export format
   const isProductExport = headers.includes('Handle') && headers.includes('Title');
   const isInventoryExport = headers.includes('Product') && headers.includes('Variant Inventory Qty');
   
-  // Check for single-column exports that might contain the actual data
-  const hasSingleColumn = headers.length === 1;
-  const singleHeader = headers[0]?.toLowerCase() || '';
+  // Check for common Shopify export patterns (case-insensitive)
+  const headerLower = headers.map(h => h.toLowerCase());
   
-  // Handle malformed exports with single columns
-  if (hasSingleColumn) {
-    if (singleHeader.includes('product') || singleHeader.includes('inventory')) {
-      console.log(`Detected single-column CSV with header: ${singleHeader}`);
-      return 'unknown'; // Will need special handling
-    }
+  const hasShopifyProductFields = headerLower.some(h => 
+    ['handle', 'title', 'body (html)', 'vendor', 'product category', 'type', 'variant sku'].includes(h)
+  );
+  
+  const hasShopifyInventoryFields = headerLower.some(h => 
+    ['sku', 'barcode', 'available', 'on hand', 'variant inventory qty', 'inventory tracked'].includes(h)
+  );
+  
+  if (isProductExport || hasShopifyProductFields) {
+    console.log('Detected product export format');
+    return 'product';
   }
   
-  // Check for common Shopify export patterns
-  const hasShopifyProductFields = headers.some(h => 
-    ['Handle', 'Title', 'Body (HTML)', 'Vendor', 'Product Category', 'Type'].includes(h)
-  );
-  
-  const hasShopifyInventoryFields = headers.some(h => 
-    ['SKU', 'Barcode', 'Available', 'On hand', 'Variant Inventory Qty'].includes(h)
-  );
-  
-  if (isProductExport || hasShopifyProductFields) return 'product';
-  if (isInventoryExport || hasShopifyInventoryFields) return 'inventory';
+  if (isInventoryExport || hasShopifyInventoryFields) {
+    console.log('Detected inventory export format');
+    return 'inventory';
+  }
   
   console.log(`Unrecognized CSV format - headers: ${JSON.stringify(headers)}`);
   return 'unknown';

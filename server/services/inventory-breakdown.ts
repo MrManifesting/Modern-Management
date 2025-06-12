@@ -356,7 +356,8 @@ export function generateStandardBreakdownTargets(bulkItem: Item): BreakdownTarge
   
   // If no divisions can be made (item too small), use fractions of the bulk weight
   if (divisions.length === 0) {
-    divisions = [bulkWeight / 2, bulkWeight / 4];
+    // Use more reasonable fractions that don't reduce by exactly 0.5g
+    divisions = [bulkWeight * 0.75, bulkWeight * 0.6, bulkWeight * 0.4, bulkWeight * 0.25];
   }
   
   // Create breakdown targets
