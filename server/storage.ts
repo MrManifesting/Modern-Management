@@ -5,7 +5,7 @@ import {
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
   ItemType, ProcessingStatus, ItemCondition,
-  User, UpsertUser,
+  User, InsertUser,
   Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
   AffiliateTransaction, InsertAffiliateTransaction,
   
@@ -28,9 +28,13 @@ import { pool } from './db';
 
 // Interface for storage methods
 export interface IStorage {
-  // User authentication methods for Replit Auth
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  // User authentication methods for flexible auth
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   
   // Session store for authentication
   sessionStore: any;
@@ -613,45 +617,53 @@ export class MemStorage implements IStorage {
     this.createUser(defaultUser);
   }
   
-  // User authentication methods for Replit Auth
-  async getUser(id: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.id === id);
+  // User authentication methods for flexible auth
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    // Check if user exists by ID
-    const existingUser = Array.from(this.users.values()).find(
-      user => user.id === userData.id
-    );
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.googleId === googleId);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userCurrentId++;
+    const now = new Date();
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      lastLogin: null
+    };
     
-    if (existingUser) {
-      // Update existing user
-      const updatedUser: User = {
-        ...existingUser,
-        ...userData,
-        updatedAt: new Date()
-      };
-      // Update in map using numeric key for MemStorage compatibility
-      const numericKey = Array.from(this.users.keys()).find(key => 
-        this.users.get(key)?.id === userData.id
-      );
-      if (numericKey !== undefined) {
-        this.users.set(numericKey, updatedUser);
-      }
-      return updatedUser;
-    } else {
-      // Create new user
-      const id = this.userCurrentId++;
-      const now = new Date();
-      const newUser: User = {
-        ...userData,
-        createdAt: now,
-        updatedAt: now
-      };
-      
-      this.users.set(id, newUser);
-      return newUser;
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    
+    if (!existingUser) {
+      return undefined;
     }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...user,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
   
   private initializeEmployees() {
@@ -1835,24 +1847,40 @@ export class DatabaseStorage implements IStorage {
   }
   
   // User authentication methods
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const now = new Date();
+    const [updatedUser] = await db
+      .update(users)
+      .set({ ...user, updatedAt: now })
+      .where(eq(users.id, id))
+      .returning();
+    
+    return updatedUser;
   }
   
   // Item methods

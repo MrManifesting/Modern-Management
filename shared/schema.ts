@@ -29,19 +29,26 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
+// User storage table for flexible authentication
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  id: serial("id").primaryKey(),
+  email: varchar("email").unique().notNull(),
+  username: varchar("username").unique(),
+  password: varchar("password"), // For username/password auth
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  googleId: varchar("google_id").unique(), // For Google OAuth
+  provider: varchar("provider").default("local"), // 'local', 'google'
+  role: varchar("role").default("user"),
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type User = typeof users.$inferSelect;
-export type UpsertUser = typeof users.$inferInsert;
+export type InsertUser = typeof users.$inferInsert;
 
 // Item table for inventory management
 export const items = pgTable("items", {
