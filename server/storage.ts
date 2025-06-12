@@ -1911,15 +1911,24 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use Drizzle ORM instead of raw SQL
-      const result = await db.select().from(items).where(eq(items.id, id)).limit(1);
+      // Use simplified query without array fields to avoid mapping issues
+      const result = await db.select({
+        id: items.id,
+        name: items.name,
+        description: items.description,
+        sku: items.sku,
+        quantity: items.quantity,
+        basePrice: items.basePrice,
+        category: items.category,
+        status: items.status
+      }).from(items).where(eq(items.id, id)).limit(1);
       
-      if (result.length === 0) {
+      if (!result.rows || result.rows.length === 0) {
         console.log(`No item found with ID ${id}`);
         return undefined;
       }
       
-      const row = result[0];
+      const row = result.rows[0];
       console.log(`Found item: ${row.name}`);
       
       // Map snake_case database column names to camelCase property names
