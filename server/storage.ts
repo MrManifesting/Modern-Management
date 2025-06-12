@@ -613,54 +613,45 @@ export class MemStorage implements IStorage {
     this.createUser(defaultUser);
   }
   
-  // User authentication methods
-  async getUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+  // User authentication methods for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.id === id);
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const users = Array.from(this.users.values());
-    return users.find(user => user.username === username);
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const now = new Date();
-    const newUser: User = {
-      ...user,
-      id,
-      createdAt: now,
-      updatedAt: now,
-      lastLogin: null
-    };
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    // Check if user exists by ID
+    const existingUser = Array.from(this.users.values()).find(
+      user => user.id === userData.id
+    );
     
-    this.users.set(id, newUser);
-    return newUser;
-  }
-
-  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
-    const existingUser = this.users.get(id);
-    
-    if (!existingUser) {
-      return undefined;
+    if (existingUser) {
+      // Update existing user
+      const updatedUser: User = {
+        ...existingUser,
+        ...userData,
+        updatedAt: new Date()
+      };
+      // Update in map using numeric key for MemStorage compatibility
+      const numericKey = Array.from(this.users.keys()).find(key => 
+        this.users.get(key)?.id === userData.id
+      );
+      if (numericKey !== undefined) {
+        this.users.set(numericKey, updatedUser);
+      }
+      return updatedUser;
+    } else {
+      // Create new user
+      const id = this.userCurrentId++;
+      const now = new Date();
+      const newUser: User = {
+        ...userData,
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      this.users.set(id, newUser);
+      return newUser;
     }
-    
-    const updatedUser: User = {
-      ...existingUser,
-      ...user,
-      updatedAt: new Date()
-    };
-    
-    this.users.set(id, updatedUser);
-    return updatedUser;
-  }
-
-  async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
   }
   
   private initializeEmployees() {
@@ -1844,39 +1835,24 @@ export class DatabaseStorage implements IStorage {
   }
   
   // User authentication methods
-  async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
-  }
-  
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
-  
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
-  }
-  
-  async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
-    return newUser;
-  }
-  
-  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
-    const now = new Date();
-    const [updatedUser] = await db
-      .update(users)
-      .set({ ...user, updatedAt: now })
-      .where(eq(users.id, id))
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
-    
-    return updatedUser;
-  }
-  
-  async deleteUser(id: number): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
-    return result.rowCount > 0;
+    return user;
   }
   
   // Item methods
