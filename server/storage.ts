@@ -3548,6 +3548,115 @@ export class DatabaseStorage implements IStorage {
     return newAction;
   }
 
+  // Customer methods implementation
+  async getCustomers(): Promise<Customer[]> {
+    return await db.select().from(customers).orderBy(desc(customers.totalSpent));
+  }
+
+  async getCustomer(id: number): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer;
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.email, email));
+    return customer;
+  }
+
+  async createCustomer(customer: InsertCustomer): Promise<Customer> {
+    const [newCustomer] = await db.insert(customers).values(customer).returning();
+    return newCustomer;
+  }
+
+  async updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const [updatedCustomer] = await db.update(customers)
+      .set({ ...customer, updatedAt: new Date() })
+      .where(eq(customers.id, id))
+      .returning();
+    return updatedCustomer;
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    const result = await db.delete(customers).where(eq(customers.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getBigSpenders(): Promise<Customer[]> {
+    return await db.select().from(customers)
+      .where(or(
+        eq(customers.tier, 'big_spender'),
+        gte(customers.totalSpent, '5000'),
+        eq(customers.priorityLevel, 5)
+      ))
+      .orderBy(desc(customers.totalSpent));
+  }
+
+  async recalculateCustomerTiers(): Promise<{ updated: number; tiers: Record<string, number> }> {
+    const allCustomers = await db.select().from(customers);
+    const tiers = await db.select().from(customerTiers).orderBy(desc(customerTiers.priority));
+    
+    let updated = 0;
+    const tierCounts: Record<string, number> = {};
+    
+    for (const customer of allCustomers) {
+      const totalSpent = parseFloat(customer.totalSpent || '0');
+      const totalOrders = customer.totalOrders || 0;
+      
+      // Find the highest tier the customer qualifies for
+      let newTier = 'standard';
+      let newPriority = 1;
+      
+      for (const tier of tiers) {
+        const minSpent = parseFloat(tier.minSpent || '0');
+        const minOrders = tier.minOrders || 0;
+        
+        if (totalSpent >= minSpent && totalOrders >= minOrders) {
+          newTier = tier.name;
+          newPriority = tier.priority || 1;
+          break;
+        }
+      }
+      
+      // Update customer if tier changed
+      if (customer.tier !== newTier || customer.priorityLevel !== newPriority) {
+        await db.update(customers)
+          .set({ 
+            tier: newTier, 
+            priorityLevel: newPriority,
+            updatedAt: new Date() 
+          })
+          .where(eq(customers.id, customer.id));
+        updated++;
+      }
+      
+      tierCounts[newTier] = (tierCounts[newTier] || 0) + 1;
+    }
+    
+    return { updated, tiers: tierCounts };
+  }
+
+  async getCustomerTiers(): Promise<CustomerTier[]> {
+    return await db.select().from(customerTiers).orderBy(customerTiers.priority);
+  }
+
+  async getCustomerTier(id: number): Promise<CustomerTier | undefined> {
+    const [tier] = await db.select().from(customerTiers).where(eq(customerTiers.id, id));
+    return tier;
+  }
+
+  async createCustomerTier(tier: InsertCustomerTier): Promise<CustomerTier> {
+    const [newTier] = await db.insert(customerTiers).values(tier).returning();
+    return newTier;
+  }
+
+  async updateCustomerTier(id: number, tier: Partial<InsertCustomerTier>): Promise<CustomerTier | undefined> {
+    const [updatedTier] = await db.update(customerTiers)
+      .set({ ...tier, updatedAt: new Date() })
+      .where(eq(customerTiers.id, id))
+      .returning();
+    return updatedTier;
+  }
+
   // Missing upsertUser method for Replit Auth
   async upsertUser(userData: any): Promise<User> {
     const [user] = await db
