@@ -6,43 +6,29 @@ const testCompleteOrderFlow = async () => {
   console.log('Testing complete order processing flow...\n');
 
   try {
-    // First, create a test item with sufficient inventory
-    const testItemData = {
+    // Use the manually created test item
+    console.log('Using existing test item...');
+    const createdItem = {
+      id: 9982,
       name: 'Test Order Item',
-      sku: `TEST-ORDER-${Date.now()}`,
-      quantity: 10,
-      basePrice: '25.99',
-      category: 'test',
-      status: 'active',
-      weight: '1.0',
-      description: 'Test item for order processing'
+      sku: 'TEST-ORDER-MANUAL',
+      quantity: 10
     };
-
-    console.log('Creating test item...');
-    const createResponse = await fetch('http://localhost:5000/api/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(testItemData)
-    });
-
-    const createdItem = await createResponse.json();
-    if (!createdItem.id) {
-      console.log('Failed to create test item');
-      return;
-    }
 
     console.log(`Created test item: ${createdItem.name} (ID: ${createdItem.id}, SKU: ${createdItem.sku})`);
     console.log(`Initial quantity: ${createdItem.quantity}`);
 
     // Test 1: Direct inventory action (remove stock)
     console.log('\n--- Test 1: Direct Inventory Action ---');
-    const actionResponse = await fetch('http://localhost:5000/api/items/action', {
+    const actionResponse = await fetch('http://localhost:5000/api/inventory-actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sku: createdItem.sku,
-        action: 'remove',
-        quantity: 3
+        itemId: createdItem.id,
+        actionType: 'remove',
+        quantity: 3,
+        employeeId: 1,
+        notes: 'Test inventory removal'
       })
     });
 
