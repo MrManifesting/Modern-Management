@@ -11,13 +11,13 @@ import { generateQRCodeDataURL } from './services/qrcode';
 import { ShopifyService } from './services/marketplaces/shopify';
 import { Item } from '@shared/schema';
 
-// Set up multer for file uploads
+// Set up multer for file uploads with flexible field handling
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-});
+}).any(); // Accept any field name for the file
 
 /**
  * Parse CSV content
@@ -281,16 +281,16 @@ function validateCSV(content: string): {
  */
 export function registerCSVImportRoutes(app: any, storage: IStorage) {
   // CSV validation endpoint
-  app.post("/api/items/validate-csv", upload.single("file"), async (req: Request, res: Response) => {
+  app.post("/api/items/validate-csv", upload, async (req: Request, res: Response) => {
     try {
-      if (!req.file) {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return res.status(400).json({ 
           success: false, 
           message: "No file uploaded" 
         });
       }
       
-      const file = req.file;
+      const file = req.files[0];
       const content = file.buffer.toString('utf8');
       
       // Validate the CSV file
@@ -314,13 +314,13 @@ export function registerCSVImportRoutes(app: any, storage: IStorage) {
   });
 
   // Standard CSV import endpoint
-  app.post("/api/items/import", upload.single("file"), async (req: Request, res: Response) => {
+  app.post("/api/items/import", upload, async (req: Request, res: Response) => {
     try {
-      if (!req.file) {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return res.status(400).json({ success: false, message: "No file uploaded" });
       }
       
-      const file = req.file;
+      const file = req.files[0];
       const content = file.buffer.toString('utf8');
       
       // Parse CSV
