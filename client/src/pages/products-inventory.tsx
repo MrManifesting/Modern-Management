@@ -2268,7 +2268,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       }}
                                     >
                                       <PackageOpen className="mr-2 h-4 w-4" />
-                                      Quick Breakdown
+                                      Breakdown Item
                                     </DropdownMenuItem>
                                     
                                     <DropdownMenuSeparator />
