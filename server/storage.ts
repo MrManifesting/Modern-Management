@@ -1756,12 +1756,12 @@ export class DatabaseStorage implements IStorage {
   private async initializeEmployees() {
     const defaultEmployee: InsertEmployee = {
       employeeId: "ADMIN001",
-      firstName: "Admin",
-      lastName: "User",
+      name: "Admin User",
       email: "admin@mrmanifestlister.com",
-      position: "admin",
-      status: "active",
-      isAdmin: true
+      role: "admin",
+      department: "management",
+      active: true,
+      pin: "123456"
     };
     
     await this.createEmployee(defaultEmployee);
