@@ -36,7 +36,7 @@ import AiToolsPage from "@/pages/ai/tools";
 import CSVValidatorPage from "@/pages/csv-validator";
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import CustomersPage from "@/pages/customers";
-import AuthPage from "@/pages/auth-page";
+import AuthPage from "@/pages/auth-page-simple";
 import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
