@@ -32,6 +32,7 @@ import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
+import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
 // Import Replit Auth system for proper Google login and HTTPS support
 import { setupAuth, requireAuth } from "./auth-simple";
 import { 
@@ -4163,6 +4164,9 @@ ${topCustomersCsv}`;
 
   // Register Google Sheets integration routes
   registerGoogleSheetsRoutes(app);
+
+  // Register enhanced Shopify integration routes
+  registerShopifyEnhancedRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
