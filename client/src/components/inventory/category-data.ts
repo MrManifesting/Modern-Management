@@ -32,15 +32,21 @@ export const FLOWER_STRAIN_TYPES = [
   'HHC'
 ];
 
-// Flower quality grades
-export const FLOWER_QUALITY_GRADES = [
-  'THCA EXOTIC INDOOR',
-  'THCAAA INDOOR',
-  'THCA AA INDOOR SMALLS',
-  'THCA TOP SHELF',
-  'THCA CLASSIC RESERVE',
-  'THCA DISCOUNTED FLOWER'
+// All flower quality grades (unified system, no special exotic tier)
+export const ALL_FLOWER_QUALITIES = [
+  'Outdoor',
+  'Indoor',
+  'Greenhouse',
+  'Premium',
+  'Top Shelf',
+  'Special Reserve',
+  'Limited Edition',
+  'Rare',
+  'Ultra Premium'
 ];
+
+// Flower quality grades (for backwards compatibility)
+export const FLOWER_QUALITY_GRADES = ALL_FLOWER_QUALITIES;
 
 // Concentrates subcategories
 export const CONCENTRATE_TYPES = [
@@ -103,19 +109,6 @@ export const WEIGHT_OPTIONS = {
   concentrates: ['0.5g', '1g', '2g', '3.5g', '7g', '14g', '28g'],
   prerolls: ['0.5g', '0.75g', '1g', '1.5g', '2g']
 };
-
-// All flower quality grades (no special exotic tier)
-export const ALL_FLOWER_QUALITIES = [
-  'Outdoor',
-  'Indoor',
-  'Greenhouse',
-  'Premium',
-  'Top Shelf',
-  'Special Reserve',
-  'Limited Edition',
-  'Rare',
-  'Ultra Premium'
-];
 
 // Export structured category map for easier access
 export const CATEGORY_MAP = {
