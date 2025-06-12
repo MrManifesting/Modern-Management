@@ -196,13 +196,105 @@ interface ImportResult {
 }
 
 /**
+ * Parse CSV content with a specific delimiter
+ */
+function parseCSVWithDelimiter(csvContent: string, delimiter: string): ParsedCsvData {
+  const rows: string[][] = [];
+  let lines = csvContent.split(/\r?\n/);
+  
+  // Skip metadata lines for this delimiter test
+  while (lines.length > 0 && (
+    lines[0].includes('export_') || 
+    lines[0].match(/^\w+_export_\d+\s*\(\d+\)$/) ||
+    lines[0].trim().length < 10 ||
+    (!lines[0].includes(delimiter) && lines[0].split(delimiter).length < 2)
+  )) {
+    lines = lines.slice(1);
+  }
+  
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    
+    // Split by the specified delimiter and clean up quotes
+    const cells = line.split(delimiter).map(cell => {
+      let cleaned = cell.trim();
+      // Remove surrounding quotes if present
+      if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+        cleaned = cleaned.slice(1, -1);
+      }
+      return cleaned;
+    });
+    
+    rows.push(cells);
+  }
+  
+  const headers = rows[0]?.map(h => h.trim()) || [];
+  const dataRows = rows.slice(1);
+  
+  return { headers, rows: dataRows };
+}
+
+/**
  * Parse CSV content to structured data
  */
 export function parseCSV(csvContent: string): ParsedCsvData {
   const rows: string[][] = [];
-  const lines = csvContent.split(/\r?\n/);
+  let lines = csvContent.split(/\r?\n/);
   
-  // Detect delimiter by checking first few lines
+  // Skip any initial lines that look like filenames or metadata
+  let skippedLines = 0;
+  while (lines.length > 0 && skippedLines < 10) { // Limit skipping to prevent infinite loops
+    const line = lines[0];
+    const shouldSkip = (
+      line.includes('export_') || 
+      line.match(/^\w+_export_\d+\s*\(\d+\)$/) ||
+      line.trim().length < 10 ||
+      (!line.includes(',') && !line.includes('\t') && !line.includes(';')) ||
+      line.match(/^[^,\t;]*$/) // Single word/phrase without delimiters
+    );
+    
+    if (shouldSkip) {
+      console.log(`Skipping potential filename/metadata line ${skippedLines + 1}: "${line}"`);
+      lines = lines.slice(1);
+      skippedLines++;
+    } else {
+      break;
+    }
+  }
+  
+  // Try to find a line that looks like proper CSV headers
+  let headerLineIndex = 0;
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    const line = lines[i];
+    const delimiters = (line.match(/[,\t;]/g) || []).length;
+    
+    // Look for lines with common Shopify CSV headers
+    if (delimiters > 5 && (
+      line.toLowerCase().includes('handle') ||
+      line.toLowerCase().includes('title') ||
+      line.toLowerCase().includes('sku') ||
+      line.toLowerCase().includes('variant') ||
+      line.toLowerCase().includes('available') ||
+      line.toLowerCase().includes('price')
+    )) {
+      console.log(`Found proper CSV header line at index ${i}: "${line}"`);
+      headerLineIndex = i;
+      break;
+    }
+  }
+  
+  // Skip to the header line if we found one
+  if (headerLineIndex > 0) {
+    lines = lines.slice(headerLineIndex);
+    console.log(`Adjusted to start from header line, remaining lines: ${lines.length}`);
+  }
+  
+  if (lines.length === 0) {
+    console.log("No valid CSV data found after skipping metadata lines");
+    return { headers: [], rows: [] };
+  }
+  
+  // Detect delimiter by checking first few real data lines
   let delimiter = ',';
   if (lines.length > 0) {
     const firstLine = lines[0];
@@ -601,9 +693,14 @@ export async function importShopifyCSV(
 ): Promise<ImportResult> {
   console.log("Starting Shopify CSV import process...");
   
+  // Debug: Show first few lines of raw content
+  const debugLines = csvContent.split('\n').slice(0, 5);
+  console.log(`First 5 lines of raw CSV:`, debugLines);
+  
   try {
     const { headers, rows } = parseCSV(csvContent);
     console.log(`CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
+    console.log(`Headers found:`, headers);
     
     if (headers.length === 0 || rows.length === 0) {
       console.log("Empty or invalid CSV file");
@@ -619,39 +716,30 @@ export async function importShopifyCSV(
     console.log(`CSV format determined as: ${format}`);
     
     if (format === 'unknown') {
-      // Try to recover from malformed single-column CSVs
-      if (headers.length === 1) {
-        console.log("Attempting to recover from malformed single-column CSV...");
+      console.log("Initial format detection failed. Attempting advanced recovery...");
+      
+      // Try to recover from various CSV formatting issues
+      if (headers.length <= 2) {
+        console.log("Attempting to recover from malformed CSV...");
         
-        // Try different delimiters to re-parse
+        // Strategy 1: Try different delimiters with the original content
         const alternativeDelimiters = ['\t', ';', '|'];
         for (const delimiter of alternativeDelimiters) {
           try {
-            const testLines = csvContent.split('\n').slice(0, 3); // Test first 3 lines
-            const testSplit = testLines[0].split(delimiter);
+            console.log(`Testing delimiter: "${delimiter}"`);
+            const testParsed = parseCSVWithDelimiter(csvContent, delimiter);
             
-            if (testSplit.length > 5) { // Likely has proper columns
-              console.log(`Found better delimiter: "${delimiter}" with ${testSplit.length} columns`);
+            if (testParsed.headers.length > 5) {
+              console.log(`Found better delimiter: "${delimiter}" with ${testParsed.headers.length} columns`);
+              console.log(`Sample headers:`, testParsed.headers.slice(0, 5));
               
-              // Re-parse with this delimiter
-              const lines = csvContent.split(/\r?\n/);
-              const rows: string[][] = [];
-              
-              for (const line of lines) {
-                if (!line.trim()) continue;
-                rows.push(line.split(delimiter).map(cell => cell.trim().replace(/^"(.*)"$/, '$1')));
-              }
-              
-              const recoveredParsed = {
-                headers: rows[0]?.map(h => h.trim()) || [],
-                rows: rows.slice(1)
-              };
-              
-              const recoveredFormat = determineCSVFormat(recoveredParsed.headers);
+              const recoveredFormat = determineCSVFormat(testParsed.headers);
               if (recoveredFormat !== 'unknown') {
                 console.log(`Successfully recovered CSV with format: ${recoveredFormat}`);
-                // Re-call this function with the properly parsed CSV
-                const recoveredCSV = rows.map(row => row.join(',')).join('\n');
+                // Recursively call with the properly parsed data
+                const recoveredCSV = [testParsed.headers, ...testParsed.rows]
+                  .map(row => row.map(cell => cell.includes(',') ? `"${cell}"` : cell).join(','))
+                  .join('\n');
                 return importShopifyCSV(recoveredCSV, storage, generateBarcodeData, generateQRCodeDataURL);
               }
             }
@@ -659,14 +747,40 @@ export async function importShopifyCSV(
             console.log(`Failed to parse with delimiter "${delimiter}":`, error);
           }
         }
+        
+        // Strategy 2: Try to find the real header line in the content
+        const lines = csvContent.split(/\r?\n/);
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
+          const line = lines[i];
+          if (line.includes('Handle') || line.includes('SKU') || line.includes('Title') || 
+              line.includes('Variant') || line.includes('Available')) {
+            console.log(`Found potential header line at index ${i}: "${line}"`);
+            
+            // Try parsing from this line
+            const remainingLines = lines.slice(i);
+            const testCSV = remainingLines.join('\n');
+            const testParsed = parseCSV(testCSV);
+            
+            if (testParsed.headers.length > 5) {
+              console.log(`Header recovery successful with ${testParsed.headers.length} columns`);
+              const recoveredFormat = determineCSVFormat(testParsed.headers);
+              if (recoveredFormat !== 'unknown') {
+                console.log(`Successfully recovered CSV with format: ${recoveredFormat}`);
+                return importShopifyCSV(testCSV, storage, generateBarcodeData, generateQRCodeDataURL);
+              }
+            }
+          }
+        }
       }
       
-      console.log("Unrecognized CSV format - headers:", headers);
+      console.log("All recovery attempts failed. Headers found:", headers);
+      console.log("First few lines of content:", csvContent.split('\n').slice(0, 3));
+      
       return {
         success: false,
         items: [],
-        errors: [{ row: 0, reason: "Unrecognized CSV format" }],
-        message: "The CSV format is not recognized as a valid Shopify export. Please use the 'Products' or 'Inventory' export from Shopify."
+        errors: [{ row: 0, reason: "Unrecognized CSV format after recovery attempts" }],
+        message: `The CSV format is not recognized as a valid Shopify export. Headers found: [${headers.join(', ')}]. Please ensure you're uploading a properly formatted Shopify 'Products' or 'Inventory' export CSV file.`
       };
     }
     
