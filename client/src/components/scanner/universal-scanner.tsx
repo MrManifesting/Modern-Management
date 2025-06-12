@@ -64,9 +64,20 @@ const UniversalScanner = () => {
   useEffect(() => {
     return () => {
       if (scannerInstance.current) {
-        scannerInstance.current.stop().catch((err: any) => {
-          console.error('Error stopping scanner:', err);
-        });
+        try {
+          const state = scannerInstance.current.getState();
+          if (state === 2) { // SCANNING state
+            scannerInstance.current.stop().catch(() => {
+              // Silently handle cleanup errors
+            });
+          }
+          scannerInstance.current.clear().catch(() => {
+            // Silently handle cleanup errors
+          });
+        } catch (err) {
+          // Scanner may already be destroyed
+        }
+        scannerInstance.current = null;
       }
     };
   }, []);
@@ -114,8 +125,11 @@ const UniversalScanner = () => {
         };
         
         const qrCodeErrorCallback = (error: any) => {
-          // Don't show errors during scanning, just log them
-          console.log(error);
+          // Silently handle scanning errors - they're normal when no code is visible
+          // Only log actual errors, not "No MultiFormat Readers" messages
+          if (error && !error.toString().includes('No MultiFormat Readers')) {
+            console.log('Scanner info:', error);
+          }
         };
         
         await scannerInstance.current.start(
@@ -144,14 +158,22 @@ const UniversalScanner = () => {
   };
   
   // Stop the barcode scanner
-  const stopScanner = () => {
-    if (scannerInstance.current && scannerInstance.current.isScanning) {
-      scannerInstance.current.stop().then(() => {
-        setIsScanning(false);
-      }).catch((err: any) => {
-        console.error('Error stopping scanner:', err);
-      });
-    } else {
+  const stopScanner = async () => {
+    try {
+      if (scannerInstance.current) {
+        // Check if scanner is actually running before trying to stop
+        const state = scannerInstance.current.getState();
+        if (state === 2) { // SCANNING state
+          await scannerInstance.current.stop();
+        }
+        // Clear the scanner instance
+        scannerInstance.current.clear();
+        scannerInstance.current = null;
+      }
+    } catch (err: any) {
+      // Silently handle stop errors - they're common when scanner isn't running
+      console.log('Scanner stop info:', err.message);
+    } finally {
       setIsScanning(false);
     }
   };
