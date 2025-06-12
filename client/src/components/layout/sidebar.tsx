@@ -81,14 +81,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/products-inventory",
       subItems: [
         {
-          title: "Gold Standard",
+          title: "Products",
           path: "/products-inventory",
           className: "inventory-link primary-brand",
-        },
-        {
-          title: "Tree Masons",
-          path: "/inventory/products",
-          className: "inventory-link specialty-brand",
         },
         {
           title: "Package Inventory",
@@ -104,7 +99,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
     },
     {
       title: "Marketplaces",
-      icon: <Package className="h-5 w-5" />,
+      icon: <ShoppingBag className="h-5 w-5" />,
       path: "/marketplace",
       subItems: [
         {

@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -14,7 +16,10 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   Webhook,
-  RotateCcw
+  RotateCcw,
+  Copy,
+  LogIn,
+  Link
 } from "lucide-react";
 
 interface GoogleSheetsStatus {
@@ -22,11 +27,15 @@ interface GoogleSheetsStatus {
   configured: boolean;
   requiredEnvVars: string[];
   webhookUrl: string;
+  googleAuthUrl?: string;
+  isAuthenticated?: boolean;
 }
 
 export default function GoogleSheetsIntegration() {
   const { toast } = useToast();
   const [isSettingUp, setIsSettingUp] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<GoogleSheetsStatus>({
     queryKey: ["/api/shopify/sheets/status"],
@@ -92,6 +101,68 @@ export default function GoogleSheetsIntegration() {
       });
     },
   });
+
+  const generateWebhookMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/shopify/sheets/generate-webhook");
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setWebhookUrl(data.webhookUrl);
+      toast({
+        title: "Webhook URL Generated",
+        description: "Webhook URL has been created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Webhook Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const googleAuthMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/google/auth/url");
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      if (data.authUrl) {
+        window.open(data.authUrl, '_blank');
+      }
+      toast({
+        title: "Google Authentication",
+        description: "Opening Google sign-in page...",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Authentication Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl || status?.webhookUrl || "");
+      setCopiedWebhook(true);
+      toast({
+        title: "Copied!",
+        description: "Webhook URL copied to clipboard",
+      });
+      setTimeout(() => setCopiedWebhook(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSetup = async () => {
     setIsSettingUp(true);
