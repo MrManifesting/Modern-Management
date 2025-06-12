@@ -5,6 +5,7 @@ import { workingShopifyService } from "./services/shopify-working";
 import { parseShopifyCSV, validateCSVImportData } from "./services/csv-parser-enhanced";
 import { storage } from "./storage";
 import multer from "multer";
+import * as fs from "fs";
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -108,7 +109,6 @@ export function registerShopifyFixRoutes(app: Express) {
       console.log(`Processing CSV import: ${req.file.originalname}`);
       
       // Read CSV file
-      const fs = require('fs');
       const csvContent = fs.readFileSync(req.file.path, 'utf8');
       
       // Parse CSV with enhanced parser

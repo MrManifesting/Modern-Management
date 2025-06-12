@@ -3914,6 +3914,9 @@ ${topCustomersCsv}`;
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
   
+  // Register Shopify fix routes for connection and CSV issues
+  registerShopifyFixRoutes(app);
+  
   // Register standard CSV import routes
   registerCSVImportRoutes(app, storage);
   
