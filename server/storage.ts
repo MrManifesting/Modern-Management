@@ -1911,18 +1911,15 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use direct query with numeric parameter instead of parameterized query
-      // to avoid parameter binding issues with some database drivers
-      const result = await db.execute(
-        `SELECT * FROM items WHERE id = ${id}`
-      );
+      // Use Drizzle ORM instead of raw SQL
+      const result = await db.select().from(items).where(eq(items.id, id)).limit(1);
       
-      if (!result || result.rows.length === 0) {
+      if (result.length === 0) {
         console.log(`No item found with ID ${id}`);
         return undefined;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       console.log(`Found item: ${row.name}`);
       
       // Map snake_case database column names to camelCase property names
@@ -1987,16 +1984,15 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with SKU: ${sku}`);
       
-      const result = await db.execute(
-        `SELECT * FROM items WHERE sku = '${sku}'`
-      );
+      // Use Drizzle ORM instead of raw SQL
+      const result = await db.select().from(items).where(eq(items.sku, sku)).limit(1);
       
-      if (!result || result.rows.length === 0) {
+      if (result.length === 0) {
         console.log(`No item found with SKU ${sku}`);
         return undefined;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       console.log(`Found item: ${row.name}`);
       
       // Map snake_case database column names to camelCase property names
@@ -2095,8 +2091,12 @@ export class DatabaseStorage implements IStorage {
         'updatedAt': 'updated_at'
       };
       
-      // Map properties
+      // Map properties and filter out non-existent columns
       for (const [key, value] of Object.entries(item)) {
+        // Skip fields that don't exist in the database schema
+        if (key === 'external_id' || key === 'externalId') {
+          continue;
+        }
         const dbColumn = columnMappings[key] || key;
         mappedItem[dbColumn] = value;
       }
