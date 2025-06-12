@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, requireAuth } from "./auth-simple";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
@@ -20,35 +20,11 @@ import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-s
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth middleware for Google login and HTTPS webhooks
-  await setupAuth(app);
+  // Setup simple authentication with Google OAuth and username/password
+  setupAuth(app);
 
-  // Auth routes for Replit Auth
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // User endpoint for authentication check
-  app.get("/api/user", isAuthenticated, async (req: any, res: Response) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Protected item routes
-  app.get("/api/items", isAuthenticated, async (req: Request, res: Response) => {
+  // Protected item routes  
+  app.get("/api/items", requireAuth, async (req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
       res.json(items);
@@ -58,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/items/:id", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/items/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.getItem(id);
@@ -74,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/items", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/items", requireAuth, async (req: Request, res: Response) => {
     try {
       const item = await storage.createItem(req.body);
       res.status(201).json(item);
@@ -84,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/items/:id", isAuthenticated, async (req: Request, res: Response) => {
+  app.patch("/api/items/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.updateItem(id, req.body);
@@ -100,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/items/:id", isAuthenticated, async (req: Request, res: Response) => {
+  app.delete("/api/items/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteItem(id);
