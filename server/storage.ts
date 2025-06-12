@@ -611,7 +611,8 @@ export class MemStorage implements IStorage {
       firstName: "Admin",
       lastName: "User",
       role: "admin",
-      isActive: true
+      isActive: true,
+      provider: "local"
     };
     
     this.createUser(defaultUser);

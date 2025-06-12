@@ -32,7 +32,7 @@ import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 // Import Replit Auth system for proper Google login and HTTPS support
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, requireAuth } from "./auth-simple";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
@@ -404,9 +404,9 @@ const upload = multer({
   },
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth middleware for Google login and HTTPS webhooks
-  await setupAuth(app);
+export function registerRoutes(app: Express): Server {
+  // Setup simple authentication with Google OAuth and username/password
+  setupAuth(app);
 
   // Simple bypass login - easiest possible login mechanism
   app.post("/api/bypass-login", (req: Request, res: Response) => {
