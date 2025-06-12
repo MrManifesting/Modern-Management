@@ -4161,6 +4161,9 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register Google Sheets integration routes
+  registerGoogleSheetsRoutes(app);
+
   const httpServer = createServer(app);
   return httpServer;
 }

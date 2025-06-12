@@ -38,12 +38,12 @@ export default function GoogleSheetsIntegration() {
   const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<GoogleSheetsStatus>({
-    queryKey: ["/api/shopify/sheets/status"],
+    queryKey: ["/api/google/sheets/status"],
   });
 
   const setupMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/shopify/sheets/setup");
+      const response = await apiRequest("POST", "/api/google/sheets/create");
       return await response.json();
     },
     onSuccess: (data) => {
@@ -51,7 +51,7 @@ export default function GoogleSheetsIntegration() {
         title: "Setup Complete",
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/shopify/sheets/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/google/sheets/status"] });
     },
     onError: (error: Error) => {
       toast({
@@ -62,14 +62,14 @@ export default function GoogleSheetsIntegration() {
     },
   });
 
-  const syncMutation = useMutation({
+  const syncInventoryMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/shopify/sync/inventory");
+      const response = await apiRequest("POST", "/api/google/sheets/sync/inventory");
       return await response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Sync Complete",
+        title: "Inventory Sync Complete",
         description: data.message,
       });
     },
@@ -82,20 +82,20 @@ export default function GoogleSheetsIntegration() {
     },
   });
 
-  const testWebhookMutation = useMutation({
+  const syncSalesMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/shopify/test/webhook");
+      const response = await apiRequest("POST", "/api/google/sheets/sync/sales");
       return await response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Test Successful",
-        description: `Test order ${data.testOrder} processed successfully`,
+        title: "Sales Sync Complete",
+        description: data.message,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Test Failed",
+        title: "Sales Sync Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -227,6 +227,28 @@ export default function GoogleSheetsIntegration() {
             </Badge>
           </div>
 
+          {status?.configured && !status?.isAuthenticated && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <LogIn className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-800">Authentication Required</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Connect your Google account to enable Sheets integration
+                  </p>
+                  <Button
+                    className="mt-3"
+                    onClick={() => window.location.href = "/api/auth/google"}
+                    size="sm"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign in with Google
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {!status?.configured && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-start gap-2">
@@ -234,7 +256,7 @@ export default function GoogleSheetsIntegration() {
                 <div>
                   <h4 className="font-medium text-yellow-800">Setup Required</h4>
                   <p className="text-sm text-yellow-700 mt-1">
-                    You need to configure these environment variables:
+                    Configure Google OAuth credentials to enable Sheets integration
                   </p>
                   <ul className="list-disc list-inside text-sm text-yellow-700 mt-2 space-y-1">
                     {status?.requiredEnvVars?.map((envVar) => (
@@ -396,26 +418,48 @@ export default function GoogleSheetsIntegration() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5" />
-            Manual Sync
+            Data Sync Options
           </CardTitle>
           <CardDescription>
-            Manually sync your current inventory to Google Sheets
+            Sync your inventory and sales data to Google Sheets
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending || !status?.configured}
-            variant="outline"
-            className="w-full"
-          >
-            {syncMutation.isPending ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RotateCcw className="h-4 w-4 mr-2" />
-            )}
-            Sync Inventory Now
-          </Button>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button
+              onClick={() => syncInventoryMutation.mutate()}
+              disabled={syncInventoryMutation.isPending || !status?.configured || !status?.isAuthenticated}
+              variant="outline"
+              className="w-full"
+            >
+              {syncInventoryMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+              )}
+              Sync Inventory
+            </Button>
+            
+            <Button
+              onClick={() => syncSalesMutation.mutate()}
+              disabled={syncSalesMutation.isPending || !status?.configured || !status?.isAuthenticated}
+              variant="outline"
+              className="w-full"
+            >
+              {syncSalesMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Sync Sales Data
+            </Button>
+          </div>
+          
+          {(!status?.configured || !status?.isAuthenticated) && (
+            <p className="text-sm text-muted-foreground text-center">
+              Authentication required to sync data
+            </p>
+          )}
         </CardContent>
       </Card>
 
