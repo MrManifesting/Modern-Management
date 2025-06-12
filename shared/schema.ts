@@ -95,15 +95,38 @@ export const items = pgTable("items", {
 export type Item = typeof items.$inferSelect;
 export type InsertItem = typeof items.$inferInsert;
 
-// Marketplace table for tracking external platforms
-export const marketplaces = pgTable("marketplaces", {
+// Marketplace Types (templates for different platforms)
+export const marketplaceTypes = pgTable("marketplace_types", {
   id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
+  name: varchar("name").notNull().unique(), // "Shopify", "eBay", "Etsy", etc.
   description: text("description"),
+  logoUrl: varchar("logo_url"),
+  apiVersion: varchar("api_version"),
+  authType: varchar("auth_type").default("api_key"), // api_key, oauth, token
+  requiredFields: json("required_fields").default([]), // Fields needed for connection
+  supportedFeatures: json("supported_features").default([]), // sync, push, pull, etc.
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type MarketplaceType = typeof marketplaceTypes.$inferSelect;
+export type InsertMarketplaceType = typeof marketplaceTypes.$inferInsert;
+
+// Store Instances (actual connected stores)
+export const stores = pgTable("stores", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // Store display name
+  marketplaceTypeId: integer("marketplace_type_id").notNull().references(() => marketplaceTypes.id),
+  storeUrl: varchar("store_url"),
   apiKey: varchar("api_key"),
   apiSecret: varchar("api_secret"),
-  storeUrl: varchar("store_url"),
-  isActive: boolean("is_active").default(true),
+  accessToken: varchar("access_token"),
+  refreshToken: varchar("refresh_token"),
+  credentials: json("credentials").default({}), // Additional auth data
+  isConnected: boolean("is_connected").default(false),
+  connectionStatus: varchar("connection_status").default("disconnected"), // connected, disconnected, error, testing
+  lastConnectionTest: timestamp("last_connection_test"),
   lastSync: timestamp("last_sync"),
   lastPush: timestamp("last_push"),
   errorCount: integer("error_count").default(0),
@@ -111,17 +134,53 @@ export const marketplaces = pgTable("marketplaces", {
   settings: json("settings").default({}),
   pullInterval: integer("pull_interval").default(15), // minutes
   pushInterval: integer("push_interval").default(30), // minutes
+  priority: integer("priority").default(1), // Store priority for sync order
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export type Marketplace = typeof marketplaces.$inferSelect;
-export type InsertMarketplace = typeof marketplaces.$inferInsert;
+export type Store = typeof stores.$inferSelect;
+export type InsertStore = typeof stores.$inferInsert;
+
+// Keep backwards compatibility
+export const marketplaces = stores;
+export type Marketplace = Store;
+export type InsertMarketplace = InsertStore;
+
+// Customer table with tiering system
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  externalId: varchar("external_id"), // ID from marketplace
+  storeId: integer("store_id").references(() => stores.id),
+  tier: varchar("tier").default("bronze"), // bronze, silver, gold, platinum, vip
+  totalSpent: numeric("total_spent").default("0"),
+  totalOrders: integer("total_orders").default(0),
+  averageOrderValue: numeric("average_order_value").default("0"),
+  lastOrderDate: timestamp("last_order_date"),
+  lifetimeValue: numeric("lifetime_value").default("0"),
+  preferredPaymentMethod: varchar("preferred_payment_method"),
+  shippingAddress: json("shipping_address"),
+  billingAddress: json("billing_address"),
+  tags: text("tags").array().default([]),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  marketingOptIn: boolean("marketing_opt_in").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;
 
 // Sales table
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   orderId: varchar("order_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
   customerName: varchar("customer_name"),
   customerEmail: varchar("customer_email"),
   customerPhone: varchar("customer_phone"),
@@ -133,7 +192,7 @@ export const sales = pgTable("sales", {
   total: numeric("total").notNull(),
   status: varchar("status").default("completed"),
   paymentMethod: varchar("payment_method"),
-  marketplaceId: integer("marketplace_id"),
+  storeId: integer("store_id").references(() => stores.id),
   externalOrderId: varchar("external_order_id"),
   shippingAddress: json("shipping_address"),
   notes: text("notes"),
