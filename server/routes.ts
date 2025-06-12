@@ -31,6 +31,7 @@ import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
+import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 // Import Replit Auth system for proper Google login and HTTPS support
 import { setupAuth, requireAuth } from "./auth-simple";
 import { 

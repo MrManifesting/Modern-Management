@@ -75,7 +75,7 @@ export function setupAuth(app: Express) {
         {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          callbackURL: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/api/auth/google/callback`,
+          callbackURL: "/api/auth/google/callback",
         },
         async (accessToken, refreshToken, profile, done) => {
           try {
@@ -183,7 +183,7 @@ export function setupAuth(app: Express) {
   // Google OAuth routes
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     app.get("/api/auth/google", passport.authenticate("google", { 
-      scope: ["profile", "email"] 
+      scope: ["profile", "email", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"] 
     }));
 
     app.get("/api/auth/google/callback", 
