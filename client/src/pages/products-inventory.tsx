@@ -195,12 +195,21 @@ const mockProducts: Product[] = [
 // Product categories
 const categories = [
   "All",
-  "Electronics",
-  "Apparel",
-  "Health",
-  "Pet",
-  "Supplements",
-  "Bundles"
+  "Classic Reserve",
+  "Top Shelf",
+  "Top Shelf Smalls",
+  "Exotics",
+  "AA Indoor",
+  "AAA Indoor",
+  "thcA",
+  "AAA Indoor THCA discounted flower",
+  "AA Indoor THCA discounted flower",
+  "CLASSIC RESERVE SMALLS",
+  "exotic indoor",
+  "extracts",
+  "pre rolls",
+  "merch",
+  "bulk flower"
 ];
 
 const ProductsInventoryPage: React.FC = () => {
