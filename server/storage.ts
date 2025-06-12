@@ -163,20 +163,20 @@ export interface IStorage {
   logInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
 
   // Customer methods
-  getCustomers(): Promise<Customer[]>;
-  getCustomer(id: number): Promise<Customer | undefined>;
-  getCustomerByEmail(email: string): Promise<Customer | undefined>;
-  createCustomer(customer: InsertCustomer): Promise<Customer>;
-  updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  getCustomers(): Promise<typeof customers.$inferSelect[]>;
+  getCustomer(id: number): Promise<typeof customers.$inferSelect | undefined>;
+  getCustomerByEmail(email: string): Promise<typeof customers.$inferSelect | undefined>;
+  createCustomer(customer: typeof customers.$inferInsert): Promise<typeof customers.$inferSelect>;
+  updateCustomer(id: number, customer: Partial<typeof customers.$inferInsert>): Promise<typeof customers.$inferSelect | undefined>;
   deleteCustomer(id: number): Promise<boolean>;
-  getBigSpenders(): Promise<Customer[]>;
+  getBigSpenders(): Promise<typeof customers.$inferSelect[]>;
   recalculateCustomerTiers(): Promise<{ updated: number; tiers: Record<string, number> }>;
 
   // Customer tier methods
-  getCustomerTiers(): Promise<CustomerTier[]>;
-  getCustomerTier(id: number): Promise<CustomerTier | undefined>;
-  createCustomerTier(tier: InsertCustomerTier): Promise<CustomerTier>;
-  updateCustomerTier(id: number, tier: Partial<InsertCustomerTier>): Promise<CustomerTier | undefined>;
+  getCustomerTiers(): Promise<typeof customerTiers.$inferSelect[]>;
+  getCustomerTier(id: number): Promise<typeof customerTiers.$inferSelect | undefined>;
+  createCustomerTier(tier: typeof customerTiers.$inferInsert): Promise<typeof customerTiers.$inferSelect>;
+  updateCustomerTier(id: number, tier: Partial<typeof customerTiers.$inferInsert>): Promise<typeof customerTiers.$inferSelect | undefined>;
 }
 
 // Memory storage implementation
