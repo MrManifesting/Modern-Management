@@ -236,11 +236,35 @@ export function parseCSV(csvContent: string): ParsedCsvData {
  * Determine CSV format based on headers
  */
 export function determineCSVFormat(headers: string[]): 'product' | 'inventory' | 'unknown' {
+  // Standard Shopify product export format
   const isProductExport = headers.includes('Handle') && headers.includes('Title');
   const isInventoryExport = headers.includes('Product') && headers.includes('Variant Inventory Qty');
   
-  if (isProductExport) return 'product';
-  if (isInventoryExport) return 'inventory';
+  // Check for single-column exports that might contain the actual data
+  const hasSingleColumn = headers.length === 1;
+  const singleHeader = headers[0]?.toLowerCase() || '';
+  
+  // Handle malformed exports with single columns
+  if (hasSingleColumn) {
+    if (singleHeader.includes('product') || singleHeader.includes('inventory')) {
+      console.log(`Detected single-column CSV with header: ${singleHeader}`);
+      return 'unknown'; // Will need special handling
+    }
+  }
+  
+  // Check for common Shopify export patterns
+  const hasShopifyProductFields = headers.some(h => 
+    ['Handle', 'Title', 'Body (HTML)', 'Vendor', 'Product Category', 'Type'].includes(h)
+  );
+  
+  const hasShopifyInventoryFields = headers.some(h => 
+    ['SKU', 'Barcode', 'Available', 'On hand', 'Variant Inventory Qty'].includes(h)
+  );
+  
+  if (isProductExport || hasShopifyProductFields) return 'product';
+  if (isInventoryExport || hasShopifyInventoryFields) return 'inventory';
+  
+  console.log(`Unrecognized CSV format - headers: ${JSON.stringify(headers)}`);
   return 'unknown';
 }
 
