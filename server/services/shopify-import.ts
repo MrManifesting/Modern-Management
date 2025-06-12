@@ -619,6 +619,48 @@ export async function importShopifyCSV(
     console.log(`CSV format determined as: ${format}`);
     
     if (format === 'unknown') {
+      // Try to recover from malformed single-column CSVs
+      if (headers.length === 1) {
+        console.log("Attempting to recover from malformed single-column CSV...");
+        
+        // Try different delimiters to re-parse
+        const alternativeDelimiters = ['\t', ';', '|'];
+        for (const delimiter of alternativeDelimiters) {
+          try {
+            const testLines = csvContent.split('\n').slice(0, 3); // Test first 3 lines
+            const testSplit = testLines[0].split(delimiter);
+            
+            if (testSplit.length > 5) { // Likely has proper columns
+              console.log(`Found better delimiter: "${delimiter}" with ${testSplit.length} columns`);
+              
+              // Re-parse with this delimiter
+              const lines = csvContent.split(/\r?\n/);
+              const rows: string[][] = [];
+              
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                rows.push(line.split(delimiter).map(cell => cell.trim().replace(/^"(.*)"$/, '$1')));
+              }
+              
+              const recoveredParsed = {
+                headers: rows[0]?.map(h => h.trim()) || [],
+                rows: rows.slice(1)
+              };
+              
+              const recoveredFormat = determineCSVFormat(recoveredParsed.headers);
+              if (recoveredFormat !== 'unknown') {
+                console.log(`Successfully recovered CSV with format: ${recoveredFormat}`);
+                // Re-call this function with the properly parsed CSV
+                const recoveredCSV = rows.map(row => row.join(',')).join('\n');
+                return importShopifyCSV(recoveredCSV, storage, generateBarcodeData, generateQRCodeDataURL);
+              }
+            }
+          } catch (error) {
+            console.log(`Failed to parse with delimiter "${delimiter}":`, error);
+          }
+        }
+      }
+      
       console.log("Unrecognized CSV format - headers:", headers);
       return {
         success: false,
