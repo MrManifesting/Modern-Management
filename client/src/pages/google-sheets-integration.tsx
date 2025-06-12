@@ -270,39 +270,98 @@ export default function GoogleSheetsIntegration() {
         </CardContent>
       </Card>
 
+      {/* Google Authentication */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LogIn className="h-5 w-5" />
+            Google Authentication
+          </CardTitle>
+          <CardDescription>
+            Connect your Google account to access Google Sheets
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            {status?.isAuthenticated ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600" />
+            )}
+            <span className="font-medium">
+              {status?.isAuthenticated ? "Authenticated" : "Not Authenticated"}
+            </span>
+            <Badge variant={status?.isAuthenticated ? "default" : "destructive"}>
+              {status?.isAuthenticated ? "Connected" : "Disconnected"}
+            </Badge>
+          </div>
+
+          <Button
+            onClick={() => googleAuthMutation.mutate()}
+            disabled={googleAuthMutation.isPending || status?.isAuthenticated}
+            variant="default"
+            className="w-full sm:w-auto"
+          >
+            {googleAuthMutation.isPending && (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            )}
+            <LogIn className="h-4 w-4 mr-2" />
+            {status?.isAuthenticated ? "Already Connected" : "Sign in with Google"}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Webhook Configuration */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Webhook className="h-5 w-5" />
-            Shopify Webhook Setup
+            Webhook Configuration
           </CardTitle>
           <CardDescription>
-            Configure Shopify to automatically send order data to Google Sheets
+            Generate and manage webhook URLs for Google Sheets integration
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-800 mb-2">Webhook URL</h4>
-            <div className="flex items-center gap-2">
-              <code className="bg-blue-100 px-2 py-1 rounded text-sm flex-1">
-                {status?.webhookUrl}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(status?.webhookUrl || "");
-                  toast({
-                    title: "Copied!",
-                    description: "Webhook URL copied to clipboard",
-                  });
-                }}
-              >
-                Copy
-              </Button>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() => generateWebhookMutation.mutate()}
+              disabled={generateWebhookMutation.isPending}
+              variant="default"
+            >
+              {generateWebhookMutation.isPending && (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              <Link className="h-4 w-4 mr-2" />
+              Generate Webhook URL
+            </Button>
           </div>
+
+          {(webhookUrl || status?.webhookUrl) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Webhook URL</h4>
+              <div className="space-y-2">
+                <Input
+                  value={webhookUrl || status?.webhookUrl || ""}
+                  readOnly
+                  className="font-mono text-xs bg-white"
+                />
+                <Button
+                  onClick={copyWebhookUrl}
+                  size="sm"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  {copiedWebhook ? (
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {copiedWebhook ? "Copied!" : "Copy URL"}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <h4 className="font-medium">Setup Instructions:</h4>

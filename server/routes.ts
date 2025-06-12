@@ -3884,6 +3884,97 @@ ${topCustomersCsv}`;
   
   registerShopifyInventorySyncRoutes(app, storage);
 
+  // Google Sheets webhook generation route
+  app.post("/api/shopify/sheets/generate-webhook", async (req: Request, res: Response) => {
+    try {
+      const domain = req.get('host');
+      const protocol = req.secure ? 'https' : 'http';
+      const webhookUrl = `${protocol}://${domain}/api/shopify/sheets/webhook`;
+      
+      res.json({
+        success: true,
+        webhookUrl,
+        message: "Webhook URL generated successfully"
+      });
+    } catch (error) {
+      console.error("Error generating webhook URL:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate webhook URL"
+      });
+    }
+  });
+
+  // Google authentication URL generation route
+  app.post("/api/google/auth/url", async (req: Request, res: Response) => {
+    try {
+      // For demo purposes, generate a placeholder Google OAuth URL
+      // In production, this would use the Google OAuth2 client
+      const domain = req.get('host');
+      const protocol = req.secure ? 'https' : 'http';
+      const redirectUri = `${protocol}://${domain}/api/google/auth/callback`;
+      
+      const authUrl = `https://accounts.google.com/oauth/authorize?` +
+        `client_id=YOUR_GOOGLE_CLIENT_ID&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=https://www.googleapis.com/auth/spreadsheets&` +
+        `response_type=code&` +
+        `access_type=offline`;
+
+      res.json({
+        success: true,
+        authUrl,
+        message: "Google authentication URL generated"
+      });
+    } catch (error) {
+      console.error("Error generating Google auth URL:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate authentication URL"
+      });
+    }
+  });
+
+  // Google Sheets status endpoint enhancement
+  app.get("/api/shopify/sheets/status", async (req: Request, res: Response) => {
+    try {
+      const domain = req.get('host');
+      const protocol = req.secure ? 'https' : 'http';
+      const webhookUrl = `${protocol}://${domain}/api/shopify/sheets/webhook`;
+      
+      // Check for required environment variables
+      const requiredEnvVars = [
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_CLIENT_SECRET',
+        'GOOGLE_SHEETS_ID'
+      ];
+      
+      const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+      const configured = missingVars.length === 0;
+      
+      // Mock authentication status - in production, check actual Google token
+      const isAuthenticated = process.env.GOOGLE_ACCESS_TOKEN ? true : false;
+
+      res.json({
+        success: true,
+        configured,
+        requiredEnvVars: missingVars,
+        webhookUrl,
+        isAuthenticated,
+        googleAuthUrl: configured ? undefined : "Authentication required"
+      });
+    } catch (error) {
+      console.error("Error checking Google Sheets status:", error);
+      res.status(500).json({
+        success: false,
+        configured: false,
+        requiredEnvVars: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_SHEETS_ID'],
+        webhookUrl: "",
+        isAuthenticated: false
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
