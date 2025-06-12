@@ -666,17 +666,69 @@ export class MemStorage implements IStorage {
     this.createEmployee(defaultEmployee);
   }
 
-  private initializeMarketplaces() {
-    const defaultMarketplaces: InsertMarketplace[] = [
-      { name: "eBay", isConnected: true, credentials: {} },
-      { name: "Etsy", isConnected: true, credentials: {} },
-      { name: "Amazon", isConnected: true, credentials: {} },
-      { name: "Shopify", isConnected: false, credentials: {} },
-    ];
+  private async initializeMarketplaces() {
+    try {
+      // Initialize marketplace types first
+      const defaultMarketplaceTypes = [
+        {
+          name: "Shopify",
+          description: "E-commerce platform for online stores",
+          authType: "api_key",
+          requiredFields: ["storeUrl", "apiKey", "apiSecret"],
+          supportedFeatures: ["sync", "push", "pull", "orders", "products"]
+        },
+        {
+          name: "eBay", 
+          description: "Online marketplace for auctions and sales",
+          authType: "oauth",
+          requiredFields: ["apiKey", "apiSecret"],
+          supportedFeatures: ["sync", "push", "pull", "orders"]
+        },
+        {
+          name: "Etsy",
+          description: "Marketplace for handmade and vintage items", 
+          authType: "oauth",
+          requiredFields: ["apiKey", "apiSecret"],
+          supportedFeatures: ["sync", "push", "pull", "orders"]
+        },
+        {
+          name: "Amazon",
+          description: "Global e-commerce marketplace",
+          authType: "api_key", 
+          requiredFields: ["marketplaceId", "sellerId", "mwsAuthToken"],
+          supportedFeatures: ["sync", "pull", "orders"]
+        }
+      ];
 
-    defaultMarketplaces.forEach(marketplace => {
-      this.createMarketplace(marketplace);
-    });
+      // Create marketplace types in database
+      for (const type of defaultMarketplaceTypes) {
+        await this.createMarketplaceType(type);
+      }
+
+    } catch (error) {
+      console.error("Error initializing marketplace types:", error);
+    }
+  }
+
+  async createMarketplaceType(marketplaceType: any): Promise<any> {
+    try {
+      const { marketplaceTypes } = await import('@shared/schema');
+      const [newType] = await db.insert(marketplaceTypes).values(marketplaceType).returning();
+      return newType;
+    } catch (error) {
+      console.error("Error creating marketplace type:", error);
+      throw error;
+    }
+  }
+
+  async getMarketplaceTypes(): Promise<any[]> {
+    try {
+      const { marketplaceTypes } = await import('@shared/schema');
+      return await db.select().from(marketplaceTypes);
+    } catch (error) {
+      console.error("Error fetching marketplace types:", error);
+      return [];
+    }
   }
 
   // Item methods
