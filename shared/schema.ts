@@ -148,7 +148,7 @@ export const marketplaces = stores;
 export type Marketplace = Store;
 export type InsertMarketplace = InsertStore;
 
-// Customer table with tiering system
+// Customer table with enhanced tiering system for high-value customer prioritization
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
@@ -156,19 +156,25 @@ export const customers = pgTable("customers", {
   phone: varchar("phone"),
   externalId: varchar("external_id"), // ID from marketplace
   storeId: integer("store_id").references(() => stores.id),
-  tier: varchar("tier").default("bronze"), // bronze, silver, gold, platinum, vip
+  tier: varchar("tier").default("standard"), // standard, premium, vip, big_spender
   totalSpent: numeric("total_spent").default("0"),
   totalOrders: integer("total_orders").default(0),
   averageOrderValue: numeric("average_order_value").default("0"),
   lastOrderDate: timestamp("last_order_date"),
   lifetimeValue: numeric("lifetime_value").default("0"),
+  loyaltyPoints: integer("loyalty_points").default(0),
+  discountEligibility: numeric("discount_eligibility").default("0"), // percentage
+  priorityLevel: integer("priority_level").default(1), // 1-5, 5 = highest priority
   preferredPaymentMethod: varchar("preferred_payment_method"),
   shippingAddress: json("shipping_address"),
   billingAddress: json("billing_address"),
+  preferredProducts: text("preferred_products").array().default([]),
   tags: text("tags").array().default([]),
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
   marketingOptIn: boolean("marketing_opt_in").default(false),
+  lastContactDate: timestamp("last_contact_date"),
+  source: varchar("source"), // shopify, manual, import, etc.
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -321,6 +327,27 @@ export const affiliateTransactions = pgTable("affiliate_transactions", {
 
 export type AffiliateTransaction = typeof affiliateTransactions.$inferSelect;
 export type InsertAffiliateTransaction = typeof affiliateTransactions.$inferInsert;
+
+
+
+// Customer tier configuration
+export const customerTiers = pgTable("customer_tiers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").unique().notNull(), // standard, premium, vip, big_spender
+  displayName: varchar("display_name").notNull(),
+  minSpent: numeric("min_spent").default("0"), // minimum total spent to qualify
+  minOrders: integer("min_orders").default(0), // minimum orders to qualify
+  discountPercentage: numeric("discount_percentage").default("0"),
+  perks: text("perks").array(), // Array of perk descriptions
+  color: varchar("color").default("#6B7280"), // hex color for UI display
+  priority: integer("priority").default(0), // higher priority = higher tier
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type CustomerTier = typeof customerTiers.$inferSelect;
+export type InsertCustomerTier = typeof customerTiers.$inferInsert;
 
 // Export enums for use in application code
 export enum ItemType {
