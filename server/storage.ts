@@ -149,6 +149,19 @@ export interface IStorage {
   createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction>;
   updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined>;
   
+  // Telegram photo methods
+  getTelegramPhotos(): Promise<TelegramPhoto[]>;
+  getTelegramPhotoById(id: number): Promise<TelegramPhoto | undefined>;
+  getTelegramPhotosByItemId(itemId: number): Promise<TelegramPhoto[]>;
+  addTelegramPhoto(photo: InsertTelegramPhoto): Promise<TelegramPhoto>;
+  updateTelegramPhoto(id: number, photo: Partial<InsertTelegramPhoto>): Promise<TelegramPhoto | undefined>;
+  deleteTelegramPhoto(id: number): Promise<boolean>;
+  
+  // Auto breakdown methods
+  getItemsByParentId(parentId: number): Promise<Item[]>;
+  getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]>;
+  logInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
+  
   // Telegram Photos methods
   getTelegramPhotos(): Promise<TelegramPhoto[]>;
   getTelegramPhotoById(id: number): Promise<TelegramPhoto | undefined>;

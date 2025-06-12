@@ -34,6 +34,52 @@ let telegramConfig = {
   configured: false,
 };
 
+// Telegram bot API functions
+const sendTelegramMessage = async (chatId: string, text: string) => {
+  if (!telegramConfig.configured) return false;
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${telegramConfig.token}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown'
+      })
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error sending Telegram message:', error);
+    return false;
+  }
+};
+
+const downloadTelegramFile = async (fileId: string): Promise<Buffer | null> => {
+  try {
+    // Get file info
+    const fileInfoResponse = await fetch(`https://api.telegram.org/bot${telegramConfig.token}/getFile?file_id=${fileId}`);
+    const fileInfo = await fileInfoResponse.json();
+    
+    if (!fileInfo.ok) {
+      console.error('Failed to get file info:', fileInfo);
+      return null;
+    }
+    
+    // Download file
+    const fileResponse = await fetch(`https://api.telegram.org/file/bot${telegramConfig.token}/${fileInfo.result.file_path}`);
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    
+    return Buffer.from(arrayBuffer);
+  } catch (error) {
+    console.error('Error downloading Telegram file:', error);
+    return null;
+  }
+};
+
 // Initialize Telegram bot if config is available
 const initTelegramBot = (storageApi: IStorage) => {
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_WEBHOOK_URL) {
@@ -43,11 +89,34 @@ const initTelegramBot = (storageApi: IStorage) => {
     
     console.log("Telegram bot initialized with token:", telegramConfig.token.substring(0, 5) + "...");
     
-    // Here you could set up a webhook or start polling with a real Telegram bot library
-    // For example, using the node-telegram-bot-api library
-    // This implementation just handles webhook endpoints
+    // Set webhook
+    setWebhook();
   } else {
     console.log("Telegram bot not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_URL env variables to enable.");
+  }
+};
+
+const setWebhook = async () => {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${telegramConfig.token}/setWebhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: telegramConfig.webhookUrl,
+        allowed_updates: ['message', 'callback_query']
+      })
+    });
+    
+    const result = await response.json();
+    if (result.ok) {
+      console.log('Telegram webhook set successfully');
+    } else {
+      console.error('Failed to set Telegram webhook:', result);
+    }
+  } catch (error) {
+    console.error('Error setting Telegram webhook:', error);
   }
 };
 
@@ -62,24 +131,51 @@ export function registerTelegramRoutes(app: Express, storageApi: IStorage) {
    * Webhook endpoint for Telegram to send updates to
    * This handles photos sent to the bot
    */
-  app.post("/api/telegram/webhook", upload.single("photo"), async (req: Request, res: Response) => {
+  app.post("/api/telegram/webhook", async (req: Request, res: Response) => {
     try {
-      // For a real webhook implementation, you'd parse the Telegram update object
-      // This is a simplified version that just handles file uploads directly
+      const update = req.body;
       
-      if (!req.file) {
-        return res.status(400).json({ message: "No photo provided" });
+      // Handle messages with photos
+      if (update.message && update.message.photo) {
+        const message = update.message;
+        const chatId = message.chat.id.toString();
+        const photo = message.photo[message.photo.length - 1]; // Get highest quality photo
+        const caption = message.caption || null;
+        
+        // Download the photo
+        const photoBuffer = await downloadTelegramFile(photo.file_id);
+        if (!photoBuffer) {
+          await sendTelegramMessage(chatId, "❌ Failed to download photo. Please try again.");
+          return res.status(200).json({ ok: true });
+        }
+        
+        // Save the photo to disk
+        const uploadDir = path.join(process.cwd(), "uploads", "telegram");
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        const fileName = `telegram-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+        const filePath = path.join(uploadDir, fileName);
+        fs.writeFileSync(filePath, photoBuffer);
+        
+        // Store photo info in database
+        const photoRecord = await storageApi.addTelegramPhoto({
+          fileId: photo.file_id,
+          filePath: `/uploads/telegram/${fileName}`,
+          caption,
+          associatedItemId: null,
+        });
+        
+        // Send confirmation message with photo URL
+        const photoUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://your-app.replit.app'}/uploads/telegram/${fileName}`;
+        await sendTelegramMessage(chatId, `✅ Photo uploaded successfully!\n\n📷 **Photo URL**: ${photoUrl}\n\n🔗 You can now assign this photo to inventory items in your admin panel.`);
+        
+        res.status(200).json({ ok: true });
+      } else {
+        // Handle other message types
+        res.status(200).json({ ok: true });
       }
-      
-      // Store file info in database
-      const photo = await storageApi.addTelegramPhoto({
-        fileId: req.body.file_id || `local-${Date.now()}`,
-        filePath: `/uploads/telegram/${req.file.filename}`,
-        caption: req.body.caption || null,
-        associatedItemId: req.body.item_id ? parseInt(req.body.item_id) : null,
-      });
-      
-      res.status(201).json({ success: true, photo });
     } catch (error) {
       console.error("Error processing Telegram webhook:", error);
       res.status(500).json({ message: "Internal server error", error: error.message });
