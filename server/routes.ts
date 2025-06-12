@@ -2,6 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { log } from "./vite";
@@ -54,6 +58,18 @@ import {
   Item,
   InsertItem
 } from "@shared/schema";
+
+// Configure multer for file uploads
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ storage: uploadStorage });
 
 /**
  * Group time series data by week or month
@@ -400,8 +416,8 @@ import path from "path";
 import fs from "fs";
 import { promisify } from "util";
 
-// Configure multer for file uploads
-const upload = multer({
+// Configure multer for file uploads (memory storage for existing routes)
+const uploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
@@ -1380,7 +1396,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // AI Analysis Route
-  app.post("/api/analyze-image", upload.single('image'), async (req: Request, res: Response) => {
+  app.post("/api/analyze-image", uploadMemory.single('image'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image provided" });
@@ -1792,7 +1808,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Image optimization route
-  app.post("/api/optimize-image", upload.single("image"), async (req: Request, res: Response) => {
+  app.post("/api/optimize-image", uploadMemory.single("image"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image provided" });
@@ -1987,7 +2003,7 @@ export function registerRoutes(app: Express): Server {
   // CSV Import route has been moved to server/routes-shopify-import.ts
   // The old implementation has been replaced with a more robust version
   
-  app.post("/api/items/import-csv", upload.single("file"), async (req: Request, res: Response) => {
+  app.post("/api/items/import-csv", uploadMemory.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No CSV file provided" });
@@ -3922,13 +3938,24 @@ ${topCustomersCsv}`;
   registerCSVImportRoutes(app, storage);
   
   // Direct CSV import route (bypasses schema issues)
-  app.post('/api/csv/import-direct', upload.single('file'), async (req: Request, res: Response) => {
+  app.post('/api/csv/import-direct', uploadMemory.single('file'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
       console.log('Processing CSV file:', req.file.filename);
+      console.log('File path:', req.file.path);
+      console.log('File details:', {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+
+      if (!req.file.path) {
+        return res.status(400).json({ error: 'File upload failed - no path available' });
+      }
 
       // Simple CSV parsing
       const csvContent = fs.readFileSync(req.file.path, 'utf-8');
