@@ -34,6 +34,7 @@ import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
 import { registerShopifyFixRoutes } from "./routes-shopify-fix";
+import csvDirectRoutes from "./routes-csv-direct";
 // Import Replit Auth system for proper Google login and HTTPS support
 import { setupAuth, requireAuth } from "./auth-simple";
 import { 
@@ -3919,6 +3920,103 @@ ${topCustomersCsv}`;
   
   // Register standard CSV import routes
   registerCSVImportRoutes(app, storage);
+  
+  // Direct CSV import route (bypasses schema issues)
+  app.post('/api/csv/import-direct', upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log('Processing CSV file:', req.file.filename);
+
+      // Simple CSV parsing
+      const csvContent = fs.readFileSync(req.file.path, 'utf-8');
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'CSV must have header and data rows' });
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const imported = [];
+      const failed = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        
+        if (values.length < 2) continue; // Skip empty rows
+
+        try {
+          // Use raw SQL with proper PostgreSQL array handling
+          const result = await db.execute(sql`
+            INSERT INTO items (
+              name, sku, base_price, quantity, description, category, brand, 
+              barcode, condition, location, item_type, status, weight, cost_price,
+              tags, images, metadata, created_at, updated_at
+            ) VALUES (
+              ${values[0] || 'Imported Item'},
+              ${values[1] || `SKU-${Date.now()}-${i}`},
+              ${values[2] || '0'},
+              ${parseInt(values[3]) || 1},
+              ${values[4] || ''},
+              ${values[5] || 'General'},
+              ${values[6] || 'Unknown'},
+              ${values[7] || ''},
+              ${'new'},
+              ${'warehouse'},
+              ${'standard'},
+              ${'active'},
+              ${values[8] || '0'},
+              ${values[9] || '0'},
+              ${[]},
+              ${[]},
+              ${'{}'},
+              NOW(),
+              NOW()
+            )
+            RETURNING id, name, sku
+          `);
+
+          imported.push({
+            id: result.rows[0].id,
+            name: result.rows[0].name,
+            sku: result.rows[0].sku
+          });
+
+        } catch (error) {
+          failed.push({
+            row: i,
+            name: values[0] || 'Unknown',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({
+        success: true,
+        imported: imported.length,
+        failed: failed.length,
+        details: { imported, failed }
+      });
+
+    } catch (error) {
+      console.error('CSV import error:', error);
+      
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      res.status(500).json({
+        error: 'Failed to process CSV file',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // Register Shopify safety routes
   registerShopifySafetyRoutes(app, storage);
