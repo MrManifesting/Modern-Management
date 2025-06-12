@@ -31,9 +31,8 @@ import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
-// Import our new auth system that bypasses complex authentication
-// Import the original auth system but we'll create a simpler auth mechanism
-import { setupAuth as originalSetupAuth } from "./auth";
+// Import Replit Auth system for proper Google login and HTTPS support
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
@@ -406,20 +405,8 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Skip complex authentication that requires the database
-  // Use simple authentication middleware instead
-  
-  // Simple authentication middleware - bypasses actual auth
-  app.use((req, res, next) => {
-    // Make every request automatically authenticated
-    (req as any).isAuthenticated = () => true;
-    (req as any).user = {
-      id: 1,
-      username: "admin",
-      role: "admin"
-    };
-    next();
-  });
+  // Setup Replit Auth middleware for Google login and HTTPS webhooks
+  await setupAuth(app);
 
   // Simple bypass login - easiest possible login mechanism
   app.post("/api/bypass-login", (req: Request, res: Response) => {
