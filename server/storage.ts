@@ -1874,16 +1874,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
-    const now = new Date();
     const [updatedUser] = await db
       .update(users)
-      .set({ ...user, updatedAt: now })
+      .set({ ...user, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    
     return updatedUser;
   }
-  
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
   // Item methods
   async getItems(): Promise<Item[]> {
     try {
