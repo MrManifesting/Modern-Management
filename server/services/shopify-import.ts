@@ -11,6 +11,7 @@ import { log } from '../vite';
 import { generateBarcodeData } from './barcode';
 import { generateQRCodeDataURL } from './qrcode';
 import { parseShopifyCSV, convertCSVRowToItem } from './csv-parser-enhanced';
+import { recoverShopifyCSV, validateShopifyCSV } from './csv-recovery';
 
 /**
  * Import products from Shopify API data
@@ -698,8 +699,85 @@ export async function importShopifyCSV(
   console.log(`First 5 lines of raw CSV:`, debugLines);
   
   try {
+    // First attempt: Try advanced CSV recovery
+    const recovered = recoverShopifyCSV(csvContent);
+    
+    if (recovered.success) {
+      console.log(`CSV recovery successful: ${recovered.headers.length} headers, ${recovered.rows.length} rows`);
+      console.log(`Skipped ${recovered.skippedLines} metadata lines`);
+      console.log(`Using delimiter: "${recovered.delimiter}"`);
+      
+      const format = validateShopifyCSV(recovered);
+      console.log(`Recovered CSV format: ${format}`);
+      
+      if (format !== 'unknown') {
+        // Use the recovered data
+        const { headers, rows } = recovered;
+        
+        const importedItems: Item[] = [];
+        const errors: {row: number; reason: string}[] = [];
+        const processedHandles = new Set<string>();
+        
+        // Process the recovered CSV data
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.length < headers.length / 2) continue; // Skip incomplete rows
+          
+          try {
+            const productInfo = extractProductInfo(headers, row, format, i + 1);
+            if (!productInfo) continue;
+            
+            const { title, handle, sku, price, weight, quantity, description, productType, vendor, published, tags } = productInfo;
+            
+            // Skip if already processed this handle
+            if (processedHandles.has(handle)) continue;
+            processedHandles.add(handle);
+            
+            const itemData: InsertItem = {
+              name: title,
+              sku: sku || `AUTO-${handle}`,
+              description: description || createDescription(title, 'Standard'),
+              category: productType || 'Cannabis',
+              subcategory: vendor || 'Default',
+              basePrice: price,
+              weight: weight,
+              quantity: quantity,
+              status: published ? 'active' : 'inactive',
+              processingStatus: ProcessingStatus.COMPLETED,
+              breakdownStatus: BreakdownStatus.COMPLETE,
+              itemType: ItemType.FINISHED_PRODUCT,
+              condition: ItemCondition.NEW,
+              notes: tags ? `Imported from Shopify. Tags: ${tags}` : 'Imported from Shopify',
+              barcodeData: generateBarcodeData(sku || `AUTO-${handle}`),
+              storageLocation: 'Import Storage',
+              supplier: vendor || 'Shopify Import',
+              tags: tags ? tags.split(',').map(t => t.trim()) : []
+            };
+            
+            const createdItem = await storage.createItem(itemData);
+            if (createdItem) {
+              createdItem.qrCodeDataURL = await generateQRCodeDataURL(createdItem);
+              importedItems.push(createdItem);
+            }
+          } catch (error) {
+            console.error(`Error processing row ${i + 1}:`, error);
+            errors.push({ row: i + 1, reason: error instanceof Error ? error.message : 'Processing error' });
+          }
+        }
+        
+        return {
+          success: true,
+          items: importedItems,
+          errors,
+          message: `Successfully imported ${importedItems.length} items from Shopify CSV. ${errors.length} errors encountered.`
+        };
+      }
+    }
+    
+    // Fallback: Use original parsing method
+    console.log("CSV recovery failed, falling back to standard parsing...");
     const { headers, rows } = parseCSV(csvContent);
-    console.log(`CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
+    console.log(`Standard CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
     console.log(`Headers found:`, headers);
     
     if (headers.length === 0 || rows.length === 0) {

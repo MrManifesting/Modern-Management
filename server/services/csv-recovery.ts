@@ -36,13 +36,21 @@ export function recoverShopifyCSV(csvContent: string): RecoveredCSV {
   
   const shopifyHeaderPatterns = [
     /handle/i, /title/i, /sku/i, /variant/i, /available/i, 
-    /price/i, /inventory/i, /type/i, /vendor/i, /published/i
+    /price/i, /inventory/i, /type/i, /vendor/i, /published/i,
+    /body.*html/i, /tags/i, /collection/i, /image/i, /weight/i,
+    /grams/i, /option/i, /barcode/i, /cost/i, /compare/i
   ];
   
   const delimiters = [',', '\t', ';', '|'];
   
   for (let lineIndex = 0; lineIndex < Math.min(15, lines.length); lineIndex++) {
     const line = lines[lineIndex];
+    
+    // Skip obvious filename patterns
+    if (line.match(/^[^,\t;|]*export[^,\t;|]*\(\d+\)$/i)) {
+      console.log(`Skipping filename pattern: ${line}`);
+      continue;
+    }
     
     for (const delimiter of delimiters) {
       const cells = line.split(delimiter);
@@ -52,16 +60,24 @@ export function recoverShopifyCSV(csvContent: string): RecoveredCSV {
       // Score this line based on how many Shopify headers it contains
       let score = 0;
       for (const cell of cells) {
+        const cleanCell = cell.trim().replace(/['"]/g, '');
         for (const pattern of shopifyHeaderPatterns) {
-          if (pattern.test(cell.trim())) {
+          if (pattern.test(cleanCell)) {
             score += 1;
           }
+        }
+        
+        // Additional scoring for exact Shopify column names
+        const lowerCell = cleanCell.toLowerCase();
+        if (['handle', 'title', 'body (html)', 'vendor', 'product type', 'tags', 'published', 'option1 name', 'option1 value', 'option2 name', 'option2 value', 'option3 name', 'option3 value', 'variant sku', 'variant grams', 'variant inventory tracker', 'variant inventory qty', 'variant inventory policy', 'variant fulfillment service', 'variant price', 'variant compare at price', 'variant requires shipping', 'variant taxable', 'variant barcode', 'image src', 'image position', 'image alt text', 'gift card', 'seo title', 'seo description', 'google shopping / google product category', 'google shopping / gender', 'google shopping / age group', 'google shopping / mpn', 'google shopping / adwords grouping', 'google shopping / adwords labels', 'google shopping / condition', 'google shopping / custom product', 'google shopping / custom label 0', 'google shopping / custom label 1', 'google shopping / custom label 2', 'google shopping / custom label 3', 'google shopping / custom label 4', 'variant image', 'variant weight unit', 'variant tax code', 'cost per item', 'status'].includes(lowerCell)) {
+          score += 2; // Higher score for exact matches
         }
       }
       
       // Bonus points for having many columns (typical Shopify exports have 20+ columns)
       if (cells.length > 10) score += 2;
       if (cells.length > 20) score += 3;
+      if (cells.length > 30) score += 5;
       
       if (score > bestScore) {
         bestScore = score;
