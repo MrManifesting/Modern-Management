@@ -34,9 +34,15 @@ export const initializeTelegramBot = (token: string) => {
           const fileId = photo.file_id;
           const fileName = `photo_${Date.now()}.jpg`;
           
-          await downloadMediaFile(bot!, fileId, fileName);
-          bot!.sendMessage(chatId, `✅ Photo saved to media folder as: ${fileName}`);
-          log(`Received photo from Telegram: ${fileName}`, 'telegram');
+          const filePath = await downloadMediaFile(bot!, fileId, fileName);
+          const publicUrl = `/media/${fileName}`;
+          
+          // Send confirmation with image URL
+          await bot!.sendPhoto(chatId, filePath, {
+            caption: `✅ Photo saved successfully!\n📁 File: ${fileName}\n🔗 URL: ${publicUrl}\n\nYou can now use this image in your inventory system.`
+          });
+          
+          log(`Received photo from Telegram: ${fileName} (URL: ${publicUrl})`, 'telegram');
         } catch (error) {
           console.error('Error saving photo:', error);
           bot!.sendMessage(chatId, '❌ Error saving photo. Please try again.');
@@ -49,9 +55,13 @@ export const initializeTelegramBot = (token: string) => {
           const fileId = msg.video.file_id;
           const fileName = `video_${Date.now()}.mp4`;
           
-          await downloadMediaFile(bot!, fileId, fileName);
-          bot!.sendMessage(chatId, `✅ Video saved to media folder as: ${fileName}`);
-          log(`Received video from Telegram: ${fileName}`, 'telegram');
+          const filePath = await downloadMediaFile(bot!, fileId, fileName);
+          const publicUrl = `/media/${fileName}`;
+          
+          // Send confirmation with video URL
+          await bot!.sendMessage(chatId, `✅ Video saved successfully!\n📁 File: ${fileName}\n🔗 URL: ${publicUrl}\n\nYou can now use this video in your inventory system.`);
+          
+          log(`Received video from Telegram: ${fileName} (URL: ${publicUrl})`, 'telegram');
         } catch (error) {
           console.error('Error saving video:', error);
           bot!.sendMessage(chatId, '❌ Error saving video. Please try again.');
@@ -65,9 +75,13 @@ export const initializeTelegramBot = (token: string) => {
           const originalName = msg.document.file_name || `file_${Date.now()}`;
           const fileName = `doc_${Date.now()}_${originalName}`;
           
-          await downloadMediaFile(bot!, fileId, fileName);
-          bot!.sendMessage(chatId, `✅ Document saved to media folder as: ${fileName}`);
-          log(`Received document from Telegram: ${fileName}`, 'telegram');
+          const filePath = await downloadMediaFile(bot!, fileId, fileName);
+          const publicUrl = `/media/${fileName}`;
+          
+          // Send confirmation with document URL
+          await bot!.sendMessage(chatId, `✅ Document saved successfully!\n📁 File: ${fileName}\n🔗 URL: ${publicUrl}\n\nYou can now use this document in your inventory system.`);
+          
+          log(`Received document from Telegram: ${fileName} (URL: ${publicUrl})`, 'telegram');
         } catch (error) {
           console.error('Error saving document:', error);
           bot!.sendMessage(chatId, '❌ Error saving document. Please try again.');

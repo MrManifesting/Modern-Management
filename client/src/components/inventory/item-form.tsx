@@ -25,7 +25,7 @@ import {
   MAIN_CATEGORIES, 
   FLOWER_QUALITY_GRADES, 
   FLOWER_STRAIN_TYPES,
-  EXOTIC_CATEGORIES,
+  ALL_FLOWER_QUALITIES,
   BULK_SIZES,
   WEIGHT_OPTIONS,
   getSubcategoriesForCategory
@@ -417,7 +417,7 @@ export default function ItemFormComponent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {FLOWER_QUALITY_GRADES.map((quality) => (
+                  {ALL_FLOWER_QUALITIES.map((quality) => (
                     <SelectItem key={quality} value={quality}>
                       {quality}
                     </SelectItem>
@@ -456,34 +456,7 @@ export default function ItemFormComponent({
               <FormMessage />
             </FormItem>
             
-            <FormItem>
-              <FormLabel>Exotic Categorization</FormLabel>
-              <Select 
-                onValueChange={(value) => {
-                  // Store exotic category in attributes
-                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                  form.setValue("attributes", {
-                    ...currentAttributes,
-                    exoticCategory: value
-                  } as any);
-                }}
-                defaultValue={(form.getValues("attributes") as any)?.exoticCategory || ""}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select exotic category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {EXOTIC_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
+
             
             <FormItem>
               <FormLabel>Bulk Categorization</FormLabel>

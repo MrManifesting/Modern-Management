@@ -104,21 +104,24 @@ export const WEIGHT_OPTIONS = {
   prerolls: ['0.5g', '0.75g', '1g', '1.5g', '2g']
 };
 
-// Exotic product quality grades
-export const EXOTIC_CATEGORIES = [
+// All flower quality grades (no special exotic tier)
+export const ALL_FLOWER_QUALITIES = [
+  'Outdoor',
+  'Indoor',
+  'Greenhouse',
   'Premium',
   'Top Shelf',
+  'Special Reserve',
   'Limited Edition',
   'Rare',
-  'Ultra Premium',
-  'Special Reserve'
+  'Ultra Premium'
 ];
 
 // Export structured category map for easier access
 export const CATEGORY_MAP = {
   'Flower': {
     strains: FLOWER_STRAIN_TYPES,
-    qualities: FLOWER_QUALITY_GRADES,
+    qualities: ALL_FLOWER_QUALITIES,
     weights: WEIGHT_OPTIONS.flower
   },
   'Concentrates': {
