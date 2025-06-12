@@ -1,9 +1,15 @@
 import type { Express } from "express";
 import { shopifyEnhancedService } from "./services/shopify-enhanced";
+import { shopifyConnectionService } from "./services/shopify-connection-fix";
+import { workingShopifyService } from "./services/shopify-working";
+import { parseShopifyCSV, validateCSVImportData } from "./services/csv-parser-enhanced";
 import { storage } from "./storage";
+import multer from "multer";
+
+const upload = multer({ dest: 'uploads/' });
 
 export function registerShopifyFixRoutes(app: Express) {
-  // Test Shopify connection with detailed diagnostics
+  // Test Shopify connection with both services
   app.get("/api/shopify/fix/test-connection", async (req, res) => {
     try {
       console.log("=== Shopify Connection Diagnostic ===");
@@ -28,20 +34,49 @@ export function registerShopifyFixRoutes(app: Express) {
         });
       }
       
-      // Test the enhanced service
-      const connectionResult = await shopifyEnhancedService.testConnection();
+      // Test all connection methods
+      const workingResult = await workingShopifyService.testConnection();
+      const directResult = await shopifyConnectionService.testConnection();
       
-      res.json({
-        success: true,
-        connection: connectionResult,
-        diagnostics: {
-          hasToken,
-          hasStore,
-          hasApiKey,
-          tokenLength: process.env.SHOPIFY_ACCESS_TOKEN?.length || 0,
-          storeName: process.env.SHOPIFY_STORE || 'default'
+      if (workingResult.success) {
+        res.json({
+          success: true,
+          connection: workingResult,
+          method: "working",
+          diagnostics: {
+            hasToken,
+            hasStore,
+            hasApiKey,
+            tokenLength: process.env.SHOPIFY_ACCESS_TOKEN?.length || 0,
+            storeName: process.env.SHOPIFY_STORE || 'default'
+          }
+        });
+      } else if (directResult.success) {
+        res.json({
+          success: true,
+          connection: directResult,
+          method: "direct",
+          workingError: workingResult.error
+        });
+      } else {
+        // Try enhanced service as last resort
+        try {
+          const enhancedResult = await shopifyEnhancedService.testConnection();
+          res.json({
+            success: true,
+            connection: enhancedResult,
+            method: "enhanced",
+            workingError: workingResult.error,
+            directError: directResult.error
+          });
+        } catch (enhancedError) {
+          res.status(500).json({
+            success: false,
+            error: `All connection methods failed. Working: ${workingResult.error}, Direct: ${directResult.error}, Enhanced: ${enhancedError instanceof Error ? enhancedError.message : 'Unknown'}`,
+            diagnostics: directResult.diagnostics
+          });
         }
-      });
+      }
       
     } catch (error) {
       console.error("Shopify connection test failed:", error);
@@ -56,6 +91,92 @@ export function registerShopifyFixRoutes(app: Express) {
           errorType: error instanceof Error ? error.name : "Unknown",
           suggestion: "Check if your Shopify access token has the required permissions"
         }
+      });
+    }
+  });
+
+  // Fixed CSV import endpoint
+  app.post("/api/shopify/fix/import-csv", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No CSV file uploaded"
+        });
+      }
+
+      console.log(`Processing CSV import: ${req.file.originalname}`);
+      
+      // Read CSV file
+      const fs = require('fs');
+      const csvContent = fs.readFileSync(req.file.path, 'utf8');
+      
+      // Parse CSV with enhanced parser
+      const parseResult = parseShopifyCSV(csvContent);
+      console.log(`CSV parse result: ${parseResult.processed} items processed, ${parseResult.skipped} skipped`);
+      
+      if (!parseResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Failed to parse CSV file",
+          details: parseResult.errors
+        });
+      }
+
+      // Validate items
+      const validation = validateCSVImportData(parseResult.items);
+      console.log(`Validation: ${validation.valid.length} valid, ${validation.invalid.length} invalid`);
+
+      if (validation.valid.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No valid items to import",
+          invalidItems: validation.invalid
+        });
+      }
+
+      // Import valid items in batches
+      const batchSize = 10;
+      const imported = [];
+      const failed = [];
+
+      for (let i = 0; i < validation.valid.length; i += batchSize) {
+        const batch = validation.valid.slice(i, i + batchSize);
+        
+        for (const item of batch) {
+          try {
+            const savedItem = await storage.createItem(item);
+            imported.push(savedItem);
+          } catch (error) {
+            console.error('Failed to save item:', error);
+            failed.push({
+              item: item.name,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({
+        success: true,
+        imported: imported.length,
+        failed: failed.length,
+        invalidItems: validation.invalid.length,
+        details: {
+          imported,
+          failed: failed.slice(0, 10), // Limit error details
+          parseErrors: parseResult.errors
+        }
+      });
+
+    } catch (error) {
+      console.error("CSV import failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Import failed"
       });
     }
   });
