@@ -1,341 +1,234 @@
 /**
- * Enhanced CSV Parser for Shopify Exports
- * Handles various Shopify export formats including malformed single-column exports
+ * Enhanced CSV Parser for Shopify inventory exports
+ * Handles various CSV formats and data validation
  */
 
-export interface ParsedCsvData {
-  headers: string[];
-  rows: string[][];
-  format: 'product' | 'inventory' | 'unknown';
-  isValid: boolean;
-  errorMessage?: string;
+import { InsertItem } from "@shared/schema";
+
+export interface CSVParseResult {
+  success: boolean;
+  items: InsertItem[];
+  errors: string[];
+  skipped: number;
+  processed: number;
 }
 
-/**
- * Enhanced CSV parser that handles various Shopify export formats
- */
-export function parseShopifyCSV(csvContent: string): ParsedCsvData {
-  try {
-    // First, try to detect if this is a malformed single-column export
-    const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
-    
-    if (lines.length === 0) {
-      return {
-        headers: [],
-        rows: [],
-        format: 'unknown',
-        isValid: false,
-        errorMessage: 'Empty CSV file'
-      };
-    }
-
-    // Check if first line is a single column with export metadata
-    const firstLine = lines[0];
-    const isMetadataLine = firstLine.includes('export') && !firstLine.includes(',');
-    
-    let actualCsvStart = 0;
-    
-    // Skip metadata lines to find actual CSV headers
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes(',') || (line.split('\t').length > 1)) {
-        actualCsvStart = i;
-        break;
-      }
-    }
-
-    if (actualCsvStart >= lines.length) {
-      return {
-        headers: [],
-        rows: [],
-        format: 'unknown',
-        isValid: false,
-        errorMessage: 'No valid CSV data found'
-      };
-    }
-
-    // Parse CSV starting from actual data
-    const csvData = lines.slice(actualCsvStart).join('\n');
-    const parsed = parseCSVContent(csvData);
-    
-    if (parsed.headers.length === 0) {
-      return {
-        headers: [],
-        rows: [],
-        format: 'unknown',
-        isValid: false,
-        errorMessage: 'No headers found'
-      };
-    }
-
-    const format = determineShopifyFormat(parsed.headers);
-    
-    return {
-      headers: parsed.headers,
-      rows: parsed.rows,
-      format,
-      isValid: format !== 'unknown',
-      errorMessage: format === 'unknown' ? `Unrecognized format with headers: ${parsed.headers.join(', ')}` : undefined
-    };
-
-  } catch (error) {
-    return {
-      headers: [],
-      rows: [],
-      format: 'unknown',
-      isValid: false,
-      errorMessage: `CSV parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
-  }
-}
-
-/**
- * Parse CSV content with proper quote and comma handling
- */
-function parseCSVContent(csvContent: string): { headers: string[]; rows: string[][] } {
-  const rows: string[][] = [];
-  const lines = csvContent.split(/\r?\n/);
-  
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    
-    // Handle both comma and tab separators
-    const separator = line.includes('\t') && !line.includes(',') ? '\t' : ',';
-    const row = parseCSVLine(line, separator);
-    
-    if (row.length > 0) {
-      rows.push(row);
-    }
-  }
-  
-  return { 
-    headers: rows[0]?.map(h => h.trim()) || [],
-    rows: rows.slice(1) 
+export function parseShopifyCSV(csvContent: string): CSVParseResult {
+  const lines = csvContent.split('\n').filter(line => line.trim());
+  const result: CSVParseResult = {
+    success: false,
+    items: [],
+    errors: [],
+    skipped: 0,
+    processed: 0
   };
+
+  if (lines.length < 2) {
+    result.errors.push('CSV file must contain at least a header and one data row');
+    return result;
+  }
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  console.log('CSV Headers detected:', headers);
+
+  // Detect CSV format based on headers
+  const format = detectCSVFormat(headers);
+  console.log('Detected CSV format:', format);
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const row = parseCSVRow(lines[i]);
+      if (row.length === 0) {
+        result.skipped++;
+        continue;
+      }
+
+      const item = convertCSVRowToItem(headers, row, format);
+      if (item) {
+        result.items.push(item);
+        result.processed++;
+      } else {
+        result.skipped++;
+      }
+    } catch (error) {
+      result.errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Parse error'}`);
+      result.skipped++;
+    }
+  }
+
+  result.success = result.items.length > 0;
+  return result;
 }
 
-/**
- * Parse a single CSV line with proper quote handling
- */
-function parseCSVLine(line: string, separator: string = ','): string[] {
-  const row: string[] = [];
-  let cell = '';
-  let inQuotes = false;
-  let i = 0;
+function detectCSVFormat(headers: string[]): 'shopify_inventory' | 'shopify_products' | 'generic' {
+  const headerStr = headers.join(',').toLowerCase();
   
-  while (i < line.length) {
+  if (headerStr.includes('handle') && headerStr.includes('variant sku')) {
+    return 'shopify_products';
+  } else if (headerStr.includes('sku') && headerStr.includes('available')) {
+    return 'shopify_inventory';
+  }
+  
+  return 'generic';
+}
+
+function parseCSVRow(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    const nextChar = line[i + 1];
     
     if (char === '"') {
-      if (inQuotes && nextChar === '"') {
+      if (inQuotes && line[i + 1] === '"') {
         // Escaped quote
-        cell += '"';
-        i += 2;
-        continue;
+        current += '"';
+        i++; // Skip next quote
       } else {
+        // Toggle quote state
         inQuotes = !inQuotes;
       }
-    } else if (char === separator && !inQuotes) {
-      row.push(cell.trim());
-      cell = '';
+    } else if (char === ',' && !inQuotes) {
+      // End of field
+      result.push(current.trim());
+      current = '';
     } else {
-      cell += char;
+      current += char;
     }
-    
-    i++;
   }
   
-  // Add the last cell
-  row.push(cell.trim());
+  // Add the last field
+  result.push(current.trim());
   
-  return row.map(cell => {
-    // Remove surrounding quotes if present
-    if (cell.startsWith('"') && cell.endsWith('"')) {
-      return cell.slice(1, -1);
-    }
-    return cell;
-  });
+  return result;
 }
 
-/**
- * Determine Shopify export format based on headers
- */
-function determineShopifyFormat(headers: string[]): 'product' | 'inventory' | 'unknown' {
-  const headerSet = new Set(headers.map(h => h.toLowerCase()));
-  
-  // Shopify Product Export patterns
-  const productIndicators = [
-    'handle', 'title', 'body (html)', 'vendor', 'product category', 'type',
-    'tags', 'published', 'option1 name', 'option1 value', 'variant sku',
-    'variant grams', 'variant inventory tracker', 'variant inventory qty',
-    'variant inventory policy', 'variant fulfillment service',
-    'variant price', 'variant compare at price', 'variant requires shipping',
-    'variant taxable', 'variant barcode', 'image src', 'image position',
-    'image alt text', 'gift card', 'seo title', 'seo description',
-    'google shopping', 'variant image', 'variant weight unit',
-    'variant tax code', 'cost per item', 'included', 'price / international',
-    'compare at price / international'
-  ];
-  
-  // Shopify Inventory Export patterns
-  const inventoryIndicators = [
-    'sku', 'product', 'variant', 'available', 'on hand', 'committed',
-    'variant inventory qty', 'barcode', 'location'
-  ];
-  
-  // Count matches for each format
-  const productMatches = productIndicators.filter(indicator => 
-    headerSet.has(indicator)
-  ).length;
-  
-  const inventoryMatches = inventoryIndicators.filter(indicator => 
-    headerSet.has(indicator)
-  ).length;
-  
-  // Determine format based on matches
-  if (productMatches >= 3) return 'product';
-  if (inventoryMatches >= 2) return 'inventory';
-  
-  // Additional checks for common variations
-  if (headerSet.has('handle') && headerSet.has('title')) return 'product';
-  if (headerSet.has('sku') && (headerSet.has('available') || headerSet.has('on hand'))) return 'inventory';
-  
-  console.log(`CSV format detection: Product matches: ${productMatches}, Inventory matches: ${inventoryMatches}`);
-  console.log(`Headers: ${headers.join(', ')}`);
-  
-  return 'unknown';
-}
-
-/**
- * Convert parsed CSV data to standardized item format
- */
-export function convertCSVRowToItem(
-  row: string[], 
-  headers: string[], 
-  format: 'product' | 'inventory',
-  rowIndex: number
-): {
-  name: string;
-  sku: string;
-  quantity: number;
-  price: number;
-  category: string;
-  description?: string;
-  vendor?: string;
-  tags?: string[];
-  barcode?: string;
-  weight?: number;
-  error?: string;
-} | null {
+export function convertCSVRowToItem(headers: string[], row: string[], format: string): InsertItem | null {
   try {
-    const headerMap = new Map(headers.map((h, i) => [h.toLowerCase(), i]));
-    
-    if (format === 'product') {
-      return convertProductRow(row, headerMap, rowIndex);
-    } else if (format === 'inventory') {
-      return convertInventoryRow(row, headerMap, rowIndex);
+    // Create a map for easy field access
+    const data: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      data[header.toLowerCase().trim()] = row[index] || '';
+    });
+
+    // Common field mappings
+    const name = data['title'] || data['product title'] || data['name'] || data['handle'] || 'Unnamed Product';
+    const sku = data['variant sku'] || data['sku'] || data['id'] || '';
+    const price = parseFloat(data['variant price'] || data['price'] || data['cost'] || '0') || 0;
+    const quantity = parseInt(data['variant inventory qty'] || data['available'] || data['quantity'] || '0') || 0;
+
+    // Skip if no essential data
+    if (!name && !sku) {
+      console.log('Skipping row - no name or SKU');
+      return null;
     }
-    
-    return null;
+
+    // Generate SKU if missing
+    const finalSku = sku || `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+    const item: InsertItem = {
+      name: name.substring(0, 255), // Ensure length limit
+      sku: finalSku.substring(0, 100),
+      basePrice: price,
+      quantity: quantity,
+      description: (data['body html'] || data['description'] || '').substring(0, 1000),
+      category: (data['product type'] || data['type'] || data['category'] || 'General').substring(0, 100),
+      brand: (data['vendor'] || data['brand'] || 'Unknown').substring(0, 100),
+      tags: parseTagsFromCSV(data['tags'] || ''),
+      weight: parseFloat(data['variant weight'] || data['weight'] || '0') || 0,
+      weightUnit: (data['variant weight unit'] || 'lb').substring(0, 10),
+      cost: parseFloat(data['variant compare at price'] || data['compare_price'] || '0') || 0,
+      barcode: (data['variant barcode'] || data['barcode'] || '').substring(0, 50),
+      images: parseImagesFromCSV(data['image src'] || data['images'] || ''),
+      condition: 'new',
+      notes: '',
+      isActive: true,
+      isBulk: false,
+      isStandard: true,
+      location: 'warehouse',
+      shelf: '',
+      bin: '',
+      lowStockThreshold: 5,
+      metadata: {
+        importSource: 'csv',
+        importDate: new Date().toISOString(),
+        originalData: format === 'shopify_products' ? {
+          handle: data['handle'] || '',
+          productId: data['id'] || '',
+          variantId: data['variant id'] || ''
+        } : {}
+      }
+    };
+
+    return item;
   } catch (error) {
-    return {
-      name: '',
-      sku: '',
-      quantity: 0,
-      price: 0,
-      category: 'general',
-      error: `Row ${rowIndex}: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
+    console.error('Error converting CSV row to item:', error);
+    return null;
   }
 }
 
-function convertProductRow(row: string[], headerMap: Map<string, number>, rowIndex: number) {
-  const getCell = (header: string) => {
-    const index = headerMap.get(header.toLowerCase());
-    return index !== undefined ? (row[index] || '').trim() : '';
-  };
+function parseTagsFromCSV(tagsString: string): string[] {
+  if (!tagsString) return [];
   
-  const name = getCell('title') || getCell('product');
-  const sku = getCell('variant sku') || getCell('sku');
-  const handle = getCell('handle');
-  
-  if (!name) {
-    return {
-      name: '',
-      sku: sku || `unknown-${rowIndex}`,
-      quantity: 0,
-      price: 0,
-      category: 'general',
-      error: `Row ${rowIndex}: Missing product title`
-    };
-  }
-  
-  // Parse quantity
-  let quantity = 0;
-  const qtyStr = getCell('variant inventory qty') || getCell('available') || '0';
-  const parsedQty = parseInt(qtyStr);
-  if (!isNaN(parsedQty)) {
-    quantity = Math.max(0, parsedQty);
-  }
-  
-  // Parse price
-  let price = 0;
-  const priceStr = getCell('variant price') || getCell('price') || '0';
-  const cleanPriceStr = priceStr.replace(/[$,]/g, '');
-  const parsedPrice = parseFloat(cleanPriceStr);
-  if (!isNaN(parsedPrice)) {
-    price = Math.max(0, parsedPrice);
-  }
-  
-  return {
-    name,
-    sku: sku || handle || `product-${rowIndex}`,
-    quantity,
-    price,
-    category: getCell('type') || getCell('product category') || 'general',
-    description: getCell('body (html)') || undefined,
-    vendor: getCell('vendor') || undefined,
-    tags: getCell('tags') ? getCell('tags').split(',').map(t => t.trim()) : undefined,
-    barcode: getCell('variant barcode') || getCell('barcode') || undefined,
-    weight: parseFloat(getCell('variant grams')) || undefined
-  };
+  return tagsString
+    .split(',')
+    .map(tag => tag.trim().replace(/"/g, ''))
+    .filter(tag => tag.length > 0)
+    .slice(0, 10); // Limit number of tags
 }
 
-function convertInventoryRow(row: string[], headerMap: Map<string, number>, rowIndex: number) {
-  const getCell = (header: string) => {
-    const index = headerMap.get(header.toLowerCase());
-    return index !== undefined ? (row[index] || '').trim() : '';
-  };
+function parseImagesFromCSV(imagesString: string): string[] {
+  if (!imagesString) return [];
   
-  const name = getCell('product') || getCell('variant');
-  const sku = getCell('sku');
+  const urls = imagesString
+    .split(',')
+    .map(url => url.trim().replace(/"/g, ''))
+    .filter(url => url.startsWith('http'))
+    .slice(0, 5); // Limit number of images
   
-  if (!name && !sku) {
-    return {
-      name: '',
-      sku: `unknown-${rowIndex}`,
-      quantity: 0,
-      price: 0,
-      category: 'general',
-      error: `Row ${rowIndex}: Missing product name and SKU`
-    };
+  return urls;
+}
+
+export function validateCSVImportData(items: InsertItem[]): { valid: InsertItem[], invalid: { item: any, errors: string[] }[] } {
+  const valid: InsertItem[] = [];
+  const invalid: { item: any, errors: string[] }[] = [];
+
+  for (const item of items) {
+    const errors: string[] = [];
+
+    // Required field validation
+    if (!item.name || item.name.trim().length === 0) {
+      errors.push('Name is required');
+    }
+
+    if (!item.sku || item.sku.trim().length === 0) {
+      errors.push('SKU is required');
+    }
+
+    if (item.basePrice < 0) {
+      errors.push('Base price cannot be negative');
+    }
+
+    if (item.quantity < 0) {
+      errors.push('Quantity cannot be negative');
+    }
+
+    // Length validation
+    if (item.name && item.name.length > 255) {
+      errors.push('Name too long (max 255 characters)');
+    }
+
+    if (item.sku && item.sku.length > 100) {
+      errors.push('SKU too long (max 100 characters)');
+    }
+
+    if (errors.length === 0) {
+      valid.push(item);
+    } else {
+      invalid.push({ item, errors });
+    }
   }
-  
-  // Parse quantity
-  let quantity = 0;
-  const qtyStr = getCell('available') || getCell('on hand') || getCell('variant inventory qty') || '0';
-  const parsedQty = parseInt(qtyStr);
-  if (!isNaN(parsedQty)) {
-    quantity = Math.max(0, parsedQty);
-  }
-  
-  return {
-    name: name || `Product ${sku}`,
-    sku: sku || `inv-${rowIndex}`,
-    quantity,
-    price: 0, // Inventory exports typically don't include price
-    category: 'general',
-    barcode: getCell('barcode') || undefined
-  };
+
+  return { valid, invalid };
 }
