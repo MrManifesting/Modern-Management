@@ -581,7 +581,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/items", upload.array("files", 5), async (req: Request, res: Response) => {
+  app.post("/api/items", uploadMemory.array("files", 5), async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[];
       const fileUrls = files?.map((file, index) => {
@@ -674,7 +674,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/items/:id", upload.array("files", 5), async (req: Request, res: Response) => {
+  app.patch("/api/items/:id", uploadMemory.array("files", 5), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const files = req.files as Express.Multer.File[];
@@ -1857,7 +1857,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Bulk image optimization route
-  app.post("/api/optimize-images/bulk", upload.array("images", 20), async (req: Request, res: Response) => {
+  app.post("/api/optimize-images/bulk", uploadMemory.array("images", 20), async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
@@ -3944,8 +3944,7 @@ ${topCustomersCsv}`;
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      console.log('Processing CSV file:', req.file.filename);
-      console.log('File path:', req.file.path);
+      console.log('Processing CSV file:', req.file.originalname);
       console.log('File details:', {
         fieldname: req.file.fieldname,
         originalname: req.file.originalname,
@@ -3953,16 +3952,11 @@ ${topCustomersCsv}`;
         size: req.file.size
       });
 
-      if (!req.file.path) {
-        return res.status(400).json({ error: 'File upload failed - no path available' });
-      }
-
-      // Simple CSV parsing
-      const csvContent = fs.readFileSync(req.file.path, 'utf-8');
+      // Get CSV content from memory buffer
+      const csvContent = req.file.buffer.toString('utf-8');
       const lines = csvContent.split('\n').filter(line => line.trim());
       
       if (lines.length < 2) {
-        fs.unlinkSync(req.file.path);
         return res.status(400).json({ error: 'CSV must have header and data rows' });
       }
 
@@ -4021,9 +4015,6 @@ ${topCustomersCsv}`;
         }
       }
 
-      // Clean up uploaded file
-      fs.unlinkSync(req.file.path);
-
       res.json({
         success: true,
         imported: imported.length,
@@ -4033,10 +4024,6 @@ ${topCustomersCsv}`;
 
     } catch (error) {
       console.error('CSV import error:', error);
-      
-      if (req.file && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
 
       res.status(500).json({
         error: 'Failed to process CSV file',
