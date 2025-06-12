@@ -128,7 +128,7 @@ export function convertCSVRowToItem(headers: string[], row: string[], format: st
     const finalSku = sku || `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
     const item: InsertItem = {
-      name: name.substring(0, 255), // Ensure length limit
+      name: name.substring(0, 255),
       sku: finalSku.substring(0, 100),
       basePrice: price,
       quantity: quantity,
@@ -137,19 +137,13 @@ export function convertCSVRowToItem(headers: string[], row: string[], format: st
       brand: (data['vendor'] || data['brand'] || 'Unknown').substring(0, 100),
       tags: parseTagsFromCSV(data['tags'] || ''),
       weight: parseFloat(data['variant weight'] || data['weight'] || '0') || 0,
-      weightUnit: (data['variant weight unit'] || 'lb').substring(0, 10),
-      cost: parseFloat(data['variant compare at price'] || data['compare_price'] || '0') || 0,
+      costPrice: parseFloat(data['variant compare at price'] || data['compare_price'] || '0') || 0,
       barcode: (data['variant barcode'] || data['barcode'] || '').substring(0, 50),
       images: parseImagesFromCSV(data['image src'] || data['images'] || ''),
       condition: 'new',
-      notes: '',
-      isActive: true,
-      isBulk: false,
-      isStandard: true,
       location: 'warehouse',
-      shelf: '',
-      bin: '',
-      lowStockThreshold: 5,
+      itemType: 'standard',
+      status: 'active',
       metadata: {
         importSource: 'csv',
         importDate: new Date().toISOString(),

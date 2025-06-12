@@ -135,25 +135,42 @@ export function registerShopifyFixRoutes(app: Express) {
         });
       }
 
-      // Import valid items in batches
-      const batchSize = 10;
+      // Import valid items with enhanced error handling
       const imported = [];
       const failed = [];
 
-      for (let i = 0; i < validation.valid.length; i += batchSize) {
-        const batch = validation.valid.slice(i, i + batchSize);
-        
-        for (const item of batch) {
-          try {
-            const savedItem = await storage.createItem(item);
-            imported.push(savedItem);
-          } catch (error) {
-            console.error('Failed to save item:', error);
-            failed.push({
-              item: item.name,
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-          }
+      for (const item of validation.valid) {
+        try {
+          // Create a simplified item for testing database compatibility
+          const simplifiedItem = {
+            name: item.name,
+            sku: item.sku,
+            basePrice: item.basePrice,
+            quantity: item.quantity,
+            description: item.description,
+            category: item.category,
+            brand: item.brand,
+            barcode: item.barcode,
+            condition: item.condition,
+            location: item.location,
+            itemType: item.itemType,
+            status: item.status,
+            tags: item.tags || [],
+            images: item.images || [],
+            weight: item.weight || 0,
+            costPrice: item.costPrice || 0
+          };
+
+          const savedItem = await storage.createItem(simplifiedItem);
+          imported.push(savedItem);
+          console.log(`Successfully imported: ${item.name}`);
+        } catch (error) {
+          console.error(`Failed to save item ${item.name}:`, error);
+          failed.push({
+            item: item.name,
+            sku: item.sku,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
         }
       }
 
