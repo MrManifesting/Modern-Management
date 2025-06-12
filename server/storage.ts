@@ -1995,6 +1995,12 @@ export class DatabaseStorage implements IStorage {
   
   async createItem(item: InsertItem): Promise<Item> {
     try {
+      // Auto-generate SKU if not provided
+      if (!item.sku) {
+        const { generateSKU } = await import('./services/sku-generator');
+        item.sku = generateSKU(item);
+      }
+      
       // Map camelCase properties to snake_case database columns
       const mappedItem: Record<string, any> = {};
       
@@ -2071,22 +2077,17 @@ export class DatabaseStorage implements IStorage {
       // Add updated timestamp
       const updateData = { ...item, updatedAt: new Date() };
       
-      // Build the SET clause parts
-      const updateFields = Object.entries(updateData).map(([key, _], index) => 
-        `${key} = $${index + 2}`
-      ).join(', ');
+      // Use Drizzle's update method instead of raw SQL
+      const result = await db.update(items)
+        .set(updateData)
+        .where(eq(items.id, id))
+        .returning();
       
-      // Execute the raw SQL update query
-      const result = await db.execute(
-        `UPDATE items SET ${updateFields} WHERE id = $1 RETURNING *`,
-        [id, ...Object.values(updateData)]
-      );
-      
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return undefined;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       
       // Map the raw result to Item type
       return {
