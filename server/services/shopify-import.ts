@@ -733,25 +733,31 @@ export async function importShopifyCSV(
             if (processedHandles.has(handle)) continue;
             processedHandles.add(handle);
             
+            // Ensure arrays are properly formatted for database
+            const tagsArray = tags && typeof tags === 'string' ? 
+              tags.split(',').map(t => t.trim()).filter(t => t.length > 0) : 
+              (Array.isArray(tags) ? tags : []);
+
             const itemData: InsertItem = {
               name: title,
               sku: sku || `AUTO-${handle}`,
               description: description || createDescription(title, 'Standard'),
               category: productType || 'Cannabis',
-              subcategory: vendor || 'Default',
               basePrice: price,
               weight: weight,
               quantity: quantity,
               status: published ? 'active' : 'inactive',
-              processingStatus: ProcessingStatus.COMPLETED,
-              breakdownStatus: BreakdownStatus.COMPLETE,
-              itemType: ItemType.FINISHED_PRODUCT,
-              condition: ItemCondition.NEW,
-              notes: tags ? `Imported from Shopify. Tags: ${tags}` : 'Imported from Shopify',
-              barcodeData: generateBarcodeData(sku || `AUTO-${handle}`),
-              storageLocation: 'Import Storage',
-              supplier: vendor || 'Shopify Import',
-              tags: tags ? tags.split(',').map(t => t.trim()) : []
+              tags: tagsArray,
+              images: [], // Start with empty array for images
+              marketplace: [], // Empty marketplace array
+              metadata: {}, // Empty metadata object
+              itemType: 'standard',
+              visibility: 'visible',
+              processingStatus: 'completed',
+              publishStatus: 'published',
+              condition: 'new',
+              brand: vendor || 'Shopify Import',
+              location: 'Import Storage'
             };
             
             const createdItem = await storage.createItem(itemData);
