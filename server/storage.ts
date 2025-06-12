@@ -161,6 +161,22 @@ export interface IStorage {
   getItemsByParentId(parentId: number): Promise<Item[]>;
   getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]>;
   logInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
+
+  // Customer methods
+  getCustomers(): Promise<Customer[]>;
+  getCustomer(id: number): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  deleteCustomer(id: number): Promise<boolean>;
+  getBigSpenders(): Promise<Customer[]>;
+  recalculateCustomerTiers(): Promise<{ updated: number; tiers: Record<string, number> }>;
+
+  // Customer tier methods
+  getCustomerTiers(): Promise<CustomerTier[]>;
+  getCustomerTier(id: number): Promise<CustomerTier | undefined>;
+  createCustomerTier(tier: InsertCustomerTier): Promise<CustomerTier>;
+  updateCustomerTier(id: number, tier: Partial<InsertCustomerTier>): Promise<CustomerTier | undefined>;
 }
 
 // Memory storage implementation

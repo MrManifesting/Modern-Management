@@ -2887,6 +2887,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Tiering Routes
+  app.get("/api/customers", async (_req: Request, res: Response) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Failed to fetch customers:", error);
+      res.status(500).json({ error: "Failed to fetch customers" });
+    }
+  });
+
+  app.get("/api/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.getCustomer(id);
+      
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      
+      res.json(customer);
+    } catch (error) {
+      console.error("Failed to fetch customer:", error);
+      res.status(500).json({ error: "Failed to fetch customer" });
+    }
+  });
+
+  app.post("/api/customers", async (req: Request, res: Response) => {
+    try {
+      const customer = await storage.createCustomer(req.body);
+      res.status(201).json(customer);
+    } catch (error) {
+      console.error("Failed to create customer:", error);
+      res.status(500).json({ error: "Failed to create customer" });
+    }
+  });
+
+  app.put("/api/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.updateCustomer(id, req.body);
+      
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      
+      res.json(customer);
+    } catch (error) {
+      console.error("Failed to update customer:", error);
+      res.status(500).json({ error: "Failed to update customer" });
+    }
+  });
+
+  app.delete("/api/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCustomer(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Failed to delete customer:", error);
+      res.status(500).json({ error: "Failed to delete customer" });
+    }
+  });
+
+  // Customer tier management routes
+  app.get("/api/customer-tiers", async (_req: Request, res: Response) => {
+    try {
+      const tiers = await storage.getCustomerTiers();
+      res.json(tiers);
+    } catch (error) {
+      console.error("Failed to fetch customer tiers:", error);
+      res.status(500).json({ error: "Failed to fetch customer tiers" });
+    }
+  });
+
+  app.post("/api/customer-tiers", async (req: Request, res: Response) => {
+    try {
+      const tier = await storage.createCustomerTier(req.body);
+      res.status(201).json(tier);
+    } catch (error) {
+      console.error("Failed to create customer tier:", error);
+      res.status(500).json({ error: "Failed to create customer tier" });
+    }
+  });
+
+  // Automatically calculate and update customer tiers based on spending
+  app.post("/api/customers/recalculate-tiers", async (_req: Request, res: Response) => {
+    try {
+      const result = await storage.recalculateCustomerTiers();
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to recalculate customer tiers:", error);
+      res.status(500).json({ error: "Failed to recalculate customer tiers" });
+    }
+  });
+
+  // Get high-priority customers (big spenders)
+  app.get("/api/customers/big-spenders", async (_req: Request, res: Response) => {
+    try {
+      const bigSpenders = await storage.getBigSpenders();
+      res.json(bigSpenders);
+    } catch (error) {
+      console.error("Failed to fetch big spenders:", error);
+      res.status(500).json({ error: "Failed to fetch big spenders" });
+    }
+  });
+
   // Employee Routes
   app.get("/api/employees", async (_req: Request, res: Response) => {
     try {
