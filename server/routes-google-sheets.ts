@@ -1,19 +1,23 @@
 import type { Express } from "express";
 import { google } from 'googleapis';
 import { storage } from "./storage";
+import { googleSheetsService } from "./services/google-sheets-service";
 
 export function registerGoogleSheetsRoutes(app: Express) {
   // Google Sheets status endpoint
   app.get("/api/google/sheets/status", async (req, res) => {
     try {
       const isConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+      const sheetStatus = await googleSheetsService.getSheetStatus();
       
       res.json({
         success: true,
-        configured: isConfigured,
+        configured: isConfigured && sheetStatus.success,
         isAuthenticated: req.isAuthenticated(),
         authUrl: isConfigured ? "/api/auth/google" : null,
-        requiredEnvVars: isConfigured ? [] : ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+        requiredEnvVars: isConfigured ? [] : ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+        sheetUrl: sheetStatus.sheetUrl,
+        webAppUrl: sheetStatus.webAppUrl
       });
     } catch (error) {
       console.error("Error checking Google Sheets status:", error);
@@ -61,34 +65,14 @@ export function registerGoogleSheetsRoutes(app: Express) {
 
     try {
       const items = await storage.getItems();
+      const result = await googleSheetsService.syncInventoryToSheets(items);
       
-      // Format items for export
-      const exportData = items.map(item => ({
-        "SKU": item.sku || "",
-        "Name": item.name,
-        "Category": item.category || "",
-        "Brand": item.brand || "",
-        "Quantity": item.quantity,
-        "Cost Price": item.costPrice || "0",
-        "Sale Price": item.salePrice || "0",
-        "Status": item.status || "active",
-        "Location": item.location || "",
-        "Tags": Array.isArray(item.tags) ? item.tags.join(", ") : "",
-        "Created": item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "",
-        "Updated": item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""
-      }));
-
-      res.json({
-        success: true,
-        message: `Prepared ${exportData.length} items for Google Sheets export`,
-        data: exportData,
-        instructions: "Copy this data to your Google Sheet or use the Google Sheets API with proper OAuth tokens"
-      });
+      res.json(result);
     } catch (error) {
-      console.error("Error syncing to Google Sheets:", error);
+      console.error("Error syncing inventory to Google Sheets:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to sync inventory to Google Sheets"
+        message: error instanceof Error ? error.message : "Failed to sync inventory to Google Sheets"
       });
     }
   });
@@ -104,34 +88,84 @@ export function registerGoogleSheetsRoutes(app: Express) {
 
     try {
       const sales = await storage.getSales();
+      const result = await googleSheetsService.syncSalesToSheets(sales);
       
-      // Format sales for export
-      const exportData = sales.map(sale => ({
-        "Sale ID": sale.id,
-        "Item ID": sale.itemId,
-        "Marketplace": sale.marketplace,
-        "Quantity": sale.quantity,
-        "Sale Price": sale.salePrice,
-        "Fees": sale.fees || "0",
-        "Shipping": sale.shippingCost || "0",
-        "Customer Email": sale.customerEmail || "",
-        "Sale Date": sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : "",
-        "Status": sale.status || "completed"
-      }));
-
-      res.json({
-        success: true,
-        message: `Prepared ${exportData.length} sales for Google Sheets export`,
-        data: exportData,
-        instructions: "Copy this data to your Google Sheet or use the Google Sheets API with proper OAuth tokens"
-      });
+      res.json(result);
     } catch (error) {
       console.error("Error syncing sales to Google Sheets:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to sync sales to Google Sheets"
+        message: error instanceof Error ? error.message : "Failed to sync sales to Google Sheets"
       });
     }
+  });
+
+  // Shopify webhook handler for order processing
+  app.post("/api/shopify/webhook/order", async (req, res) => {
+    try {
+      const orderData = req.body;
+      console.log('Received Shopify order webhook:', orderData.id);
+
+      // Process the order data
+      const processedOrder = {
+        orderId: orderData.id?.toString() || '',
+        customerEmail: orderData.email || '',
+        lineItems: orderData.line_items?.map((item: any) => ({
+          sku: item.sku || '',
+          title: item.title || '',
+          quantity: item.quantity || 0,
+          price: item.price || '0'
+        })) || [],
+        totalPrice: orderData.total_price || '0',
+        orderDate: orderData.created_at || new Date().toISOString()
+      };
+
+      // Send to Google Sheets for processing
+      const result = await googleSheetsService.processShopifyOrder(processedOrder);
+
+      // Update local inventory based on order
+      for (const lineItem of processedOrder.lineItems) {
+        if (lineItem.sku) {
+          try {
+            const items = await storage.getItems();
+            const item = items.find(i => i.sku === lineItem.sku);
+            
+            if (item && item.quantity >= lineItem.quantity) {
+              await storage.updateItem(item.id, { 
+                quantity: item.quantity - lineItem.quantity 
+              });
+              console.log(`Updated inventory for ${lineItem.sku}: ${item.quantity} -> ${item.quantity - lineItem.quantity}`);
+            } else {
+              console.warn(`Insufficient inventory for SKU ${lineItem.sku}. Available: ${item?.quantity || 0}, Required: ${lineItem.quantity}`);
+            }
+          } catch (error) {
+            console.error(`Error updating inventory for SKU ${lineItem.sku}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Order processed successfully",
+        orderId: processedOrder.orderId
+      });
+    } catch (error) {
+      console.error('Error processing Shopify webhook:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process order webhook"
+      });
+    }
+  });
+
+  // Webhook configuration helper
+  app.get("/api/shopify/webhook/url", (req, res) => {
+    const webhookUrl = `${req.protocol}://${req.get('host')}/api/shopify/webhook/order`;
+    res.json({
+      success: true,
+      webhookUrl,
+      instructions: "Add this URL as a webhook in your Shopify admin for order/paid events"
+    });
   });
 
   // Import from Google Sheets (placeholder for future OAuth implementation)
