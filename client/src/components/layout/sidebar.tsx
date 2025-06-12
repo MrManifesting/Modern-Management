@@ -85,11 +85,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/products-inventory",
           className: "inventory-link primary-brand",
         },
-        {
-          title: "Package Inventory",
-          path: "/inventory/package",
-          className: "inventory-link package-brand",
-        },
+
         {
           title: "CSV Validator",
           path: "/csv-validator",
