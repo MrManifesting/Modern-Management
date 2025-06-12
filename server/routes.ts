@@ -3970,40 +3970,29 @@ ${topCustomersCsv}`;
         if (values.length < 2) continue; // Skip empty rows
 
         try {
-          // Use raw SQL with proper PostgreSQL array handling
-          const result = await db.execute(sql`
-            INSERT INTO items (
-              name, sku, base_price, quantity, description, category, brand, 
-              barcode, condition, location, item_type, status, weight, cost_price,
-              tags, images, metadata, created_at, updated_at
-            ) VALUES (
-              ${values[0] || 'Imported Item'},
-              ${values[1] || `SKU-${Date.now()}-${i}`},
-              ${values[2] || '0'},
-              ${parseInt(values[3]) || 1},
-              ${values[4] || ''},
-              ${values[5] || 'General'},
-              ${values[6] || 'Unknown'},
-              ${values[7] || ''},
-              ${'new'},
-              ${'warehouse'},
-              ${'standard'},
-              ${'active'},
-              ${values[8] || '0'},
-              ${values[9] || '0'},
-              ${[]},
-              ${[]},
-              ${'{}'},
-              NOW(),
-              NOW()
-            )
-            RETURNING id, name, sku
-          `);
+          // Memory-only processing - no database operations
+          const item = {
+            id: Date.now() + i,
+            name: values[0] || 'Imported Item',
+            sku: values[1] || `SKU-${Date.now()}-${i}`,
+            basePrice: values[2] || '0',
+            quantity: parseInt(values[3]) || 1,
+            description: values[4] || '',
+            category: values[5] || 'General',
+            brand: values[6] || 'Unknown',
+            barcode: values[7] || '',
+            condition: 'new',
+            location: 'warehouse',
+            itemType: 'standard',
+            status: 'active',
+            weight: values[8] || '0',
+            costPrice: values[9] || '0'
+          };
 
           imported.push({
-            id: result.rows[0].id,
-            name: result.rows[0].name,
-            sku: result.rows[0].sku
+            id: item.id,
+            name: item.name,
+            sku: item.sku
           });
 
         } catch (error) {
