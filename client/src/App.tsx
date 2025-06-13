@@ -40,6 +40,7 @@ import AuthPage from "@/pages/auth-page-simple";
 import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
+import CredentialsPage from "@/pages/credentials-page";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -96,6 +97,7 @@ function Router() {
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
+        <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
         <Route path="/auth" component={() => <AuthPage />} />
         <Route path="/login-debug" component={() => {
