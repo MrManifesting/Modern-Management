@@ -1890,49 +1890,155 @@ const ProductsInventoryPage: React.FC = () => {
                                       View
                                     </Button>
                                   </DialogTrigger>
-                                  <DialogContent>
+                                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                                     <DialogHeader>
-                                      <DialogTitle>{product.name}</DialogTitle>
+                                      <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
                                       <DialogDescription>
-                                        Product details
+                                        Complete product information and management
                                       </DialogDescription>
                                     </DialogHeader>
-                                    <div className="grid grid-cols-2 gap-4 py-4">
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
-                                        <p>{product.category}</p>
+                                    
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+                                      {/* Left Column - Product Details */}
+                                      <div className="lg:col-span-2 space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                            <p className="text-sm">{product.description || "Description"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                                            <p className="text-sm">{product.category}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-3 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Weight</h4>
+                                            <p className="text-sm">{product.weight || "0g"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Dimensions</h4>
+                                            <p className="text-sm">Not specified</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Brand</h4>
+                                            <p className="text-sm">{product.vendor || "No brand"}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Supplier</h4>
+                                            <p className="text-sm">No supplier</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Created</h4>
+                                            <p className="text-sm">{product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "Jun 13, 2025"}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Updated</h4>
+                                            <p className="text-sm">{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString() : "Jun 13, 2025"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <span className="text-sm">Available</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Inventory Status</h4>
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <span className="text-sm">In Stock</span>
+                                            <span className="text-sm font-medium">{product.quantity}</span>
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            SKU: {product.sku || "Not assigned"}
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Images</h4>
+                                          <div className="text-sm text-muted-foreground">
+                                            {product.imageUrl ? "Image available" : "No images available"}
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
-                                        <p>{product.subcategory}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
-                                        <p className="font-mono">{product.sku}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
-                                        <p>{product.size || "N/A"}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
-                                        <p>{formatPrice(product.price)}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Retail Price</h4>
-                                        <p>{formatPrice(product.retailPrice)}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Wholesale Price</h4>
-                                        <p>{formatPrice(product.wholesalePrice)}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
-                                        <p>{product.quantity}</p>
-                                      </div>
-                                      <div className="space-y-1 col-span-2">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
-                                        <p>{product.description || "No description available"}</p>
+                                      
+                                      {/* Right Column - Barcode and Category */}
+                                      <div className="space-y-6">
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Product Barcode</h4>
+                                          <div className="border rounded-lg p-4 bg-white">
+                                            <div className="text-center space-y-2">
+                                              <div className="text-xs font-medium">Flower</div>
+                                              <div className="space-y-1">
+                                                <div style={{fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px'}}>
+                                                  ||||||||||||||||||||||||||||
+                                                </div>
+                                                <div style={{fontSize: '10px', fontFamily: 'monospace'}}>
+                                                  {product.sku || "FLW-GOL-TEST-317089-QT118"}
+                                                </div>
+                                              </div>
+                                              <div className="text-xs">
+                                                SKU: {product.sku || "FLW-GOL-TEST-317089-QT118"}
+                                              </div>
+                                              <Button size="sm" variant="outline" className="w-full mt-2">
+                                                <Printer className="h-3 w-3 mr-1" />
+                                                Print Barcode
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Category Color Legend</h4>
+                                          <div className="space-y-2">
+                                            <div className="text-xs font-medium">Main Categories</div>
+                                            <div className="grid grid-cols-1 gap-1 text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                                                <span>Flower</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                                                <span>Concentrates</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-pink-500 rounded"></div>
+                                                <span>Edibles</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                                <span>Vapes</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                                <span>Tinctures</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-cyan-500 rounded"></div>
+                                                <span>Topicals</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                                                <span>Accessories</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-xs font-medium mt-3">Other</div>
+                                            <div className="flex items-center gap-2 text-xs">
+                                              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                                              <span>Bulk</span>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </DialogContent>
