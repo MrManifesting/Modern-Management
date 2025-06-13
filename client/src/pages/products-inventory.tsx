@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
+import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
 import { 
   Plus, 
   UploadCloud, 
@@ -946,13 +947,11 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   const handleUnitsGenerated = () => {
+    // Refresh the items list after units are generated
+    refetchItems();
     queryClient.invalidateQueries({ queryKey: ['/api/items'] });
     setGenerateUnitsDialogOpen(false);
     setItemForUnitsGeneration(null);
-    toast({
-      title: "Units Generated",
-      description: "Individual units have been created successfully with unique SKUs and barcodes."
-    });
   };
 
 

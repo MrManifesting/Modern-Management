@@ -3,16 +3,6 @@
  */
 import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
-// Create a client
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
-
 interface QueryFnOptions {
   on401?: "throw" | "returnNull";
 }
@@ -49,6 +39,17 @@ export function getQueryFn(options: QueryFnOptions = {}): QueryFunction {
     }
   };
 }
+
+// Create a client
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      queryFn: getQueryFn(),
+    },
+  },
+});
 
 /**
  * Makes an API request to the specified endpoint (returns full Response object)

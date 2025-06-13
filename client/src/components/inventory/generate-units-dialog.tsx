@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,186 +8,155 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Item } from '@shared/schema';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Package, Hash, QrCode } from 'lucide-react';
-
-const generateUnitsSchema = z.object({
-  quantity: z.number().min(2, 'Quantity must be at least 2').max(100, 'Maximum 100 units allowed'),
-});
-
-type GenerateUnitsForm = z.infer<typeof generateUnitsSchema>;
+import { Loader2, Package2 } from 'lucide-react';
 
 interface GenerateUnitsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: Item | null;
+  item: any | null;
   onUnitsGenerated: () => void;
 }
 
-export function GenerateUnitsDialog({
-  open,
-  onOpenChange,
-  item,
-  onUnitsGenerated,
+export function GenerateUnitsDialog({ 
+  open, 
+  onOpenChange, 
+  item, 
+  onUnitsGenerated 
 }: GenerateUnitsDialogProps) {
-  const { toast } = useToast();
+  const [quantity, setQuantity] = useState(1);
+  const [unitWeight, setUnitWeight] = useState('ounce');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedUnits, setGeneratedUnits] = useState<any[]>([]);
+  const { toast } = useToast();
 
-  const form = useForm<GenerateUnitsForm>({
-    resolver: zodResolver(generateUnitsSchema),
-    defaultValues: {
-      quantity: 2,
-    },
-  });
-
-  const onSubmit = async (data: GenerateUnitsForm) => {
+  const handleGenerateUnits = async () => {
     if (!item) return;
-    
+
     setIsGenerating(true);
     try {
-      const response = await apiRequest('/api/items/generate-units', {
-        method: 'POST',
-        body: {
-          itemId: item.id,
-          quantity: data.quantity,
-        },
+      const response = await apiRequest('POST', `/api/items/${item.id}/generate-units`, {
+        quantity,
+        unitWeight,
+        basePrice: item.price || 0,
+        baseRetailPrice: item.retailPrice || 0,
+        baseWholesalePrice: item.wholesalePrice || 0
       });
 
-      if (response.success) {
-        setGeneratedUnits(response.units || []);
+      if (response.ok) {
+        const result = await response.json();
         toast({
-          title: 'Units Generated Successfully',
-          description: `Created ${data.quantity} individual units with unique SKUs and barcodes.`,
+          title: "Units Generated Successfully",
+          description: `Generated ${quantity} individual units from ${item.name}`,
         });
-        
         onUnitsGenerated();
+        onOpenChange(false);
+        
+        // Reset form
+        setQuantity(1);
+        setUnitWeight('ounce');
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate units');
       }
-    } catch (error) {
-      console.error('Failed to generate units:', error);
+    } catch (error: any) {
       toast({
-        title: 'Generation Failed',
-        description: 'There was an error generating individual units. Please try again.',
-        variant: 'destructive',
+        title: "Generation Failed",
+        description: error.message || "Failed to generate units",
+        variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleClose = () => {
-    setGeneratedUnits([]);
-    form.reset();
-    onOpenChange(false);
-  };
-
   if (!item) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Generate Individual Units</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package2 className="h-5 w-5" />
+            Generate Individual Units
+          </DialogTitle>
           <DialogDescription>
-            Create individual units with unique SKUs and barcodes for {item.name}
+            Break down "{item.name}" into individual sellable units with unique SKUs and barcodes.
           </DialogDescription>
         </DialogHeader>
         
-        {generatedUnits.length === 0 ? (
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Original Item</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div><span className="font-medium">Name:</span> {item.name}</div>
-                  <div><span className="font-medium">SKU:</span> {item.sku || 'Not set'}</div>
-                  <div><span className="font-medium">Current Qty:</span> {item.quantity}</div>
-                  <div><span className="font-medium">Price:</span> ${item.basePrice}</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Number of Individual Units to Create</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="2"
-                  max="100"
-                  placeholder="Enter quantity"
-                  {...form.register('quantity', { valueAsNumber: true })}
-                />
-                {form.formState.errors.quantity && (
-                  <p className="text-sm text-red-600">{form.formState.errors.quantity.message}</p>
-                )}
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2 flex items-center">
-                  <Package className="h-4 w-4 mr-2" />
-                  What will be created:
-                </h4>
-                <ul className="text-sm space-y-1">
-                  <li>• {form.watch('quantity')} individual items, each with quantity = 1</li>
-                  <li className="flex items-center">
-                    <Hash className="h-3 w-3 mr-1" />
-                    Unique SKU for each unit (e.g., {item.sku || 'FLW-GOL-ITEM'}-U001, -U002, etc.)
-                  </li>
-                  <li className="flex items-center">
-                    <QrCode className="h-3 w-3 mr-1" />
-                    Individual barcode and QR code for each unit
-                  </li>
-                  <li>• Perfect for tracking individual items separately</li>
-                </ul>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isGenerating}>
-                {isGenerating ? 'Generating...' : 'Generate Units'}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2 text-green-800">
-                ✓ Successfully Generated {generatedUnits.length} Units
-              </h4>
-              <p className="text-sm text-green-700">
-                Each unit has been created with a unique SKU, barcode, and QR code for individual tracking.
-              </p>
-            </div>
-            
-            <div className="max-h-64 overflow-y-auto space-y-2">
-              {generatedUnits.map((unit, index) => (
-                <div key={unit.id} className="border p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{unit.name}</p>
-                      <p className="text-xs text-gray-600">SKU: {unit.sku}</p>
-                    </div>
-                    <Badge variant="outline">Unit {index + 1}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <DialogFooter>
-              <Button onClick={handleClose}>
-                Done
-              </Button>
-            </DialogFooter>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="quantity" className="text-right">
+              Quantity
+            </Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              max="100"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              className="col-span-3"
+            />
           </div>
-        )}
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="unitWeight" className="text-right">
+              Unit Size
+            </Label>
+            <Select value={unitWeight} onValueChange={setUnitWeight}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select unit size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ounce">Ounce</SelectItem>
+                <SelectItem value="half ounce">Half Ounce</SelectItem>
+                <SelectItem value="quarter ounce">Quarter Ounce</SelectItem>
+                <SelectItem value="eighth">Eighth</SelectItem>
+                <SelectItem value="gram">Gram</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="bg-muted/50 p-3 rounded-lg text-sm">
+            <p className="font-medium mb-1">Generation Preview:</p>
+            <p>• {quantity} individual units will be created</p>
+            <p>• Each unit will have a unique SKU and barcode</p>
+            <p>• Original item quantity will be reduced by {quantity}</p>
+            <p>• Unit size: {unitWeight}</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isGenerating}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleGenerateUnits}
+            disabled={isGenerating || quantity < 1}
+            className="gap-2"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Package2 className="h-4 w-4" />
+                Generate {quantity} Units
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
