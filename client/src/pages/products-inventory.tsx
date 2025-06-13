@@ -2024,28 +2024,97 @@ const ProductsInventoryPage: React.FC = () => {
                   </div>
                 </TabsContent>
                 
-                {/* Similar tabs for other categories */}
+                {/* Electronics Category */}
                 <TabsContent value="electronics" className="mt-0">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
-                      {/* Table headers */}
                       <thead>
                         <tr className="border-b border-border">
+                          {bulkSelectMode && (
+                            <th className="py-3 px-2 w-10">
+                              <Checkbox 
+                                checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'electronics').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'electronics').length > 0}
+                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'electronics')}
+                              />
+                            </th>
+                          )}
+                          <th className="text-left py-3 px-4 w-16">Image</th>
                           <th className="text-left py-3 px-4">Product</th>
                           <th className="text-left py-3 px-4">Category</th>
                           <th className="text-center py-3 px-4">SKU</th>
                           <th className="text-center py-3 px-4">Size</th>
                           <th className="text-right py-3 px-4">Price</th>
                           <th className="text-center py-3 px-4">Qty</th>
+                          <th className="text-center py-3 px-4">Status</th>
                           <th className="text-center py-3 px-4">Actions</th>
                         </tr>
                       </thead>
-                      {/* Table body */}
                       <tbody>
                         {filteredProducts
                           .filter((product: Product) => product.category === "Electronics")
                           .map((product: Product) => (
                             <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelect(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-4">
+                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center relative group overflow-hidden">
+                                  {product.imageUrl ? (
+                                    <img 
+                                      src={product.imageUrl} 
+                                      alt={product.name}
+                                      className="object-cover w-full h-full"
+                                      onError={(e) => {
+                                        const imgElement = e.target as HTMLImageElement;
+                                        const parentContainer = imgElement.parentElement;
+                                        imgElement.style.display = 'none';
+                                        if (parentContainer) {
+                                          const iconDiv = document.createElement('div');
+                                          iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                          iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                          parentContainer.appendChild(iconDiv);
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                      <ImageIcon className="h-6 w-6 opacity-50" />
+                                    </div>
+                                  )}
+                                  
+                                  {product.imageUrl && (
+                                    <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
+                                      <div className="relative w-48 h-48 overflow-hidden rounded">
+                                        <img 
+                                          src={product.imageUrl} 
+                                          alt={product.name} 
+                                          className="object-contain w-full h-full"
+                                          onError={(e) => {
+                                            const imgElement = e.target as HTMLImageElement;
+                                            const parentContainer = imgElement.parentElement;
+                                            imgElement.style.display = 'none';
+                                            if (parentContainer) {
+                                              const iconDiv = document.createElement('div');
+                                              iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                              iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                              parentContainer.appendChild(iconDiv);
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
+                                        {product.name}
+                                      </div>
+                                      <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
                               <td className="py-3 px-4">
                                 <div className="font-medium">{product.name}</div>
                                 <div className="text-sm text-muted-foreground">{product.subcategory}</div>
@@ -2062,23 +2131,70 @@ const ProductsInventoryPage: React.FC = () => {
                                 </Badge>
                               </td>
                               <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
                                 <div className="flex justify-center gap-2">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      if (product.id !== undefined) {
-                                        handleViewClick(product.id);
-                                      }
-                                    }}
-                                  >
-                                    <Eye className="h-3 w-3 mr-1" />
-                                    View
-                                  </Button>
-                                  
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm" variant="outline">
+                                        <Eye className="h-3 w-3 mr-1" />
+                                        View
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>{product.name}</DialogTitle>
+                                        <DialogDescription>
+                                          Product details
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="grid grid-cols-2 gap-4 py-4">
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                                          <p>{product.category}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
+                                          <p>{product.subcategory}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
+                                          <p className="font-mono">{product.sku}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
+                                          <p>{product.size || "N/A"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
+                                          <p>{formatPrice(product.price)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Retail Price</h4>
+                                          <p>{formatPrice(product.retailPrice)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Wholesale Price</h4>
+                                          <p>{formatPrice(product.wholesalePrice)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
+                                          <p>{product.quantity}</p>
+                                        </div>
+                                        <div className="space-y-1 col-span-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                          <p>{product.description || "No description available"}</p>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
+                                      <Button size="sm" variant="outline">
                                         Actions <ChevronDown className="ml-1 h-3 w-3" />
                                       </Button>
                                     </DropdownMenuTrigger>
@@ -2093,11 +2209,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem 
                                         className="flex items-center cursor-pointer"
-                                        onClick={() => {
-                                          if (product.id !== undefined) {
-                                            handlePrintBarcodeClick(product.id);
-                                          }
-                                        }}
+                                        onClick={() => handlePrintBarcodeClick(product.id)}
                                       >
                                         <Printer className="mr-2 h-4 w-4" />
                                         Print Barcode/QR
@@ -2115,6 +2227,8 @@ const ProductsInventoryPage: React.FC = () => {
                                         Quick Breakdown
                                       </DropdownMenuItem>
                                       
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                       <DropdownMenuItem
                                         className="flex items-center cursor-pointer"
                                         onClick={() => {
