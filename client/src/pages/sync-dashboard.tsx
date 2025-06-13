@@ -178,12 +178,12 @@ export default function SyncDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{syncStatus?.sheets?.itemCount || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               Status: {syncStatus?.sheets?.connected ? 
                 <Badge variant="default" className="text-xs">Connected</Badge> : 
                 <Badge variant="destructive" className="text-xs">Disconnected</Badge>
               }
-            </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -194,12 +194,12 @@ export default function SyncDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{syncStatus?.shopify?.productCount || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               Status: {syncStatus?.shopify?.connected ? 
                 <Badge variant="default" className="text-xs">Connected</Badge> : 
                 <Badge variant="destructive" className="text-xs">Disconnected</Badge>
               }
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>
