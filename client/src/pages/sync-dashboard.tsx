@@ -24,10 +24,33 @@ import {
   RotateCcw
 } from "lucide-react";
 
+interface ConnectionStatus {
+  itemCount: number;
+  lastUpdate: string;
+  status: string;
+}
+
 interface SyncStatus {
   isActive: boolean;
   lastSync: string | null;
   direction: 'bidirectional' | 'app-to-sheets' | 'shopify-to-app' | 'disabled';
+  app: ConnectionStatus;
+  sheets: ConnectionStatus;
+  shopify: ConnectionStatus;
+  currentOperation?: string;
+  progress?: number;
+  conflictsDetected?: boolean;
+  appToSheets?: { enabled: boolean; lastRun: string | null };
+  shopifyToApp?: { enabled: boolean; lastRun: string | null };
+  bidirectional?: { enabled: boolean; lastRun: string | null };
+  map?: any[];
+  conflicts?: any[];
+  settings?: {
+    autoSync: boolean;
+    syncInterval: number;
+    conflictResolution: string;
+    includeImages: boolean;
+  };
   itemsInSync: number;
   conflictsDetected: number;
   lastError: string | null;
