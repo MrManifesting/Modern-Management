@@ -1835,15 +1835,23 @@ export class DatabaseStorage implements IStorage {
   }
   
   private async initializeMarketplaces() {
-    const defaultMarketplaces: InsertMarketplace[] = [
-      { name: "eBay", isConnected: true, credentials: {} },
-      { name: "Etsy", isConnected: true, credentials: {} },
-      { name: "Amazon", isConnected: true, credentials: {} },
-      { name: "Shopify", isConnected: false, credentials: {} },
+    // Get marketplace type IDs first
+    const marketplaceTypes = await db.select().from(stores).limit(0); // Just to check if stores table exists
+    
+    const defaultMarketplaces = [
+      { name: "eBay", marketplaceTypeId: 2, isConnected: true, credentials: {} },
+      { name: "Etsy", marketplaceTypeId: 4, isConnected: true, credentials: {} },
+      { name: "Amazon", marketplaceTypeId: 3, isConnected: true, credentials: {} },
+      { name: "Shopify", marketplaceTypeId: 1, isConnected: false, credentials: {} },
     ];
     
     for (const marketplace of defaultMarketplaces) {
-      await this.createMarketplace(marketplace);
+      try {
+        await this.createMarketplace(marketplace);
+      } catch (error) {
+        console.log(`Failed to create marketplace ${marketplace.name}:`, error);
+        // Continue with other marketplaces
+      }
     }
   }
   
