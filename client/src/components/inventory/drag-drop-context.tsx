@@ -20,8 +20,9 @@ export const WEIGHT_BRACKETS = {
   SEVEN_GRAM: { name: '7g', value: 7, unit: 'g' },
   FOURTEEN_GRAM: { name: '14g', value: 14, unit: 'g' },
   TWENTY_EIGHT_GRAM: { name: '28g', value: 28, unit: 'g' },
-  QUARTER_POUND: { name: 'Quarter Pound', value: 113.4, unit: 'g' }, // 1/4 lb = 113.4g
-  HALF_POUND: { name: 'Half Pound', value: 226.8, unit: 'g' }, // 1/2 lb = 226.8g
+  QUARTER_POUND: { name: 'Quarter Pound', value: 113.5, unit: 'g' }, // 1/4 lb = 113.5g
+  HALF_POUND: { name: 'Half Pound', value: 227, unit: 'g' }, // 1/2 lb = 227g
+  POUND: { name: 'Pound', value: 454, unit: 'g' }, // 1 lb = 454g
 };
 
 // Conversion rates between different units
