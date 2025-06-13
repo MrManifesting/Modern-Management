@@ -125,12 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 13, 2025: **Database Schema Stability and Error Handling Enhanced**
+- June 13, 2025: **Database Schema Stability and Item Creation Fixed**
+  - Resolved weight field data type conflict preventing new item creation
+  - Changed database weight column from double precision to varchar(50) to support standardized weight options
   - Fixed "column name does not exist" initialization errors in employees and affiliates tables
   - Added comprehensive error handling for schema mismatches during data initialization
   - Protected all table initialization routines with try-catch blocks
   - System now gracefully handles database schema evolution without breaking
-  - Improved startup reliability and eliminated schema-related crashes
+  - New items can now be created with standardized weight formats ("1 pound", "half ounce", etc.)
 - June 13, 2025: **Automatic SKU/Barcode Generation System Implemented**
   - Created individual unit generation for inventory tracking
   - Each unit gets unique SKU with format: CATEGORY-BRAND-NAME-TIMESTAMP-U001, U002, etc.
