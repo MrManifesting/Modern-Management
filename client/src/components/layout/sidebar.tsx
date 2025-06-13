@@ -21,7 +21,8 @@ import {
   CreditCard,
   QrCode,
   FileSpreadsheet,
-  FileCheck
+  FileCheck,
+  Shield
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -176,6 +177,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Google Sheets",
       icon: <FileSpreadsheet className="h-5 w-5" />,
       path: "/google-sheets",
+      highlight: true,
+    },
+    {
+      title: "Credentials",
+      icon: <Shield className="h-5 w-5" />,
+      path: "/credentials",
       highlight: true,
     },
     {
