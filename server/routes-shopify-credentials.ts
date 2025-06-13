@@ -83,10 +83,18 @@ export function registerShopifyCredentialsRoutes(app: Express, storage: IStorage
       console.log(`Cleaned store URL: "${cleanedStoreUrl}"`);
       console.log(`Access token length: ${shopifyAccessToken.length}, first 5 chars: ${shopifyAccessToken.substring(0, 5)}`);
       
-      // Check token type
+      // Check token type and validate it's correct for Admin API
       const isStorefrontToken = shopifyAccessToken.startsWith('shpat_');
-      const isAdminToken = shopifyAccessToken.startsWith('shppa_');
+      const isAdminToken = shopifyAccessToken.startsWith('shppa_') || shopifyAccessToken.startsWith('shpat_');
       console.log(`Token type: ${isStorefrontToken ? 'Storefront API' : (isAdminToken ? 'Admin API' : 'Unknown')}`);
+      
+      // Validate token length (Admin API tokens are typically 32+ characters)
+      if (shopifyAccessToken.length < 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Admin API token appears to be incomplete. Please ensure you copied the full token."
+        });
+      }
       
       // Validate final store URL format with a more lenient regex
       // Allow domains that end with .myshopify.com

@@ -200,23 +200,28 @@ export default function ShopifyCredentialsForm() {
                   className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
                 />
                 <div className="text-xs text-muted-foreground space-y-2">
-                  <p className="font-medium text-amber-600">⚠️ You need an Admin API access token (not Storefront API)</p>
-                  <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-2">
-                    <p className="font-medium">To create the correct token:</p>
-                    <ol className="list-decimal pl-4 space-y-1">
-                      <li>Go to your Shopify admin → Settings → Apps and sales channels</li>
-                      <li>Click "Develop apps" → "Create an app"</li>
-                      <li>Name it "MrLister Inventory" and click "Create app"</li>
-                      <li>Click "Configure Admin API scopes"</li>
-                      <li>Enable these permissions:
-                        <ul className="list-disc pl-4 mt-1">
-                          <li>Products: read_products, write_products</li>
-                          <li>Inventory: read_inventory, write_inventory</li>
-                          <li>Orders: read_orders</li>
-                        </ul>
-                      </li>
-                      <li>Save → "Install app" → Copy the "Admin API access token"</li>
-                    </ol>
+                  <div className="bg-red-50 border border-red-200 rounded p-3 space-y-2">
+                    <p className="font-medium text-red-600">Current Issue: Getting "Unauthorized" errors</p>
+                    <p>Your store URL is correct, but the Admin API token needs to be recreated with proper permissions.</p>
+                    
+                    <div className="mt-2">
+                      <p className="font-medium">Steps to fix:</p>
+                      <ol className="list-decimal pl-4 space-y-1 text-xs">
+                        <li>Go to your Shopify admin → Settings → Apps and sales channels</li>
+                        <li>Click "Develop apps"</li>
+                        <li>If "MrLister Inventory" app exists, delete it and create new</li>
+                        <li>Click "Create an app" → Name: "MrLister Inventory"</li>
+                        <li>Click "Configure Admin API scopes" and enable:
+                          <ul className="list-disc pl-4 mt-1">
+                            <li><strong>read_products, write_products</strong></li>
+                            <li><strong>read_inventory, write_inventory</strong></li>
+                            <li><strong>read_orders</strong></li>
+                          </ul>
+                        </li>
+                        <li>Save → "Install app" → Copy the "Admin API access token"</li>
+                        <li>Paste the complete token here (it should be 32+ characters)</li>
+                      </ol>
+                    </div>
                   </div>
                 </div>
               </div>
