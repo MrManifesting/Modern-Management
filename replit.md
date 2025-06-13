@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 13, 2025: **Product Form Standardization Complete**
+  - Updated category system: Flower category restored with "Flower" as default
+  - Standardized weight options: "1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"
+  - Set form defaults: Category="Flower", Weight="1 pound", Vendor="Gold Standard", Quality="Top Shelf"
+  - Added vendor dropdown with three options: "Gold Standard", "Mason Jar Co", "Premium Supply"
+  - Replaced condition field with flower quality field using standardized options
+  - Updated database schema to handle string-based weight values instead of numeric
 - June 13, 2025: **Bidirectional Sync System Fully Operational**
   - Fixed critical import error preventing application startup
   - Successfully initialized bidirectional sync with proper configuration
