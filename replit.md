@@ -125,7 +125,8 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 13, 2025: **Critical Bug Fixes and UI Standardization Complete**
+- June 13, 2025: **Database Cleanup and Bug Fixes Complete**
+  - Removed 9 duplicate user accounts sharing the same email address, maintaining only the most recent entry
   - Fixed runtime errors: null checking for event targets preventing crashes when clicking inventory items
   - Resolved DialogDescription import error in AddItemModal component eliminating accessibility warnings
   - Fixed NaN value warnings in QuickBreakdown component with proper numeric input validation
