@@ -194,6 +194,9 @@ export default function AddItemModal({
           <DialogTitle>
             {isEditing ? "Edit Item" : "Add New Item"}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing ? "Update the item details below" : "Enter the details for your new inventory item"}
+          </DialogDescription>
         </DialogHeader>
         
         {/* Shopify sync status indicator */}
