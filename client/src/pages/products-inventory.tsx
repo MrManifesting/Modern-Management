@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
-import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
 import { 
   Plus, 
   UploadCloud, 
@@ -952,6 +951,83 @@ const ProductsInventoryPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/items'] });
     setGenerateUnitsDialogOpen(false);
     setItemForUnitsGeneration(null);
+  };
+
+
+
+
+
+  // Individual item handlers
+  const handleGenerateSKU = async (id: number) => {
+    try {
+      const item = products.find(p => p.id === id);
+      if (!item) return;
+      
+      const response = await apiRequest('PUT', `/api/items/${id}`, {
+        ...item,
+        sku: `AUTO-${Date.now()}-${id}`
+      });
+      
+      if (response.ok) {
+        refetchItems();
+        toast({
+          title: "SKU Generated",
+          description: "New SKU generated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate SKU",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateBarcode = async (id: number) => {
+    try {
+      const response = await apiRequest('POST', `/api/items/${id}/barcode`);
+      if (response.ok) {
+        refetchItems();
+        toast({
+          title: "Barcode Generated",
+          description: "New barcode generated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate barcode",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateQRCode = async (id: number) => {
+    try {
+      const response = await apiRequest('POST', `/api/items/${id}/qr-code`);
+      if (response.ok) {
+        refetchItems();
+        toast({
+          title: "QR Code Generated",
+          description: "New QR code generated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate QR code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewShopifyClick = (id: number) => {
+    const item = products.find(p => p.id === id);
+    if (item?.shopifyId) {
+      const shopifyUrl = `https://simplifiedcurations.myshopify.com/admin/products/${item.shopifyId}`;
+      window.open(shopifyUrl, '_blank');
+    }
   };
 
 
@@ -2469,6 +2545,14 @@ const ProductsInventoryPage: React.FC = () => {
           onClearSelection={clearSelection}
         />
       )}
+      
+      {/* Generate Units Dialog */}
+      <GenerateUnitsDialog
+        open={generateUnitsDialogOpen}
+        onOpenChange={setGenerateUnitsDialogOpen}
+        item={itemForUnitsGeneration}
+        onUnitsGenerated={handleUnitsGenerated}
+      />
     </div>
   );
 };
