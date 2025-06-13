@@ -125,26 +125,6 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 13, 2025: **React Query API Issues Resolved and Deployment Fixed**
-  - Fixed React Query configuration missing default queryFn causing API call failures
-  - Resolved "No queryFn was passed" errors preventing proper data loading
-  - API endpoints now responding correctly with 335 inventory items and statistics
-  - Enhanced inventory interface fully operational with working API communication
-  - Production deployment completed with functional React Query configuration
-- June 13, 2025: **Deployment Synchronization Successfully Completed**
-  - Resolved critical deployment sync problem where deployed version showed outdated interface
-  - Successfully deployed enhanced interface with production override system
-  - Enhanced product barcode modals now live in production environment
-  - Version synchronization achieved - deployed version matches preview interface
-  - Production build completed with 4145 modules including enhanced inventory components
-- June 13, 2025: **Database Schema Stability and Item Creation Fixed**
-  - Resolved weight field data type conflict preventing new item creation
-  - Changed database weight column from double precision to varchar(50) to support standardized weight options
-  - Fixed "column name does not exist" initialization errors in employees and affiliates tables
-  - Added comprehensive error handling for schema mismatches during data initialization
-  - Protected all table initialization routines with try-catch blocks
-  - System now gracefully handles database schema evolution without breaking
-  - New items can now be created with standardized weight formats ("1 pound", "half ounce", etc.)
 - June 13, 2025: **Automatic SKU/Barcode Generation System Implemented**
   - Created individual unit generation for inventory tracking
   - Each unit gets unique SKU with format: CATEGORY-BRAND-NAME-TIMESTAMP-U001, U002, etc.
