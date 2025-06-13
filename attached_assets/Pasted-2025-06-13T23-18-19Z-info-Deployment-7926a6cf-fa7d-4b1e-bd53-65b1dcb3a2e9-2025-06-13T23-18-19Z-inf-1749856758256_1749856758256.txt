@@ -1,0 +1,110 @@
+2025-06-13T23:18:19Z info: Deployment: 7926a6cf-fa7d-4b1e-bd53-65b1dcb3a2e9
+2025-06-13T23:18:19Z info: Build: 1d2a8f51-5210-4e8d-b893-48222ac3ae1e
+2025-06-13T23:18:19Z info: Connecting to builder
+2025-06-13T23:18:21Z info: Builder connected
+2025-06-13T23:18:22Z info: Installing packages
+2025-06-13T23:18:22Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v6.3.5 building for production...
+
+transforming...
+
+✓ 3976 modules transformed.
+
+rendering chunks...
+
+[plugin vite:reporter] 
+(!) /home/runner/workspace/client/src/components/ui/leaf-loader.tsx is dynamically imported by /home/runner/workspace/client/src/App.tsx but also statically imported by /home/runner/workspace/client/src/components/ui/loading-overlay.tsx, /home/runner/workspace/client/src/pages/animation-demo.tsx, /home/runner/workspace/client/src/pages/inventory.tsx, /home/runner/workspace/client/src/pages/products-inventory.tsx, dynamic import will not move module into another chunk.
+
+
+computing gzip size...
+
+../dist/public/index.html                               1.36 kB │ gzip:   0.83 kB
+
+../dist/public/assets/index-CkgWyA7E.js             2,148.54 kB │ gzip: 581.28 kB
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+✓ built in 19.33s
+
+▲ [WARNING] Duplicate member "getUser" in class body [duplicate-class-member]
+
+    server/storage.ts:1908:8:
+      1908 │   async getUser(id: number): Promise<User | undefined> {
+           ╵         ~~~~~~~
+
+  The original member "getUser" is here:
+
+    server/storage.ts:1874:8:
+      1874 │   async getUser(id: number): Promise<User | undefined> {
+           ╵         ~~~~~~~
+
+▲ [WARNING] Duplicate key "publishStatus" in object literal [duplicate-object-key]
+
+    server/storage.ts:2093:8:
+      2093 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+  The original key "publishStatus" is here:
+
+    server/storage.ts:2085:8:
+      2085 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:2426:8:
+      2426 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2037:8:
+      2037 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:3774:8:
+      3774 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2426:8:
+      2426 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate key "Outdoor" in object literal [duplicate-object-key]
+
+    server/services/sku-generator.ts:222:4:
+      222 │     'Outdoor': 'ODR',
+          ╵     ~~~~~~~~~
+
+  The original key "Outdoor" is here:
+
+    server/services/sku-generator.ts:201:4:
+      201 │     'Outdoor': 'OUT',
+          ╵     ~~~~~~~~~
+
+5 warnings
+
+  dist/index.js  691.7kb
+
+⚡ Done in 668ms
+
+2025-06-13T23:18:57Z info: Pushing pid1 binary layer...
+2025-06-13T23:18:58Z info: Pushing hosting layer...
+2025-06-13T23:18:58Z info: Pushing Repl layer...
+2025-06-13T23:18:58Z info: Retrieved cached nix layer
+2025-06-13T23:18:58Z info: Created hosting layer
+2025-06-13T23:18:58Z info: Created pid1 binary layer
