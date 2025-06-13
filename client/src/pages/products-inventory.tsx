@@ -936,12 +936,27 @@ const ProductsInventoryPage: React.FC = () => {
     setIsPrintModalOpen(true);
   };
 
-  // Render mobile product card
+  // Render mobile product card with selection checkbox
   const renderMobileProductCard = (product: Product) => (
     <Card key={product.id} className="mb-4">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-1">
+            {/* Selection checkbox for mobile */}
+            <div className="flex items-start pt-1">
+              <Checkbox
+                checked={selectedItems.some(item => item.id === product.id)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedItems(prev => [...prev, product]);
+                  } else {
+                    setSelectedItems(prev => prev.filter(item => item.id !== product.id));
+                  }
+                }}
+                className="mt-1"
+              />
+            </div>
+            
             <div className="w-16 h-16 rounded-md border border-border overflow-hidden flex-shrink-0">
               {product.imageUrl ? (
                 <img 
@@ -968,7 +983,7 @@ const ProductsInventoryPage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <CardTitle className="text-lg">{product.name}</CardTitle>
               <div className="flex flex-wrap gap-2 mt-1">
                 <Badge variant="outline">{product.category}</Badge>
