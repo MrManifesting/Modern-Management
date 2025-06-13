@@ -421,7 +421,7 @@ export class BidirectionalSyncService {
       category: sheetsItem.category,
       brand: sheetsItem.vendor,
       quantity: sheetsItem.quantity,
-      weight: sheetsItem.weight,
+      weight: String(sheetsItem.weight || 0),
       basePrice: sheetsItem.price,
       costPrice: sheetsItem.cost,
       status: sheetsItem.status || 'active'

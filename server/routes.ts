@@ -2,6 +2,63 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
+import { z } from "zod";
+import { Parser } from "@json2csv/plainjs";
+import { log } from "./vite";
+import { analyzeProductImage, generateProductDescription } from "./services/openai";
+import { generateSKU, generateSKUBatch } from "./services/sku-generator";
+import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode-generator";
+import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
+import { 
+  fetchShopifySalesReport, 
+  fetchShopifyInventoryReport, 
+  fetchShopifyCustomerReport 
+} from "./services/shopify-reports";
+import { registerShopifyImportRoutes } from "./routes-shopify-import";
+import { registerCSVImportRoutes } from "./routes-csv-import";
+import { registerCleanupRoutes } from "./routes-cleanup";
+import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
+import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
+import { registerMarketplaceRoutes } from "./routes-marketplace";
+import { registerAffiliateRoutes } from "./routes-affiliate";
+import { registerPayPalRoutes } from "./routes-paypal";
+import { registerAIRoutes } from "./routes-ai";
+import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
+import { registerLabelRoutes } from "./routes-labels";
+import { registerSyncRoutes } from "./routes-sync";
+import { registerBreakdownRoutes } from "./routes-breakdown";
+import { registerBarcodeRoutes } from "./routes-barcode";
+import { registerTelegramRoutes } from "./routes-telegram";
+import { registerBulkOperationRoutes } from "./routes-bulk";
+import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
+import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
+import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
+import { registerShopifyFixRoutes } from "./routes-shopify-fix";
+import { registerCredentialRoutes } from "./routes-credentials";
+import csvDirectRoutes from "./routes-csv-direct";
+import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
+import { setupAuth, requireAuth } from "./auth-simple";
+import { 
+  insertItemSchema, 
+  insertMarketplaceSchema, 
+  insertSaleSchema,
+  csvExportSchema, 
+  reportSchema,
+  forecastRequestSchema,
+  insertEmployeeSchema,
+  insertInventoryActionSchema,
+  breakdownTargetSchema,
+  ItemType,
+  BreakdownStatus,
+  insertBreakdownSchema,
+  TimeSeriesData,
+  Item,
+  InsertItem
+} from "@shared/schema";
 import { promisify } from "util";
 
 // Configure multer for file uploads (memory storage for existing routes)
@@ -487,7 +544,7 @@ export function registerRoutes(app: Express): Server {
         message: `Updated ${ids.length} items successfully` 
       });
     } catch (error) {
-      console.error("Error during bulk update:", error);
+      console.error("Error during bulk update:", error instanceof Error ? error.message : error);
       res.status(500).json({ 
         success: false, 
         message: "Failed to update items" 
