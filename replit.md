@@ -123,10 +123,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 - HTTPS enforcement in production
 - Input validation with Zod schemas
 
-## Changelog
+## Recent Changes
 
-Changelog:
-- June 13, 2025. Initial setup
+- June 13, 2025: Successfully resolved Shopify store connection issues
+  - Fixed store URL spelling from "curatioins" to "curations" 
+  - Updated credentials validation and Admin API token requirements
+  - Successfully synced 47 products from actual Shopify store
+  - Store now properly connects to simplifiedcurations.myshopify.com
+- June 13, 2025: Fixed database schema issues and port conflicts
+- June 13, 2025: Initial setup
 
 ## User Preferences
 
