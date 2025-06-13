@@ -4434,6 +4434,9 @@ ${topCustomersCsv}`;
   
   // Register credentials management routes
   registerCredentialRoutes(app, storage);
+  
+  // Register bidirectional sync routes for app, Google Sheets, and Shopify
+  registerBidirectionalSyncRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
