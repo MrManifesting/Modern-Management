@@ -93,10 +93,20 @@ export default function CSVImport() {
       const headers = rows[0];
       
       // Detect file type by headers
+      const headersLower = headers.map(h => h.toLowerCase());
+      
+      // Check for Shopify CSV format
+      const isShopifyFormat = headers.some(h => 
+        h.toLowerCase().includes('handle') || 
+        h.toLowerCase().includes('variant sku') ||
+        h.toLowerCase().includes('variant price') ||
+        h.toLowerCase().includes('variant inventory qty')
+      );
+      
       const isStampFormat = headers.some(h => 
         h.toLowerCase().includes('title') || 
         h.toLowerCase().includes('condition')
-      );
+      ) && !isShopifyFormat; // Don't treat Shopify as stamp format
       
       const isCannabisFormat = isCannabisInventory(headers);
       
@@ -104,26 +114,28 @@ export default function CSVImport() {
       setIsStampImport(isStampFormat);
       setIsCannabisImport(isCannabisFormat);
       
-      // Set required columns based on import type
-      let requiredColumns = [];
-      
-      if (isStampFormat) {
-        requiredColumns = ['title', 'description', 'price', 'condition'];
-      } else if (isCannabisFormat) {
-        requiredColumns = ['strain', 'tier', 'price']; 
-      } else {
-        requiredColumns = ['name', 'description', 'price', 'quantity'];
-      };
-      
-      const headersLower = headers.map(h => h.toLowerCase());
-      const missingColumns = requiredColumns.filter(col => 
-        !headersLower.some(h => h.includes(col))
-      );
-      
-      if (missingColumns.length > 0) {
-        setErrorMessage(`Missing required columns: ${missingColumns.join(', ')}`);
-        setImportStatus("error");
-        return;
+      // Skip validation for Shopify files - they have their own format
+      if (!isShopifyFormat) {
+        // Set required columns based on import type
+        let requiredColumns = [];
+        
+        if (isStampFormat) {
+          requiredColumns = ['title', 'description', 'price', 'condition'];
+        } else if (isCannabisFormat) {
+          requiredColumns = ['strain', 'tier', 'price']; 
+        } else {
+          requiredColumns = ['name', 'description', 'price', 'quantity'];
+        };
+        
+        const missingColumns = requiredColumns.filter(col => 
+          !headersLower.some(h => h.includes(col))
+        );
+        
+        if (missingColumns.length > 0) {
+          setErrorMessage(`Missing required columns: ${missingColumns.join(', ')}`);
+          setImportStatus("error");
+          return;
+        }
       }
       
       setPreview({
