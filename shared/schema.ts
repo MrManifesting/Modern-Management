@@ -50,6 +50,22 @@ export const users = pgTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+// User credentials table for storing encrypted API keys and tokens
+export const userCredentials = pgTable("user_credentials", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  provider: varchar("provider").notNull(), // 'shopify', 'google_sheets', etc.
+  encryptedData: text("encrypted_data").notNull(), // Encrypted JSON credentials
+  isValid: boolean("is_valid").default(false),
+  lastValidated: timestamp("last_validated"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UserCredentials = typeof userCredentials.$inferSelect;
+export type InsertUserCredentials = typeof userCredentials.$inferInsert;
+export type InsertUser = typeof users.$inferInsert;
+
 // Item table for inventory management
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
