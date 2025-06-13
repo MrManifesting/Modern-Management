@@ -724,7 +724,7 @@ export async function importShopifyCSV(
           if (row.length < headers.length / 2) continue; // Skip incomplete rows
           
           try {
-            const productInfo = extractProductInfo(headers, row, format, i + 1);
+            const productInfo = extractProductInfo(row, headers, format, i + 1);
             if (!productInfo) continue;
             
             const { title, handle, sku, price, weight, quantity, description, productType, vendor, published, tags } = productInfo;

@@ -109,7 +109,16 @@ export function convertCSVRowToItem(headers: string[], row: string[], format: st
     // Create a map for easy field access
     const data: Record<string, string> = {};
     headers.forEach((header, index) => {
-      data[header.toLowerCase().trim()] = row[index] || '';
+      const cleanHeader = header.toLowerCase().trim().replace(/"/g, '');
+      data[cleanHeader] = (row[index] || '').replace(/"/g, '').trim();
+    });
+
+    console.log('Processing CSV row with data keys:', Object.keys(data));
+    console.log('Sample data values:', {
+      title: data['title'],
+      'variant sku': data['variant sku'],
+      'variant price': data['variant price'],
+      'variant inventory qty': data['variant inventory qty']
     });
 
     // Common field mappings
@@ -118,9 +127,11 @@ export function convertCSVRowToItem(headers: string[], row: string[], format: st
     const price = parseFloat(data['variant price'] || data['price'] || data['cost'] || '0') || 0;
     const quantity = parseInt(data['variant inventory qty'] || data['available'] || data['quantity'] || '0') || 0;
 
+    console.log('Extracted values:', { name, sku, price, quantity });
+
     // Skip if no essential data
-    if (!name && !sku) {
-      console.log('Skipping row - no name or SKU');
+    if (!name || name === 'Unnamed Product') {
+      console.log('Skipping row - no valid name found');
       return null;
     }
 
