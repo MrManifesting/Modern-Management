@@ -405,122 +405,128 @@ export function extractProductInfo(
 ): { 
   handle: string; 
   title: string; 
+  sku: string;
   quantity: number; 
-  variant: string;
-  price: number | null;
+  price: number;
+  weight: number | null;
+  description: string;
+  productType: string;
+  vendor: string;
+  published: boolean;
+  tags: string;
   error?: string;
-} {
+} | null {
   try {
+    console.log(`Extracting product info for row ${rowIndex}, format: ${format}`);
+    console.log(`Headers: ${JSON.stringify(headers)}`);
+    console.log(`Row data: ${JSON.stringify(row.slice(0, 10))}...`); // Show first 10 fields
+    
     if (format === 'product') {
-      const handleIndex = headers.indexOf('Handle');
-      const titleIndex = headers.indexOf('Title');
-      const option1NameIndex = headers.indexOf('Option1 Name');
-      const option1ValueIndex = headers.indexOf('Option1 Value');
-      const availableIndex = headers.indexOf('Available');
-      const variantInventoryIndex = headers.indexOf('Variant Inventory Qty');
+      // Map headers to indices (case-insensitive)
+      const headerMap: {[key: string]: number} = {};
+      headers.forEach((header, index) => {
+        headerMap[header.toLowerCase().trim()] = index;
+      });
       
-      // Look for price in various possible column names
-      const variantPriceIndex = headers.indexOf('Variant Price');
-      const priceIndex = headers.indexOf('Price');
-      const regularPriceIndex = headers.indexOf('Regular Price');
+      console.log('Header mapping:', Object.keys(headerMap));
       
-      if (handleIndex < 0 || titleIndex < 0) {
-        return { 
-          handle: '', title: '', quantity: 0, variant: '', price: null,
-          error: 'Missing required Handle or Title columns'
-        };
-      }
+      const handle = row[headerMap['handle']] || '';
+      const title = row[headerMap['title']] || '';
+      const sku = row[headerMap['variant sku']] || row[headerMap['sku']] || '';
+      const description = row[headerMap['body (html)']] || row[headerMap['description']] || '';
+      const productType = row[headerMap['product type']] || row[headerMap['type']] || '';
+      const vendor = row[headerMap['vendor']] || '';
+      const published = (row[headerMap['published']] || '').toLowerCase() === 'true';
+      const tags = row[headerMap['tags']] || '';
       
-      const handle = row[handleIndex]?.trim() || '';
-      const title = row[titleIndex]?.trim() || '';
-      const optionName = option1NameIndex >= 0 && row[option1NameIndex] 
-        ? row[option1NameIndex].trim() 
-        : '';
-      const optionValue = option1ValueIndex >= 0 && row[option1ValueIndex]
-        ? row[option1ValueIndex].trim()
-        : '';
-      
-      // Find quantity from either Available or Variant Inventory column
+      // Extract quantity
       let quantity = 0;
-      if (availableIndex >= 0 && row[availableIndex]) {
-        const qtyStr = row[availableIndex].trim();
-        quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
-      } else if (variantInventoryIndex >= 0 && row[variantInventoryIndex]) {
-        const qtyStr = row[variantInventoryIndex].trim();
-        quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
+      const qtyStr = row[headerMap['variant inventory qty']] || row[headerMap['available']] || '0';
+      quantity = parseInt(qtyStr) || 0;
+      
+      // Extract price
+      let price = 0;
+      const priceStr = row[headerMap['variant price']] || row[headerMap['price']] || '0';
+      price = parseFloat(priceStr) || 0;
+      
+      // Extract weight
+      let weight: number | null = null;
+      const weightStr = row[headerMap['variant grams']] || row[headerMap['weight']] || '';
+      if (weightStr) {
+        weight = parseFloat(weightStr) || null;
       }
       
-      // Extract price if available in any of the price columns
-      let price: number | null = null;
-      if (variantPriceIndex >= 0 && row[variantPriceIndex]) {
-        const priceStr = row[variantPriceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
-      } else if (priceIndex >= 0 && row[priceIndex]) {
-        const priceStr = row[priceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
-      } else if (regularPriceIndex >= 0 && row[regularPriceIndex]) {
-        const priceStr = row[regularPriceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
+      console.log(`Extracted data:`, { 
+        handle, title, sku, quantity, price, weight, 
+        productType, vendor, published, tags: tags.substring(0, 50) 
+      });
+      
+      if (!title) {
+        console.log('Skipping row - no title found');
+        return null;
       }
       
-      return { handle, title, quantity, variant: optionValue, price };
+      return {
+        handle: handle.trim(),
+        title: title.trim(),
+        sku: sku.trim(),
+        quantity,
+        price,
+        weight,
+        description: description.trim(),
+        productType: productType.trim(),
+        vendor: vendor.trim(),
+        published,
+        tags: tags.trim()
+      };
     } 
     else if (format === 'inventory') {
-      const productIndex = headers.indexOf('Product');
-      const variantIndex = headers.indexOf('Variant');
-      const qtyIndex = headers.indexOf('Variant Inventory Qty');
+      // Map headers to indices (case-insensitive)  
+      const headerMap: {[key: string]: number} = {};
+      headers.forEach((header, index) => {
+        headerMap[header.toLowerCase().trim()] = index;
+      });
       
-      // Look for price in various possible column names in inventory format
-      const priceIndex = headers.indexOf('Price');
-      const costPriceIndex = headers.indexOf('Cost Price');
-      const comparePriceIndex = headers.indexOf('Compare At Price');
-      
-      if (productIndex < 0) {
-        return { 
-          handle: '', title: '', quantity: 0, variant: '', price: null,
-          error: 'Missing required Product column'
-        };
-      }
-      
-      const title = row[productIndex]?.trim() || '';
-      // Generate a handle from the title (simplified version of what Shopify does)
+      const title = row[headerMap['product']] || '';
       const handle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const sku = row[headerMap['sku']] || '';
+      const variant = row[headerMap['variant']] || '';
       
-      const variant = variantIndex >= 0 && row[variantIndex]
-        ? row[variantIndex]?.trim() || ''
-        : '';
-      
+      // Extract quantity
       let quantity = 0;
-      if (qtyIndex >= 0 && row[qtyIndex]) {
-        const qtyStr = row[qtyIndex].trim();
-        quantity = !isNaN(parseInt(qtyStr)) ? parseInt(qtyStr) : 0;
+      const qtyStr = row[headerMap['variant inventory qty']] || '0';
+      quantity = parseInt(qtyStr) || 0;
+      
+      // Extract price
+      let price = 0;
+      const priceStr = row[headerMap['price']] || row[headerMap['cost price']] || '0';
+      price = parseFloat(priceStr) || 0;
+      
+      if (!title) {
+        console.log('Skipping inventory row - no title found');
+        return null;
       }
       
-      // Extract price if available in any of the price columns
-      let price: number | null = null;
-      if (priceIndex >= 0 && row[priceIndex]) {
-        const priceStr = row[priceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
-      } else if (costPriceIndex >= 0 && row[costPriceIndex]) {
-        const priceStr = row[costPriceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
-      } else if (comparePriceIndex >= 0 && row[comparePriceIndex]) {
-        const priceStr = row[comparePriceIndex].trim().replace(/[^0-9.]/g, '');
-        price = !isNaN(parseFloat(priceStr)) ? parseFloat(priceStr) : null;
-      }
-      
-      return { handle, title, quantity, variant, price };
+      return {
+        handle: handle.trim(),
+        title: title.trim(),
+        sku: sku.trim(),
+        quantity,
+        price,
+        weight: null,
+        description: '',
+        productType: 'Cannabis',
+        vendor: '',
+        published: true,
+        tags: ''
+      };
     }
     
-    return { 
-      handle: '', title: '', quantity: 0, variant: '', price: null,
-      error: 'Unknown CSV format'
-    };
+    console.log('Unknown CSV format');
+    return null;
   } catch (error) {
-    return { 
-      handle: '', title: '', quantity: 0, variant: '', price: null,
-      error: `Error processing row ${rowIndex}: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
+    console.log(`Error processing row ${rowIndex}:`, error);
+    return null;
   }
 }
 
