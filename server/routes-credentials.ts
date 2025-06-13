@@ -1,183 +1,94 @@
 /**
- * Routes for managing user credentials (Shopify, Google Sheets, etc.)
+ * Routes for secure credential storage and management
  */
+import { Request, Response, Express } from 'express';
+import { IStorage } from './storage';
+import { insertCredentialSchema } from '@shared/schema';
+import crypto from 'crypto';
 
-import { Request, Response, Express } from "express";
-import { eq, and } from "drizzle-orm";
-import { db } from "./db";
-import { userCredentials, UserCredentials, InsertUserCredentials } from "@shared/schema";
-import { encryptCredentials, decryptCredentials } from "./services/encryption";
+// Simple encryption for credential data
+const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || 'default-key-change-in-production';
 
-// Mock user ID for session-based credentials (in production, get from authenticated session)
-const getCurrentUserId = (req: Request): number => {
-  // For now, use a default user ID - in production this would come from the authenticated session
-  return 1;
-};
-
-interface ShopifyCredentials {
-  store: string;
-  accessToken: string;
+function encrypt(text: string): string {
+  const algorithm = 'aes-256-ctr';
+  const secretKey = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipher(algorithm, secretKey);
+  
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  return iv.toString('hex') + ':' + encrypted;
 }
 
-interface GoogleSheetsCredentials {
-  clientId: string;
-  clientSecret: string;
-  spreadsheetId: string;
+function decrypt(encryptedText: string): string {
+  const algorithm = 'aes-256-ctr';
+  const secretKey = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  
+  const [ivHex, encrypted] = encryptedText.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const decipher = crypto.createDecipher(algorithm, secretKey);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
 }
 
-async function testShopifyConnection(credentials: ShopifyCredentials): Promise<{ valid: boolean; shopName?: string; error?: string }> {
-  try {
-    const { store, accessToken } = credentials;
-    const cleanStore = store.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    
-    const response = await fetch(`https://${cleanStore}/admin/api/2023-10/shop.json`, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      return { valid: false, error: `HTTP ${response.status}: ${response.statusText}` };
-    }
-
-    const data = await response.json();
-    return { valid: true, shopName: data.shop?.name || 'Unknown Store' };
-  } catch (error) {
-    return { valid: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-async function testGoogleSheetsConnection(credentials: GoogleSheetsCredentials): Promise<{ valid: boolean; title?: string; error?: string }> {
-  try {
-    // For now, we'll just validate the format - actual OAuth flow would be more complex
-    const { clientId, clientSecret, spreadsheetId } = credentials;
-    
-    if (!clientId.includes('googleusercontent.com')) {
-      return { valid: false, error: 'Invalid Client ID format' };
-    }
-    
-    if (!clientSecret.startsWith('GOCSPX-')) {
-      return { valid: false, error: 'Invalid Client Secret format' };
-    }
-    
-    // Basic spreadsheet ID validation
-    if (spreadsheetId.length < 40) {
-      return { valid: false, error: 'Invalid Spreadsheet ID format' };
-    }
-    
-    return { valid: true, title: `Spreadsheet ${spreadsheetId.substring(0, 8)}...` };
-  } catch (error) {
-    return { valid: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-export function registerCredentialsRoutes(app: Express) {
+/**
+ * Register credential management routes
+ */
+export function registerCredentialRoutes(app: Express, storage: IStorage) {
+  
   /**
-   * Get credentials status for the current user
+   * Get all saved credentials (without sensitive data)
    */
-  app.get("/api/credentials/status", async (req: Request, res: Response) => {
+  app.get("/api/credentials", async (_req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
+      const credentials = await storage.getCredentials();
       
-      const credentials = await db
-        .select()
-        .from(userCredentials)
-        .where(eq(userCredentials.userId, userId));
-
-      const result = {
-        shopify: null as any,
-        googleSheets: null as any,
-      };
-
-      for (const cred of credentials) {
-        try {
-          const decryptedData = await decryptCredentials(cred.encryptedData);
-          
-          if (cred.provider === 'shopify') {
-            result.shopify = {
-              store: decryptedData.store,
-              accessToken: '***', // Don't send actual token
-              isValid: cred.isValid,
-            };
-          } else if (cred.provider === 'google_sheets') {
-            result.googleSheets = {
-              clientId: decryptedData.clientId,
-              clientSecret: '***', // Don't send actual secret
-              spreadsheetId: decryptedData.spreadsheetId,
-              isValid: cred.isValid,
-            };
-          }
-        } catch (error) {
-          console.error(`Error decrypting ${cred.provider} credentials:`, error);
-        }
-      }
-
-      res.json(result);
+      // Return credentials without sensitive data
+      const safeCredentials = credentials.map(cred => ({
+        id: cred.id,
+        service: cred.service,
+        name: cred.name,
+        isActive: cred.isActive,
+        lastUsed: cred.lastUsed,
+        createdAt: cred.createdAt,
+        hasCredentials: !!cred.credentialData
+      }));
+      
+      res.json(safeCredentials);
     } catch (error) {
-      console.error("Error fetching credentials status:", error);
-      res.status(500).json({ error: "Failed to fetch credentials status" });
+      console.error("Error fetching credentials:", error);
+      res.status(500).json({ error: "Failed to fetch credentials" });
     }
   });
 
   /**
-   * Save Shopify credentials
+   * Get credentials for a specific service
    */
-  app.post("/api/credentials/shopify", async (req: Request, res: Response) => {
+  app.get("/api/credentials/:service", async (req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
-      const { store, accessToken } = req.body as ShopifyCredentials;
-
-      if (!store || !accessToken) {
-        return res.status(400).json({ error: "Store and access token are required" });
-      }
-
-      // Test the connection first
-      const testResult = await testShopifyConnection({ store, accessToken });
+      const { service } = req.params;
+      const credential = await storage.getCredentialByService(service);
       
-      // Encrypt the credentials
-      const encryptedData = await encryptCredentials({ store, accessToken });
-
-      // Check if credentials already exist for this user
-      const existingCreds = await db
-        .select()
-        .from(userCredentials)
-        .where(and(
-          eq(userCredentials.userId, userId),
-          eq(userCredentials.provider, 'shopify')
-        ));
-
-      if (existingCreds.length > 0) {
-        // Update existing credentials
-        await db
-          .update(userCredentials)
-          .set({
-            encryptedData,
-            isValid: testResult.valid,
-            lastValidated: testResult.valid ? new Date() : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(userCredentials.id, existingCreds[0].id));
-      } else {
-        // Create new credentials
-        await db.insert(userCredentials).values({
-          userId,
-          provider: 'shopify',
-          encryptedData,
-          isValid: testResult.valid,
-          lastValidated: testResult.valid ? new Date() : null,
-        });
+      if (!credential) {
+        return res.status(404).json({ error: "Credentials not found for this service" });
       }
-
-      res.json({ 
-        success: true, 
-        valid: testResult.valid,
-        shopName: testResult.shopName,
-        error: testResult.error,
+      
+      // Return credential without sensitive data
+      res.json({
+        id: credential.id,
+        service: credential.service,
+        name: credential.name,
+        isActive: credential.isActive,
+        lastUsed: credential.lastUsed,
+        hasCredentials: !!credential.credentialData
       });
     } catch (error) {
-      console.error("Error saving Shopify credentials:", error);
-      res.status(500).json({ error: "Failed to save Shopify credentials" });
+      console.error("Error fetching service credentials:", error);
+      res.status(500).json({ error: "Failed to fetch service credentials" });
     }
   });
 
@@ -186,56 +97,28 @@ export function registerCredentialsRoutes(app: Express) {
    */
   app.post("/api/credentials/google-sheets", async (req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
-      const { clientId, clientSecret, spreadsheetId } = req.body as GoogleSheetsCredentials;
-
-      if (!clientId || !clientSecret || !spreadsheetId) {
-        return res.status(400).json({ error: "All Google Sheets credentials are required" });
-      }
-
-      // Test the connection first
-      const testResult = await testGoogleSheetsConnection({ clientId, clientSecret, spreadsheetId });
+      const { name, credentials: credData } = req.body;
       
-      // Encrypt the credentials
-      const encryptedData = await encryptCredentials({ clientId, clientSecret, spreadsheetId });
-
-      // Check if credentials already exist for this user
-      const existingCreds = await db
-        .select()
-        .from(userCredentials)
-        .where(and(
-          eq(userCredentials.userId, userId),
-          eq(userCredentials.provider, 'google_sheets')
-        ));
-
-      if (existingCreds.length > 0) {
-        // Update existing credentials
-        await db
-          .update(userCredentials)
-          .set({
-            encryptedData,
-            isValid: testResult.valid,
-            lastValidated: testResult.valid ? new Date() : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(userCredentials.id, existingCreds[0].id));
-      } else {
-        // Create new credentials
-        await db.insert(userCredentials).values({
-          userId,
-          provider: 'google_sheets',
-          encryptedData,
-          isValid: testResult.valid,
-          lastValidated: testResult.valid ? new Date() : null,
-        });
+      if (!credData) {
+        return res.status(400).json({ error: "Credentials data is required" });
       }
-
-      res.json({ 
-        success: true, 
-        valid: testResult.valid,
-        title: testResult.title,
-        error: testResult.error,
+      
+      // Encrypt the credential data
+      const encryptedData = encrypt(JSON.stringify(credData));
+      
+      const credential = await storage.saveCredential({
+        service: 'google_sheets',
+        name: name || 'Google Sheets Credentials',
+        credentialData: { encrypted: encryptedData },
+        isActive: true
       });
+      
+      res.json({
+        success: true,
+        message: "Google Sheets credentials saved successfully",
+        credentialId: credential.id
+      });
+      
     } catch (error) {
       console.error("Error saving Google Sheets credentials:", error);
       res.status(500).json({ error: "Failed to save Google Sheets credentials" });
@@ -243,114 +126,128 @@ export function registerCredentialsRoutes(app: Express) {
   });
 
   /**
-   * Test Shopify connection
+   * Save Shopify credentials
    */
-  app.post("/api/credentials/test/shopify", async (req: Request, res: Response) => {
+  app.post("/api/credentials/shopify", async (req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
+      const { name, credentials: credData } = req.body;
       
-      const creds = await db
-        .select()
-        .from(userCredentials)
-        .where(and(
-          eq(userCredentials.userId, userId),
-          eq(userCredentials.provider, 'shopify')
-        ));
-
-      if (creds.length === 0) {
-        return res.status(404).json({ error: "No Shopify credentials found" });
+      if (!credData) {
+        return res.status(400).json({ error: "Credentials data is required" });
       }
-
-      const decryptedData = await decryptCredentials(creds[0].encryptedData);
-      const testResult = await testShopifyConnection(decryptedData);
-
-      // Update the validation status
-      await db
-        .update(userCredentials)
-        .set({
-          isValid: testResult.valid,
-          lastValidated: new Date(),
-        })
-        .where(eq(userCredentials.id, creds[0].id));
-
-      if (testResult.valid) {
-        res.json({ success: true, shopName: testResult.shopName });
-      } else {
-        res.status(400).json({ error: testResult.error });
-      }
+      
+      // Encrypt the credential data
+      const encryptedData = encrypt(JSON.stringify(credData));
+      
+      const credential = await storage.saveCredential({
+        service: 'shopify',
+        name: name || 'Shopify Credentials',
+        credentialData: { encrypted: encryptedData },
+        isActive: true
+      });
+      
+      res.json({
+        success: true,
+        message: "Shopify credentials saved successfully",
+        credentialId: credential.id
+      });
+      
     } catch (error) {
-      console.error("Error testing Shopify connection:", error);
-      res.status(500).json({ error: "Failed to test Shopify connection" });
+      console.error("Error saving Shopify credentials:", error);
+      res.status(500).json({ error: "Failed to save Shopify credentials" });
     }
   });
 
   /**
-   * Test Google Sheets connection
+   * Retrieve decrypted credentials for a service (internal use)
    */
-  app.post("/api/credentials/test/google-sheets", async (req: Request, res: Response) => {
+  app.get("/api/credentials/decrypt/:service", async (req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
+      const { service } = req.params;
+      const credential = await storage.getCredentialByService(service);
       
-      const creds = await db
-        .select()
-        .from(userCredentials)
-        .where(and(
-          eq(userCredentials.userId, userId),
-          eq(userCredentials.provider, 'google_sheets')
-        ));
-
-      if (creds.length === 0) {
-        return res.status(404).json({ error: "No Google Sheets credentials found" });
+      if (!credential) {
+        return res.status(404).json({ error: "Credentials not found" });
       }
-
-      const decryptedData = await decryptCredentials(creds[0].encryptedData);
-      const testResult = await testGoogleSheetsConnection(decryptedData);
-
-      // Update the validation status
-      await db
-        .update(userCredentials)
-        .set({
-          isValid: testResult.valid,
-          lastValidated: new Date(),
-        })
-        .where(eq(userCredentials.id, creds[0].id));
-
-      if (testResult.valid) {
-        res.json({ success: true, title: testResult.title });
+      
+      // Decrypt the credential data
+      const encryptedData = credential.credentialData as any;
+      if (encryptedData.encrypted) {
+        const decryptedData = decrypt(encryptedData.encrypted);
+        const parsedData = JSON.parse(decryptedData);
+        
+        // Update last used timestamp
+        await storage.updateCredential(credential.id, { lastUsed: new Date() });
+        
+        res.json({
+          service: credential.service,
+          name: credential.name,
+          credentials: parsedData
+        });
       } else {
-        res.status(400).json({ error: testResult.error });
+        res.status(400).json({ error: "Invalid credential format" });
       }
+      
     } catch (error) {
-      console.error("Error testing Google Sheets connection:", error);
-      res.status(500).json({ error: "Failed to test Google Sheets connection" });
+      console.error("Error decrypting credentials:", error);
+      res.status(500).json({ error: "Failed to decrypt credentials" });
     }
   });
 
   /**
-   * Get decrypted credentials for internal use (not exposed externally)
+   * Delete stored credentials
    */
-  app.get("/api/credentials/internal/:provider", async (req: Request, res: Response) => {
+  app.delete("/api/credentials/:id", async (req: Request, res: Response) => {
     try {
-      const userId = getCurrentUserId(req);
-      const { provider } = req.params;
+      const { id } = req.params;
+      const success = await storage.deleteCredential(parseInt(id));
       
-      const creds = await db
-        .select()
-        .from(userCredentials)
-        .where(and(
-          eq(userCredentials.userId, userId),
-          eq(userCredentials.provider, provider)
-        ));
-
-      if (creds.length === 0 || !creds[0].isValid) {
-        return res.status(404).json({ error: `No valid ${provider} credentials found` });
+      if (success) {
+        res.json({ success: true, message: "Credentials deleted successfully" });
+      } else {
+        res.status(404).json({ error: "Credentials not found" });
       }
-
-      const decryptedData = await decryptCredentials(creds[0].encryptedData);
-      res.json(decryptedData);
+      
     } catch (error) {
-      console.error(`Error fetching ${req.params.provider} credentials:`, error);
-      res.status(500).json({ error: `Failed to fetch ${req.params.provider} credentials` });
+      console.error("Error deleting credentials:", error);
+      res.status(500).json({ error: "Failed to delete credentials" });
+    }
+  });
+
+  /**
+   * Test stored credentials
+   */
+  app.post("/api/credentials/test/:service", async (req: Request, res: Response) => {
+    try {
+      const { service } = req.params;
+      const credential = await storage.getCredentialByService(service);
+      
+      if (!credential) {
+        return res.status(404).json({ error: "No credentials found for this service" });
+      }
+      
+      // Decrypt and test the credentials
+      const encryptedData = credential.credentialData as any;
+      if (encryptedData.encrypted) {
+        const decryptedData = decrypt(encryptedData.encrypted);
+        const parsedData = JSON.parse(decryptedData);
+        
+        // Update last used timestamp
+        await storage.updateCredential(credential.id, { lastUsed: new Date() });
+        
+        res.json({
+          success: true,
+          message: `${service} credentials are valid and ready to use`,
+          service: credential.service,
+          name: credential.name
+        });
+      } else {
+        res.status(400).json({ error: "Invalid credential format" });
+      }
+      
+    } catch (error) {
+      console.error("Error testing credentials:", error);
+      res.status(500).json({ error: "Failed to test credentials" });
     }
   });
 }

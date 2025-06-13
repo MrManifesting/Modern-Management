@@ -40,7 +40,7 @@ import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
 import { registerShopifyFixRoutes } from "./routes-shopify-fix";
-import { registerCredentialsRoutes } from "./routes-credentials";
+import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
 // Import Replit Auth system for proper Google login and HTTPS support
 import { setupAuth, requireAuth } from "./auth-simple";
@@ -4432,7 +4432,7 @@ ${topCustomersCsv}`;
   registerShopifyFixRoutes(app);
   
   // Register credentials management routes
-  registerCredentialsRoutes(app);
+  registerCredentialRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
