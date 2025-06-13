@@ -46,6 +46,7 @@ interface SyncLog {
 
 export default function SyncDashboard() {
   const [activeSync, setActiveSync] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("sync-controls");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -226,7 +227,7 @@ export default function SyncDashboard() {
         </Alert>
       )}
 
-      <Tabs defaultValue="sync-controls" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="sync-controls">Sync Controls</TabsTrigger>
           <TabsTrigger value="sync-logs">Sync History</TabsTrigger>
@@ -523,7 +524,7 @@ export default function SyncDashboard() {
                   </Badge>
                 </div>
               </div>
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => setActiveTab("settings")}>
                 <Settings className="h-4 w-4 mr-2" />
                 Configure Settings
               </Button>
