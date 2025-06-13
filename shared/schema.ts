@@ -369,6 +369,24 @@ export const customerTiers = pgTable("customer_tiers", {
 export type CustomerTier = typeof customerTiers.$inferSelect;
 export type InsertCustomerTier = typeof customerTiers.$inferInsert;
 
+// Sync logs table for tracking bidirectional synchronization
+export const syncLogs = pgTable("sync_logs", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 50 }).notNull(), // 'sync-initialized', 'full-sync', 'incremental-sync', etc.
+  message: text("message").notNull(),
+  data: jsonb("data"), // Additional sync data/metadata
+  success: boolean("success").default(true),
+  itemsUpdated: integer("items_updated").default(0),
+  itemsCreated: integer("items_created").default(0),
+  conflicts: integer("conflicts").default(0),
+  errors: json("errors"), // Array of error messages
+  source: varchar("source", { length: 20 }).default("system"), // 'app', 'sheets', 'shopify', 'system'
+  timestamp: timestamp("timestamp").defaultNow()
+});
+
+export type SyncLog = typeof syncLogs.$inferSelect;
+export type InsertSyncLog = typeof syncLogs.$inferInsert;
+
 // Export enums for use in application code
 export enum ItemType {
   STANDARD = "standard",
