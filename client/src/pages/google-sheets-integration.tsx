@@ -1,505 +1,435 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
+  Loader2, 
+  Sheet, 
   CheckCircle, 
-  XCircle, 
+  AlertCircle, 
   RefreshCw, 
-  ExternalLink, 
-  AlertTriangle,
-  FileSpreadsheet,
-  Webhook,
-  RotateCcw,
-  Copy,
-  LogIn,
-  Link
+  Settings, 
+  ExternalLink,
+  Upload,
+  Download
 } from "lucide-react";
 
 interface GoogleSheetsStatus {
-  success: boolean;
   configured: boolean;
-  requiredEnvVars: string[];
-  webhookUrl: string;
-  googleAuthUrl?: string;
-  isAuthenticated?: boolean;
+  message: string;
 }
 
-export default function GoogleSheetsIntegration() {
-  const { toast } = useToast();
-  const [isSettingUp, setIsSettingUp] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [copiedWebhook, setCopiedWebhook] = useState(false);
+interface ConfigStep {
+  step: number;
+  title: string;
+  description: string;
+}
 
-  const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<GoogleSheetsStatus>({
-    queryKey: ["/api/google/sheets/status"],
+interface ConfigGuide {
+  steps: ConfigStep[];
+  requiredEnvVars: string[];
+  links: {
+    googleCloudConsole: string;
+    sheetsApiDocs: string;
+  };
+}
+
+export default function GoogleSheetsIntegrationPage() {
+  const { toast } = useToast();
+  const [spreadsheetId, setSpreadsheetId] = useState("");
+  const [worksheetName, setWorksheetName] = useState("Inventory");
+
+  // Check Google Sheets status
+  const { data: status, isLoading: statusLoading } = useQuery<GoogleSheetsStatus>({
+    queryKey: ["/api/google-sheets/status"],
   });
 
-  const setupMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/google/sheets/create");
-      return await response.json();
+  // Get configuration guide
+  const { data: configGuide } = useQuery<ConfigGuide>({
+    queryKey: ["/api/google-sheets/config-guide"],
+  });
+
+  // Setup worksheet mutation
+  const setupWorksheet = useMutation({
+    mutationFn: async ({ spreadsheetId, worksheetName }: { spreadsheetId: string; worksheetName: string }) => {
+      const response = await apiRequest("POST", "/api/google-sheets/setup", {
+        spreadsheetId,
+        worksheetName
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Setup Complete",
+        title: "Worksheet Setup Complete",
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/google/sheets/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/google-sheets/status"] });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Setup Failed",
-        description: error.message,
+        description: error.message || "Failed to setup worksheet",
         variant: "destructive",
       });
     },
   });
 
-  const syncInventoryMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/google/sheets/sync/inventory");
-      return await response.json();
+  // Sync inventory mutation
+  const syncInventory = useMutation({
+    mutationFn: async ({ spreadsheetId, worksheetName }: { spreadsheetId: string; worksheetName: string }) => {
+      const response = await apiRequest("POST", "/api/google-sheets/sync", {
+        spreadsheetId,
+        worksheetName
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Inventory Sync Complete",
-        description: data.message,
+        title: "Inventory Synced",
+        description: `${data.message} - ${data.itemCount} items synced`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Sync Failed",
-        description: error.message,
+        description: error.message || "Failed to sync inventory",
         variant: "destructive",
       });
     },
   });
 
-  const syncSalesMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/google/sheets/sync/sales");
-      return await response.json();
+  // Test connection mutation
+  const testConnection = useMutation({
+    mutationFn: async (spreadsheetId: string) => {
+      const response = await apiRequest("POST", "/api/google-sheets/test-connection", {
+        spreadsheetId
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Sales Sync Complete",
+        title: "Connection Successful",
         description: data.message,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
-        title: "Sales Sync Failed",
-        description: error.message,
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Google Sheets",
         variant: "destructive",
       });
     },
   });
 
-  const generateWebhookMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/shopify/sheets/generate-webhook");
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      setWebhookUrl(data.webhookUrl);
+  const handleSetupWorksheet = () => {
+    if (!spreadsheetId.trim() || !worksheetName.trim()) {
       toast({
-        title: "Webhook URL Generated",
-        description: "Webhook URL has been created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Webhook Generation Failed",
-        description: error.message,
+        title: "Missing Information",
+        description: "Please provide both spreadsheet ID and worksheet name",
         variant: "destructive",
       });
-    },
-  });
-
-  const googleAuthMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/google/auth/url");
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      if (data.authUrl) {
-        window.open(data.authUrl, '_blank');
-      }
-      toast({
-        title: "Google Authentication",
-        description: "Opening Google sign-in page...",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Authentication Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const copyWebhookUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(webhookUrl || status?.webhookUrl || "");
-      setCopiedWebhook(true);
-      toast({
-        title: "Copied!",
-        description: "Webhook URL copied to clipboard",
-      });
-      setTimeout(() => setCopiedWebhook(false), 2000);
-    } catch (err) {
-      toast({
-        title: "Copy Failed",
-        description: "Could not copy to clipboard",
-        variant: "destructive",
-      });
+      return;
     }
+    setupWorksheet.mutate({ spreadsheetId: spreadsheetId.trim(), worksheetName: worksheetName.trim() });
   };
 
-  const handleSetup = async () => {
-    setIsSettingUp(true);
-    try {
-      await setupMutation.mutateAsync();
-    } finally {
-      setIsSettingUp(false);
+  const handleSyncInventory = () => {
+    if (!spreadsheetId.trim() || !worksheetName.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both spreadsheet ID and worksheet name",
+        variant: "destructive",
+      });
+      return;
     }
+    syncInventory.mutate({ spreadsheetId: spreadsheetId.trim(), worksheetName: worksheetName.trim() });
+  };
+
+  const handleTestConnection = () => {
+    if (!spreadsheetId.trim()) {
+      toast({
+        title: "Missing Spreadsheet ID",
+        description: "Please provide a spreadsheet ID to test",
+        variant: "destructive",
+      });
+      return;
+    }
+    testConnection.mutate(spreadsheetId.trim());
+  };
+
+  const extractSpreadsheetId = (url: string) => {
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    return match ? match[1] : url;
+  };
+
+  const handleSpreadsheetUrlChange = (value: string) => {
+    const id = extractSpreadsheetId(value);
+    setSpreadsheetId(id);
   };
 
   if (statusLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-3">
+        <Sheet className="h-8 w-8 text-green-600" />
         <div>
           <h1 className="text-3xl font-bold">Google Sheets Integration</h1>
-          <p className="text-muted-foreground mt-2">
-            Automatically sync Shopify orders with Google Sheets to prevent employee overselling
-          </p>
+          <p className="text-muted-foreground">Automatically sync inventory data to Google Sheets for real-time tracking</p>
         </div>
-        <Button
-          onClick={() => refetchStatus()}
-          variant="outline"
-          size="sm"
-          disabled={statusLoading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${statusLoading ? 'animate-spin' : ''}`} />
-          Refresh Status
-        </Button>
       </div>
 
-      {/* Configuration Status */}
+      {/* Status Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
-            Configuration Status
-          </CardTitle>
-          <CardDescription>
-            Current status of your Google Sheets integration
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+          <CardTitle className="flex items-center space-x-2">
             {status?.configured ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-600" />
+              <AlertCircle className="h-5 w-5 text-orange-500" />
             )}
-            <span className="font-medium">
-              {status?.configured ? "Configured" : "Not Configured"}
-            </span>
-            <Badge variant={status?.configured ? "default" : "destructive"}>
-              {status?.configured ? "Ready" : "Setup Required"}
-            </Badge>
+            <span>Integration Status</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Badge variant={status?.configured ? "default" : "secondary"}>
+                {status?.configured ? "Active" : "Not Configured"}
+              </Badge>
+              <p className="text-sm text-muted-foreground mt-1">
+                {status?.message}
+              </p>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {status?.configured && !status?.isAuthenticated && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-2">
-                <LogIn className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-800">Authentication Required</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Connect your Google account to enable Sheets integration
-                  </p>
-                  <Button
-                    className="mt-3"
-                    onClick={() => window.location.href = "/api/auth/google"}
-                    size="sm"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign in with Google
-                  </Button>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Configuration Panel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="h-5 w-5" />
+              <span>Spreadsheet Configuration</span>
+            </CardTitle>
+            <CardDescription>Configure your Google Sheets connection</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="spreadsheetUrl">Google Sheets URL or ID</Label>
+              <Input
+                id="spreadsheetUrl"
+                placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit or just the ID"
+                value={spreadsheetId}
+                onChange={(e) => handleSpreadsheetUrlChange(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste the full URL or just the spreadsheet ID from your Google Sheet
+              </p>
             </div>
-          )}
 
-          {!status?.configured && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-yellow-800">Setup Required</h4>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Configure Google OAuth credentials to enable Sheets integration
-                  </p>
-                  <ul className="list-disc list-inside text-sm text-yellow-700 mt-2 space-y-1">
-                    {status?.requiredEnvVars?.map((envVar) => (
-                      <li key={envVar}>
-                        <code className="bg-yellow-100 px-1 rounded">{envVar}</code>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="worksheetName">Worksheet Name</Label>
+              <Input
+                id="worksheetName"
+                placeholder="Inventory"
+                value={worksheetName}
+                onChange={(e) => setWorksheetName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Name of the worksheet/tab where inventory data will be stored
+              </p>
             </div>
-          )}
 
-          {status?.configured && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Button
-                onClick={handleSetup}
-                disabled={isSettingUp || setupMutation.isPending}
+                onClick={handleTestConnection}
+                disabled={!spreadsheetId.trim() || testConnection.isPending}
+                variant="outline"
                 className="w-full"
               >
-                {isSettingUp || setupMutation.isPending ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                {testConnection.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  <ExternalLink className="h-4 w-4 mr-2" />
                 )}
-                {isSettingUp ? "Setting up..." : "Setup Google Sheets"}
+                Test Connection
               </Button>
-              <p className="text-sm text-muted-foreground">
-                This will create the necessary sheets and sync your current inventory
-              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Google Authentication */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5" />
-            Google Authentication
-          </CardTitle>
-          <CardDescription>
-            Connect your Google account to access Google Sheets
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            {status?.isAuthenticated ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            ) : (
-              <XCircle className="h-5 w-5 text-red-600" />
-            )}
-            <span className="font-medium">
-              {status?.isAuthenticated ? "Authenticated" : "Not Authenticated"}
-            </span>
-            <Badge variant={status?.isAuthenticated ? "default" : "destructive"}>
-              {status?.isAuthenticated ? "Connected" : "Disconnected"}
-            </Badge>
-          </div>
+            <div className="space-y-2">
+              <Button
+                onClick={handleSetupWorksheet}
+                disabled={!spreadsheetId.trim() || !worksheetName.trim() || setupWorksheet.isPending}
+                className="w-full"
+              >
+                {setupWorksheet.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Setup Worksheet
+              </Button>
+            </div>
 
-          <Button
-            onClick={() => googleAuthMutation.mutate()}
-            disabled={googleAuthMutation.isPending || status?.isAuthenticated}
-            variant="default"
-            className="w-full sm:w-auto"
-          >
-            {googleAuthMutation.isPending && (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            )}
-            <LogIn className="h-4 w-4 mr-2" />
-            {status?.isAuthenticated ? "Already Connected" : "Sign in with Google"}
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Button
+                onClick={handleSyncInventory}
+                disabled={!spreadsheetId.trim() || !worksheetName.trim() || syncInventory.isPending}
+                variant="secondary"
+                className="w-full"
+              >
+                {syncInventory.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sync Inventory Now
+              </Button>
+            </div>
 
-      {/* Webhook Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Webhook className="h-5 w-5" />
-            Webhook Configuration
-          </CardTitle>
-          <CardDescription>
-            Generate and manage webhook URLs for Google Sheets integration
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={() => generateWebhookMutation.mutate()}
-              disabled={generateWebhookMutation.isPending}
-              variant="default"
-            >
-              {generateWebhookMutation.isPending && (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              <Link className="h-4 w-4 mr-2" />
-              Generate Webhook URL
-            </Button>
-          </div>
-
-          {(webhookUrl || status?.webhookUrl) && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">Webhook URL</h4>
-              <div className="space-y-2">
-                <Input
-                  value={webhookUrl || status?.webhookUrl || ""}
-                  readOnly
-                  className="font-mono text-xs bg-white"
-                />
+            {spreadsheetId && (
+              <div className="pt-4 border-t">
                 <Button
-                  onClick={copyWebhookUrl}
-                  size="sm"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  size="sm"
+                  onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}`, '_blank')}
+                  className="w-full"
                 >
-                  {copiedWebhook ? (
-                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4 mr-2" />
-                  )}
-                  {copiedWebhook ? "Copied!" : "Copy URL"}
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in Google Sheets
                 </Button>
               </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <h4 className="font-medium">Setup Instructions:</h4>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-              <li>Go to your Shopify Admin → Settings → Notifications</li>
-              <li>Scroll to "Webhooks" section</li>
-              <li>Click "Create webhook"</li>
-              <li>Set Event to "Order creation"</li>
-              <li>Set Format to "JSON"</li>
-              <li>Paste the webhook URL above</li>
-              <li>Click "Save webhook"</li>
-            </ol>
-          </div>
-
-          <Button
-            onClick={() => testWebhookMutation.mutate()}
-            variant="outline"
-            disabled={testWebhookMutation.isPending}
-          >
-            {testWebhookMutation.isPending ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Webhook className="h-4 w-4 mr-2" />
             )}
-            Test Webhook
-          </Button>
+          </CardContent>
+        </Card>
+
+        {/* Setup Guide */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup Guide</CardTitle>
+            <CardDescription>Follow these steps to configure Google Sheets integration</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {configGuide ? (
+              <div className="space-y-4">
+                {configGuide.steps.map((step) => (
+                  <div key={step.step} className="flex space-x-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                      {step.step}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium">{step.title}</h4>
+                      <p className="text-sm text-muted-foreground">{step.description}</p>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="pt-4 border-t space-y-2">
+                  <h4 className="font-medium">Required Environment Variables</h4>
+                  <div className="space-y-1">
+                    {configGuide.requiredEnvVars.map((envVar) => (
+                      <Badge key={envVar} variant="outline" className="mr-2">
+                        {envVar}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t space-y-2">
+                  <h4 className="font-medium">Helpful Links</h4>
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(configGuide.links.googleCloudConsole, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Google Cloud Console
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(configGuide.links.sheetsApiDocs, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Sheets API Documentation
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Features Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Integration Features</CardTitle>
+          <CardDescription>What you can do with Google Sheets integration</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Download className="h-5 w-5 text-blue-500" />
+                <h4 className="font-medium">Real-time Sync</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Automatically sync inventory changes to Google Sheets in real-time
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Sheet className="h-5 w-5 text-green-500" />
+                <h4 className="font-medium">Structured Data</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Organized inventory data with SKU, name, category, quantity, and pricing
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <RefreshCw className="h-5 w-5 text-purple-500" />
+                <h4 className="font-medium">Change Tracking</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Track all inventory changes with timestamps and action details
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Manual Sync */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RotateCcw className="h-5 w-5" />
-            Data Sync Options
-          </CardTitle>
-          <CardDescription>
-            Sync your inventory and sales data to Google Sheets
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button
-              onClick={() => syncInventoryMutation.mutate()}
-              disabled={syncInventoryMutation.isPending || !status?.configured || !status?.isAuthenticated}
-              variant="outline"
-              className="w-full"
-            >
-              {syncInventoryMutation.isPending ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-              )}
-              Sync Inventory
-            </Button>
-            
-            <Button
-              onClick={() => syncSalesMutation.mutate()}
-              disabled={syncSalesMutation.isPending || !status?.configured || !status?.isAuthenticated}
-              variant="outline"
-              className="w-full"
-            >
-              {syncSalesMutation.isPending ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4 mr-2" />
-              )}
-              Sync Sales Data
-            </Button>
-          </div>
-          
-          {(!status?.configured || !status?.isAuthenticated) && (
-            <p className="text-sm text-muted-foreground text-center">
-              Authentication required to sync data
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* How It Works */}
-      <Card>
-        <CardHeader>
-          <CardTitle>How It Works</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-blue-600 font-bold">1</span>
-              </div>
-              <h4 className="font-medium">Order Received</h4>
-              <p className="text-sm text-muted-foreground">
-                Customer places order on Shopify
-              </p>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-green-600 font-bold">2</span>
-              </div>
-              <h4 className="font-medium">Webhook Triggered</h4>
-              <p className="text-sm text-muted-foreground">
-                Shopify sends order data to your webhook
-              </p>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-purple-600 font-bold">3</span>
-              </div>
-              <h4 className="font-medium">Inventory Updated</h4>
-              <p className="text-sm text-muted-foreground">
-                Google Sheets and database automatically updated
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {!status?.configured && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Google Sheets integration is not configured. Please set up the required environment variables and follow the setup guide above.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
