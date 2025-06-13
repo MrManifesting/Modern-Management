@@ -32,15 +32,19 @@ interface QuickBreakdownProps {
 }
 
 const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }) => {
+  const safePrice = isNaN(item.price) ? 0 : item.price;
+  const safeWeight = item.weight && !isNaN(item.weight) ? item.weight : 1;
+  const defaultUnitPrice = safeWeight > 0 ? safePrice / safeWeight : safePrice;
+  
   const [options, setOptions] = useState<BreakdownOption[]>([
-    { weight: 1, quantity: 1, price: item.price / (item.weight || 1) },
+    { weight: 1, quantity: 1, price: isNaN(defaultUnitPrice) ? 0 : defaultUnitPrice },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const addOption = () => {
-    setOptions([...options, { weight: 1, quantity: 1, price: item.price / (item.weight || 1) }]);
+    setOptions([...options, { weight: 1, quantity: 1, price: isNaN(defaultUnitPrice) ? 0 : defaultUnitPrice }]);
   };
 
   const removeOption = (index: number) => {
@@ -49,7 +53,8 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
 
   const updateOption = (index: number, field: keyof BreakdownOption, value: number) => {
     const newOptions = [...options];
-    newOptions[index][field] = value;
+    const safeValue = isNaN(value) ? 0 : value;
+    newOptions[index][field] = safeValue;
     setOptions(newOptions);
   };
 
@@ -130,8 +135,8 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
                 type="number"
                 min="0.1"
                 step="0.1"
-                value={option.weight}
-                onChange={(e) => updateOption(index, 'weight', parseFloat(e.target.value))}
+                value={isNaN(option.weight) ? '' : option.weight.toString()}
+                onChange={(e) => updateOption(index, 'weight', parseFloat(e.target.value) || 0)}
                 className="h-8"
               />
             </div>
@@ -142,8 +147,8 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
                 id={`quantity-${index}`}
                 type="number"
                 min="1"
-                value={option.quantity}
-                onChange={(e) => updateOption(index, 'quantity', parseInt(e.target.value))}
+                value={isNaN(option.quantity) ? '' : option.quantity.toString()}
+                onChange={(e) => updateOption(index, 'quantity', parseInt(e.target.value) || 0)}
                 className="h-8"
               />
             </div>
@@ -155,8 +160,8 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
                 type="number"
                 min="0.01"
                 step="0.01"
-                value={option.price}
-                onChange={(e) => updateOption(index, 'price', parseFloat(e.target.value))}
+                value={isNaN(option.price) ? '' : option.price.toString()}
+                onChange={(e) => updateOption(index, 'price', parseFloat(e.target.value) || 0)}
                 className="h-8"
               />
             </div>
