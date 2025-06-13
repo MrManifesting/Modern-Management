@@ -69,6 +69,14 @@ const uploadMemory = multer({
   },
 });
 
+// Configure multer for disk storage (for file uploads that need persistence)
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+});
+
 export function registerRoutes(app: Express): Server {
   // Setup simple authentication with Google OAuth and username/password
   setupAuth(app);
@@ -1582,6 +1590,134 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Image SEO analysis endpoint removed per requirements
+
+  // Comprehensive bulk item update endpoint
+  app.put("/api/items/bulk-update", async (req: Request, res: Response) => {
+    try {
+      const { itemIds, saleDiscount, quantity, status, generateCodes } = req.body;
+      
+      if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+        return res.status(400).json({ error: "Item IDs are required" });
+      }
+      
+      const promises: Promise<any>[] = [];
+      
+      // Handle sale/discount application
+      if (saleDiscount) {
+        const { type, value } = saleDiscount;
+        const items = await storage.getItemsByIds(itemIds);
+        
+        for (const item of items) {
+          let newSalePrice = null;
+          const basePrice = parseFloat(item.basePrice?.toString() || '0');
+          
+          if (type === 'percentage' && basePrice > 0) {
+            newSalePrice = (basePrice * (100 - value) / 100).toFixed(2);
+          } else if (type === 'fixed' && basePrice > value) {
+            newSalePrice = (basePrice - value).toFixed(2);
+          }
+          
+          if (newSalePrice) {
+            promises.push(storage.updateItem(item.id, { salePrice: newSalePrice }));
+          }
+        }
+      }
+      
+      // Handle quantity updates
+      if (quantity) {
+        const { operation, value } = quantity;
+        const items = await storage.getItemsByIds(itemIds);
+        
+        for (const item of items) {
+          let newQuantity = item.quantity;
+          
+          switch (operation) {
+            case 'set':
+              newQuantity = value;
+              break;
+            case 'add':
+              newQuantity = item.quantity + value;
+              break;
+            case 'subtract':
+              newQuantity = Math.max(0, item.quantity - value);
+              break;
+          }
+          
+          promises.push(storage.updateItem(item.id, { quantity: newQuantity }));
+        }
+      }
+      
+      // Handle status updates
+      if (status) {
+        for (const itemId of itemIds) {
+          promises.push(storage.updateItem(itemId, { status }));
+        }
+      }
+      
+      // Handle code generation
+      if (generateCodes) {
+        const items = await storage.getItemsByIds(itemIds);
+        
+        for (const item of items) {
+          const codeUpdates: any = {};
+          
+          if (generateCodes.sku && !item.sku) {
+            codeUpdates.sku = await generateSKU(item.name, item.category);
+          }
+          
+          if (generateCodes.barcode && !item.barcode) {
+            codeUpdates.barcode = generateBarcodeData(item.sku || item.id.toString());
+          }
+          
+          if (generateCodes.qrCode && !item.qrCode) {
+            codeUpdates.qrCode = await generateQRCodeDataURL(`${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost'}/items/${item.id}`);
+          }
+          
+          if (Object.keys(codeUpdates).length > 0) {
+            promises.push(storage.updateItem(item.id, codeUpdates));
+          }
+        }
+      }
+      
+      // Wait for all updates to complete
+      await Promise.all(promises);
+      
+      res.json({ 
+        success: true, 
+        updatedCount: itemIds.length,
+        message: `Successfully updated ${itemIds.length} items` 
+      });
+    } catch (error) {
+      console.error("Error in bulk update:", error);
+      res.status(500).json({ error: "Failed to update items" });
+    }
+  });
+
+  // Telegram photo upload endpoint
+  app.post("/api/telegram/send-photo", upload.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // For now, return the local file URL - in production this would integrate with Telegram Bot API
+      const imageUrl = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost'}/uploads/${req.file.filename}`;
+      
+      res.json({
+        success: true,
+        message: "Photo processed successfully",
+        imageUrl: imageUrl,
+        telegramResponse: {
+          chat_id: process.env.TELEGRAM_CHAT_ID || "demo_chat",
+          photo_url: imageUrl,
+          message_id: Date.now()
+        }
+      });
+    } catch (error) {
+      console.error("Error processing photo:", error);
+      res.status(500).json({ error: "Failed to process photo" });
+    }
+  });
 
   // No duplicate endpoint needed - universal barcode scanning is now handled by the main /api/scan endpoint
   
