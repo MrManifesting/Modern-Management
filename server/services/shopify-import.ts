@@ -10,8 +10,7 @@ import { storage } from '../storage';
 import { log } from '../vite';
 import { generateBarcodeData } from './barcode';
 import { generateQRCodeDataURL } from './qrcode';
-import { parseShopifyCSV, convertCSVRowToItem } from './csv-parser-enhanced';
-import { recoverShopifyCSV, validateShopifyCSV } from './csv-recovery';
+import { parseShopifyCSV } from './csv-parser-robust';
 
 /**
  * Import products from Shopify API data
