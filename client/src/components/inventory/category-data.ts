@@ -5,7 +5,6 @@
 
 // Main product categories
 export const MAIN_CATEGORIES = [
-  'Flower',
   'Concentrates',
   'Edibles',
   'Vapes',
@@ -103,23 +102,22 @@ export const BULK_SIZES = [
   'Distribution'
 ];
 
-// Package sizes for different product types (common weights)
-export const WEIGHT_OPTIONS = {
-  flower: ['1g', '3.5g (Eighth)', '7g (Quarter)', '14g (Half)', '28g (Ounce)', '113g (QP)', '226g (HP)', '453g (Pound)'],
-  concentrates: ['0.5g', '1g', '2g', '3.5g', '7g', '14g', '28g'],
-  prerolls: ['0.5g', '0.75g', '1g', '1.5g', '2g']
-};
+// Standard weight options for all products
+export const WEIGHT_OPTIONS = [
+  'pound',
+  'half pound', 
+  'quarter pound',
+  'ounce',
+  'half ounce',
+  'quarter ounce', 
+  'eighth',
+  'gram'
+];
 
 // Export structured category map for easier access
 export const CATEGORY_MAP = {
-  'Flower': {
-    strains: FLOWER_STRAIN_TYPES,
-    qualities: ALL_FLOWER_QUALITIES,
-    weights: WEIGHT_OPTIONS.flower
-  },
   'Concentrates': {
-    types: CONCENTRATE_TYPES,
-    weights: WEIGHT_OPTIONS.concentrates
+    types: CONCENTRATE_TYPES
   },
   'Edibles': {
     types: EDIBLE_TYPES
@@ -128,8 +126,7 @@ export const CATEGORY_MAP = {
     types: VAPE_TYPES
   },
   'Pre-Rolls': {
-    types: PREROLL_TYPES,
-    weights: WEIGHT_OPTIONS.prerolls
+    types: PREROLL_TYPES
   },
   'Bulk': {
     sizes: BULK_SIZES
