@@ -514,3 +514,26 @@ export const itemFormSchema = z.object({
   itemType: z.string().default("standard"),
   visibility: z.string().default("visible"),
 });
+
+// Secure credentials storage table
+export const credentials = pgTable("credentials", {
+  id: serial("id").primaryKey(),
+  service: varchar("service", { length: 100 }).notNull(), // 'google_sheets', 'shopify', etc.
+  name: varchar("name", { length: 255 }).notNull(), // Display name for the credential
+  credentialData: jsonb("credential_data").notNull(), // Encrypted credential data
+  isActive: boolean("is_active").default(true),
+  lastUsed: timestamp("last_used"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Credential = typeof credentials.$inferSelect;
+export type InsertCredential = typeof credentials.$inferInsert;
+
+export const insertCredentialSchema = createInsertSchema(credentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCredentialData = z.infer<typeof insertCredentialSchema>;

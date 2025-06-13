@@ -8,10 +8,11 @@ import {
   User, InsertUser,
   Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
   AffiliateTransaction, InsertAffiliateTransaction,
+  Credential, InsertCredential,
   
   // Import schema tables for Drizzle
   users, items, sales, employees, inventoryActions, productBreakdowns,
-  affiliates, qrCodes, affiliateTransactions, stores, marketplaceTypes, customers, customerTiers
+  affiliates, qrCodes, affiliateTransactions, stores, marketplaceTypes, customers, customerTiers, credentials
 } from "@shared/schema";
 
 // Import Telegram photo schema
@@ -147,6 +148,14 @@ export interface IStorage {
   getAffiliateTransactionsBySaleId(saleId: number): Promise<AffiliateTransaction[]>;
   createAffiliateTransaction(transaction: InsertAffiliateTransaction): Promise<AffiliateTransaction>;
   updateAffiliateTransactionStatus(id: number, status: string): Promise<AffiliateTransaction | undefined>;
+  
+  // Credential storage methods
+  getCredentials(service?: string): Promise<Credential[]>;
+  getCredential(id: number): Promise<Credential | undefined>;
+  getCredentialByService(service: string): Promise<Credential | undefined>;
+  saveCredential(credential: InsertCredential): Promise<Credential>;
+  updateCredential(id: number, credential: Partial<InsertCredential>): Promise<Credential | undefined>;
+  deleteCredential(id: number): Promise<boolean>;
   
   // Telegram photo methods
   getTelegramPhotos(): Promise<TelegramPhoto[]>;
@@ -3732,6 +3741,63 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Credential storage methods
+  async getCredentials(service?: string): Promise<Credential[]> {
+    if (service) {
+      return await db.select().from(credentials)
+        .where(eq(credentials.service, service))
+        .orderBy(desc(credentials.createdAt));
+    }
+    return await db.select().from(credentials).orderBy(desc(credentials.createdAt));
+  }
+
+  async getCredential(id: number): Promise<Credential | undefined> {
+    const [credential] = await db.select().from(credentials).where(eq(credentials.id, id));
+    return credential;
+  }
+
+  async getCredentialByService(service: string): Promise<Credential | undefined> {
+    const [credential] = await db.select().from(credentials)
+      .where(and(eq(credentials.service, service), eq(credentials.isActive, true)))
+      .orderBy(desc(credentials.createdAt));
+    return credential;
+  }
+
+  async saveCredential(credential: InsertCredential): Promise<Credential> {
+    // Deactivate existing credentials for the same service
+    await db.update(credentials)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(credentials.service, credential.service));
+
+    // Insert the new credential
+    const [newCredential] = await db.insert(credentials)
+      .values({
+        ...credential,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newCredential;
+  }
+
+  async updateCredential(id: number, credential: Partial<InsertCredential>): Promise<Credential | undefined> {
+    const [updatedCredential] = await db.update(credentials)
+      .set({ 
+        ...credential, 
+        updatedAt: new Date(),
+        lastUsed: new Date()
+      })
+      .where(eq(credentials.id, id))
+      .returning();
+    return updatedCredential;
+  }
+
+  async deleteCredential(id: number): Promise<boolean> {
+    const result = await db.delete(credentials).where(eq(credentials.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
