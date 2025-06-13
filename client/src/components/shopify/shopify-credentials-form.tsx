@@ -195,9 +195,26 @@ export default function ShopifyCredentialsForm() {
                   onChange={handleInputChange}
                   className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Admin API access token with necessary permissions for inventory management
-                </p>
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <p className="font-medium text-amber-600">⚠️ You need an Admin API access token (not Storefront API)</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-2">
+                    <p className="font-medium">To create the correct token:</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Go to your Shopify admin → Settings → Apps and sales channels</li>
+                      <li>Click "Develop apps" → "Create an app"</li>
+                      <li>Name it "MrLister Inventory" and click "Create app"</li>
+                      <li>Click "Configure Admin API scopes"</li>
+                      <li>Enable these permissions:
+                        <ul className="list-disc pl-4 mt-1">
+                          <li>Products: read_products, write_products</li>
+                          <li>Inventory: read_inventory, write_inventory</li>
+                          <li>Orders: read_orders</li>
+                        </ul>
+                      </li>
+                      <li>Save → "Install app" → Copy the "Admin API access token"</li>
+                    </ol>
+                  </div>
+                </div>
               </div>
             </div>
             
