@@ -58,12 +58,14 @@ export default function ItemFormComponent({
     name: "",
     description: "",
     basePrice: 0,
-    category: "Electronics",
-    condition: "Used",
+    category: "Flower",
+    condition: "New",
     status: "draft",
     images: [],
     tags: [],
     marketplace: [],
+    weight: "454", // 1 pound default
+    brand: "Gold Standard",
     attributes: {}, // Will store flowerQuality, flowerCategory, and other custom attributes
   },
   onSubmit,
