@@ -1778,19 +1778,29 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Check if there are any employees
-      const existingEmployees = await db.select().from(employees);
-      
-      if (existingEmployees.length === 0) {
-        // Initialize with a default admin employee
-        await this.initializeEmployees();
+      try {
+        const existingEmployees = await db.select().from(employees);
+        
+        if (existingEmployees.length === 0) {
+          // Initialize with a default admin employee
+          await this.initializeEmployees();
+        }
+      } catch (error) {
+        console.error("Warning: Unable to initialize employees due to schema mismatch:", error);
+        console.log("Try running migrations to update your database schema");
       }
       
       // Check if there are any affiliates
-      const existingAffiliates = await db.select().from(affiliates);
-      
-      if (existingAffiliates.length === 0) {
-        // Initialize with a default test affiliate
-        await this.initializeAffiliates();
+      try {
+        const existingAffiliates = await db.select().from(affiliates);
+        
+        if (existingAffiliates.length === 0) {
+          // Initialize with a default test affiliate
+          await this.initializeAffiliates();
+        }
+      } catch (error) {
+        console.error("Warning: Unable to initialize affiliates due to schema mismatch:", error);
+        console.log("Try running migrations to update your database schema");
       }
     } catch (error) {
       console.error("Failed to initialize data:", error);
