@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
+import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
 import { 
   Plus, 
   UploadCloud, 
@@ -30,7 +31,8 @@ import {
   Store,
   PackageOpen,
   Barcode,
-  QrCode
+  QrCode,
+  Package
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -224,6 +226,8 @@ const ProductsInventoryPage: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkQuantityEditOpen, setBulkQuantityEditOpen] = useState(false);
+  const [generateUnitsDialogOpen, setGenerateUnitsDialogOpen] = useState(false);
+  const [selectedItemForUnits, setSelectedItemForUnits] = useState<Product | null>(null);
   
   // Handlers for bulk actions
   const toggleSelectionMode = () => {

@@ -36,15 +36,36 @@ export function getQueryFn(options: QueryFnOptions = {}): QueryFunction {
       }
 
       if (!response.ok) {
+        // Check if response is HTML (common when auth redirects occur)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          console.error(`API returned HTML instead of JSON for ${endpoint}. This usually means authentication failed or server error.`);
+          throw new Error(`Authentication required or server error for ${endpoint}`);
+        }
+        
         const error = await response.json().catch(() => ({ message: "Request failed" }));
         throw new Error(error.message || "Request failed");
       }
 
-      return await response.json();
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      } else {
+        console.error(`API returned non-JSON response for ${endpoint}:`, contentType);
+        throw new Error(`Invalid response format from ${endpoint}`);
+      }
     } catch (error: any) {
       if (error.message === "Failed to fetch" && options.on401 === "returnNull") {
         return { success: false, user: null };
       }
+      
+      // Handle JSON parsing errors specifically
+      if (error.message.includes('Unexpected token') && error.message.includes('<')) {
+        console.error(`JSON parsing failed for ${endpoint}. Server returned HTML instead of JSON.`);
+        throw new Error(`Authentication required or server error for ${endpoint}`);
+      }
+      
       throw error;
     }
   };
@@ -122,9 +143,23 @@ export async function apiRequestSimple<T = any>(endpoint: string, options: Reque
   const response = await fetch(endpoint, fetchOptions);
 
   if (!response.ok) {
+    // Check if response is HTML (common when auth redirects occur)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      console.error(`API returned HTML instead of JSON for ${endpoint}. Status: ${response.status}`);
+      throw new Error(`Authentication required or server error for ${endpoint}`);
+    }
+    
     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
     throw new Error(errorData.message || 'Request failed');
   }
 
-  return await response.json() as T;
+  // Check if response is JSON before parsing
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await response.json() as T;
+  } else {
+    console.error(`API returned non-JSON response for ${endpoint}:`, contentType);
+    throw new Error(`Invalid response format from ${endpoint}`);
+  }
 }
