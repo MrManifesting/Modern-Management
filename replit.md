@@ -125,20 +125,6 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 13, 2025: **Automatic SKU/Barcode Generation System Implemented**
-  - Created individual unit generation for inventory tracking
-  - Each unit gets unique SKU with format: CATEGORY-BRAND-NAME-TIMESTAMP-U001, U002, etc.
-  - Automatic barcode and QR code generation for each individual unit
-  - New API endpoint: /api/items/generate-units for creating multiple tracked units
-  - Frontend dialog component for user-friendly unit generation
-  - Enhanced SKU generator with unitIndex parameter for unique identification
-  - Fixed weight field database schema issue (text instead of numeric)
-- June 13, 2025: **Comprehensive Bulk Editing System Complete**
-  - Enhanced bulk action bar with sales/discounts, quantity updates, status changes, code generation
-  - Camera dialog with photo capture and Telegram integration for image URL return
-  - Backend storage methods: getItemsByIds, bulkUpdateItems for efficient batch operations
-  - Bulk edit dialog with percentage/fixed discounts, set/add/subtract quantities, status updates
-  - Generate missing SKUs, barcodes, QR codes for selected items in bulk
 - June 13, 2025: **Product Form Standardization Complete**
   - Updated category system: Flower category restored with "Flower" as default
   - Standardized weight options: "1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"
