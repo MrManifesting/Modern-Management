@@ -61,28 +61,29 @@ export function registerConnectionStatusRoutes(app: Express, storage: IStorage) 
         }
         
         if (shopifyStore && shopifyToken) {
-          // Test actual Shopify API connection
-          const response = await fetch(`https://${shopifyStore}/admin/api/2023-10/shop.json`, {
-            headers: {
-              'X-Shopify-Access-Token': shopifyToken,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            shopifyConnected = true;
-            // Get product count
-            const productsResponse = await fetch(`https://${shopifyStore}/admin/api/2023-10/products/count.json`, {
-              headers: {
-                'X-Shopify-Access-Token': shopifyToken,
-                'Content-Type': 'application/json'
+          // Use the working Shopify test connection endpoint instead of direct API calls
+          try {
+            const testResponse = await fetch(`http://localhost:5000/api/shopify/test-connection`);
+            if (testResponse.ok) {
+              const testData = await testResponse.json();
+              shopifyConnected = testData.connected || false;
+              if (shopifyConnected) {
+                // Get product count from products endpoint
+                try {
+                  const productsResponse = await fetch(`http://localhost:5000/api/shopify/products`);
+                  if (productsResponse.ok) {
+                    const productsData = await productsResponse.json();
+                    shopifyProductCount = Array.isArray(productsData) ? productsData.length : 0;
+                  }
+                } catch (productError) {
+                  console.warn("Failed to get Shopify product count:", productError);
+                  shopifyProductCount = 0;
+                }
               }
-            });
-            
-            if (productsResponse.ok) {
-              const countData = await productsResponse.json();
-              shopifyProductCount = countData.count || 0;
             }
+          } catch (testError) {
+            console.warn("Failed to test Shopify connection:", testError);
+            shopifyConnected = false;
           }
         }
       } catch (error) {
