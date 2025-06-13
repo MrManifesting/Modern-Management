@@ -1,0 +1,80 @@
+/workspace$ npm run build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v6.3.5 building for production...
+✓ 3976 modules transformed.
+[plugin vite:reporter] 
+(!) /home/runner/workspace/client/src/components/ui/leaf-loader.tsx is dynamically imported by /home/runner/workspace/client/src/App.tsx but also statically imported by /home/runner/workspace/client/src/components/ui/loading-overlay.tsx, /home/runner/workspace/client/src/pages/animation-demo.tsx, /home/runner/workspace/client/src/pages/inventory.tsx, /home/runner/workspace/client/src/pages/products-inventory.tsx, dynamic import will not move module into another chunk.
+
+../dist/public/index.html                               1.36 kB │ gzip:   0.83 kB
+../dist/public/assets/index-aSjjRqsz.css              122.70 kB │ gzip:  20.68 kB
+../dist/public/assets/layout-grid-QQdvC2DY.js           0.51 kB │ gzip:   0.30 kB
+../dist/public/assets/direct-login-CjbptWIK.js          1.64 kB │ gzip:   0.86 kB
+../dist/public/assets/login-debug-Brd0wbqK.js           2.14 kB │ gzip:   1.00 kB
+../dist/public/assets/bypass-login-C56yY2r4.js          2.92 kB │ gzip:   1.28 kB
+../dist/public/assets/qr-demo-DCNS-jch.js              10.12 kB │ gzip:   4.16 kB
+../dist/public/assets/demo-inventory-scJqVtBl.js       13.83 kB │ gzip:   3.80 kB
+../dist/public/assets/inventory-detail-DPrATMe2.js     17.09 kB │ gzip:   4.39 kB
+../dist/public/assets/index-CwxsWp9T.js             2,153.73 kB │ gzip: 581.65 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 13.47s
+▲ [WARNING] Duplicate key "publishStatus" in object literal [duplicate-object-key]
+
+    server/storage.ts:2088:8:
+      2088 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+  The original key "publishStatus" is here:
+
+    server/storage.ts:2080:8:
+      2080 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:2421:8:
+      2421 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2032:8:
+      2032 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:3769:8:
+      3769 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2421:8:
+      2421 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate key "Outdoor" in object literal [duplicate-object-key]
+
+    server/services/sku-generator.ts:222:4:
+      222 │     'Outdoor': 'ODR',
+          ╵     ~~~~~~~~~
+
+  The original key "Outdoor" is here:
+
+    server/services/sku-generator.ts:201:4:
+      201 │     'Outdoor': 'OUT',
+          ╵     ~~~~~~~~~
+
+4 warnings
+
+  dist/index.js  691.5kb
+
+⚡ Done in 32ms
+~/workspace$ 

@@ -2085,7 +2085,6 @@ export class DatabaseStorage implements IStorage {
         marketplaceId: row.marketplace_id,
         marketplaceIds: row.marketplace_ids,
         syncedToMarketplaces: row.synced_to_marketplaces,
-        publishStatus: row.publish_status,
         reorderPoint: row.reorder_point,
         reorderQuantity: row.reorder_quantity,
         stockAlerts: row.stock_alerts,
@@ -2418,30 +2417,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getItemBySku(sku: string): Promise<Item | undefined> {
-    try {
-      // Use Drizzle query builder for proper parameter handling
-      const result = await db.select().from(items).where(eq(items.sku, sku)).limit(1);
-      
-      if (result.length === 0) {
-        return undefined;
-      }
-      
-      const row = result[0];
-      
-      // Map the raw result to Item type
-      return {
-        ...row,
-        id: Number(row.id),
-        quantity: row.quantity !== null ? Number(row.quantity) : 0,
-        tags: row.tags || [],
-        images: row.images || []
-      };
-    } catch (error) {
-      console.error("Error fetching item by SKU:", error);
-      return undefined;
-    }
-  }
+
   
   async getBulkItems(): Promise<Item[]> {
     return await db
@@ -3766,15 +3742,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(items).where(eq(items.parentItemId, parentId));
   }
 
-  async getItemBySku(sku: string): Promise<Item | undefined> {
-    try {
-      const [item] = await db.select().from(items).where(eq(items.sku, sku));
-      return item;
-    } catch (error) {
-      console.error("Error getting item by SKU:", error);
-      return undefined;
-    }
-  }
+
 
   async getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]> {
     if (actionType) {
