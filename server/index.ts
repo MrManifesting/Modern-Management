@@ -55,7 +55,9 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Force enhanced interface in production
+    console.log("PRODUCTION OVERRIDE: Loading enhanced interface");
+    await setupVite(app, server);
   }
 
   // ALWAYS serve the app on port 5000
