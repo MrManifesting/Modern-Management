@@ -247,15 +247,21 @@ export function registerRoutes(app: Express): Server {
       console.log("Item creation request body:", JSON.stringify(req.body, null, 2));
       
       // Prepare the item data
+      const requestedQuantity = parseInt(req.body.quantity || 1);
       const itemData = {
         ...req.body,
         images: fileUrls,
         basePrice: String(req.body.basePrice || '0'),
-        quantity: parseInt(req.body.quantity || 1),
+        quantity: 1, // Each unit will be quantity 1
         tags: req.body.tags ? (typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags) : [],
         marketplace: req.body.marketplace ? (typeof req.body.marketplace === 'string' ? JSON.parse(req.body.marketplace) : req.body.marketplace) : [],
         attributes: req.body.attributes ? (typeof req.body.attributes === 'string' ? JSON.parse(req.body.attributes) : req.body.attributes) : {},
       };
+      
+      // Fix weight field - ensure it's a string not number (database schema fix)
+      if (typeof itemData.weight === 'number') {
+        itemData.weight = itemData.weight.toString();
+      }
       
       // Ensure all required fields are strings
       for (const field of ['name', 'description', 'category', 'condition']) {
@@ -1716,6 +1722,66 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error processing photo:", error);
       res.status(500).json({ error: "Failed to process photo" });
+    }
+  });
+
+  // Generate individual units with unique SKUs/barcodes for items with multiple quantities
+  app.post("/api/items/generate-units", async (req: Request, res: Response) => {
+    try {
+      const { itemId, quantity } = req.body;
+      
+      if (!itemId || !quantity || quantity < 2) {
+        return res.status(400).json({ error: "Item ID and quantity (>1) are required" });
+      }
+      
+      // Get the original item
+      const originalItem = await storage.getItem(itemId);
+      if (!originalItem) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const createdUnits = [];
+      
+      // Generate individual units with unique SKUs and barcodes
+      for (let i = 1; i <= quantity; i++) {
+        const unitData = {
+          ...originalItem,
+          id: undefined, // Let database generate new ID
+          name: `${originalItem.name} - Unit ${i}`,
+          sku: await generateSKU(originalItem, { unitIndex: i }),
+          quantity: 1, // Each unit is quantity 1
+          parentItemId: originalItem.id, // Reference to original item
+          createdAt: undefined,
+          updatedAt: undefined
+        };
+        
+        // Generate unique barcode for each unit
+        unitData.barcode = generateBarcodeData(unitData.sku);
+        
+        // Create the unit
+        const unit = await storage.createItem(unitData);
+        
+        // Generate QR code for this unit
+        const qrCodeDataURL = await generateQRCodeDataURL(unit);
+        
+        // Update the unit with the QR code data
+        const updatedUnit = await storage.updateItem(unit.id, { qrCode: qrCodeDataURL });
+        
+        if (updatedUnit) {
+          createdUnits.push(updatedUnit);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated ${quantity} individual units with unique SKUs and barcodes`,
+        originalItem: originalItem,
+        units: createdUnits,
+        totalUnits: createdUnits.length
+      });
+    } catch (error) {
+      console.error("Error generating units:", error);
+      res.status(500).json({ error: "Failed to generate individual units" });
     }
   });
 

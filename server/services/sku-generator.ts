@@ -19,7 +19,8 @@ export function generateSKU(
     quantity?: number, 
     weight?: number, 
     weightUnit?: string,
-    parentSku?: string
+    parentSku?: string,
+    unitIndex?: number // For generating unique SKUs per unit
   }
 ): string {
   // Start with a category prefix (max 3 chars)
@@ -54,18 +55,41 @@ export function generateSKU(
         sku = `${sku}-${options.weight}${options.weightUnit}`;
       }
       
-      // For multiple quantities of the same weight, add a sequence number
-      if (options.quantity && options.quantity > 1) {
-        sku = `${sku}-${options.quantity}`;
+      // Add unit index for individual tracking
+      if (options.unitIndex !== undefined) {
+        sku = `${sku}-U${String(options.unitIndex).padStart(3, '0')}`;
       }
     }
     // If this is a standalone item with quantity variations
     else if (options.quantity && options.quantity > 1) {
       sku = `${sku}-QTY${options.quantity}`;
     }
+    
+    // Add unit index for individual tracking
+    if (options.unitIndex !== undefined) {
+      sku = `${sku}-U${String(options.unitIndex).padStart(3, '0')}`;
+    }
   }
   
   return sku;
+}
+
+/**
+ * Generate multiple SKUs for items with quantities > 1
+ * Each unit gets its own unique SKU and barcode for individual tracking
+ */
+export function generateMultipleSkus(
+  item: Partial<InsertItem> | Item,
+  quantity: number
+): string[] {
+  const skus: string[] = [];
+  
+  for (let i = 1; i <= quantity; i++) {
+    const sku = generateSKU(item, { unitIndex: i });
+    skus.push(sku);
+  }
+  
+  return skus;
 }
 
 /**
