@@ -43,6 +43,7 @@ import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
 import CredentialsManagement from "@/pages/credentials-management";
 import LabelGeneration from "@/pages/label-generation";
+import SyncDashboard from "@/pages/sync-dashboard";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
