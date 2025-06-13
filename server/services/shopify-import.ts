@@ -286,17 +286,123 @@ function parseCSVWithDelimiter(csvContent: string, delimiter: string): ParsedCsv
  * Parse CSV content to structured data using state machine approach
  */
 export function parseCSV(csvContent: string): ParsedCsvData {
-  console.log('Starting advanced CSV parsing...');
+  console.log('Starting bulletproof CSV parsing...');
   
-  // Clean content and normalize line endings
-  const cleanContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  
-  // Parse the entire CSV as one block to handle multi-line quoted fields
-  const result = parseCSVContent(cleanContent);
+  // Use the bulletproof CSV parser
+  const result = parseBulletproofCSV(csvContent);
   
   console.log(`CSV parsing complete: ${result.headers.length} headers, ${result.rows.length} rows`);
   
   return result;
+}
+
+/**
+ * Bulletproof CSV parser that handles RFC 4180 compliance correctly
+ */
+function parseBulletproofCSV(csvContent: string): ParsedCsvData {
+  // Normalize line endings
+  const content = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let insideQuotes = false;
+  let i = 0;
+  
+  while (i < content.length) {
+    const currentChar = content[i];
+    const nextChar = content[i + 1];
+    
+    if (currentChar === '"') {
+      if (insideQuotes) {
+        if (nextChar === '"') {
+          // Double quote - this is an escaped quote
+          currentField += '"';
+          i += 2; // Skip both quotes
+          continue;
+        } else {
+          // Single quote - end of quoted field
+          insideQuotes = false;
+          i++;
+          continue;
+        }
+      } else {
+        // Start of quoted field
+        insideQuotes = true;
+        i++;
+        continue;
+      }
+    }
+    
+    if (currentChar === ',' && !insideQuotes) {
+      // Field separator - end current field
+      currentRow.push(currentField);
+      currentField = '';
+      i++;
+      continue;
+    }
+    
+    if (currentChar === '\n' && !insideQuotes) {
+      // End of row
+      currentRow.push(currentField);
+      if (currentRow.length > 0) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = '';
+      i++;
+      continue;
+    }
+    
+    // Regular character or quoted content
+    currentField += currentChar;
+    i++;
+  }
+  
+  // Handle the last field if we ended without a newline
+  if (currentField !== '' || currentRow.length > 0) {
+    currentRow.push(currentField);
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
+  }
+  
+  // Filter out empty rows
+  const validRows = rows.filter(row => row.some(cell => cell.trim().length > 0));
+  
+  if (validRows.length === 0) {
+    return { headers: [], rows: [] };
+  }
+  
+  // The first row should be headers
+  const headers = validRows[0].map(h => h.trim());
+  const dataRows = validRows.slice(1);
+  
+  // Ensure all data rows have the same number of fields as headers
+  const normalizedDataRows = dataRows.map(row => {
+    const normalizedRow = [...row];
+    
+    // Pad with empty strings if row is shorter than headers
+    while (normalizedRow.length < headers.length) {
+      normalizedRow.push('');
+    }
+    
+    // Truncate if row is longer than headers
+    return normalizedRow.slice(0, headers.length).map(cell => cell.trim());
+  });
+  
+  console.log(`Bulletproof parsing complete: ${headers.length} headers, ${normalizedDataRows.length} data rows`);
+  console.log(`First few headers: ${headers.slice(0, 6).join(', ')}`);
+  
+  if (normalizedDataRows.length > 0) {
+    console.log(`First row field count: ${normalizedDataRows[0].length}`);
+    console.log(`First few values: ${normalizedDataRows[0].slice(0, 6).join(' | ')}`);
+  }
+  
+  return {
+    headers,
+    rows: normalizedDataRows
+  };
 }
 
 /**
@@ -850,20 +956,17 @@ export async function importShopifyCSV(
   console.log(`First 5 lines of raw CSV:`, debugLines);
   
   try {
-    // First attempt: Try advanced CSV recovery
-    const recovered = recoverShopifyCSV(csvContent);
+    // Use bulletproof CSV parser directly
+    console.log("Using bulletproof CSV parser...");
+    const { headers, rows } = parseCSV(csvContent);
+    console.log(`Bulletproof CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
     
-    if (recovered.success) {
-      console.log(`CSV recovery successful: ${recovered.headers.length} headers, ${recovered.rows.length} rows`);
-      console.log(`Skipped ${recovered.skippedLines} metadata lines`);
-      console.log(`Using delimiter: "${recovered.delimiter}"`);
-      
-      const format = validateShopifyCSV(recovered);
-      console.log(`Recovered CSV format: ${format}`);
+    if (headers.length > 0 && rows.length > 0) {
+      const format = determineCSVFormat(headers);
+      console.log(`Detected CSV format: ${format}`);
       
       if (format !== 'unknown') {
-        // Use the recovered data
-        const { headers, rows } = recovered;
+        // Use the parsed data
         
         const importedItems: Item[] = [];
         const errors: {row: number; reason: string}[] = [];
@@ -931,13 +1034,23 @@ export async function importShopifyCSV(
       }
     }
     
-    // Fallback: Use original parsing method
-    console.log("CSV recovery failed, falling back to standard parsing...");
-    const { headers, rows } = parseCSV(csvContent);
-    console.log(`Standard CSV parsed with ${headers.length} headers and ${rows.length} data rows`);
-    console.log(`Headers found:`, headers);
-    
-    if (headers.length === 0 || rows.length === 0) {
+    console.log("No valid CSV format detected");
+    return {
+      success: false,
+      items: [],
+      errors: [{ row: 0, reason: 'No valid CSV format detected' }],
+      message: 'Could not parse CSV file: No valid format detected'
+    };
+  } catch (error) {
+    console.error('CSV import error:', error);
+    return {
+      success: false,
+      items: [],
+      errors: [{ row: 0, reason: error instanceof Error ? error.message : 'Unknown error' }],
+      message: 'Failed to import CSV file due to an error'
+    };
+  }
+}
       console.log("Empty or invalid CSV file");
       return {
         success: false,
