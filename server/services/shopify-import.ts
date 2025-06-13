@@ -197,7 +197,7 @@ interface ImportResult {
 }
 
 /**
- * Properly parse a CSV line with quoted fields
+ * Properly parse a CSV line with quoted fields (RFC 4180 compliant)
  */
 function parseCSVLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
@@ -207,15 +207,24 @@ function parseCSVLine(line: string, delimiter: string): string[] {
   
   while (i < line.length) {
     const char = line[i];
+    const nextChar = line[i + 1];
     
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        // Handle escaped quotes
+      if (inQuotes && nextChar === '"') {
+        // Handle escaped quotes (double quote)
         current += '"';
         i += 2;
+      } else if (inQuotes && (nextChar === delimiter || nextChar === undefined || nextChar === '\r' || nextChar === '\n')) {
+        // End of quoted field
+        inQuotes = false;
+        i++;
+      } else if (!inQuotes && (current.trim() === '' || current.length === 0)) {
+        // Start of quoted field (only if current field is empty)
+        inQuotes = true;
+        i++;
       } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
+        // Quote in middle of unquoted field - treat as literal
+        current += char;
         i++;
       }
     } else if (char === delimiter && !inQuotes) {
@@ -231,7 +240,15 @@ function parseCSVLine(line: string, delimiter: string): string[] {
   
   // Add the last field
   result.push(current.trim());
-  return result;
+  
+  // Clean up quoted content
+  return result.map(field => {
+    // Remove outer quotes if present and handle escaped quotes
+    if (field.startsWith('"') && field.endsWith('"')) {
+      return field.slice(1, -1).replace(/""/g, '"');
+    }
+    return field;
+  });
 }
 
 /**
@@ -266,112 +283,115 @@ function parseCSVWithDelimiter(csvContent: string, delimiter: string): ParsedCsv
 }
 
 /**
- * Parse CSV content to structured data
+ * Parse CSV content to structured data using state machine approach
  */
 export function parseCSV(csvContent: string): ParsedCsvData {
+  console.log('Starting advanced CSV parsing...');
+  
+  // Clean content and normalize line endings
+  const cleanContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Parse the entire CSV as one block to handle multi-line quoted fields
+  const result = parseCSVContent(cleanContent);
+  
+  console.log(`CSV parsing complete: ${result.headers.length} headers, ${result.rows.length} rows`);
+  
+  return result;
+}
+
+/**
+ * Advanced CSV parser that handles quoted fields with commas and newlines
+ */
+function parseCSVContent(content: string): ParsedCsvData {
   const rows: string[][] = [];
-  let lines = csvContent.split(/\r?\n/);
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  let i = 0;
   
-  // Skip any initial lines that look like filenames or metadata
-  let skippedLines = 0;
-  while (lines.length > 0 && skippedLines < 10) { // Limit skipping to prevent infinite loops
-    const line = lines[0];
-    const shouldSkip = (
-      line.includes('export_') || 
-      line.match(/^\w+_export_\d+\s*\(\d+\)$/) ||
-      line.trim().length < 10 ||
-      (!line.includes(',') && !line.includes('\t') && !line.includes(';')) ||
-      line.match(/^[^,\t;]*$/) // Single word/phrase without delimiters
-    );
+  while (i < content.length) {
+    const char = content[i];
+    const nextChar = content[i + 1];
     
-    if (shouldSkip) {
-      console.log(`Skipping potential filename/metadata line ${skippedLines + 1}: "${line}"`);
-      lines = lines.slice(1);
-      skippedLines++;
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote - add single quote to field
+        currentField += '"';
+        i += 2;
+      } else if (inQuotes) {
+        // End of quoted field
+        inQuotes = false;
+        i++;
+      } else if (currentField.trim() === '') {
+        // Start of quoted field (only if field is empty)
+        inQuotes = true;
+        i++;
+      } else {
+        // Quote in middle of unquoted field
+        currentField += char;
+        i++;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator
+      currentRow.push(currentField.trim());
+      currentField = '';
+      i++;
+    } else if (char === '\n' && !inQuotes) {
+      // End of row
+      currentRow.push(currentField.trim());
+      if (currentRow.some(field => field.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = '';
+      i++;
     } else {
-      break;
+      // Regular character
+      currentField += char;
+      i++;
     }
   }
   
-  // Try to find a line that looks like proper CSV headers
-  let headerLineIndex = 0;
-  for (let i = 0; i < Math.min(10, lines.length); i++) {
-    const line = lines[i];
-    const delimiters = (line.match(/[,\t;]/g) || []).length;
-    
-    // Look for lines with common Shopify CSV headers
-    if (delimiters > 5 && (
-      line.toLowerCase().includes('handle') ||
-      line.toLowerCase().includes('title') ||
-      line.toLowerCase().includes('sku') ||
-      line.toLowerCase().includes('variant') ||
-      line.toLowerCase().includes('available') ||
-      line.toLowerCase().includes('price')
-    )) {
-      console.log(`Found proper CSV header line at index ${i}: "${line}"`);
-      headerLineIndex = i;
-      break;
+  // Add the last field and row if there's content
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.some(field => field.length > 0)) {
+      rows.push(currentRow);
     }
   }
   
-  // Skip to the header line if we found one
-  if (headerLineIndex > 0) {
-    lines = lines.slice(headerLineIndex);
-    console.log(`Adjusted to start from header line, remaining lines: ${lines.length}`);
-  }
+  // Skip empty rows and find headers
+  const validRows = rows.filter(row => row.some(cell => cell.trim().length > 0));
   
-  if (lines.length === 0) {
-    console.log("No valid CSV data found after skipping metadata lines");
+  if (validRows.length === 0) {
     return { headers: [], rows: [] };
   }
   
-  // Detect delimiter by checking first few real data lines
-  let delimiter = ',';
-  if (lines.length > 0) {
-    const firstLine = lines[0];
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    const tabCount = (firstLine.match(/\t/g) || []).length;
-    const semicolonCount = (firstLine.match(/;/g) || []).length;
+  // Find the header row (look for common Shopify headers)
+  let headerRowIndex = 0;
+  for (let i = 0; i < Math.min(5, validRows.length); i++) {
+    const row = validRows[i];
+    const hasShopifyHeaders = row.some(cell => {
+      const lower = cell.toLowerCase();
+      return lower.includes('handle') || lower.includes('title') || 
+             lower.includes('variant') || lower.includes('sku');
+    });
     
-    // Choose the most frequent delimiter
-    if (tabCount > commaCount && tabCount > semicolonCount) {
-      delimiter = '\t';
-    } else if (semicolonCount > commaCount && semicolonCount > tabCount) {
-      delimiter = ';';
+    if (hasShopifyHeaders && row.length > 10) {
+      headerRowIndex = i;
+      console.log(`Found Shopify header row at index ${i} with ${row.length} columns`);
+      break;
     }
-    
-    console.log(`Detected CSV delimiter: "${delimiter}" (commas: ${commaCount}, tabs: ${tabCount}, semicolons: ${semicolonCount})`);
   }
   
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    
-    const row: string[] = [];
-    let cell = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
-        inQuotes = !inQuotes;
-      } else if (char === delimiter && !inQuotes) {
-        row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
-        cell = '';
-      } else {
-        cell += char;
-      }
-    }
-    
-    // Add the last cell
-    row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
-    rows.push(row);
-  }
+  const headers = validRows[headerRowIndex] || [];
+  const dataRows = validRows.slice(headerRowIndex + 1);
   
-  return { 
-    headers: rows[0]?.map(h => h.trim()) || [],
-    rows: rows.slice(1) 
-  };
+  console.log(`Headers found: ${headers.length}`);
+  console.log(`Sample headers: ${headers.slice(0, 5).join(', ')}`);
+  console.log(`Data rows: ${dataRows.length}`);
+  
+  return { headers, rows: dataRows };
 }
 
 /**
