@@ -40,6 +40,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Employee Management";
       case "/affiliate-dashboard":
         return "Affiliate Program";
+      case "/credentials":
+        return "Credential Management";
       default:
         return "Inventory Pro";
     }

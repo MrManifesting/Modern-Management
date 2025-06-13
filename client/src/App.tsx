@@ -41,6 +41,7 @@ import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
+import CredentialsManagement from "@/pages/credentials-management";
 import LabelGeneration from "@/pages/label-generation";
 import NotFound from "@/pages/not-found";
 
@@ -138,6 +139,7 @@ function Router() {
           return <AffiliateQrDemo />;
         }} />
         <Route path="/checkout" component={() => <CheckoutPage />} />
+        <ProtectedRoute path="/credentials" component={() => <CredentialsManagement />} />
         <Route path="/demo-inventory" component={() => {
           const DemoInventoryPage = React.lazy(() => import('@/pages/demo-inventory'));
           return (
