@@ -1973,6 +1973,18 @@ const ProductsInventoryPage: React.FC = () => {
                                       Generate QR Code
                                     </DropdownMenuItem>
                                     
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedItemForUnits(product);
+                                        setGenerateUnitsDialogOpen(true);
+                                      }}
+                                    >
+                                      <Package className="mr-2 h-4 w-4" />
+                                      Generate Individual Units
+                                    </DropdownMenuItem>
+                                    
                                     {product.shopifyId && (
                                       <DropdownMenuItem
                                         className="flex items-center cursor-pointer"
@@ -2452,6 +2464,18 @@ const ProductsInventoryPage: React.FC = () => {
           onClearSelection={clearSelection}
         />
       )}
+
+      {/* Generate Units Dialog */}
+      <GenerateUnitsDialog
+        open={generateUnitsDialogOpen}
+        onOpenChange={setGenerateUnitsDialogOpen}
+        item={selectedItemForUnits}
+        onUnitsGenerated={() => {
+          // Refresh the items list after units are generated
+          refetch();
+          setSelectedItemForUnits(null);
+        }}
+      />
     </div>
   );
 };
