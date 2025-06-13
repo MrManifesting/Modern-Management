@@ -28,6 +28,8 @@ import {
   ALL_FLOWER_QUALITIES,
   BULK_SIZES,
   WEIGHT_OPTIONS,
+  VENDOR_OPTIONS,
+  FLOWER_QUALITY_OPTIONS,
   getSubcategoriesForCategory
 } from "./category-data";
 import { itemFormSchema, ItemForm, Item } from "@shared/schema";
@@ -164,10 +166,20 @@ export default function ItemFormComponent({
 
   const statuses = ["draft", "listed", "sold"];
   
-  // Set default weight to "pound" when form is initialized
+  // Set default values when form is initialized
   useEffect(() => {
     if (!form.getValues("weight")) {
-      form.setValue("weight", "pound");
+      form.setValue("weight", "1 pound");
+    }
+    if (!form.getValues("category")) {
+      form.setValue("category", "Flower");
+    }
+    if (!form.getValues("brand")) {
+      form.setValue("brand", "Gold Standard");
+    }
+    // Set flower quality default if it's a flower product
+    if (!form.getValues("condition")) {
+      form.setValue("condition", "Top Shelf");
     }
   }, []);
 
@@ -228,7 +240,7 @@ export default function ItemFormComponent({
                 <FormLabel>Product Weight</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value || "pound"}
+                  defaultValue={field.value || "1 pound"}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -312,7 +324,7 @@ export default function ItemFormComponent({
             name="condition"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Condition</FormLabel>
+                <FormLabel>Flower Quality</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
@@ -323,9 +335,9 @@ export default function ItemFormComponent({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {conditions.map((condition) => (
-                      <SelectItem key={condition} value={condition}>
-                        {condition}
+                    {FLOWER_QUALITY_OPTIONS.map((quality) => (
+                      <SelectItem key={quality} value={quality}>
+                        {quality}
                       </SelectItem>
                     ))}
                   </SelectContent>

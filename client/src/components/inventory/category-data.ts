@@ -5,6 +5,7 @@
 
 // Main product categories
 export const MAIN_CATEGORIES = [
+  'Flower',
   'Concentrates',
   'Edibles',
   'Vapes',
@@ -104,7 +105,7 @@ export const BULK_SIZES = [
 
 // Standard weight options for all products
 export const WEIGHT_OPTIONS = [
-  'pound',
+  '1 pound',
   'half pound', 
   'quarter pound',
   'ounce',
@@ -112,6 +113,21 @@ export const WEIGHT_OPTIONS = [
   'quarter ounce', 
   'eighth',
   'gram'
+];
+
+// Vendor options
+export const VENDOR_OPTIONS = [
+  'Gold Standard',
+  'Mason Jar Co',
+  'Premium Supply'
+];
+
+// Flower quality options
+export const FLOWER_QUALITY_OPTIONS = [
+  'Top Shelf',
+  'Premium',
+  'Mid-Grade',
+  'Budget'
 ];
 
 // Export structured category map for easier access
