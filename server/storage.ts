@@ -10,8 +10,8 @@ import {
   AffiliateTransaction, InsertAffiliateTransaction,
   
   // Import schema tables for Drizzle
-  users, items, marketplaces, sales, employees, inventoryActions, productBreakdowns,
-  affiliates, qrCodes, affiliateTransactions
+  users, items, sales, employees, inventoryActions, productBreakdowns,
+  affiliates, qrCodes, affiliateTransactions, stores, marketplaceTypes, customers, customerTiers
 } from "@shared/schema";
 
 // Import Telegram photo schema
@@ -1753,8 +1753,8 @@ export class DatabaseStorage implements IStorage {
       }
       
       try {
-        // Check if there are any marketplaces
-        const existingMarketplaces = await db.select().from(marketplaces);
+        // Check if there are any stores (marketplaces)
+        const existingMarketplaces = await db.select().from(stores);
         
         if (existingMarketplaces.length === 0) {
           // Initialize with default marketplaces
@@ -2287,27 +2287,36 @@ export class DatabaseStorage implements IStorage {
       .where(eq(items.breakdownStatus, BreakdownStatus.WAITING));
   }
   
-  // Marketplace methods
-  async getMarketplaces(): Promise<Marketplace[]> {
-    return await db.select().from(marketplaces);
+  // Marketplace methods (using stores table)
+  async getMarketplaces(): Promise<any[]> {
+    return await db.select().from(stores);
   }
   
-  async getAllMarketplaces(): Promise<Marketplace[]> {
-    return await db.select().from(marketplaces);
+  async getAllMarketplaces(): Promise<any[]> {
+    return await db.select().from(stores);
   }
   
-  async getMarketplaceByName(name: string): Promise<Marketplace | undefined> {
-    const [marketplace] = await db.select().from(marketplaces).where(eq(marketplaces.name, name));
+  async getMarketplaceByName(name: string): Promise<any | undefined> {
+    const [marketplace] = await db.select().from(stores).where(eq(stores.name, name));
     return marketplace;
   }
   
-  async getMarketplace(id: number): Promise<Marketplace | undefined> {
-    const [marketplace] = await db.select().from(marketplaces).where(eq(marketplaces.id, id));
+  async getMarketplace(id: number): Promise<any | undefined> {
+    const [marketplace] = await db.select().from(stores).where(eq(stores.id, id));
     return marketplace;
   }
   
-  async createMarketplace(marketplace: InsertMarketplace): Promise<Marketplace> {
-    const [newMarketplace] = await db.insert(marketplaces).values(marketplace).returning();
+  async createMarketplace(marketplace: any): Promise<any> {
+    const [newMarketplace] = await db.insert(stores).values({
+      name: marketplace.name,
+      marketplaceTypeId: marketplace.marketplaceTypeId,
+      isActive: true,
+      connectionStatus: 'disconnected',
+      pullInterval: 15,
+      pushInterval: 30,
+      priority: 1,
+      credentials: marketplace.credentials || {}
+    }).returning();
     return newMarketplace;
   }
   
