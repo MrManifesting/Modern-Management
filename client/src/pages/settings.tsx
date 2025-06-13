@@ -15,10 +15,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sun, Moon, LifeBuoy, Settings2, RotateCcw, BellRing, Eye, Headphones, Keyboard, Sparkles, Store } from 'lucide-react';
+import { EditProfileModal } from '@/components/edit-profile-modal';
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   // Simulate loading state for demonstration
   useEffect(() => {
