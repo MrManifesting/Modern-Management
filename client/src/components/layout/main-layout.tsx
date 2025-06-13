@@ -40,6 +40,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Employee Management";
       case "/affiliate-dashboard":
         return "Affiliate Program";
+      case "/sync-dashboard":
+        return "Sync Dashboard";
       case "/credentials":
         return "Credential Management";
       default:
