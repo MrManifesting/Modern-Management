@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 // Direct deployment fix to sync enhanced interface
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { exec } from 'child_process';
 
 console.log('Creating direct deployment to sync enhanced interface...');
 
