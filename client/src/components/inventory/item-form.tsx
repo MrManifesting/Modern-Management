@@ -164,36 +164,12 @@ export default function ItemFormComponent({
 
   const statuses = ["draft", "listed", "sold"];
   
-  // Effect to update subcategories when main category changes
+  // Set default weight to "pound" when form is initialized
   useEffect(() => {
-    const selectedCategory = form.getValues("category");
-    if (selectedCategory) {
-      // Update subcategories based on selected main category
-      let subCats: string[] = [];
-      
-      // Handle different category types
-      if (selectedCategory.toLowerCase() === "flower") {
-        subCats = FLOWER_STRAIN_TYPES;
-        setWeightOptions(WEIGHT_OPTIONS.flower);
-      } else if (selectedCategory.toLowerCase() === "concentrates") {
-        subCats = getSubcategoriesForCategory("Concentrates");
-        setWeightOptions(WEIGHT_OPTIONS.concentrates);
-      } else if (selectedCategory.toLowerCase() === "pre-rolls") {
-        subCats = getSubcategoriesForCategory("Pre-Rolls");
-        setWeightOptions(WEIGHT_OPTIONS.prerolls);
-      } else if (selectedCategory.toLowerCase() === "bulk") {
-        subCats = BULK_SIZES;
-      } else {
-        subCats = getSubcategoriesForCategory(selectedCategory);
-        setWeightOptions([]);
-      }
-      
-      setSubcategories(subCats);
-      
-      // Clear subcategory selection when main category changes
-      form.setValue("subcategory", "");
+    if (!form.getValues("weight")) {
+      form.setValue("weight", "pound");
     }
-  }, [form.watch("category")]);
+  }, []);
 
   return (
     <Form {...form}>
@@ -241,74 +217,36 @@ export default function ItemFormComponent({
             )}
           />
 
-          {/* Subcategory field - appears when a main category is selected */}
-          {subcategories.length > 0 && (
-            <FormField
-              control={form.control}
-              name="subcategory"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subcategory</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString() || ""}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subcategory" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {subcategories.map((subcat: string) => (
-                        <SelectItem key={subcat} value={subcat}>
-                          {subcat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
 
-          {/* Weight options field - appears for products that have standard weights */}
-          {weightOptions.length > 0 && (
-            <FormField
-              control={form.control}
-              name="weight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Weight</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      // Extract numeric part from weight option (e.g. "3.5g (Eighth)" -> 3.5)
-                      const numericWeight = parseFloat(value.split('g')[0]);
-                      if (!isNaN(numericWeight)) {
-                        field.onChange(numericWeight);
-                        form.setValue("weightUnit", "g");
-                      }
-                    }}
-                    defaultValue={field.value ? `${field.value}g` : undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select weight" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {weightOptions.map((option: string) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+
+          {/* Weight field - standardized weight options */}
+          <FormField
+            control={form.control}
+            name="weight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Product Weight</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value || "pound"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select weight" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {WEIGHT_OPTIONS.map((option: string) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}

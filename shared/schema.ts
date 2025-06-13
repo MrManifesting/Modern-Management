@@ -83,7 +83,7 @@ export const items = pgTable("items", {
   status: varchar("status").default("active"),
   images: json("images").default([]),
   barcode: varchar("barcode"),
-  weight: numeric("weight"),
+  weight: varchar("weight").default("pound"),
   dimensions: varchar("dimensions"),
   condition: varchar("condition"),
   packageSize: varchar("package_size"),
