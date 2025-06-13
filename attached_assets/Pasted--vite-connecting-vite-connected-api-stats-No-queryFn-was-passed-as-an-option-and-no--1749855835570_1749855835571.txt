@@ -1,0 +1,16 @@
+[vite] connecting...
+[vite] connected.
+[["/api/stats"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+[["/api/items"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+[["/api/stats"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+[["/api/items"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[["/api/stats"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+[["/api/items"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+[vite] hot updated: /src/pages/products-inventory.tsx
+[vite] hot updated: /src/index.css?v=ypv1SNdSpnycxG6eycORe
+[vite] hot updated: /src/pages/products-inventory.tsx
+[vite] hot updated: /src/index.css?v=ypv1SNdSpnycxG6eycORe

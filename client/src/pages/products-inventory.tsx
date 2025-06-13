@@ -90,6 +90,7 @@ import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
+import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
 
 // Define the Product interface
 interface Product {
@@ -359,6 +360,8 @@ const ProductsInventoryPage: React.FC = () => {
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [generateUnitsDialogOpen, setGenerateUnitsDialogOpen] = useState(false);
+  const [itemForUnitsGeneration, setItemForUnitsGeneration] = useState<Product | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -934,6 +937,44 @@ const ProductsInventoryPage: React.FC = () => {
     // Set selected items for printing and open print modal
     setSelectedItem(null); // Clear single item selection
     setIsPrintModalOpen(true);
+  };
+
+  // Handle Generate Units
+  const handleGenerateUnits = (item: Product) => {
+    setItemForUnitsGeneration(item);
+    setGenerateUnitsDialogOpen(true);
+  };
+
+  const handleUnitsGenerated = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+    setGenerateUnitsDialogOpen(false);
+    setItemForUnitsGeneration(null);
+    toast({
+      title: "Units Generated",
+      description: "Individual units have been created successfully with unique SKUs and barcodes."
+    });
+  };
+
+  // Handle Generate Barcode for items without barcodes
+  const handleGenerateBarcode = async (itemId: number) => {
+    try {
+      await apiRequest('/api/items/generate-barcode', {
+        method: 'POST',
+        body: { itemId }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      toast({
+        title: "Barcode Generated",
+        description: "Barcode and QR code have been generated successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate barcode. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Render mobile product card with selection checkbox
