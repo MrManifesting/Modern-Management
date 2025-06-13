@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 13, 2025: **Inventory Features Restoration Complete**
+  - Fixed React Query configuration to resolve "No queryFn" errors and restore data loading
+  - Restored barcode and QR code generation functionality (both bulk and individual operations)
+  - Added Generate Units Dialog for breaking down bulk items into individual sellable units
+  - Implemented SKU generation capabilities with unique identifiers per unit
+  - Restored print preview functionality for barcode labels with proper formatting
+  - Added color-coded categories and status indicators throughout the inventory view
+  - Bulk editing capabilities now include barcode/QR code operations and SKU generation
+  - All missing inventory features successfully restored after database connection issues
+  - Application builds and deploys successfully with 327 items loading properly
 - June 13, 2025: **Product Form Standardization Complete**
   - Updated category system: Flower category restored with "Flower" as default
   - Standardized weight options: "1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"
