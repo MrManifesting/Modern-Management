@@ -445,7 +445,13 @@ export class BidirectionalSyncService {
         type,
         message,
         data: JSON.stringify(data),
-        timestamp: new Date()
+        timestamp: new Date(),
+        source: 'system', // Add required source field
+        status: 'completed',
+        itemsProcessed: 0,
+        itemsSuccess: 0,
+        itemsError: 0,
+        duration: 0
       });
     } catch (error) {
       console.error('Failed to log sync event:', error);
