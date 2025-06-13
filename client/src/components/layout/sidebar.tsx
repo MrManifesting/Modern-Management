@@ -180,6 +180,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       highlight: true,
     },
     {
+      title: "Sync Dashboard",
+      icon: <RefreshCw className="h-5 w-5" />,
+      path: "/sync-dashboard",
+      highlight: true,
+    },
+    {
       title: "Credentials",
       icon: <Shield className="h-5 w-5" />,
       path: "/credentials",
