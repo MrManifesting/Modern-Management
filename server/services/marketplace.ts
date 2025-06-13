@@ -29,16 +29,18 @@ export class MarketplaceService {
       // Create the appropriate service based on marketplace type
       const type = (marketplace.type || '').toLowerCase();
       
-      // Special handling for Shopify - it could be under 'shopify' or 'general' type
-      // with Shopify-specific credentials
+      // Special handling for Shopify - use environment variables for working connection
       if (type === 'shopify' || 
           (type === 'general' && marketplace.name.toLowerCase().includes('shopify'))) {
-        const credentials = marketplace.credentials as Record<string, string>;
-        this.service = new ShopifyService(
-          credentials.shopName || credentials.storeUrl || 'simplifiedcurations.myshopify.com', 
-          credentials.apiKey || credentials.accessToken, 
-          credentials.apiSecret || ''
-        );
+        // Use environment variables for Shopify connection since it's already working
+        const shopifyStore = process.env.SHOPIFY_STORE || 'simplifiedcurations.myshopify.com';
+        const shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        
+        if (shopifyToken) {
+          this.service = new ShopifyService(shopifyStore, shopifyToken, '');
+        } else {
+          throw new Error('Shopify credentials not available in environment variables');
+        }
       }
       // Add other marketplace implementations here
       else {
