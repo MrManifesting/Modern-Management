@@ -957,78 +957,7 @@ const ProductsInventoryPage: React.FC = () => {
 
 
 
-  // Individual item handlers
-  const handleGenerateSKU = async (id: number) => {
-    try {
-      const item = products.find(p => p.id === id);
-      if (!item) return;
-      
-      const response = await apiRequest('PUT', `/api/items/${id}`, {
-        ...item,
-        sku: `AUTO-${Date.now()}-${id}`
-      });
-      
-      if (response.ok) {
-        refetchItems();
-        toast({
-          title: "SKU Generated",
-          description: "New SKU generated successfully",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate SKU",
-        variant: "destructive",
-      });
-    }
-  };
 
-  const handleGenerateBarcode = async (id: number) => {
-    try {
-      const response = await apiRequest('POST', `/api/items/${id}/barcode`);
-      if (response.ok) {
-        refetchItems();
-        toast({
-          title: "Barcode Generated",
-          description: "New barcode generated successfully",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate barcode",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGenerateQRCode = async (id: number) => {
-    try {
-      const response = await apiRequest('POST', `/api/items/${id}/qr-code`);
-      if (response.ok) {
-        refetchItems();
-        toast({
-          title: "QR Code Generated",
-          description: "New QR code generated successfully",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate QR code",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewShopifyClick = (id: number) => {
-    const item = products.find(p => p.id === id);
-    if (item?.shopifyId) {
-      const shopifyUrl = `https://simplifiedcurations.myshopify.com/admin/products/${item.shopifyId}`;
-      window.open(shopifyUrl, '_blank');
-    }
-  };
 
 
 
