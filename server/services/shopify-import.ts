@@ -197,6 +197,44 @@ interface ImportResult {
 }
 
 /**
+ * Properly parse a CSV line with quoted fields
+ */
+function parseCSVLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let i = 0;
+  
+  while (i < line.length) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Handle escaped quotes
+        current += '"';
+        i += 2;
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+        i++;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      // Field delimiter outside quotes
+      result.push(current.trim());
+      current = '';
+      i++;
+    } else {
+      current += char;
+      i++;
+    }
+  }
+  
+  // Add the last field
+  result.push(current.trim());
+  return result;
+}
+
+/**
  * Parse CSV content with a specific delimiter
  */
 function parseCSVWithDelimiter(csvContent: string, delimiter: string): ParsedCsvData {
@@ -216,16 +254,8 @@ function parseCSVWithDelimiter(csvContent: string, delimiter: string): ParsedCsv
   for (const line of lines) {
     if (!line.trim()) continue;
     
-    // Split by the specified delimiter and clean up quotes
-    const cells = line.split(delimiter).map(cell => {
-      let cleaned = cell.trim();
-      // Remove surrounding quotes if present
-      if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-        cleaned = cleaned.slice(1, -1);
-      }
-      return cleaned;
-    });
-    
+    // Properly parse CSV line with quoted fields
+    const cells = parseCSVLine(line, delimiter);
     rows.push(cells);
   }
   
@@ -422,53 +452,94 @@ export function extractProductInfo(
     console.log(`Row data: ${JSON.stringify(row.slice(0, 10))}...`); // Show first 10 fields
     
     if (format === 'product') {
-      // Map headers to indices (case-insensitive)
+      // Map headers to indices (case-insensitive) with better matching
       const headerMap: {[key: string]: number} = {};
       headers.forEach((header, index) => {
-        headerMap[header.toLowerCase().trim()] = index;
+        const cleanHeader = header.toLowerCase().trim().replace(/['"]/g, '');
+        headerMap[cleanHeader] = index;
       });
       
-      console.log('Header mapping:', Object.keys(headerMap));
+      // Log first few mappings for debugging
+      console.log('Sample header mappings:', Object.keys(headerMap).slice(0, 10));
       
+      // Enhanced field extraction with multiple fallback options
       const handle = row[headerMap['handle']] || '';
       const title = row[headerMap['title']] || '';
-      const sku = row[headerMap['variant sku']] || row[headerMap['sku']] || '';
-      const description = row[headerMap['body (html)']] || row[headerMap['description']] || '';
-      const productType = row[headerMap['product type']] || row[headerMap['type']] || '';
+      
+      // Try multiple SKU field variations
+      const sku = row[headerMap['variant sku']] || 
+                  row[headerMap['sku']] || 
+                  row[headerMap['variant inventory item id']] || '';
+      
+      // Try multiple description field variations
+      const description = row[headerMap['body (html)']] || 
+                         row[headerMap['description']] || 
+                         row[headerMap['body']] || '';
+      
+      // Try multiple product type variations
+      const productType = row[headerMap['product type']] || 
+                         row[headerMap['type']] || 
+                         row[headerMap['product category']] || '';
+      
       const vendor = row[headerMap['vendor']] || '';
-      const published = (row[headerMap['published']] || '').toLowerCase() === 'true';
+      const published = (row[headerMap['published'] || row[headerMap['status']]] || '').toLowerCase() === 'true';
       const tags = row[headerMap['tags']] || '';
       
-      // Extract quantity
+      // Extract quantity with multiple field options
       let quantity = 0;
-      const qtyStr = row[headerMap['variant inventory qty']] || row[headerMap['available']] || '0';
-      quantity = parseInt(qtyStr) || 0;
+      const qtyStr = row[headerMap['variant inventory qty']] || 
+                     row[headerMap['available']] || 
+                     row[headerMap['inventory qty']] || 
+                     row[headerMap['quantity']] || '0';
+      quantity = parseInt(String(qtyStr).replace(/[^0-9]/g, '')) || 0;
       
-      // Extract price
+      // Extract price with multiple field options
       let price = 0;
-      const priceStr = row[headerMap['variant price']] || row[headerMap['price']] || '0';
-      price = parseFloat(priceStr) || 0;
+      const priceStr = row[headerMap['variant price']] || 
+                       row[headerMap['price']] || 
+                       row[headerMap['price / united states']] || 
+                       row[headerMap['cost per item']] || '0';
+      price = parseFloat(String(priceStr).replace(/[^0-9.]/g, '')) || 0;
       
       // Extract weight
       let weight: number | null = null;
-      const weightStr = row[headerMap['variant grams']] || row[headerMap['weight']] || '';
+      const weightStr = row[headerMap['variant grams']] || 
+                        row[headerMap['weight']] || 
+                        row[headerMap['variant weight']] || '';
       if (weightStr) {
-        weight = parseFloat(weightStr) || null;
+        weight = parseFloat(String(weightStr).replace(/[^0-9.]/g, '')) || null;
       }
       
-      console.log(`Extracted data:`, { 
-        handle, title, sku, quantity, price, weight, 
-        productType, vendor, published, tags: tags.substring(0, 50) 
+      console.log(`Extracted data for row ${rowIndex}:`, { 
+        handle: handle.substring(0, 30), 
+        title: title.substring(0, 30), 
+        sku: sku.substring(0, 20), 
+        quantity, 
+        price, 
+        weight,
+        productType: productType.substring(0, 20),
+        vendor: vendor.substring(0, 20)
       });
       
-      if (!title) {
-        console.log('Skipping row - no title found');
+      // Skip rows with no meaningful data
+      if (!title && !handle && !sku) {
+        console.log(`Skipping row ${rowIndex} - no meaningful data found`);
+        return null;
+      }
+      
+      // Use handle as title if title is missing but handle exists
+      const finalTitle = title || handle || `Product ${rowIndex}`;
+      const finalHandle = handle || title.toLowerCase().replace(/[^a-z0-9]+/g, '-') || `product-${rowIndex}`;
+      
+      // Skip if we still don't have a valid title
+      if (!finalTitle || finalTitle.length < 2) {
+        console.log(`Skipping row ${rowIndex} - invalid title: "${finalTitle}"`);
         return null;
       }
       
       return {
-        handle: handle.trim(),
-        title: title.trim(),
+        handle: finalHandle.trim(),
+        title: finalTitle.trim(),
         sku: sku.trim(),
         quantity,
         price,
