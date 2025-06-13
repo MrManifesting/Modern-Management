@@ -65,17 +65,25 @@ export function createCannabisProductFromRow(row: string[]): CannabisProduct | n
  * Converts a cannabis product to an inventory item
  */
 export function cannabisProductToInventoryItem(product: CannabisProduct): InsertItem {
+  // Ensure all numeric values are valid
+  const safeAmount = isNaN(product.amount) ? 1 : Math.max(0, Math.floor(product.amount));
+  const safePercentage = isNaN(product.percentage) ? 0 : Math.max(0, product.percentage);
+  const safeBulk = isNaN(product.bulk) ? 0 : Math.max(0, product.bulk);
+  const safeDistro = isNaN(product.distro) ? 0 : Math.max(0, product.distro);
+  const safeMaster = isNaN(product.master) ? 0 : Math.max(0, product.master);
+  const safeMaster2 = isNaN(product.master2) ? 0 : Math.max(0, product.master2);
+
   // Build a rich description based on product data
   const description = `
 ${product.strain} - ${product.strainType}
-THC: ${product.percentage}%
+THC: ${safePercentage}%
 Tier: ${product.tier}
 
 Price Tiers:
-- Bulk: $${product.bulk.toFixed(2)}
-- Distributor (25lbs+): $${product.distro.toFixed(2)}
-- Master (50lbs+): $${product.master.toFixed(2)}
-- Master 2 (100lbs+): $${product.master2.toFixed(2)}
+- Bulk: $${safeBulk.toFixed(2)}
+- Distributor (25lbs+): $${safeDistro.toFixed(2)}
+- Master (50lbs+): $${safeMaster.toFixed(2)}
+- Master 2 (100lbs+): $${safeMaster2.toFixed(2)}
 
 SKU: ${product.sku}
   `.trim();
@@ -88,34 +96,43 @@ SKU: ${product.sku}
   ];
 
   // Add percentage range tag
-  if (product.percentage >= 30) {
+  if (safePercentage >= 30) {
     tags.push('high-thc');
-  } else if (product.percentage >= 25) {
+  } else if (safePercentage >= 25) {
     tags.push('medium-thc');
   } else {
     tags.push('moderate-thc');
   }
 
   // Extract product SKU or generate if not provided
-  const sku = product.sku || `CBD-${product.strain.substring(0, 3).toUpperCase()}-${Math.floor(product.percentage * 100).toString().padStart(4, '0')}`;
+  const sku = product.sku || `CBD-${product.strain.substring(0, 3).toUpperCase()}-${Math.floor(safePercentage * 100).toString().padStart(4, '0')}`;
 
   return {
     name: product.strain,
     description,
-    price: product.bulk,
-    quantity: product.amount,
-    status: product.amount > 0 ? 'in_stock' : 'out_of_stock',
+    costPrice: safeBulk.toString(),
+    basePrice: safeBulk.toString(),
+    salePrice: safeBulk.toString(),
+    wholesalePrice: (safeBulk * 0.8).toString(),
+    quantity: safeAmount,
+    status: safeAmount > 0 ? 'active' : 'inactive',
     category: 'cannabis',
     condition: 'new',
     sku,
     barcode: generateBarcodeData(sku),
-    lowStockThreshold: 5,
-    reorderPoint: 2,
     tags,
     images: [],
     marketplace: [],
-    aiEnhanced: false,
-    aiTags: []
+    tier: product.tier,
+    strainType: product.strainType,
+    metadata: {
+      thc_percentage: safePercentage,
+      bulk_price: safeBulk,
+      distro_price: safeDistro,
+      master_price: safeMaster,
+      master2_price: safeMaster2,
+      imported_from: 'csv'
+    }
   };
 }
 
