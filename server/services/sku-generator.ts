@@ -198,7 +198,6 @@ function getCategoryPrefix(category: string): string {
     'Health': 'HLT',
     'Beauty': 'BTY',
     'Sports': 'SPT',
-    'Outdoor': 'OUT',
     'Automotive': 'AUT',
     'Home': 'HOM',
     'Furniture': 'FRN',
