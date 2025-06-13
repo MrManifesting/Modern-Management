@@ -43,10 +43,10 @@ export interface IStorage {
   // Item methods
   getItems(): Promise<Item[]>;
   getItem(id: number): Promise<Item | undefined>;
+  getItemBySku(sku: string): Promise<Item | undefined>;
   createItem(item: InsertItem): Promise<Item>;
   updateItem(id: number, item: Partial<InsertItem>): Promise<Item | undefined>;
   deleteItem(id: number): Promise<boolean>;
-  getItemBySku(sku: string): Promise<Item | undefined>;
   getBulkItems(): Promise<Item[]>;
   getBreakdownItems(): Promise<Item[]>;
   getWaitingItems(): Promise<Item[]>;
