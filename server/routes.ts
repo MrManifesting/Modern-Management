@@ -4438,6 +4438,9 @@ ${topCustomersCsv}`;
   
   // Register bidirectional sync routes for app, Google Sheets, and Shopify
   registerBidirectionalSyncRoutes(app, storage);
+  
+  // Register connection status routes for sync debugging
+  registerConnectionStatusRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;
