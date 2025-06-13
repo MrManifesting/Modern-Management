@@ -2,423 +2,6 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import fs from "fs";
-import path from "path";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
-import { z } from "zod";
-import { Parser } from "@json2csv/plainjs";
-import { log } from "./vite";
-import { analyzeProductImage, generateProductDescription } from "./services/openai";
-import { generateSKU, generateSKUBatch } from "./services/sku-generator";
-import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode-generator";
-import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
-// Inventory breakdown functions are imported below
-import { 
-  fetchShopifySalesReport, 
-  fetchShopifyInventoryReport, 
-  fetchShopifyCustomerReport 
-} from "./services/shopify-reports";
-import { registerShopifyImportRoutes } from "./routes-shopify-import";
-import { registerCSVImportRoutes } from "./routes-csv-import";
-import { registerCleanupRoutes } from "./routes-cleanup";
-import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
-import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
-import { registerMarketplaceRoutes } from "./routes-marketplace";
-import { registerAffiliateRoutes } from "./routes-affiliate";
-import { registerPayPalRoutes } from "./routes-paypal";
-import { registerAIRoutes } from "./routes-ai";
-import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
-import { registerLabelRoutes } from "./routes-labels";
-import { registerSyncRoutes } from "./routes-sync";
-import { registerBreakdownRoutes } from "./routes-breakdown";
-import { registerBarcodeRoutes } from "./routes-barcode";
-import { registerTelegramRoutes } from "./routes-telegram";
-import { registerBulkOperationRoutes } from "./routes-bulk";
-import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
-import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
-import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
-import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
-import { registerShopifyFixRoutes } from "./routes-shopify-fix";
-import { registerCredentialRoutes } from "./routes-credentials";
-import csvDirectRoutes from "./routes-csv-direct";
-import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
-import { registerConnectionStatusRoutes } from "./routes-connection-status";
-// Import Replit Auth system for proper Google login and HTTPS support
-import { setupAuth, requireAuth } from "./auth-simple";
-import { 
-  insertItemSchema, 
-  insertMarketplaceSchema, 
-  insertSaleSchema,
-  csvExportSchema, 
-  reportSchema,
-  forecastRequestSchema,
-  insertEmployeeSchema,
-  insertInventoryActionSchema,
-  breakdownTargetSchema,
-  ItemType,
-  BreakdownStatus,
-  insertBreakdownSchema,
-  TimeSeriesData,
-  Item,
-  InsertItem
-} from "@shared/schema";
-
-// Configure multer for file uploads
-const uploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-
-const upload = multer({ storage: uploadStorage });
-
-/**
- * Group time series data by week or month
- * 
- * @param data Original time series data points
- * @param groupBy Group by 'day', 'week', or 'month'
- * @returns Grouped time series data
- */
-function groupTimeSeriesData(data: TimeSeriesData[], groupBy: 'day' | 'week' | 'month'): TimeSeriesData[] {
-  if (groupBy === 'day' || data.length === 0) {
-    return data;
-  }
-  
-  // Sort data by date
-  const sortedData = [...data].sort((a, b) => 
-    new Date(a.label).getTime() - new Date(b.label).getTime()
-  );
-  
-  // Group data points
-  const groupedMap = new Map<string, TimeSeriesData>();
-  
-  sortedData.forEach(point => {
-    const date = new Date(point.label);
-    let groupKey: string;
-    
-    if (groupBy === 'week') {
-      // Get the week number
-      const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-      const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-      const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-      groupKey = `${date.getFullYear()}-W${weekNumber}`;
-    } else {
-      // Month grouping
-      groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-    
-    if (!groupedMap.has(groupKey)) {
-      groupedMap.set(groupKey, {
-        label: groupKey,
-        sales: 0,
-        revenue: 0,
-        profit: 0,
-        isForecasted: point.isForecasted,
-        metadata: point.metadata
-      });
-    }
-    
-    const group = groupedMap.get(groupKey)!;
-    group.sales += point.sales;
-    group.revenue += point.revenue;
-    group.profit += point.profit;
-  });
-  
-  // Convert map back to array and sort
-  return Array.from(groupedMap.values())
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-// analyzeImage import removed per requirements
-// generateSEOContent import removed per requirements
-import { generateBarcodeData } from "./services/barcode";
-import { generateQRCodeDataURL } from "./services/qrcode";
-import { generateForecast, calculateKPIs } from "./services/forecasting";
-import { 
-  createBulkBreakdown, 
-  processBreakdown, 
-  generateStandardBreakdownTargets 
-} from "./services/inventory-breakdown";
-import { generateSKU, generateQuantitySKU } from "./services/sku-generator";
-import { 
-  prepareItemForShopify, 
-  getPushStatus, 
-  setPushStatus, 
-  testConnection, 
-  pushItemToShopify, 
-  getItemPushInfo,
-  isShopifyConfigured,
-  syncProductsFromShopify
-} from "./services/shopify";
-
-/**
- * Process Shopify inventory CSV format
- * 
- * @param rows The CSV rows from the Shopify export
- * @returns Array of imported items
- */
-async function processShopifyInventoryImport(rows: string[][]): Promise<Item[]> {
-  // Skip header row
-  const dataRows = rows.slice(1);
-  const importedItems: Item[] = [];
-  const itemsMap = new Map<string, InsertItem>();
-  
-  console.log(`Processing ${dataRows.length} Shopify inventory rows`);
-  
-  for (let i = 0; i < dataRows.length; i++) {
-    const row = dataRows[i];
-    if (row.length < 5) continue; // Skip rows with insufficient data
-    
-    // Skip "not stocked" items from Printify
-    if (row.includes("Printify") && row.includes("not stocked")) continue;
-    
-    // Extract data from Shopify format
-    const handle = row[0]?.trim() || '';
-    const title = row[1]?.trim() || '';
-    const optionName = row[2]?.trim() || '';
-    const optionValue = row[3]?.trim() || '';
-    const sku = row[8]?.trim() || '';
-    
-    // Find the Available column index
-    const headers = rows[0];
-    const availableIndex = headers.indexOf('Available');
-    const locationIndex = headers.indexOf('Location');
-    
-    const location = locationIndex >= 0 ? row[locationIndex]?.trim() || '' : '';
-    const quantity = availableIndex >= 0 ? row[availableIndex]?.trim() || '0' : '0';
-    
-    // Skip empty titles or handles
-    if (!title || !handle) continue;
-    
-    // Parse the product data
-    try {
-      // If this is a variant of a product already in our map, update that product
-      if (itemsMap.has(handle)) {
-        continue; // Skip variants for now, or merge them if needed
-      }
-      
-      // Weight information from option value
-      let weight: number | null = null;
-      let weightUnit = '';
-      
-      if (optionValue) {
-        // Try to extract weight information
-        const weightMatch = optionValue.match(/(\d+(?:\.\d+)?)\s*(pound|pounds|lb|lbs|gram|grams|g|ounce|ounces|oz)/i);
-        if (weightMatch) {
-          const weightAmount = parseFloat(weightMatch[1]);
-          weightUnit = weightMatch[2].toLowerCase();
-          
-          // Convert to a standard unit (grams)
-          if (weightUnit.includes('pound') || weightUnit.includes('lb')) {
-            weight = weightAmount * 453.592; // Convert pounds to grams
-          } else if (weightUnit.includes('ounce') || weightUnit.includes('oz')) {
-            weight = weightAmount * 28.3495; // Convert ounces to grams
-          } else {
-            weight = weightAmount; // Already in grams
-          }
-        }
-      }
-      
-      // Extract product information
-      const titleParts = title.split(' - ');
-      const strain = titleParts[0] || title;
-      
-      // Try to extract category/tier from the title
-      let category = 'cannabis';
-      let strainType = 'Hybrid';
-      let tier = '';
-      
-      if (titleParts.length > 1) {
-        // Process THCA identification
-        if (titleParts.some(part => part.toUpperCase().includes('THCA'))) {
-          category = 'THCA Flower';
-        }
-        
-        // Process tier information
-        const tierKeywords = [
-          { keyword: 'TOP SHELF', tier: 'Top Shelf' },
-          { keyword: 'CLASSIC RESERVE', tier: 'Classic Reserve' },
-          { keyword: 'AAA INDOOR', tier: 'AAA Indoor' },
-          { keyword: 'AA INDOOR', tier: 'AA Indoor' },
-          { keyword: 'EXOTIC INDOOR', tier: 'Exotic Indoor' }
-        ];
-        
-        for (const { keyword, tier: tierValue } of tierKeywords) {
-          if (title.toUpperCase().includes(keyword)) {
-            tier = tierValue;
-            break;
-          }
-        }
-        
-        // Look for strain type indicators
-        const strainTypes = [
-          { keyword: 'INDICA', type: 'Indica' },
-          { keyword: 'SATIVA', type: 'Sativa' },
-          { keyword: 'HYBRID', type: 'Hybrid' }
-        ];
-        
-        for (const { keyword, type } of strainTypes) {
-          if (title.toUpperCase().includes(keyword)) {
-            strainType = type;
-            break;
-          }
-        }
-      }
-      
-      // Set a reasonable price based on the tier and weight
-      let price = 39.99; // Default price
-      
-      // Price multiplier based on tier
-      const tierMultiplier = {
-        'Top Shelf': 1.5,
-        'Exotic Indoor': 1.8,
-        'Classic Reserve': 1.3,
-        'AAA Indoor': 1.2,
-        'AA Indoor': 1.0
-      };
-      
-      const multiplier = tier ? (tierMultiplier[tier] || 1.0) : 1.0;
-      
-      // Adjust price based on weight
-      if (weight) {
-        if (weight > 400) { // Pound (453g)
-          price = 500 * multiplier;
-        } else if (weight > 200) { // Half pound
-          price = 275 * multiplier;
-        } else if (weight > 100) { // Quarter pound
-          price = 150 * multiplier;
-        } else if (weight >= 28) { // Ounce (28g)
-          price = 120 * multiplier;
-        } else if (weight >= 14) { // Half ounce
-          price = 75 * multiplier;
-        } else if (weight >= 7) { // Quarter ounce
-          price = 40 * multiplier;
-        } else if (weight >= 3.5) { // Eighth (3.5g)
-          price = 25 * multiplier;
-        } else {
-          price = weight * 5 * multiplier; // $5 per gram adjusted by tier
-        }
-      } else if (optionValue) {
-        // If we couldn't parse the weight but we have option values
-        if (optionValue.toLowerCase().includes('pound')) {
-          price = 500 * multiplier;
-        } else if (optionValue.toLowerCase().includes('1/2')) {
-          price = 275 * multiplier;
-        } else if (optionValue.toLowerCase().includes('1/4')) {
-          price = 150 * multiplier;
-        } else if (optionValue.match(/\b28\s*g/i)) {
-          price = 120 * multiplier;
-        } else if (optionValue.match(/\b14\s*g/i)) {
-          price = 75 * multiplier;
-        } else if (optionValue.match(/\b7\s*g/i)) {
-          price = 40 * multiplier;
-        } else if (optionValue.match(/\b3.5\s*g/i)) {
-          price = 25 * multiplier;
-        }
-      }
-      
-      // Generate a description with available information
-      const description = `${strain} - ${strainType}${tier ? ' - ' + tier : ''}
-${optionName}: ${optionValue}
-SKU: ${sku || 'Auto-generated'}
-Quality: Premium Grade Cannabis
-THC/CBD: Lab tested for potency and purity`;
-      
-      // Prepare tags
-      const tags = [
-        'cannabis',
-        'thca',
-        strainType.toLowerCase(),
-        category.toLowerCase(),
-        tier ? tier.toLowerCase().replace(/\s+/g, '-') : '',
-        handle.toLowerCase()
-      ].filter(Boolean);
-      
-      // Create or update item
-      const itemData: InsertItem = {
-        name: title,
-        description,
-        basePrice: String(price), // Calculated price based on tier and weight
-        quantity: parseInt(quantity) || 0,
-        status: 'active',
-        category,
-        condition: strainType, // Using condition field for strain type
-        weight,
-        packageSize: optionValue,
-        sku: sku || `THCA-${handle.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        barcode: '',
-        tags,
-        images: [],
-        marketplace: [
-          {
-            name: 'Shopify',
-            isListed: true,
-            url: `https://${process.env.SHOPIFY_STORE}/products/${handle}`
-          }
-        ],
-        tier,
-        strainType
-      };
-      
-      // Generate barcode data
-      itemData.barcode = generateBarcodeData(itemData.sku);
-      
-      // Store in our map to prevent duplicates
-      itemsMap.set(handle, itemData);
-    } catch (error) {
-      console.error(`Error processing Shopify row ${i}:`, error);
-    }
-  }
-  
-  // Save all items
-  console.log(`Saving ${itemsMap.size} unique cannabis products`);
-  
-  // Convert map to array to avoid iteration issues
-  const itemsList = Array.from(itemsMap).map(([handle, data]) => ({ handle, data }));
-  
-  for (const { handle, data } of itemsList) {
-    try {
-      // Validate and create item
-      const parsedData = insertItemSchema.parse(data);
-      const item = await storage.createItem(parsedData);
-      
-      // Generate QR code
-      const qrCodeDataURL = await generateQRCodeDataURL(item);
-      const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
-      
-      if (updatedItem) {
-        importedItems.push(updatedItem);
-      }
-    } catch (error) {
-      console.error(`Error saving cannabis product ${handle}:`, error);
-      console.error(`Validation error details:`, error);
-    }
-  }
-  
-  return importedItems;
-}
-import {
-  getShopifyProducts,
-  updateShopifyProduct,
-  createShopifyProduct
-} from "./services/shopify-sync";
-
-import {
-  initializeTelegramBot,
-  getMediaFiles,
-  getMediaUrl,
-  getTelegramBot,
-  deleteMediaFile,
-  renameMediaFile,
-  linkMediaToItem,
-  MediaType
-} from "./services/telegram";
-import path from "path";
-import fs from "fs";
 import { promisify } from "util";
 
 // Configure multer for file uploads (memory storage for existing routes)
@@ -624,7 +207,6 @@ export function registerRoutes(app: Express): Server {
       if (itemData.quantity && itemData.quantity > 1) {
         itemData.sku = generateSKU(itemData, { quantity: itemData.quantity });
       } else {
-        itemData.sku = generateSKU(itemData);
       }
       
       // Generate barcode data
@@ -698,7 +280,7 @@ export function registerRoutes(app: Express): Server {
       
       // Handle numeric values
       if (updateData.basePrice) {
-        updateData.basePrice = parseFloat(updateData.basePrice);
+        updateData.basePrice = String(parseFloat(updateData.basePrice));
       }
       
       // Handle JSON fields
@@ -1359,7 +941,6 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Generate barcode from SKU
-      const barcodeDataURL = await generateBarcodeData(item.sku);
       
       // Generate QR code for Certificate of Analysis if available
       let coaQrDataURL = null;
@@ -1368,14 +949,14 @@ export function registerRoutes(app: Express): Server {
       if (typeof attributes === 'object' && 'coa' in attributes) {
         const coaUrl = (attributes as any).coa;
         if (coaUrl) {
-          coaQrDataURL = await generateQRCodeDataURL({ 
+          coaQrDataURL = await generateQRCodeDataURL({
             id: item.id, 
             name: item.name, 
             customUrl: coaUrl 
           });
         }
       } else if (item.externalUrl) {
-        coaQrDataURL = await generateQRCodeDataURL({ 
+        coaQrDataURL = await generateQRCodeDataURL({
           id: item.id, 
           name: item.name, 
           customUrl: item.externalUrl 
@@ -1622,7 +1203,6 @@ export function registerRoutes(app: Express): Server {
       
       // Regenerate QR code data URL if it doesn't exist
       if (!item.qrCode) {
-        const qrCodeDataURL = await generateQRCodeDataURL(item);
         const updatedItem = await storage.updateItem(id, { qrCode: qrCodeDataURL });
         res.json({
           sku: updatedItem.sku,
@@ -2338,8 +1918,6 @@ export function registerRoutes(app: Express): Server {
               const createdItem = await storage.createItem(item);
               
               // Generate barcode
-              const barcode = generateBarcodeData(item.sku);
-              const qrCode = await generateQRCodeDataURL(createdItem);
               
               // Update with barcode and QR code
               const updatedItem = await storage.updateItem(createdItem.id, { 
@@ -2447,12 +2025,10 @@ export function registerRoutes(app: Express): Server {
               const randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
               itemData.sku = `${prefix}-${namePart}-${randomPart}`;
             } else {
-              itemData.sku = generateSKU(itemData);
             }
           }
           
           // Generate barcode data
-          itemData.barcode = generateBarcodeData(itemData.sku);
           
           // Add image reference if available
           if (fieldIndices['image'] !== undefined && row[fieldIndices['image']]) {
@@ -2468,7 +2044,6 @@ export function registerRoutes(app: Express): Server {
           const item = await storage.createItem(parsedData);
           
           // Generate QR code
-          const qrCodeDataURL = await generateQRCodeDataURL(item);
           const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
           
           if (updatedItem) {
