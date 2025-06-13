@@ -955,27 +955,7 @@ const ProductsInventoryPage: React.FC = () => {
     });
   };
 
-  // Handle Generate Barcode for items without barcodes
-  const handleGenerateBarcode = async (itemId: number) => {
-    try {
-      await apiRequest('/api/items/generate-barcode', {
-        method: 'POST',
-        body: { itemId }
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
-      toast({
-        title: "Barcode Generated",
-        description: "Barcode and QR code have been generated successfully."
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate barcode. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
+
 
   // Render mobile product card with selection checkbox
   const renderMobileProductCard = (product: Product) => (

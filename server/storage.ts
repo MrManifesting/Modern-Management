@@ -1778,11 +1778,16 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Check if there are any employees
-      const existingEmployees = await db.select().from(employees);
-      
-      if (existingEmployees.length === 0) {
-        // Initialize with a default admin employee
-        await this.initializeEmployees();
+      try {
+        const existingEmployees = await db.select().from(employees);
+        
+        if (existingEmployees.length === 0) {
+          // Initialize with a default admin employee
+          await this.initializeEmployees();
+        }
+      } catch (error) {
+        console.error("Warning: Unable to initialize employees due to schema mismatch:", error);
+        console.log("Skipping employee initialization due to database schema issue");
       }
       
       // Check if there are any affiliates
@@ -1834,12 +1839,11 @@ export class DatabaseStorage implements IStorage {
   private async initializeEmployees() {
     const defaultEmployee: InsertEmployee = {
       employeeId: "ADMIN001",
-      name: "Admin User",
+      firstName: "Admin",
+      lastName: "User", 
       email: "admin@mrmanifestlister.com",
-      role: "admin",
-      department: "management",
-      active: true,
-      pin: "123456"
+      position: "admin",
+      status: "active"
     };
     
     await this.createEmployee(defaultEmployee);
