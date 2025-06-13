@@ -566,13 +566,3 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
 };
 
 export default MobileScanner;
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-};
-
-export default MobileScanner;
