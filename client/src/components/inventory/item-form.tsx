@@ -151,9 +151,7 @@ export default function ItemFormComponent({
     }
   };
 
-  // State to hold dynamic subcategories based on main category selection
-  const [subcategories, setSubcategories] = useState<string[]>([]);
-  const [weightOptions, setWeightOptions] = useState<string[]>([]);
+  // Weight options are now static - no need for dynamic state
 
   const conditions = [
     "New",
