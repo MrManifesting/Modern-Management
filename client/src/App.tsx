@@ -41,6 +41,7 @@ import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
+import LabelGeneration from "@/pages/label-generation";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -96,6 +97,7 @@ function Router() {
         <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
+        <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
