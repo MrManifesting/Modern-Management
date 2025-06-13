@@ -33,13 +33,32 @@ export function registerConnectionStatusRoutes(app: Express, storage: IStorage) 
         sheetsConnected = false;
       }
 
-      // Test Shopify connection
+      // Test Shopify connection using stored credentials
       let shopifyConnected = false;
       let shopifyProductCount = 0;
       try {
-        // Check if Shopify credentials exist
-        const shopifyStore = process.env.SHOPIFY_STORE;
-        const shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        // First check if we have saved Shopify credentials
+        const shopifyCredential = await storage.getCredentialByService('shopify');
+        let shopifyStore = process.env.SHOPIFY_STORE;
+        let shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        
+        if (shopifyCredential) {
+          // Decrypt stored credentials
+          const encryptedData = shopifyCredential.credentialData as any;
+          if (encryptedData.encrypted) {
+            // Use the credential decryption API endpoint
+            try {
+              const decryptResponse = await fetch(`http://localhost:5000/api/credentials/decrypt/shopify`);
+              if (decryptResponse.ok) {
+                const credData = await decryptResponse.json();
+                shopifyStore = credData.credentials.shopifyStore || shopifyStore;
+                shopifyToken = credData.credentials.shopifyAccessToken || shopifyToken;
+              }
+            } catch (decryptError) {
+              console.warn("Failed to decrypt stored Shopify credentials:", decryptError);
+            }
+          }
+        }
         
         if (shopifyStore && shopifyToken) {
           // Test actual Shopify API connection
@@ -128,11 +147,26 @@ export function registerConnectionStatusRoutes(app: Express, storage: IStorage) 
 
       if (service === 'shopify' || service === 'all') {
         try {
-          const shopifyStore = process.env.SHOPIFY_STORE;
-          const shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+          // Check for stored credentials first, then fallback to environment variables
+          const shopifyCredential = await storage.getCredentialByService('shopify');
+          let shopifyStore = process.env.SHOPIFY_STORE;
+          let shopifyToken = process.env.SHOPIFY_ACCESS_TOKEN;
+          
+          if (shopifyCredential) {
+            try {
+              const decryptResponse = await fetch(`http://localhost:5000/api/credentials/decrypt/shopify`);
+              if (decryptResponse.ok) {
+                const credData = await decryptResponse.json();
+                shopifyStore = credData.credentials.shopifyStore || shopifyStore;
+                shopifyToken = credData.credentials.shopifyAccessToken || shopifyToken;
+              }
+            } catch (decryptError) {
+              console.warn("Failed to decrypt stored Shopify credentials:", decryptError);
+            }
+          }
           
           if (!shopifyStore || !shopifyToken) {
-            results.shopify = { connected: false, message: "Shopify credentials not configured" };
+            results.shopify = { connected: false, message: "Shopify credentials not found. Please save your credentials first." };
           } else {
             const response = await fetch(`https://${shopifyStore}/admin/api/2023-10/shop.json`, {
               headers: {
