@@ -3,12 +3,40 @@
  */
 import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
-// Create a client
+// Create a client with default query function
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      queryFn: async ({ queryKey }) => {
+        const [endpoint] = queryKey as string[];
+        
+        try {
+          const response = await fetch(endpoint, {
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+              throw new Error(`Authentication required or server error for ${endpoint}`);
+            }
+            
+            const error = await response.json().catch(() => ({ message: "Request failed" }));
+            throw new Error(error.message || "Request failed");
+          }
+
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+          } else {
+            throw new Error(`Invalid response format from ${endpoint}`);
+          }
+        } catch (error: any) {
+          throw error;
+        }
+      },
     },
   },
 });
