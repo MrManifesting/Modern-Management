@@ -2010,43 +2010,30 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "No CSV file provided" });
       }
       
-      // Parse CSV file handling quotes properly
-      const fileContent = req.file.buffer.toString('utf8');
-      const rawRows = fileContent.split('\n').filter(row => row.trim() !== '');
-      const rows: string[][] = [];
+      // Import robust CSV parser
+      const { parseShopifyCSV } = await import('./services/csv-parser-robust');
       
-      for (const row of rawRows) {
-        const parsedRow: string[] = [];
-        let currentCell = '';
-        let insideQuotes = false;
-        
-        for (let i = 0; i < row.length; i++) {
-          if (row[i] === '"' && (i === 0 || row[i-1] !== '\\')) {
-            insideQuotes = !insideQuotes;
-          } else if (row[i] === ',' && !insideQuotes) {
-            parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
-            currentCell = '';
-          } else if (row[i] === '\t' && !insideQuotes) {
-            // Handle tab-delimited files
-            parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
-            currentCell = '';
-          } else {
-            currentCell += row[i];
-          }
-        }
-        
-        if (currentCell) {
-          parsedRow.push(currentCell.trim().replace(/^"(.*)"$/, '$1'));
-        }
-        
-        rows.push(parsedRow);
+      // Parse CSV file using robust parser
+      const fileContent = req.file.buffer.toString('utf8');
+      const parseResult = parseShopifyCSV(fileContent);
+      
+      console.log(`Robust CSV parse: ${parseResult.headers.length} headers, ${parseResult.rows.length} rows`);
+      console.log(`Valid rows: ${parseResult.stats.validRows}, Invalid: ${parseResult.stats.invalidRows}`);
+      
+      if (parseResult.headers.length === 0) {
+        return res.status(400).json({ error: "No headers found in CSV file" });
       }
+      
+      if (parseResult.rows.length === 0) {
+        return res.status(400).json({ error: "No data rows found in CSV file" });
+      }
+      
+      const headers = parseResult.headers;
+      const rows = parseResult.rows;
       
       if (rows.length === 0) {
         return res.status(400).json({ error: "Empty CSV file" });
       }
-      
-      const headers = rows[0];
       // Default to cannabis import unless explicitly set otherwise
       const isCannabisImport = req.body.isCannabisImport !== 'false';
       const isStampImport = false; // Remove stamp import detection
