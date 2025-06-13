@@ -164,7 +164,7 @@ export function registerBidirectionalSyncRoutes(app: Express, storage: IStorage)
       }
 
       // Get recent sync logs - handle table not existing gracefully
-      let recentLogs = [];
+      let recentLogs: any[] = [];
       try {
         recentLogs = await db
           .select()
@@ -209,7 +209,7 @@ export function registerBidirectionalSyncRoutes(app: Express, storage: IStorage)
           syncFrequency: "Every 5 minutes"
         },
         conflicts: [],
-        recentLogs
+        recentLogs: recentLogs as any[]
       });
     } catch (error) {
       console.error("Error getting sync status:", error);

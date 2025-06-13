@@ -74,7 +74,7 @@ export default function SyncDashboard() {
   const queryClient = useQueryClient();
 
   // Fetch sync status
-  const { data: syncStatus, isLoading: statusLoading } = useQuery({
+  const { data: syncStatus, isLoading: statusLoading } = useQuery<SyncStatus>({
     queryKey: ['/api/sync/status'],
     refetchInterval: 5000, // Refresh every 5 seconds
   });
