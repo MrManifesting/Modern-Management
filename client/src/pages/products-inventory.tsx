@@ -1756,6 +1756,7 @@ const ProductsInventoryPage: React.FC = () => {
                           <th className="text-left py-3 px-4">Product</th>
                           <th className="text-left py-3 px-4">Category</th>
                           <th className="text-center py-3 px-4">SKU</th>
+                          <th className="text-center py-3 px-4">Barcode/QR</th>
                           <th className="text-center py-3 px-4">Size</th>
                           <th className="text-right py-3 px-4">Price</th>
                           <th className="text-center py-3 px-4">Qty</th>
