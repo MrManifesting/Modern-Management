@@ -301,76 +301,36 @@ export function parseCSV(csvContent: string): ParsedCsvData {
 
 /**
  * Advanced CSV parser that handles quoted fields with commas and newlines
+ * Uses a robust finite state machine approach
  */
 function parseCSVContent(content: string): ParsedCsvData {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = '';
-  let inQuotes = false;
+  const lines = content.split(/\r?\n/);
+  const result: string[][] = [];
+  
   let i = 0;
-  
-  while (i < content.length) {
-    const char = content[i];
-    const nextChar = content[i + 1];
+  while (i < lines.length) {
+    if (!lines[i].trim()) {
+      i++;
+      continue;
+    }
     
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        // Escaped quote - add single quote to field
-        currentField += '"';
-        i += 2;
-      } else if (inQuotes) {
-        // End of quoted field
-        inQuotes = false;
-        i++;
-      } else if (currentField.trim() === '') {
-        // Start of quoted field (only if field is empty)
-        inQuotes = true;
-        i++;
-      } else {
-        // Quote in middle of unquoted field
-        currentField += char;
-        i++;
-      }
-    } else if (char === ',' && !inQuotes) {
-      // Field separator
-      currentRow.push(currentField.trim());
-      currentField = '';
-      i++;
-    } else if (char === '\n' && !inQuotes) {
-      // End of row
-      currentRow.push(currentField.trim());
-      if (currentRow.some(field => field.length > 0)) {
-        rows.push(currentRow);
-      }
-      currentRow = [];
-      currentField = '';
-      i++;
-    } else {
-      // Regular character
-      currentField += char;
-      i++;
+    // Parse the current line and potentially following lines if quotes span multiple lines
+    const { row, linesConsumed } = parseCSVRow(lines, i);
+    if (row.length > 0) {
+      result.push(row);
     }
+    i += linesConsumed;
   }
   
-  // Add the last field and row if there's content
-  if (currentField.length > 0 || currentRow.length > 0) {
-    currentRow.push(currentField.trim());
-    if (currentRow.some(field => field.length > 0)) {
-      rows.push(currentRow);
-    }
-  }
-  
-  // Skip empty rows and find headers
-  const validRows = rows.filter(row => row.some(cell => cell.trim().length > 0));
-  
-  if (validRows.length === 0) {
+  // Find headers and return structured data
+  if (result.length === 0) {
     return { headers: [], rows: [] };
   }
   
   // Find the header row (look for common Shopify headers)
   let headerRowIndex = 0;
-  for (let i = 0; i < Math.min(5, validRows.length); i++) {
-    const row = validRows[i];
+  for (let i = 0; i < Math.min(3, result.length); i++) {
+    const row = result[i];
     const hasShopifyHeaders = row.some(cell => {
       const lower = cell.toLowerCase();
       return lower.includes('handle') || lower.includes('title') || 
@@ -384,14 +344,95 @@ function parseCSVContent(content: string): ParsedCsvData {
     }
   }
   
-  const headers = validRows[headerRowIndex] || [];
-  const dataRows = validRows.slice(headerRowIndex + 1);
+  const headers = result[headerRowIndex] || [];
+  const dataRows = result.slice(headerRowIndex + 1);
   
   console.log(`Headers found: ${headers.length}`);
   console.log(`Sample headers: ${headers.slice(0, 5).join(', ')}`);
   console.log(`Data rows: ${dataRows.length}`);
   
   return { headers, rows: dataRows };
+}
+
+/**
+ * Parse a single CSV row, handling multi-line quoted fields
+ */
+function parseCSVRow(lines: string[], startIndex: number): { row: string[]; linesConsumed: number } {
+  const fields: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  let lineIndex = startIndex;
+  let charIndex = 0;
+  
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex];
+    
+    while (charIndex < line.length) {
+      const char = line[charIndex];
+      const nextChar = line[charIndex + 1];
+      
+      if (char === '"') {
+        if (inQuotes) {
+          if (nextChar === '"') {
+            // Escaped quote - add single quote to field
+            currentField += '"';
+            charIndex += 2;
+            continue;
+          } else {
+            // End of quoted field
+            inQuotes = false;
+            charIndex++;
+            continue;
+          }
+        } else {
+          // Start of quoted field
+          inQuotes = true;
+          charIndex++;
+          continue;
+        }
+      }
+      
+      if (char === ',' && !inQuotes) {
+        // Field separator
+        fields.push(currentField);
+        currentField = '';
+        charIndex++;
+        continue;
+      }
+      
+      // Regular character or quoted comma
+      currentField += char;
+      charIndex++;
+    }
+    
+    if (inQuotes) {
+      // Multi-line quoted field - add newline and continue to next line
+      currentField += '\n';
+      lineIndex++;
+      charIndex = 0;
+    } else {
+      // End of row
+      fields.push(currentField);
+      break;
+    }
+  }
+  
+  // Clean up fields - remove outer quotes and trim
+  const cleanFields = fields.map(field => {
+    let cleaned = field.trim();
+    // Remove outer quotes if they wrap the entire field
+    if (cleaned.startsWith('"') && cleaned.endsWith('"') && cleaned.length > 1) {
+      cleaned = cleaned.slice(1, -1);
+      // Handle escaped quotes within the field
+      cleaned = cleaned.replace(/""/g, '"');
+    }
+    return cleaned;
+  });
+  
+  return {
+    row: cleanFields,
+    linesConsumed: Math.max(1, lineIndex - startIndex + 1)
+  };
 }
 
 /**
@@ -468,8 +509,14 @@ export function extractProductInfo(
 } | null {
   try {
     console.log(`Extracting product info for row ${rowIndex}, format: ${format}`);
-    console.log(`Headers: ${JSON.stringify(headers)}`);
-    console.log(`Row data: ${JSON.stringify(row.slice(0, 10))}...`); // Show first 10 fields
+    console.log(`Headers count: ${headers.length}, Row data count: ${row.length}`);
+    console.log(`First 6 headers: ${JSON.stringify(headers.slice(0, 6))}`);
+    console.log(`First 6 row values: ${JSON.stringify(row.slice(0, 6))}`);
+    
+    // Check if the row has the expected number of fields
+    if (row.length !== headers.length) {
+      console.log(`WARNING: Header/row field count mismatch - Headers: ${headers.length}, Row: ${row.length}`);
+    }
     
     if (format === 'product') {
       // Map headers to indices (case-insensitive) with better matching
@@ -482,50 +529,57 @@ export function extractProductInfo(
       // Log first few mappings for debugging
       console.log('Sample header mappings:', Object.keys(headerMap).slice(0, 10));
       
-      // Enhanced field extraction with multiple fallback options
-      const handle = row[headerMap['handle']] || '';
-      const title = row[headerMap['title']] || '';
+      // Enhanced field extraction with safe array access
+      const getField = (fieldName: string): string => {
+        const index = headerMap[fieldName];
+        return (index !== undefined && row[index] !== undefined) ? String(row[index]).trim() : '';
+      };
+
+      const handle = getField('handle');
+      const title = getField('title');
       
       // Try multiple SKU field variations
-      const sku = row[headerMap['variant sku']] || 
-                  row[headerMap['sku']] || 
-                  row[headerMap['variant inventory item id']] || '';
+      const sku = getField('variant sku') || 
+                  getField('sku') || 
+                  getField('variant inventory item id') || 
+                  'Default Title';
       
-      // Try multiple description field variations
-      const description = row[headerMap['body (html)']] || 
-                         row[headerMap['description']] || 
-                         row[headerMap['body']] || '';
+      // Try multiple description field variations  
+      const description = getField('body (html)') || 
+                         getField('description') || 
+                         getField('body') || '';
       
       // Try multiple product type variations
-      const productType = row[headerMap['product type']] || 
-                         row[headerMap['type']] || 
-                         row[headerMap['product category']] || '';
+      const productType = getField('product type') || 
+                         getField('type') || 
+                         getField('product category') || '';
       
-      const vendor = row[headerMap['vendor']] || '';
-      const published = (row[headerMap['published'] || row[headerMap['status']]] || '').toLowerCase() === 'true';
-      const tags = row[headerMap['tags']] || '';
+      const vendor = getField('vendor');
+      const publishedField = getField('published') || getField('status');
+      const published = publishedField.toLowerCase() === 'true';
+      const tags = getField('tags');
       
-      // Extract quantity with multiple field options
+      // Extract quantity with multiple field options using safe access
       let quantity = 0;
-      const qtyStr = row[headerMap['variant inventory qty']] || 
-                     row[headerMap['available']] || 
-                     row[headerMap['inventory qty']] || 
-                     row[headerMap['quantity']] || '0';
+      const qtyStr = getField('variant inventory qty') || 
+                     getField('available') || 
+                     getField('inventory qty') || 
+                     getField('quantity') || '0';
       quantity = parseInt(String(qtyStr).replace(/[^0-9]/g, '')) || 0;
       
-      // Extract price with multiple field options
+      // Extract price with multiple field options using safe access
       let price = 0;
-      const priceStr = row[headerMap['variant price']] || 
-                       row[headerMap['price']] || 
-                       row[headerMap['price / united states']] || 
-                       row[headerMap['cost per item']] || '0';
+      const priceStr = getField('variant price') || 
+                       getField('price') || 
+                       getField('price / united states') || 
+                       getField('cost per item') || '0';
       price = parseFloat(String(priceStr).replace(/[^0-9.]/g, '')) || 0;
       
-      // Extract weight
+      // Extract weight using safe access
       let weight: number | null = null;
-      const weightStr = row[headerMap['variant grams']] || 
-                        row[headerMap['weight']] || 
-                        row[headerMap['variant weight']] || '';
+      const weightStr = getField('variant grams') || 
+                        getField('weight') || 
+                        getField('variant weight') || '';
       if (weightStr) {
         weight = parseFloat(String(weightStr).replace(/[^0-9.]/g, '')) || null;
       }
