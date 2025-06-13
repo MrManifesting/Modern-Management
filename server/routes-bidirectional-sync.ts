@@ -75,12 +75,18 @@ export function registerBidirectionalSyncRoutes(app: Express, storage: IStorage)
     try {
       const status = syncService.getSyncStatus();
       
-      // Get recent sync logs
-      const recentLogs = await db
-        .select()
-        .from(syncLogs)
-        .orderBy(desc(syncLogs.timestamp))
-        .limit(10);
+      // Get recent sync logs - handle table not existing gracefully
+      let recentLogs = [];
+      try {
+        recentLogs = await db
+          .select()
+          .from(syncLogs)
+          .orderBy(desc(syncLogs.timestamp))
+          .limit(10);
+      } catch (dbError) {
+        console.warn("Sync logs table not available yet:", dbError);
+        // Table doesn't exist yet, return empty logs
+      }
 
       res.json({
         success: true,
