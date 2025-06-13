@@ -1,0 +1,206 @@
+2025-06-13T21:42:22Z info: Deployment: 7926a6cf-fa7d-4b1e-bd53-65b1dcb3a2e9
+2025-06-13T21:42:22Z info: Build: d47e88f7-981c-4147-9be1-8e521fead772
+2025-06-13T21:42:22Z info: Connecting to builder
+2025-06-13T21:42:22Z info: Deployment: 7926a6cf-fa7d-4b1e-bd53-65b1dcb3a2e9
+2025-06-13T21:42:22Z info: Build: d47e88f7-981c-4147-9be1-8e521fead772
+2025-06-13T21:42:22Z info: Connecting to builder
+2025-06-13T21:42:23Z info: Builder connected
+2025-06-13T21:42:24Z info: Installing packages
+2025-06-13T21:42:25Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v5.4.14 building for production...
+
+transforming...
+
+✓ 4145 modules transformed.
+
+rendering chunks...
+
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /home/runner/workspace/client/src/components/ui/leaf-loader.tsx is dynamically imported by /home/runner/workspace/client/src/App.tsx but also statically imported by /home/runner/workspace/client/src/components/ui/loading-overlay.tsx, /home/runner/workspace/client/src/pages/animation-demo.tsx, /home/runner/workspace/client/src/pages/inventory.tsx, /home/runner/workspace/client/src/pages/products-inventory.tsx, dynamic import will not move module into another chunk.
+
+
+computing gzip size...
+
+../dist/public/index.html                               1.36 kB │ gzip:   0.83 kB
+
+../dist/public/assets/index-B3XV_al2.css              122.73 kB │ gzip:  20.69 kB
+
+../dist/public/assets/layout-grid-Dt6TEHIG.js           0.51 kB │ gzip:   0.30 kB
+
+../dist/public/assets/direct-login-BDrEndkE.js          1.64 kB │ gzip:   0.86 kB
+
+../dist/public/assets/login-debug-DeMWmjG6.js           2.14 kB │ gzip:   1.00 kB
+
+../dist/public/assets/bypass-login-B9jBFD1f.js          2.92 kB │ gzip:   1.28 kB
+
+../dist/public/assets/qr-demo-Cvopne5A.js              10.12 kB │ gzip:   4.16 kB
+
+../dist/public/assets/demo-inventory-DbrVBF0J.js       13.83 kB │ gzip:   3.81 kB
+../dist/public/assets/inventory-detail-BF2H3K2U.js     17.09 kB │ gzip:   4.39 kB
+../dist/public/assets/index-olbgnKZg.js             2,134.84 kB │ gzip: 575.66 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+✓ built in 17.63s
+
+▲ [WARNING] Duplicate member "getUser" in class body [duplicate-class-member]
+
+    server/storage.ts:1914:8:
+      1914 │   async getUser(id: number): Promise<User | undefined> {
+           ╵         ~~~~~~~
+
+  The original member "getUser" is here:
+
+    server/storage.ts:1880:8:
+      1880 │   async getUser(id: number): Promise<User | undefined> {
+           ╵         ~~~~~~~
+
+▲ [WARNING] Duplicate key "publishStatus" in object literal [duplicate-object-key]
+
+    server/storage.ts:2099:8:
+      2099 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+  The original key "publishStatus" is here:
+
+    server/storage.ts:2091:8:
+      2091 │         publishStatus: row.publish_status,
+           ╵         ~~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:2432:8:
+      2432 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2043:8:
+      2043 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "getItemBySku" in class body [duplicate-class-member]
+
+    server/storage.ts:3780:8:
+      3780 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getItemBySku" is here:
+
+    server/storage.ts:2432:8:
+      2432 │   async getItemBySku(sku: string): Promise<Item | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate key "Outdoor" in object literal [duplicate-object-key]
+
+    server/services/sku-generator.ts:222:4:
+      222 │     'Outdoor': 'ODR',
+          ╵     ~~~~~~~~~
+
+  The original key "Outdoor" is here:
+
+    server/services/sku-generator.ts:201:4:
+      201 │     'Outdoor': 'OUT',
+          ╵     ~~~~~~~~~
+
+5 warnings
+
+
+  dist/index.js  691.3kb
+
+⚡ Done in 124ms
+
+npm notice
+npm notice New minor version of npm available! 11.3.0 -> 11.4.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.4.2
+npm notice To update run: npm install -g npm@11.4.2
+npm notice
+
+2025-06-13T21:42:54Z info: Pushing pid1 binary layer...
+2025-06-13T21:42:55Z info: Pushing Repl layer...
+2025-06-13T21:42:55Z info: Pushing hosting layer...
+2025-06-13T21:42:55Z info: Retrieved cached nix layer
+2025-06-13T21:42:56Z info: Created hosting layer
+2025-06-13T21:42:56Z info: Created pid1 binary layer
+2025-06-13T21:43:37Z info: Created Repl layer
+2025-06-13T21:43:37Z info: Pushed image manifest
+2025-06-13T21:43:38Z info: Pushed soci index manifest
+2025-06-13T21:43:42Z info: Creating Autoscale service
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+> rest-express@1.0.0 start
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+forwarding local port 5000 to external port 80 (mapped as 1104)
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+> NODE_ENV=production node dist/index.js
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+starting up user application
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+Google Sheets: Authentication initialized successfully
+Google Sheets: Initializing with simplified auth method
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+Failed to initialize Shopify Enhanced Service: Error: Missing or invalid options
+error proxying request error=dial tcp 127.0.0.1:5000: connect: connection refused
+Shopify store connection: simplifiedcurations.myshopify.com [TOKEN PRESENT]
+Working Shopify Service initialized successfully
+    at ShopifyEnhancedService.initializeShopify (file:///home/runner/workspace/dist/index.js:13678:22)
+    at file:///home/runner/workspace/dist/index.js:13912:30
+Google Sheets: Initializing with simplified auth method
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+}
+Failed to set Telegram webhook: {
+  column: undefined,
+    at new Shopify (/home/runner/workspace/node_modules/shopify-api-node/index.js:58:11)
+  ok: false,
+Telegram bot initialized with token: 78983...
+  internalQuery: undefined,
+Warning: Unable to initialize employees due to schema mismatch: error: column "name" does not exist
+9:44:30 PM [marketplace-scheduler] Initializing marketplace scheduler service
+    at new ShopifyEnhancedService (file:///home/runner/workspace/dist/index.js:13673:10)
+  severity: 'ERROR',
+  internalPosition: undefined,
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+    at async DatabaseStorage.initializeData (file:///home/runner/workspace/dist/index.js:753:39) {
+***DEBUG: Using SHOPIFY_STORE value: simplifiedcurations.myshopify.com
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:122:5)
+  error_code: 400,
+  table: undefined,
+  detail: undefined,
+  where: undefined,
+  code: '42703',
+  schema: undefined,
+Google Sheets: Authentication initialized successfully
+  length: 104,
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+  routine: 'errorMissingColumn'
+Google Sheets: Authentication initialized successfully
+9:44:30 PM [express] serving on port 5000
+  position: '29',
+  description: 'Bad Request: invalid webhook URL specified'
+Google Sheets: Initializing with simplified auth method
+  file: 'parse_relation.c',
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  constraint: undefined,
+  line: '3722',
+Try running migrations to update your database schema
+9:44:31 PM [marketplace-scheduler] Initialized scheduling for 4 marketplaces
+}
+  dataType: undefined,
+  hint: undefined,
+2025-06-13T21:44:33Z info: Waiting for service to be ready
+2025-06-13T21:44:35Z info: Deployment successful
