@@ -64,10 +64,8 @@ export default function SyncDashboard() {
   // Sync mutations
   const startSyncMutation = useMutation({
     mutationFn: async ({ direction, force = false }: { direction: string; force?: boolean }) => {
-      return await apiRequest(`/api/sync/start`, {
-        method: 'POST',
-        body: { direction, force }
-      });
+      const response = await apiRequest('POST', `/api/sync/start`, { direction, force });
+      return response.json();
     },
     onSuccess: (data, variables) => {
       toast({
@@ -88,7 +86,8 @@ export default function SyncDashboard() {
 
   const stopSyncMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/sync/stop`, { method: 'POST' });
+      const response = await apiRequest('POST', `/api/sync/stop`);
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -102,10 +101,8 @@ export default function SyncDashboard() {
 
   const resolveConflictMutation = useMutation({
     mutationFn: async ({ conflictId, resolution }: { conflictId: number; resolution: string }) => {
-      return await apiRequest(`/api/sync/conflicts/${conflictId}/resolve`, {
-        method: 'POST',
-        body: { resolution }
-      });
+      const response = await apiRequest('POST', `/api/sync/conflicts/${conflictId}/resolve`, { resolution });
+      return response.json();
     },
     onSuccess: () => {
       toast({
