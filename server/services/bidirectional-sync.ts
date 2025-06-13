@@ -59,8 +59,18 @@ export class BidirectionalSyncService {
     try {
       this.syncConfig = config;
       
-      // For now, skip Google Sheets verification and focus on Shopify sync
-      console.log('Bypassing Google Sheets setup for simplified sync');
+      // Verify Google Sheets access
+      if (config.googleSheets.enabled && !this.googleSheets.isConfigured()) {
+        throw new Error('Google Sheets not properly configured');
+      }
+
+      // Setup initial sheet structure
+      if (config.googleSheets.enabled) {
+        await this.googleSheets.setupInventorySheet({
+          spreadsheetId: config.googleSheets.spreadsheetId,
+          worksheetName: config.googleSheets.worksheetName
+        });
+      }
 
       await this.logSyncEvent('sync-initialized', 'Bidirectional sync initialized', {
         config: config
@@ -435,14 +445,7 @@ export class BidirectionalSyncService {
         type,
         message,
         data: JSON.stringify(data),
-        timestamp: new Date(),
-        source: 'system',
-        target: 'all', // Add required target field
-        status: 'completed',
-        itemsProcessed: 0,
-        itemsSuccess: 0,
-        itemsError: 0,
-        duration: 0
+        timestamp: new Date()
       });
     } catch (error) {
       console.error('Failed to log sync event:', error);
