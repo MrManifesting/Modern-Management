@@ -330,13 +330,24 @@ const SettingsPage = () => {
               </div>
 
               <div className="flex justify-end space-x-2 mt-4">
-                <Button variant="outline" className="border-gold hover:bg-gold/10">Edit Profile</Button>
+                <Button 
+                  variant="outline" 
+                  className="border-gold hover:bg-gold/10"
+                  onClick={() => setIsEditProfileOpen(true)}
+                >
+                  Edit Profile
+                </Button>
                 <Button className="bg-gold hover:bg-gold-dark text-black">Change Password</Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <EditProfileModal 
+        open={isEditProfileOpen} 
+        onOpenChange={setIsEditProfileOpen} 
+      />
     </div>
   );
 };
