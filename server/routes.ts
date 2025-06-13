@@ -42,6 +42,7 @@ import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
 import { registerShopifyFixRoutes } from "./routes-shopify-fix";
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
+import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
 // Import Replit Auth system for proper Google login and HTTPS support
 import { setupAuth, requireAuth } from "./auth-simple";
 import { 

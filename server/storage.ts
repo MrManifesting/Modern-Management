@@ -3598,6 +3598,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(items).where(eq(items.parentItemId, parentId));
   }
 
+  async getItemBySku(sku: string): Promise<Item | undefined> {
+    try {
+      const [item] = await db.select().from(items).where(eq(items.sku, sku));
+      return item;
+    } catch (error) {
+      console.error("Error getting item by SKU:", error);
+      return undefined;
+    }
+  }
+
   async getInventoryActionsByItemId(itemId: number, actionType?: string): Promise<InventoryAction[]> {
     if (actionType) {
       return await db
