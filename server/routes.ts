@@ -2530,6 +2530,80 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Barcode Scanning API Routes
+  app.get("/api/items/barcode/:barcode", async (req: Request, res: Response) => {
+    try {
+      const { barcode } = req.params;
+      const items = await storage.getItems();
+      const item = items.find(item => item.barcode === barcode);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found with this barcode" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to find item by barcode:", error);
+      res.status(500).json({ error: "Failed to search by barcode" });
+    }
+  });
+
+  app.get("/api/items/sku/:sku", async (req: Request, res: Response) => {
+    try {
+      const { sku } = req.params;
+      const items = await storage.getItems();
+      const item = items.find(item => item.sku === sku);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found with this SKU" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to find item by SKU:", error);
+      res.status(500).json({ error: "Failed to search by SKU" });
+    }
+  });
+
+  app.post("/api/inventory/action", async (req: Request, res: Response) => {
+    try {
+      const { sku, action, quantity } = req.body;
+      
+      if (!sku || !action) {
+        return res.status(400).json({ error: "SKU and action are required" });
+      }
+      
+      // Find item by SKU
+      const items = await storage.getItems();
+      const item = items.find(item => item.sku === sku);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      let updatedItem = item;
+      
+      // Perform inventory action
+      if (action === 'add') {
+        const newQuantity = (item.quantity || 0) + (quantity || 1);
+        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+      } else if (action === 'remove') {
+        const newQuantity = Math.max(0, (item.quantity || 0) - (quantity || 1));
+        updatedItem = await storage.updateItem(item.id, { quantity: newQuantity });
+      }
+      // 'check' action doesn't modify inventory, just returns current state
+      
+      res.json({
+        ...updatedItem,
+        action,
+        message: `${action === 'check' ? 'Checked' : action === 'add' ? 'Added' : 'Removed'} ${action !== 'check' ? quantity || 1 : ''} ${item.name}`.trim()
+      });
+    } catch (error) {
+      console.error("Failed to perform inventory action:", error);
+      res.status(500).json({ error: "Failed to perform inventory action" });
+    }
+  });
+
   // Sales API Routes
   app.get("/api/sales", async (_req: Request, res: Response) => {
     try {

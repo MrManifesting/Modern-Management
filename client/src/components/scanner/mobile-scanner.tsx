@@ -499,25 +499,73 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <h3 className="font-semibold text-lg">{scannedItem.name}</h3>
-              <p className="text-sm text-muted-foreground">SKU: {scannedItem.sku}</p>
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{scannedItem.name}</span>
+              <Badge variant="secondary">{scannedItem.sku}</Badge>
             </div>
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Price</p>
-                <p className="font-medium">${scannedItem.price.toFixed(2)}</p>
+                <span className="text-gray-500">Quantity:</span>
+                <div className="font-medium">{scannedItem.quantity}</div>
               </div>
               <div>
-                <p className="text-muted-foreground">Quantity</p>
-                <p className="font-medium">{scannedItem.quantity}</p>
+                <span className="text-gray-500">Price:</span>
+                <div className="font-medium">${scannedItem.price}</div>
               </div>
+              {scannedItem.category && (
+                <div>
+                  <span className="text-gray-500">Category:</span>
+                  <div className="font-medium">{scannedItem.category}</div>
+                </div>
+              )}
+              {scannedItem.brand && (
+                <div>
+                  <span className="text-gray-500">Brand:</span>
+                  <div className="font-medium">{scannedItem.brand}</div>
+                </div>
+              )}
             </div>
+            
+            {/* Quick Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => inventoryMutation.mutate({
+                  sku: scannedItem.sku,
+                  action: 'add',
+                  quantity: 1
+                })}
+                disabled={inventoryMutation.isPending}
+                className="flex-1"
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add 1
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => inventoryMutation.mutate({
+                  sku: scannedItem.sku,
+                  action: 'remove',
+                  quantity: 1
+                })}
+                disabled={inventoryMutation.isPending}
+                className="flex-1"
+              >
+                <Minus className="mr-1 h-3 w-3" />
+                Remove 1
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
 
-            <div className="flex justify-center">
-              <Badge variant={scannedItem.quantity > 0 ? "default" : "destructive"}>
-                {scannedItem.quantity > 0 ? "In Stock" : "Out of Stock"}
+export default MobileScanner;
               </Badge>
             </div>
           </CardContent>

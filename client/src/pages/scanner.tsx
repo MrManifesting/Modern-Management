@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScanLine, Barcode, QrCode } from 'lucide-react';
 import QuickScanner from '../components/scanner/quick-scanner';
 import UniversalScanner from '../components/scanner/universal-scanner';
+import MobileScanner from '../components/scanner/mobile-scanner';
 import { ErrorBoundary } from '../components/error-boundary';
 
 export default function ScannerPage() {
@@ -29,16 +30,39 @@ export default function ScannerPage() {
       </div>
       
       <Tabs value={scanMode} onValueChange={setScanMode} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="mobile" className="flex items-center gap-2">
+            <ScanLine className="h-4 w-4" />
+            <span>Mobile</span>
+          </TabsTrigger>
           <TabsTrigger value="quick" className="flex items-center gap-2">
             <ScanLine className="h-4 w-4" />
-            <span>Quick Scanner</span>
+            <span>Quick</span>
           </TabsTrigger>
           <TabsTrigger value="universal" className="flex items-center gap-2">
             <Barcode className="h-4 w-4" />
-            <span>Universal Scanner</span>
+            <span>Universal</span>
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="mobile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mobile Scanner</CardTitle>
+              <CardDescription>
+                Optimized mobile interface with camera scanning and inventory actions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ErrorBoundary>
+                <MobileScanner 
+                  onItemScanned={handleItemFound}
+                  onActionComplete={handleActionComplete}
+                />
+              </ErrorBoundary>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         <TabsContent value="quick">
           <div className="grid gap-6">
