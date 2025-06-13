@@ -1,237 +1,377 @@
 /**
- * Google Sheets Integration Routes
- * 
- * Provides API endpoints for connecting and synchronizing inventory data with Google Sheets
+ * Routes for Google Sheets integration and automated inventory tracking
  */
 
 import type { Express, Request, Response } from "express";
-import { createGoogleSheetsService, GoogleSheetsConfig } from "./services/google-sheets";
 import { IStorage } from "./storage";
+import GoogleSheetsService, { SheetConfig } from "./services/google-sheets";
 
+const sheetsService = new GoogleSheetsService();
+
+/**
+ * Register Google Sheets integration routes
+ */
 export function registerGoogleSheetsRoutes(app: Express, storage: IStorage) {
   
   /**
-   * Test Google Sheets connection
+   * Check Google Sheets integration status
    */
-  app.get("/api/google-sheets/test-connection", async (req: Request, res: Response) => {
+  app.get("/api/google-sheets/status", (_req: Request, res: Response) => {
     try {
-      const { spreadsheetId, worksheetName } = req.query;
+      const isConfigured = sheetsService.isConfigured();
       
-      if (!spreadsheetId || !worksheetName) {
-        return res.status(400).json({
-          success: false,
-          error: "Missing required parameters: spreadsheetId and worksheetName"
-        });
-      }
-
-      const config: GoogleSheetsConfig = {
-        spreadsheetId: spreadsheetId as string,
-        worksheetName: worksheetName as string
-      };
-
-      const sheetsService = createGoogleSheetsService(config, storage);
-      const info = await sheetsService.getSpreadsheetInfo();
-
       res.json({
-        success: true,
-        message: "Successfully connected to Google Sheets",
-        spreadsheet: info
+        configured: isConfigured,
+        message: isConfigured 
+          ? "Google Sheets integration is active and ready" 
+          : "Google Sheets integration requires configuration"
       });
-
     } catch (error) {
-      console.error('Google Sheets connection test failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
-      });
+      console.error("Error checking Google Sheets status:", error);
+      res.status(500).json({ error: "Failed to check integration status" });
     }
   });
 
   /**
-   * Create a new inventory spreadsheet
+   * Setup inventory worksheet in Google Sheets
    */
-  app.post("/api/google-sheets/create-spreadsheet", async (req: Request, res: Response) => {
-    try {
-      const { title } = req.body;
-      
-      if (!title) {
-        return res.status(400).json({
-          success: false,
-          error: "Spreadsheet title is required"
-        });
-      }
-
-      const config: GoogleSheetsConfig = {
-        spreadsheetId: '', // Will be set after creation
-        worksheetName: 'Inventory'
-      };
-
-      const sheetsService = createGoogleSheetsService(config, storage);
-      const spreadsheetId = await sheetsService.createInventorySheet(title);
-
-      res.json({
-        success: true,
-        message: "Spreadsheet created successfully",
-        spreadsheetId,
-        worksheetName: 'Inventory'
-      });
-
-    } catch (error) {
-      console.error('Failed to create spreadsheet:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create spreadsheet'
-      });
-    }
-  });
-
-  /**
-   * Export inventory to Google Sheets
-   */
-  app.post("/api/google-sheets/export", async (req: Request, res: Response) => {
+  app.post("/api/google-sheets/setup", async (req: Request, res: Response) => {
     try {
       const { spreadsheetId, worksheetName } = req.body;
       
       if (!spreadsheetId || !worksheetName) {
-        return res.status(400).json({
-          success: false,
-          error: "Missing required parameters: spreadsheetId and worksheetName"
+        return res.status(400).json({ 
+          error: "Spreadsheet ID and worksheet name are required" 
         });
       }
 
-      const config: GoogleSheetsConfig = {
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured. Please check credentials." 
+        });
+      }
+
+      const config: SheetConfig = {
         spreadsheetId,
         worksheetName
       };
 
-      const sheetsService = createGoogleSheetsService(config, storage);
-      const result = await sheetsService.exportToSheets();
-
-      res.json({
-        success: result.success,
-        message: result.success ? 
-          `Successfully exported ${result.syncedItems} items to Google Sheets` :
-          'Export failed',
-        syncedItems: result.syncedItems,
-        errors: result.errors
-      });
-
-    } catch (error) {
-      console.error('Export to Google Sheets failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Export failed'
-      });
-    }
-  });
-
-  /**
-   * Import data from Google Sheets
-   */
-  app.post("/api/google-sheets/import", async (req: Request, res: Response) => {
-    try {
-      const { spreadsheetId, worksheetName } = req.body;
+      const success = await sheetsService.setupInventorySheet(config);
       
-      if (!spreadsheetId || !worksheetName) {
-        return res.status(400).json({
-          success: false,
-          error: "Missing required parameters: spreadsheetId and worksheetName"
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Inventory worksheet "${worksheetName}" setup completed`,
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to setup inventory worksheet" 
         });
       }
-
-      const config: GoogleSheetsConfig = {
-        spreadsheetId,
-        worksheetName
-      };
-
-      const sheetsService = createGoogleSheetsService(config, storage);
-      const result = await sheetsService.importFromSheets();
-
-      res.json({
-        success: result.success,
-        message: result.success ? 
-          `Successfully imported ${result.syncedItems} items from Google Sheets` :
-          'Import failed',
-        syncedItems: result.syncedItems,
-        conflicts: result.conflicts,
-        errors: result.errors
-      });
-
     } catch (error) {
-      console.error('Import from Google Sheets failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Import failed'
-      });
+      console.error("Error setting up Google Sheets:", error);
+      res.status(500).json({ error: "Failed to setup Google Sheets integration" });
     }
   });
 
   /**
-   * Perform bidirectional sync with Google Sheets
+   * Sync all inventory data to Google Sheets
    */
   app.post("/api/google-sheets/sync", async (req: Request, res: Response) => {
     try {
       const { spreadsheetId, worksheetName } = req.body;
       
       if (!spreadsheetId || !worksheetName) {
-        return res.status(400).json({
-          success: false,
-          error: "Missing required parameters: spreadsheetId and worksheetName"
+        return res.status(400).json({ 
+          error: "Spreadsheet ID and worksheet name are required" 
         });
       }
 
-      const config: GoogleSheetsConfig = {
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const config: SheetConfig = {
         spreadsheetId,
         worksheetName
       };
 
-      const sheetsService = createGoogleSheetsService(config, storage);
-      const result = await sheetsService.syncBidirectional();
-
-      res.json({
-        success: result.success,
-        message: result.success ? 
-          `Successfully synchronized ${result.syncedItems} items with Google Sheets` :
-          'Sync failed',
-        syncedItems: result.syncedItems,
-        conflicts: result.conflicts,
-        errors: result.errors
-      });
-
+      // Get all inventory items
+      const items = await storage.getItems();
+      
+      const success = await sheetsService.syncInventoryData(items, config);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Synced ${items.length} items to Google Sheets`,
+          itemCount: items.length,
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to sync inventory data" 
+        });
+      }
     } catch (error) {
-      console.error('Google Sheets sync failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Sync failed'
-      });
+      console.error("Error syncing to Google Sheets:", error);
+      res.status(500).json({ error: "Failed to sync inventory data" });
     }
   });
 
   /**
-   * Get Google Sheets connection status
+   * Update a specific item in Google Sheets
    */
-  app.get("/api/google-sheets/status", async (req: Request, res: Response) => {
+  app.post("/api/google-sheets/update-item/:id", async (req: Request, res: Response) => {
     try {
-      const hasCredentials = !!(
-        (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) ||
-        (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-      );
+      const itemId = parseInt(req.params.id);
+      const { spreadsheetId, worksheetName } = req.body;
+      
+      if (isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid item ID" });
+      }
 
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({ 
+          error: "Spreadsheet ID and worksheet name are required" 
+        });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const config: SheetConfig = {
+        spreadsheetId,
+        worksheetName
+      };
+
+      const success = await sheetsService.updateInventoryItem(item, config);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Updated item ${item.sku} in Google Sheets`
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to update item in Google Sheets" 
+        });
+      }
+    } catch (error) {
+      console.error("Error updating item in Google Sheets:", error);
+      res.status(500).json({ error: "Failed to update item" });
+    }
+  });
+
+  /**
+   * Log inventory changes for tracking
+   */
+  app.post("/api/google-sheets/log-change", async (req: Request, res: Response) => {
+    try {
+      const { 
+        sku, 
+        action, 
+        quantity, 
+        previousQuantity, 
+        source,
+        spreadsheetId, 
+        worksheetName 
+      } = req.body;
+      
+      if (!sku || !action || quantity === undefined || previousQuantity === undefined) {
+        return res.status(400).json({ 
+          error: "SKU, action, quantity, and previousQuantity are required" 
+        });
+      }
+
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({ 
+          error: "Spreadsheet ID and worksheet name are required" 
+        });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const config: SheetConfig = {
+        spreadsheetId,
+        worksheetName
+      };
+
+      const change = {
+        sku,
+        action,
+        quantity: parseInt(quantity),
+        previousQuantity: parseInt(previousQuantity),
+        timestamp: new Date(),
+        source: source || 'manual'
+      };
+
+      const success = await sheetsService.logInventoryChange(change, config);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: "Inventory change logged successfully"
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to log inventory change" 
+        });
+      }
+    } catch (error) {
+      console.error("Error logging inventory change:", error);
+      res.status(500).json({ error: "Failed to log inventory change" });
+    }
+  });
+
+  /**
+   * Get inventory data from Google Sheets
+   */
+  app.get("/api/google-sheets/inventory", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, worksheetName } = req.query;
+      
+      if (!spreadsheetId || !worksheetName) {
+        return res.status(400).json({ 
+          error: "Spreadsheet ID and worksheet name are required" 
+        });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const config: SheetConfig = {
+        spreadsheetId: spreadsheetId as string,
+        worksheetName: worksheetName as string
+      };
+
+      const inventoryData = await sheetsService.getInventoryFromSheet(config);
+      
       res.json({
         success: true,
-        configured: hasCredentials,
-        authMethod: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ? 'service-account' : 'oauth2',
-        message: hasCredentials ? 
-          'Google Sheets integration is configured' : 
-          'Google Sheets credentials not found. Please configure authentication.'
+        data: inventoryData,
+        count: inventoryData.length
       });
-
     } catch (error) {
-      console.error('Failed to check Google Sheets status:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to check configuration status'
-      });
+      console.error("Error getting inventory from Google Sheets:", error);
+      res.status(500).json({ error: "Failed to get inventory data" });
+    }
+  });
+
+  /**
+   * Test Google Sheets connection
+   */
+  app.post("/api/google-sheets/test-connection", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId } = req.body;
+      
+      if (!spreadsheetId) {
+        return res.status(400).json({ 
+          error: "Spreadsheet ID is required" 
+        });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      // Try to access the spreadsheet to test connection
+      const config: SheetConfig = {
+        spreadsheetId,
+        worksheetName: 'Test' // Use a test worksheet name
+      };
+
+      try {
+        await sheetsService.setupInventorySheet(config);
+        res.json({ 
+          success: true, 
+          message: "Successfully connected to Google Sheets",
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+        });
+      } catch (error) {
+        res.status(400).json({ 
+          error: "Failed to connect to Google Sheets. Please check spreadsheet ID and permissions." 
+        });
+      }
+    } catch (error) {
+      console.error("Error testing Google Sheets connection:", error);
+      res.status(500).json({ error: "Failed to test connection" });
+    }
+  });
+
+  /**
+   * Get Google Sheets configuration guide
+   */
+  app.get("/api/google-sheets/config-guide", (_req: Request, res: Response) => {
+    try {
+      const guide = {
+        steps: [
+          {
+            step: 1,
+            title: "Create Google Cloud Project",
+            description: "Go to Google Cloud Console and create a new project or select existing one"
+          },
+          {
+            step: 2,
+            title: "Enable Google Sheets API",
+            description: "Enable the Google Sheets API in your Google Cloud project"
+          },
+          {
+            step: 3,
+            title: "Create Service Account",
+            description: "Create a service account and download the JSON credentials file"
+          },
+          {
+            step: 4,
+            title: "Set Environment Variables",
+            description: "Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN"
+          },
+          {
+            step: 5,
+            title: "Create Spreadsheet",
+            description: "Create a new Google Sheets spreadsheet and copy its ID from the URL"
+          },
+          {
+            step: 6,
+            title: "Share Spreadsheet",
+            description: "Share the spreadsheet with your service account email address"
+          }
+        ],
+        requiredEnvVars: [
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET", 
+          "GOOGLE_REFRESH_TOKEN"
+        ],
+        links: {
+          googleCloudConsole: "https://console.cloud.google.com",
+          sheetsApiDocs: "https://developers.google.com/sheets/api"
+        }
+      };
+
+      res.json(guide);
+    } catch (error) {
+      console.error("Error getting config guide:", error);
+      res.status(500).json({ error: "Failed to get configuration guide" });
     }
   });
 }
