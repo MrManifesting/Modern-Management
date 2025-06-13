@@ -2034,15 +2034,103 @@ export function registerRoutes(app: Express): Server {
       if (rows.length === 0) {
         return res.status(400).json({ error: "Empty CSV file" });
       }
-      // Default to cannabis import unless explicitly set otherwise
-      const isCannabisImport = req.body.isCannabisImport !== 'false';
-      const isStampImport = false; // Remove stamp import detection
+      // Determine import type based on headers
+      const isShopifyImport = headers.includes('Handle') && headers.includes('Title') && 
+                             headers.includes('Variant SKU') && headers.includes('Variant Price');
+      const isCannabisImport = headers.includes('Strain') || headers.includes('strain') || 
+                               headers.includes('Percentage') || headers.includes('percentage') ||
+                               headers.includes('THC') || headers.includes('thc');
       
       console.log("CSV Import - Headers:", headers);
-      console.log("Import Type: Cannabis Inventory");
+      console.log("Shopify detection:", { 
+        hasHandle: headers.includes('Handle'),
+        hasTitle: headers.includes('Title'),
+        hasVariantSKU: headers.includes('Variant SKU'),
+        hasVariantPrice: headers.includes('Variant Price'),
+        isShopifyImport
+      });
       
-      // For cannabis import, use the specialized processing function
-      if (isCannabisImport) {
+      if (isShopifyImport) {
+        console.log("Import Type: Shopify CSV");
+        
+        // Process Shopify CSV format
+        const importedItems: any[] = [];
+        
+        for (const row of rows) {
+          if (row.length < headers.length) continue;
+          
+          try {
+            // Map headers to row values
+            const data: { [key: string]: string } = {};
+            headers.forEach((header, index) => {
+              data[header] = row[index] || '';
+            });
+
+            // Extract key fields from Shopify CSV format
+            const title = data['Title'] || data['Handle'] || 'Unnamed Product';
+            const description = data['Body (HTML)'] || '';
+            const vendor = data['Vendor'] || '';
+            const productType = data['Product Type'] || 'General';
+            const tags = data['Tags'] ? data['Tags'].split(',').map(t => t.trim()) : [];
+            const sku = data['Variant SKU'] || '';
+            const price = parseFloat(data['Variant Price']) || 0;
+            const compareAtPrice = parseFloat(data['Variant Compare At Price']) || null;
+            const quantity = parseInt(data['Variant Inventory Qty']) || 0;
+            const barcode = data['Variant Barcode'] || '';
+            const weight = parseFloat(data['Variant Grams']) || 0;
+            const costPerItem = parseFloat(data['Cost per item']) || 0;
+            const status = data['Status'] === 'active' ? 'active' : 'draft';
+
+            const itemData = {
+              name: title,
+              description: description.replace(/<[^>]*>/g, ''), // Strip HTML tags
+              sku,
+              brand: vendor,
+              costPrice: costPerItem.toString(),
+              basePrice: price.toString(),
+              salePrice: compareAtPrice ? compareAtPrice.toString() : null,
+              wholesalePrice: (price * 0.8).toString(),
+              category: productType,
+              tags,
+              quantity,
+              status,
+              condition: 'new',
+              barcode,
+              weight: weight.toString(),
+              images: [],
+              marketplace: [
+                {
+                  type: 'shopify',
+                  externalId: data['Handle'],
+                  url: '',
+                  status: 'synced',
+                  lastSynced: new Date().toISOString()
+                }
+              ],
+              metadata: {
+                vendor,
+                productType,
+                imported_from: 'shopify_csv',
+                original_data: data
+              }
+            };
+
+            const item = await storage.createItem(itemData);
+            importedItems.push(item);
+          } catch (error) {
+            console.error('Error importing Shopify product:', error);
+          }
+        }
+        
+        res.json({
+          success: true,
+          importedCount: importedItems.length,
+          totalRows: rows.length,
+          type: "shopify_csv",
+          syncResults: null
+        });
+      } else if (isCannabisImport) {
+        console.log("Import Type: Cannabis Inventory");
         const { processCannabisImport } = await import('./services/cannabis-import');
         const importedItems = await processCannabisImport(rows);
         
