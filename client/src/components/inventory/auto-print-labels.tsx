@@ -1,5 +1,4 @@
 import { Item } from "@shared/schema";
-import { useToast } from "@/hooks/use-toast";
 
 interface AutoPrintLabelsProps {
   item: Item;
@@ -7,11 +6,11 @@ interface AutoPrintLabelsProps {
   autoOpen?: boolean;
 }
 
-export function AutoPrintLabels({ item, quantity = 1, autoOpen = false }: AutoPrintLabelsProps) {
-  const { toast } = useToast();
+// Utility function to generate barcode labels (no hooks)
+export function createPrintLabels(item: Item, quantity = 1) {
 
-  const generateBarcodeLabels = (printQuantity: number) => {
-    if (!item.sku) return;
+  const generateBarcodeLabels = (printQuantity: number): string | null => {
+    if (!item.sku) return null;
     
     const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
@@ -86,43 +85,26 @@ export function AutoPrintLabels({ item, quantity = 1, autoOpen = false }: AutoPr
     return printContent;
   };
 
-  const openPrintPreview = (printQuantity: number) => {
+  const openPrintPreview = (printQuantity: number): boolean => {
     try {
       const printWindow = window.open('', '_blank', 'width=800,height=600');
       if (printWindow) {
         const printContent = generateBarcodeLabels(printQuantity);
-        printWindow.document.write(printContent);
+        if (printContent) {
+          printWindow.document.write(printContent);
+        }
         printWindow.document.close();
-        
-        toast({
-          title: "Print Labels Ready",
-          description: `${printQuantity} barcode label${printQuantity > 1 ? 's' : ''} ready for printing`,
-        });
+        return true;
       } else {
-        toast({
-          title: "Print Blocked",
-          description: "Please allow popups to print barcode labels",
-          variant: "destructive"
-        });
+        return false;
       }
     } catch (error) {
-      toast({
-        title: "Print Error",
-        description: "Failed to open print preview",
-        variant: "destructive"
-      });
+      return false;
     }
   };
-
-  // Auto-open print preview if requested
-  if (autoOpen && item.sku) {
-    setTimeout(() => openPrintPreview(quantity), 500);
-  }
 
   return {
     openPrintPreview,
     generateBarcodeLabels
   };
 }
-
-export default AutoPrintLabels;

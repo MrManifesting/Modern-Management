@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Printer, Copy, Download, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { AutoPrintLabels } from "./auto-print-labels";
+import { createPrintLabels } from "./auto-print-labels";
 
 interface WorkingBarcodeProps {
   item: Item;
@@ -144,12 +144,21 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
   const handlePrintLabels = () => {
     if (!item.sku || labelQuantity < 1) return;
     
-    const printLabels = AutoPrintLabels({ 
-      item, 
-      quantity: labelQuantity, 
-      autoOpen: false 
-    });
-    printLabels.openPrintPreview(labelQuantity);
+    const printLabels = createPrintLabels(item, labelQuantity);
+    const success = printLabels.openPrintPreview(labelQuantity);
+    
+    if (success) {
+      toast({
+        title: "Print Labels Ready",
+        description: `${labelQuantity} barcode label${labelQuantity > 1 ? 's' : ''} ready for printing`,
+      });
+    } else {
+      toast({
+        title: "Print Blocked",
+        description: "Please allow popups to print barcode labels",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

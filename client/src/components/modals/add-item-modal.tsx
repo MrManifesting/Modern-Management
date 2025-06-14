@@ -6,7 +6,7 @@ import ItemFormComponent from "@/components/inventory/item-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
-import { AutoPrintLabels } from "@/components/inventory/auto-print-labels";
+import { createPrintLabels } from "@/components/inventory/auto-print-labels";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -62,12 +62,16 @@ export default function AddItemModal({
       if (!isEditing && newItem && variables.quantity && variables.quantity > 0) {
         // Delay to allow modal to close first
         setTimeout(() => {
-          const printLabels = AutoPrintLabels({ 
-            item: newItem, 
-            quantity: variables.quantity || 1, 
-            autoOpen: true 
-          });
-          printLabels.openPrintPreview(variables.quantity || 1);
+          const printLabels = createPrintLabels(newItem, variables.quantity || 1);
+          const success = printLabels.openPrintPreview(variables.quantity || 1);
+          
+          if (!success) {
+            toast({
+              title: "Print Blocked",
+              description: "Please allow popups to auto-print labels",
+              variant: "destructive"
+            });
+          }
         }, 500);
       }
       
