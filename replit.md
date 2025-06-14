@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Fixed Bulk Generation Functions with Product Names in Barcodes**
+  - Resolved syntax errors in routes.ts that were preventing bulk generation functions from working
+  - Implemented product name inclusion in barcode generation as requested
+  - Barcodes now format as `SKU-ProductName` (e.g., `FLW-GEN-CRTT-057621-CRTTS0CRTT`)
+  - All three bulk generation endpoints now functional: barcodes, QR codes, and SKUs
+  - Fixed application startup issues and ensured proper API endpoint functionality
 - June 14, 2025: **Added Shopify and Google Sheets View Buttons to Inventory**
   - Added "View in Shopify" and "View in Google Sheets" buttons to inventory item action dropdown menus
   - Implemented backend endpoints `/api/items/:id/shopify-store-view` and `/api/items/:id/sheets-view`

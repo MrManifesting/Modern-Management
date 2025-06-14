@@ -1869,24 +1869,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to generate SKUs" });
     }
   });
-        }
-      }
-      
-
-      
-      // Wait for all updates to complete
-      await Promise.all(promises);
-      
-      res.json({ 
-        success: true, 
-        updatedCount: itemIds.length,
-        message: `Successfully updated ${itemIds.length} items` 
-      });
-    } catch (error) {
-      console.error("Error in bulk update:", error);
-      res.status(500).json({ error: "Failed to update items" });
-    }
-  });
 
   // Telegram photo upload endpoint
   app.post("/api/telegram/send-photo", upload.single('image'), async (req: Request, res: Response) => {
