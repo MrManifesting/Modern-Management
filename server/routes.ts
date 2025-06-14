@@ -5813,13 +5813,325 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Register bidirectional sync routes
-  try {
-    const { registerBidirectionalSyncRoutes } = require('./routes-bidirectional-sync');
-    registerBidirectionalSyncRoutes(app, storage);
-  } catch (error) {
-    console.log('Bidirectional sync routes not available:', error);
-  }
+  // Google Sheets mapping endpoints for THCa Flower, Inventory, and InventoryList sheets
+  app.post("/api/sheets/thca-import", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, sheetName = "THCa Flower" } = req.body;
+
+      if (!spreadsheetId) {
+        return res.status(400).json({ error: "Spreadsheet ID is required" });
+      }
+
+      const { SheetMappingService } = await import('./services/sheet-mapping');
+      const GoogleSheetsService = (await import('./services/google-sheets')).default;
+      const sheetsService = new GoogleSheetsService();
+
+      // Get data from Google Sheets
+      const sheetData = await sheetsService.getInventoryFromSheet({
+        spreadsheetId,
+        worksheetName: sheetName
+      });
+
+      if (sheetData.length === 0) {
+        return res.json({
+          success: true,
+          message: "No data found in THCa Flower sheet",
+          imported: 0
+        });
+      }
+
+      // Parse and import data
+      const headers = SheetMappingService.getSheetHeaders('thca');
+      let imported = 0;
+
+      for (const row of sheetData) {
+        try {
+          const parsedRow = SheetMappingService.parseSheetRow(
+            headers, 
+            Object.values(row) as string[], 
+            'thca'
+          );
+
+          const inventoryItem = SheetMappingService.thcaFlowerToInventory(parsedRow);
+
+          if (!inventoryItem.sku) {
+            const { generateSKU } = await import('./services/sku-generator');
+            inventoryItem.sku = generateSKU(inventoryItem);
+          }
+
+          await storage.createItem(inventoryItem);
+          imported++;
+        } catch (error) {
+          console.error("Error importing THCa row:", error);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully imported ${imported} items from THCa Flower sheet`,
+        imported,
+        total: sheetData.length
+      });
+
+    } catch (error) {
+      console.error("Error importing THCa Flower sheet:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to import THCa Flower sheet",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/sheets/inventory-export", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, sheetName = "Inventory Export" } = req.body;
+
+      if (!spreadsheetId) {
+        return res.status(400).json({ error: "Spreadsheet ID is required" });
+      }
+
+      const { SheetMappingService } = await import('./services/sheet-mapping');
+      const GoogleSheetsService = (await import('./services/google-sheets')).default;
+      const sheetsService = new GoogleSheetsService();
+
+      // Get all inventory items
+      const items = await storage.getItems();
+
+      if (items.length === 0) {
+        return res.json({
+          success: true,
+          message: "No items found to export",
+          exported: 0
+        });
+      }
+
+      // Convert to Inventory sheet format
+      const inventoryRows = SheetMappingService.convertFromInventoryItems(items, 'inventory');
+
+      // Prepare data for sheets
+      const headers = SheetMappingService.getSheetHeaders('inventory');
+      const sheetData = [
+        headers,
+        ...inventoryRows.map(row => headers.map(header => {
+          const key = SheetMappingService.INVENTORY_SHEET_MAPPING[header as keyof typeof SheetMappingService.INVENTORY_SHEET_MAPPING];
+          return row[key] || '';
+        }))
+      ];
+
+      // Sync to Google Sheets
+      const success = await sheetsService.syncInventoryData(sheetData, {
+        spreadsheetId,
+        worksheetName: sheetName
+      });
+
+      if (success) {
+        res.json({
+          success: true,
+          message: `Successfully exported ${items.length} items to Inventory sheet`,
+          exported: items.length
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to export to Google Sheets"
+        });
+      }
+
+    } catch (error) {
+      console.error("Error exporting Inventory sheet:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to export Inventory sheet",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/sheets/bulk-sync", async (req: Request, res: Response) => {
+    try {
+      const { 
+        spreadsheetId, 
+        thcaSheetName = "THCa Flower",
+        inventorySheetName = "Inventory", 
+        listSheetName = "InventoryList",
+        syncDirection = "bidirectional" 
+      } = req.body;
+
+      if (!spreadsheetId) {
+        return res.status(400).json({ error: "Spreadsheet ID is required" });
+      }
+
+      const { SheetMappingService } = await import('./services/sheet-mapping');
+      const GoogleSheetsService = (await import('./services/google-sheets')).default;
+      const sheetsService = new GoogleSheetsService();
+
+      const results = {
+        thca: { imported: 0, exported: 0, success: false },
+        inventory: { imported: 0, exported: 0, success: false },
+        list: { imported: 0, exported: 0, success: false }
+      };
+
+      // Sync THCa Flower sheet
+      if (thcaSheetName && (syncDirection === 'to-app' || syncDirection === 'bidirectional')) {
+        try {
+          const sheetData = await sheetsService.getInventoryFromSheet({
+            spreadsheetId,
+            worksheetName: thcaSheetName
+          });
+
+          const headers = SheetMappingService.getSheetHeaders('thca');
+          
+          for (const row of sheetData) {
+            try {
+              const parsedRow = SheetMappingService.parseSheetRow(headers, Object.values(row) as string[], 'thca');
+              const inventoryItem = SheetMappingService.thcaFlowerToInventory(parsedRow);
+              
+              if (!inventoryItem.sku) {
+                const { generateSKU } = await import('./services/sku-generator');
+                inventoryItem.sku = generateSKU(inventoryItem);
+              }
+              
+              await storage.createItem(inventoryItem);
+              results.thca.imported++;
+            } catch (error) {
+              console.error("Error importing THCa row:", error);
+            }
+          }
+          results.thca.success = true;
+        } catch (error) {
+          console.error("Error syncing THCa sheet:", error);
+        }
+      }
+
+      // Export to sheets if requested
+      if (syncDirection === 'from-app' || syncDirection === 'bidirectional') {
+        const items = await storage.getItems();
+        
+        // Export flower items to THCa sheet
+        if (thcaSheetName) {
+          const flowerItems = items.filter(item => 
+            item.category?.toLowerCase() === 'flower' || 
+            item.tags?.includes('THCa')
+          );
+
+          if (flowerItems.length > 0) {
+            const thcaRows = SheetMappingService.convertFromInventoryItems(flowerItems, 'thca');
+            const headers = SheetMappingService.getSheetHeaders('thca');
+            const sheetData = [
+              headers,
+              ...thcaRows.map(row => headers.map(header => {
+                const key = SheetMappingService.THCA_FLOWER_MAPPING[header as keyof typeof SheetMappingService.THCA_FLOWER_MAPPING];
+                return row[key] || '';
+              }))
+            ];
+
+            const success = await sheetsService.syncInventoryData(sheetData, {
+              spreadsheetId,
+              worksheetName: thcaSheetName
+            });
+
+            if (success) {
+              results.thca.exported = flowerItems.length;
+            }
+          }
+        }
+
+        // Export all items to inventory sheet
+        if (inventorySheetName && items.length > 0) {
+          const inventoryRows = SheetMappingService.convertFromInventoryItems(items, 'inventory');
+          const headers = SheetMappingService.getSheetHeaders('inventory');
+          const sheetData = [
+            headers,
+            ...inventoryRows.map(row => headers.map(header => {
+              const key = SheetMappingService.INVENTORY_SHEET_MAPPING[header as keyof typeof SheetMappingService.INVENTORY_SHEET_MAPPING];
+              return row[key] || '';
+            }))
+          ];
+
+          const success = await sheetsService.syncInventoryData(sheetData, {
+            spreadsheetId,
+            worksheetName: inventorySheetName
+          });
+
+          if (success) {
+            results.inventory.exported = items.length;
+            results.inventory.success = true;
+          }
+        }
+
+        // Export to inventory list sheet
+        if (listSheetName && items.length > 0) {
+          const listRows = SheetMappingService.convertFromInventoryItems(items, 'list');
+          const headers = SheetMappingService.getSheetHeaders('list');
+          const sheetData = [
+            headers,
+            ...listRows.map(row => headers.map(header => {
+              const key = SheetMappingService.INVENTORY_LIST_MAPPING[header as keyof typeof SheetMappingService.INVENTORY_LIST_MAPPING];
+              return row[key] || '';
+            }))
+          ];
+
+          const success = await sheetsService.syncInventoryData(sheetData, {
+            spreadsheetId,
+            worksheetName: listSheetName
+          });
+
+          if (success) {
+            results.list.exported = items.length;
+            results.list.success = true;
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Bulk sync completed across all sheet types",
+        results
+      });
+
+    } catch (error) {
+      console.error("Error in bulk sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to perform bulk sync",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get("/api/sheets/mapping-config", async (req: Request, res: Response) => {
+    try {
+      const { SheetMappingService } = await import('./services/sheet-mapping');
+      
+      res.json({
+        success: true,
+        mappings: {
+          thcaFlower: {
+            headers: SheetMappingService.getSheetHeaders('thca'),
+            mapping: SheetMappingService.THCA_FLOWER_MAPPING,
+            description: "THCa Flower sheet format with strain data"
+          },
+          inventory: {
+            headers: SheetMappingService.getSheetHeaders('inventory'),
+            mapping: SheetMappingService.INVENTORY_SHEET_MAPPING,
+            description: "Shopify inventory sheet format"
+          },
+          inventoryList: {
+            headers: SheetMappingService.getSheetHeaders('list'),
+            mapping: SheetMappingService.INVENTORY_LIST_MAPPING,
+            description: "Simplified inventory list format"
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error getting mapping config:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get mapping configuration"
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
