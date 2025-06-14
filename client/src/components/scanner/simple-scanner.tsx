@@ -174,18 +174,80 @@ const SimpleScanner: React.FC<SimpleScannerProps> = ({
         // Try to extract text/numbers from the image using basic image processing
         const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Convert to grayscale and enhance contrast for better detection
-        if (imageData) {
+        // Apply multiple image enhancement techniques for better barcode detection
+        if (imageData && ctx) {
           const data = imageData.data;
+          const width = canvas.width;
+          const height = canvas.height;
+          
+          // Step 1: Convert to grayscale with better weighting
           for (let i = 0; i < data.length; i += 4) {
             const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-            // Enhance contrast
-            const enhanced = gray > 128 ? 255 : 0;
-            data[i] = enhanced;     // red
-            data[i + 1] = enhanced; // green  
-            data[i + 2] = enhanced; // blue
+            data[i] = gray;     // red
+            data[i + 1] = gray; // green  
+            data[i + 2] = gray; // blue
           }
-          ctx?.putImageData(imageData, 0, 0);
+          ctx.putImageData(imageData, 0, 0);
+          
+          // Step 2: Apply histogram equalization for better contrast
+          const histogram = new Array(256).fill(0);
+          for (let i = 0; i < data.length; i += 4) {
+            histogram[data[i]]++;
+          }
+          
+          // Calculate cumulative distribution
+          const cdf = new Array(256);
+          cdf[0] = histogram[0];
+          for (let i = 1; i < 256; i++) {
+            cdf[i] = cdf[i - 1] + histogram[i];
+          }
+          
+          // Normalize and apply equalization
+          const totalPixels = width * height;
+          for (let i = 0; i < data.length; i += 4) {
+            const equalizedValue = Math.round((cdf[data[i]] * 255) / totalPixels);
+            data[i] = equalizedValue;
+            data[i + 1] = equalizedValue;
+            data[i + 2] = equalizedValue;
+          }
+          
+          // Step 3: Apply adaptive thresholding for better barcode contrast
+          const newImageData = ctx.createImageData(width, height);
+          const newData = newImageData.data;
+          
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const idx = (y * width + x) * 4;
+              
+              // Calculate local average in 15x15 window
+              let sum = 0;
+              let count = 0;
+              const windowSize = 7;
+              
+              for (let dy = -windowSize; dy <= windowSize; dy++) {
+                for (let dx = -windowSize; dx <= windowSize; dx++) {
+                  const ny = y + dy;
+                  const nx = x + dx;
+                  if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                    const nidx = (ny * width + nx) * 4;
+                    sum += data[nidx];
+                    count++;
+                  }
+                }
+              }
+              
+              const localAvg = sum / count;
+              const threshold = localAvg * 0.85; // Adaptive threshold
+              const value = data[idx] > threshold ? 255 : 0;
+              
+              newData[idx] = value;     // red
+              newData[idx + 1] = value; // green
+              newData[idx + 2] = value; // blue
+              newData[idx + 3] = 255;   // alpha
+            }
+          }
+          
+          ctx.putImageData(newImageData, 0, 0);
         }
         
         // Convert canvas to blob and send to server for processing

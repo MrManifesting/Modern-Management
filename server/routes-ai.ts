@@ -15,6 +15,7 @@ import {
   analyzeInventoryData
 } from './services/openai';
 import { IStorage } from './storage';
+import { ImageEnhancer } from './services/image-enhancer';
 
 // Configure multer for file uploads
 // Use import.meta.url to get the current module's URL
@@ -67,7 +68,7 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
     });
   });
   
-  // Analyze product image and extract details
+  // Analyze product image and extract details with enhanced barcode detection
   app.post('/api/ai/analyze-image', upload.single('image'), async (req: Request, res: Response) => {
     try {
       // Check if a file was uploaded
@@ -78,21 +79,87 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
         });
       }
       
-      log(`Processing image analysis request for ${req.file.originalname}`, 'ai-routes');
+      log(`Processing enhanced image analysis for ${req.file.originalname}`, 'ai-routes');
       
-      // Read the file as base64
-      const imageBuffer = fs.readFileSync(req.file.path);
-      const base64Image = imageBuffer.toString('base64');
+      // Read the original file
+      const originalBuffer = fs.readFileSync(req.file.path);
       
-      // Call OpenAI to analyze the image
-      const analysis = await analyzeProductImage(base64Image);
+      // Try multiple enhancement techniques for better barcode detection
+      try {
+        const enhancedVariants = await ImageEnhancer.createMultipleEnhanced(originalBuffer);
+        log(`Created ${enhancedVariants.length} enhanced image variants`, 'ai-routes');
+        
+        let bestResult = null;
+        let extractedText = '';
+        
+        // Try analyzing each enhanced variant
+        for (let i = 0; i < enhancedVariants.length; i++) {
+          try {
+            const base64Image = enhancedVariants[i].toString('base64');
+            const analysis = await analyzeProductImage(base64Image);
+            
+            // Check if this variant extracted more text
+            if (analysis.extractedText && analysis.extractedText.length > extractedText.length) {
+              bestResult = analysis;
+              extractedText = analysis.extractedText;
+              log(`Variant ${i + 1} extracted better text: "${extractedText.substring(0, 50)}..."`, 'ai-routes');
+            }
+          } catch (variantError) {
+            console.warn(`Analysis failed for variant ${i + 1}:`, variantError);
+            continue;
+          }
+        }
+        
+        // If no enhanced variants worked, try the original
+        if (!bestResult) {
+          log('Enhanced variants failed, trying original image', 'ai-routes');
+          const base64Image = originalBuffer.toString('base64');
+          bestResult = await analyzeProductImage(base64Image);
+        }
+        
+        // Delete the temporary file
+        fs.unlinkSync(req.file.path);
+        
+        // Add debugging info about enhancement
+        const result = {
+          ...bestResult,
+          debug: {
+            variantsProcessed: enhancedVariants.length,
+            enhancementUsed: !!extractedText,
+            originalFileSize: originalBuffer.length,
+            extractedTextLength: extractedText.length
+          }
+        };
+        
+        res.json(result);
+        
+      } catch (enhancementError) {
+        log(`Image enhancement failed, falling back to original: ${enhancementError}`, 'ai-routes');
+        
+        // Fallback to original image if enhancement fails
+        const base64Image = originalBuffer.toString('base64');
+        const analysis = await analyzeProductImage(base64Image);
+        
+        // Delete the temporary file
+        fs.unlinkSync(req.file.path);
+        
+        res.json({
+          ...analysis,
+          debug: {
+            enhancementFailed: true,
+            fallbackUsed: true
+          }
+        });
+      }
       
-      // Delete the temporary file
-      fs.unlinkSync(req.file.path);
-      
-      res.json(analysis);
     } catch (error: any) {
       log(`Error in image analysis: ${error.message}`, 'ai-routes-error');
+      
+      // Clean up file if it exists
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      
       res.status(500).json({ 
         success: false, 
         error: `Error processing image: ${error.message}` 
