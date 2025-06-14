@@ -47,6 +47,7 @@ interface MobileScannerProps {
 declare global {
   interface Window {
     Html5Qrcode: any;
+    Html5QrcodeSupportedFormats: any;
   }
 }
 
@@ -127,23 +128,29 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
 
       if (scannerInstance.current) {
         await scannerInstance.current.stop();
+        scannerInstance.current = null;
       }
+
+      // Ensure DOM element exists and is ready
+      let scannerElement = document.getElementById("mobile-scanner");
+      if (!scannerElement) {
+        // Wait a bit longer for React to render the element
+        await new Promise(resolve => setTimeout(resolve, 300));
+        scannerElement = document.getElementById("mobile-scanner");
+        if (!scannerElement) {
+          throw new Error("Scanner element not available - please try again");
+        }
+      }
+
+      // Clear any existing content in the scanner element
+      scannerElement.innerHTML = '';
 
       scannerInstance.current = new window.Html5Qrcode("mobile-scanner");
 
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        formatsToSupport: [
-          window.Html5QrcodeSupportedFormats.QR_CODE,
-          window.Html5QrcodeSupportedFormats.CODE_128,
-          window.Html5QrcodeSupportedFormats.CODE_39,
-          window.Html5QrcodeSupportedFormats.EAN_13,
-          window.Html5QrcodeSupportedFormats.EAN_8,
-          window.Html5QrcodeSupportedFormats.UPC_A,
-          window.Html5QrcodeSupportedFormats.UPC_E,
-        ]
+        aspectRatio: 1.0
       };
 
       await scannerInstance.current.start(
@@ -159,8 +166,19 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
 
     } catch (err) {
       console.error('Error starting scanner:', err);
-      setError('Failed to start camera scanner');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start camera scanner';
+      setError(`Scanner error: ${errorMessage}`);
       setIsScanning(false);
+      
+      // Clean up any partial scanner instance
+      if (scannerInstance.current) {
+        try {
+          await scannerInstance.current.stop();
+        } catch (stopErr) {
+          console.error('Error cleaning up scanner:', stopErr);
+        }
+        scannerInstance.current = null;
+      }
     }
   }, [scannerReady, selectedCamera, isScanning]);
 
