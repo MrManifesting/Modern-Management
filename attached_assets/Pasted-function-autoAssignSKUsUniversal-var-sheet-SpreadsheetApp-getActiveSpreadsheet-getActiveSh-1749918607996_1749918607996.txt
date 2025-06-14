@@ -1,0 +1,169 @@
+function autoAssignSKUsUniversal() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return;
+  var headers = data[0].map(h => (h || '').toString());
+  function idx(col) { return headers.findIndex(h => h.trim().toLowerCase() === col.trim().toLowerCase()); }
+  var handleCol = idx('Handle');
+  var weightCol = idx('Option1 Value');
+  var skuCol = idx('SKU');
+  if (skuCol === -1) skuCol = idx('Variant SKU');
+  if ([handleCol, weightCol, skuCol].some(i => i === -1)) {
+    SpreadsheetApp.getUi().alert('❌ One or more columns not found!\nActual headers: ' + headers.join(', '));
+    return;
+  }
+
+  var weightMap = {
+    '1 pound': '454','28 grams': '28','14 grams': '14','7 grams': '7','3.5 grams': '3.5',
+    '1 g': '1','1 gram': '1','1 lb': '454','pound': '454'
+  };
+
+  var updated = 0;
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[skuCol]) {
+      var handle = (row[handleCol] || '').toString().trim();
+      var weight = (row[weightCol] || '').toString().toLowerCase().trim();
+      var abbr = handle.split(/[^a-zA-Z0-9]+/).map(part => part.charAt(0)).join('').toUpperCase();
+      var weightNum = weightMap[weight];
+      if (weightNum === undefined) {
+        var found = weight.match(/(\d+(\.\d+)?)/);
+        weightNum = found ? found[1] : '';
+      }
+      var sku = abbr + (weightNum ? '-' + weightNum : '');
+      sheet.getRange(i + 1, skuCol + 1).setValue(sku.toUpperCase());
+      updated++;
+    }
+  }
+  SpreadsheetApp.getUi().alert(`✅ Auto-assigned ${updated} UPPERCASE SKUs on "${sheet.getName()}".`);
+}
+// Main function to handle incoming requests
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    console.log('Received webhook data:', data);
+    
+    // Your inventory system webhook URL
+    const INVENTORY_WEBHOOK_URL = 'https://your-replit-app.replit.app/api/google-apps-script/webhook';
+    
+    // Process the incoming data and forward to your inventory system
+    const response = UrlFetchApp.fetch(INVENTORY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify({
+        action: data.action || 'sync_request',
+        data: data,
+        timestamp: new Date().toISOString(),
+        source: 'google_apps_script'
+      })
+    });
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({status: 'ok', received: data}))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    return ContentService
+      .createTextOutput(JSON.stringify({status: 'error', message: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Function to sync inventory to Google Sheets
+function syncInventoryToSheets(inventoryData) {
+  const SHEET_ID = '1SW_o292VqhW0_RAIBIEb3J_9srmZGg2uyo1Kob3CU-s';
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+  
+  // Clear existing data (except headers)
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clear();
+  }
+  
+  // Add headers if not present
+  if (sheet.getRange(1, 1).getValue() === '') {
+    sheet.getRange(1, 1, 1, 8).setValues([
+      ['ID', 'Name', 'SKU', 'Quantity', 'Base Price', 'Status', 'Category', 'Brand']
+    ]);
+  }
+  
+  // Add inventory data
+  if (inventoryData && inventoryData.items) {
+    const rows = inventoryData.items.map(item => [
+      item.id,
+      item.name,
+      item.sku,
+      item.quantity,
+      item.basePrice,
+      item.status,
+      item.category,
+      item.brand
+    ]);
+    
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 8).setValues(rows);
+    }
+  }
+  
+  console.log(`Synced ${inventoryData.items?.length || 0} items to Google Sheets`);
+}
+
+// Function to handle Shopify webhooks
+function handleShopifyWebhook(orderData) {
+  const INVENTORY_WEBHOOK_URL = 'https://modern-inventory-and-sales-management-whateversclever.replit.app/api/google-apps-script/webhook';
+  
+  // Forward Shopify order to inventory system for processing
+  const response = UrlFetchApp.fetch(INVENTORY_WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify({
+      action: 'shopify_order_update',
+      data: orderData,
+      timestamp: new Date().toISOString(),
+      source: 'shopify_via_google_apps_script'
+    })
+  });
+  
+  console.log('Forwarded Shopify order to inventory system');
+}
+
+// Function to manually trigger inventory sync
+function manualInventorySync() {
+  const INVENTORY_SYNC_URL = 'https://modern-inventory-and-sales-management-whateversclever.replit.app/api/google-apps-script/sync-inventory';
+  
+  try {
+    const response = UrlFetchApp.fetch(INVENTORY_SYNC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = JSON.parse(response.getContentText());
+    console.log('Manual sync result:', result);
+    
+    if (result.success) {
+      syncInventoryToSheets(result);
+    }
+    
+  } catch (error) {
+    console.error('Manual sync failed:', error);
+  }
+}
+// Export Sheet to CSV
+function exportSheetToCsv() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  let csv = '';
+  data.forEach(row => {
+    csv += row.map(cell => `"${cell ? cell.toString().replace(/"/g, '""') : ''}"`).join(',') + '\n';
+  });
+  const fileName = `${SHEET_NAME}_export_${new Date().toISOString()}.csv`;
+  const file = DriveApp.createFile(fileName, csv);
+  SpreadsheetApp.getUi().alert(`✅ CSV exported successfully: ${file.getUrl()}`);
+}
