@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScanLine, Barcode, QrCode } from 'lucide-react';
-import QuickScanner from '../components/scanner/quick-scanner';
-import UniversalScanner from '../components/scanner/universal-scanner';
-import SimpleScanner from '../components/scanner/simple-scanner';
+import { BarcodeScanner } from '../components/scanner/barcode-scanner';
 import { ErrorBoundary } from '../components/error-boundary';
 
 export default function ScannerPage() {
@@ -55,7 +53,11 @@ export default function ScannerPage() {
             </CardHeader>
             <CardContent>
               <ErrorBoundary>
-                <SimpleScanner />
+                <BarcodeScanner 
+                  onItemScanned={handleItemFound}
+                  onActionComplete={handleActionComplete}
+                  actionType="scan"
+                />
               </ErrorBoundary>
             </CardContent>
           </Card>
@@ -71,9 +73,10 @@ export default function ScannerPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <QuickScanner 
-                  onItemFound={handleItemFound}
+                <BarcodeScanner 
+                  onItemScanned={handleItemFound}
                   onActionComplete={handleActionComplete}
+                  actionType="intake"
                 />
               </CardContent>
             </Card>
@@ -128,7 +131,11 @@ export default function ScannerPage() {
             </CardHeader>
             <CardContent>
               <ErrorBoundary>
-                <UniversalScanner />
+                <BarcodeScanner 
+                  onItemScanned={handleItemFound}
+                  onActionComplete={handleActionComplete}
+                  actionType="fulfillment"
+                />
               </ErrorBoundary>
             </CardContent>
           </Card>

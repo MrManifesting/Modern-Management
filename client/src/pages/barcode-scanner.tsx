@@ -1,5 +1,5 @@
-import SimpleScanner from "@/components/scanner/simple-scanner";
-import { ScannerErrorBoundary } from "@/components/scanner/scanner-error-boundary";
+import { SimpleScanner } from "@/components/scanner/simple-scanner";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function BarcodeScannerPage() {
   return (
