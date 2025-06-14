@@ -48,6 +48,7 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerLabelRoutes } from "./routes-labels";
 import { registerSyncRoutes } from "./routes-sync";
+import { ShopifyProductImportService } from "./services/shopify-product-import.js";
 import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
 import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
@@ -4336,6 +4337,67 @@ ${topCustomersCsv}`;
   
   // Register barcode fulfillment routes for inventory subtraction
   registerBarcodeFulfillmentRoutes(app, storage);
+
+  // Shopify Product Import Service
+  const shopifyImportService = new ShopifyProductImportService(storage);
+
+  // Shopify Product Import Routes
+  app.post("/api/shopify/import-all-products", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting full Shopify product import...');
+      const results = await shopifyImportService.importAllProducts();
+      
+      res.json({
+        success: true,
+        message: `Import completed: ${results.imported} new items, ${results.updated} updated items`,
+        ...results
+      });
+    } catch (error) {
+      console.error('Error importing Shopify products:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to import products from Shopify" 
+      });
+    }
+  });
+
+  app.post("/api/shopify/update-pricing", async (req: Request, res: Response) => {
+    try {
+      console.log('Updating pricing from Shopify...');
+      const results = await shopifyImportService.updatePricingFromShopify();
+      
+      res.json({
+        success: true,
+        message: `Updated pricing for ${results.updated} items`,
+        ...results
+      });
+    } catch (error) {
+      console.error('Error updating pricing from Shopify:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update pricing from Shopify" 
+      });
+    }
+  });
+
+  app.post("/api/shopify/update-images", async (req: Request, res: Response) => {
+    try {
+      console.log('Updating images from Shopify...');
+      const results = await shopifyImportService.updateImagesFromShopify();
+      
+      res.json({
+        success: true,
+        message: `Updated images for ${results.updated} items`,
+        ...results
+      });
+    } catch (error) {
+      console.error('Error updating images from Shopify:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update images from Shopify" 
+      });
+    }
+  });
   
   registerShopifyInventorySyncRoutes(app, storage);
 
