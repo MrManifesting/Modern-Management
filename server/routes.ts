@@ -5527,7 +5527,7 @@ ${topCustomersCsv}`;
             for (const lineItem of data.lineItems) {
               if (lineItem.sku) {
                 // Find item by SKU and update quantity
-                const items = await storage.listItems();
+                const items = await storage.getItems();
                 const item = items.find(i => i.sku === lineItem.sku);
                 
                 if (item && item.quantity !== null) {
@@ -5560,7 +5560,7 @@ ${topCustomersCsv}`;
 
         case 'sync_request':
           // Trigger inventory sync back to Google Sheets
-          const items = await storage.listItems();
+          const items = await storage.getItems();
           const syncResponse = {
             success: true,
             items: items.map(item => ({
