@@ -37,37 +37,36 @@ export function generateSKU(
     .substring(0, 4)
     .toUpperCase();
   
-  // Add a timestamp for uniqueness
+  // Add a timestamp for uniqueness - this creates the base SKU ending in -0
   const timestamp = Date.now().toString().substring(7);
   
-  // Base SKU
-  let sku = `${categoryPrefix}-${brandPrefix}-${namePart}-${timestamp}`;
+  // Base SKU always ends with -0 for the master record
+  let sku = `${categoryPrefix}-${brandPrefix}-${namePart}-${timestamp}-0`;
   
   // If we have options for quantity or weight, incorporate them into the SKU
   if (options) {
     // If this is a breakdown or derived item with quantity/weight
     if (options.parentSku) {
-      // Use parent SKU as base
-      sku = options.parentSku;
+      // Use parent SKU as base (remove the -0 ending if present)
+      const baseSku = options.parentSku.replace(/-0$/, '');
+      sku = baseSku;
       
       // Add a weight suffix if provided
       if (options.weight && options.weightUnit) {
         sku = `${sku}-${options.weight}${options.weightUnit}`;
       }
       
-      // Add unit index for individual tracking
-      if (options.unitIndex !== undefined) {
-        sku = `${sku}-U${String(options.unitIndex).padStart(3, '0')}`;
+      // Add unit index for individual tracking (1, 2, 3, etc.)
+      if (options.unitIndex !== undefined && options.unitIndex > 0) {
+        sku = `${sku}-${options.unitIndex}`;
+      } else {
+        sku = `${sku}-0`; // Default to 0 for master record
       }
     }
-    // If this is a standalone item with quantity variations
-    else if (options.quantity && options.quantity > 1) {
-      sku = `${sku}-QTY${options.quantity}`;
-    }
-    
-    // Add unit index for individual tracking
-    if (options.unitIndex !== undefined) {
-      sku = `${sku}-U${String(options.unitIndex).padStart(3, '0')}`;
+    // If this is a standalone item with unit index
+    else if (options.unitIndex !== undefined && options.unitIndex > 0) {
+      // Replace the -0 ending with the actual unit number
+      sku = sku.replace(/-0$/, `-${options.unitIndex}`);
     }
   }
   
@@ -77,6 +76,53 @@ export function generateSKU(
 /**
  * Generate multiple SKUs for items with quantities > 1
  * Each unit gets its own unique SKU and barcode for individual tracking
+ * @param baseSku The base SKU (ending in -0)
+ * @param quantity The number of individual units to create SKUs for
+ * @returns Array of numbered SKUs (1, 2, 3, etc.)
+ */
+export function generateNumberedSKUs(baseSku: string, quantity: number): string[] {
+  const skus: string[] = [];
+  
+  // Remove -0 ending if present to get the base
+  const base = baseSku.replace(/-0$/, '');
+  
+  // Generate numbered SKUs starting from 1
+  for (let i = 1; i <= quantity; i++) {
+    skus.push(`${base}-${i}`);
+  }
+  
+  return skus;
+}
+
+/**
+ * Get the next available unit number for a base SKU
+ * This checks existing items to find the highest unit number and returns the next one
+ * @param baseSku The base SKU pattern (without unit number)
+ * @param existingSkus Array of existing SKUs to check against
+ * @returns The next available unit number
+ */
+export function getNextUnitNumber(baseSku: string, existingSkus: string[]): number {
+  const base = baseSku.replace(/-\d+$/, ''); // Remove any existing number
+  const pattern = new RegExp(`^${base}-(\\d+)$`);
+  
+  let maxUnit = 0;
+  
+  existingSkus.forEach(sku => {
+    const match = sku.match(pattern);
+    if (match) {
+      const unitNumber = parseInt(match[1]);
+      if (unitNumber > maxUnit) {
+        maxUnit = unitNumber;
+      }
+    }
+  });
+  
+  return maxUnit + 1;
+}
+
+/**
+ * Generate multiple items with numbered SKUs for inventory tracking
+ * Each unit gets its own unique SKU and can be tracked individually
  */
 export function generateMultipleSkus(
   item: Partial<InsertItem> | Item,

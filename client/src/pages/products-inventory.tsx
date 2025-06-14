@@ -1998,6 +1998,12 @@ const ProductsInventoryPage: React.FC = () => {
                                       <Printer className="mr-2 h-4 w-4" />
                                       Print Barcode/QR
                                     </DropdownMenuItem>
+                                    <NumberedLabelsDialog item={product}>
+                                      <DropdownMenuItem className="flex items-center cursor-pointer">
+                                        <Hash className="mr-2 h-4 w-4" />
+                                        Print Numbered Labels
+                                      </DropdownMenuItem>
+                                    </NumberedLabelsDialog>
                                     {product.weight && (
                                       <DropdownMenuItem 
                                         className="flex items-center cursor-pointer"

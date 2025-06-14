@@ -5694,6 +5694,125 @@ ${topCustomersCsv}`;
     });
   });
 
+  // Generate numbered labels for specific item quantities
+  app.post("/api/labels/numbered", async (req: Request, res: Response) => {
+    try {
+      const { itemId, quantity, format = 'avery-5160' } = req.body;
+      
+      if (!itemId || !quantity || quantity < 1) {
+        return res.status(400).json({ error: "Item ID and quantity are required" });
+      }
+      
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const { generateNumberedLabels, LABEL_FORMATS } = await import('./services/label-printer');
+      
+      if (!LABEL_FORMATS[format]) {
+        return res.status(400).json({ error: "Invalid label format" });
+      }
+      
+      const htmlContent = generateNumberedLabels(item, quantity, format);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(htmlContent);
+    } catch (error) {
+      console.error("Error generating numbered labels:", error);
+      res.status(500).json({ error: "Failed to generate numbered labels" });
+    }
+  });
+
+  // Generate bulk labels with numbered SKUs
+  app.post("/api/labels/bulk-numbered", async (req: Request, res: Response) => {
+    try {
+      const { itemIds, format = 'avery-5160', includeQuantities = true } = req.body;
+      
+      if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+        return res.status(400).json({ error: "Item IDs array is required" });
+      }
+      
+      const items = await Promise.all(
+        itemIds.map((id: number) => storage.getItem(id))
+      );
+      
+      const validItems = items.filter(item => item !== undefined);
+      
+      if (validItems.length === 0) {
+        return res.status(404).json({ error: "No valid items found" });
+      }
+      
+      const { generateBulkLabels, LABEL_FORMATS } = await import('./services/label-printer');
+      
+      if (!LABEL_FORMATS[format]) {
+        return res.status(400).json({ error: "Invalid label format" });
+      }
+      
+      const htmlContent = generateBulkLabels(validItems, format, includeQuantities);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(htmlContent);
+    } catch (error) {
+      console.error("Error generating bulk numbered labels:", error);
+      res.status(500).json({ error: "Failed to generate bulk numbered labels" });
+    }
+  });
+
+  // Get available label formats
+  app.get("/api/labels/formats", async (_req: Request, res: Response) => {
+    try {
+      const { LABEL_FORMATS } = await import('./services/label-printer');
+      
+      const formats = Object.entries(LABEL_FORMATS).map(([key, format]) => ({
+        id: key,
+        name: format.name,
+        size: `${format.width}" x ${format.height}"`,
+        labelsPerPage: format.columns * format.rows,
+        columns: format.columns,
+        rows: format.rows
+      }));
+      
+      res.json(formats);
+    } catch (error) {
+      console.error("Error getting label formats:", error);
+      res.status(500).json({ error: "Failed to get label formats" });
+    }
+  });
+
+  // Generate numbered SKUs for existing item
+  app.post("/api/items/:id/generate-numbered-skus", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { quantity } = req.body;
+      
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ error: "Quantity must be at least 1" });
+      }
+      
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const { generateNumberedSKUs } = await import('./services/sku-generator');
+      
+      // Generate numbered SKUs
+      const baseSku = item.sku || '';
+      const numberedSkus = generateNumberedSKUs(baseSku, quantity);
+      
+      res.json({
+        baseSku,
+        numberedSkus,
+        quantity,
+        itemName: item.name
+      });
+    } catch (error) {
+      console.error("Error generating numbered SKUs:", error);
+      res.status(500).json({ error: "Failed to generate numbered SKUs" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
