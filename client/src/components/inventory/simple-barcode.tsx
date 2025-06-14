@@ -37,21 +37,7 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
       console.log("Canvas found:", canvas);
       console.log("Canvas parent:", canvas.parentElement);
 
-      // Import jsbarcode with detailed error handling
-      let JsBarcode;
-      try {
-        console.log("Importing jsbarcode...");
-        const module = await import('jsbarcode');
-        console.log("Module imported:", module);
-        JsBarcode = module.default;
-        console.log("JsBarcode function:", typeof JsBarcode);
-        if (!JsBarcode || typeof JsBarcode !== 'function') {
-          throw new Error("JsBarcode not loaded properly or not a function");
-        }
-      } catch (importError) {
-        console.error("Failed to import jsbarcode:", importError);
-        throw new Error(`Barcode library import failed: ${importError.message}`);
-      }
+      // Use external barcode service instead of client-side jsbarcode
       
       // Validate and clean the SKU
       console.log("Original SKU:", item.sku);
