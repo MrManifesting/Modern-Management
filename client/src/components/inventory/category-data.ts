@@ -34,11 +34,16 @@ export const FLOWER_STRAIN_TYPES = [
 
 // All flower quality grades (unified system, no special exotic tier)
 export const ALL_FLOWER_QUALITIES = [
-  'Outdoor',
   'Indoor',
+  'Exotic',
+  'Top Shelf',
+  'Classic Reserve',
+  'AA Indoor',
+  'AAA Indoor',
+  'Exotic Indoor',
+  'Outdoor',
   'Greenhouse',
   'Premium',
-  'Top Shelf',
   'Special Reserve',
   'Limited Edition',
   'Rare',
@@ -106,18 +111,22 @@ export const BULK_SIZES = [
 // Standard weight options for all products
 export const WEIGHT_OPTIONS = [
   '1 pound',
+  '1 lb',
   'half pound', 
   'quarter pound',
   'ounce',
   'half ounce',
   'quarter ounce', 
   'eighth',
-  'gram'
+  'gram',
+  'little trees',
+  'gold nuggets'
 ];
 
 // Vendor options
 export const VENDOR_OPTIONS = [
   'Gold Standard',
+  'Tree Mason',
   'Mason Jar Co',
   'Premium Supply'
 ];
@@ -128,6 +137,20 @@ export const FLOWER_QUALITY_OPTIONS = [
   'Premium',
   'Mid-Grade',
   'Budget'
+];
+
+// Product type options
+export const PRODUCT_TYPE_OPTIONS = [
+  'THCA',
+  'THCP',
+  'Wholesale',
+  'Discount',
+  'Distribution 25+',
+  'Distribution 50+',
+  'Distribution 100+',
+  'Regular',
+  'Premium',
+  'Limited Edition'
 ];
 
 // Export structured category map for easier access
