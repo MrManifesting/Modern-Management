@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Added Shopify and Google Sheets View Buttons to Inventory**
+  - Added "View in Shopify" and "View in Google Sheets" buttons to inventory item action dropdown menus
+  - Implemented backend endpoints `/api/items/:id/shopify-store-view` and `/api/items/:id/sheets-view`
+  - Shopify view redirects directly to admin product page for items with shopifyId
+  - Google Sheets view opens with search functionality to locate items by SKU or name
+  - Both features integrate seamlessly with existing inventory management workflow
 - June 14, 2025: **Comprehensive Codebase Cleanup and Consolidation Complete**
   - Removed 6 duplicate route files (routes-shopify-enhanced, routes-shopify-fix, routes-shopify-safety)
   - Eliminated 8 duplicate service files (shopify-enhanced, csv-parser variants, shopify-utils, etc.)

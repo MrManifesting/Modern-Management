@@ -4346,6 +4346,80 @@ ${topCustomersCsv}`;
   // Register bidirectional sync routes for app, Google Sheets, and Shopify
   registerBidirectionalSyncRoutes(app, storage);
 
+  // View item in Shopify store
+  app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const item = await storage.getItem(parseInt(id));
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      if (!item.shopifyId) {
+        return res.status(400).json({ error: "Item not available in Shopify" });
+      }
+      
+      // Get Shopify credentials
+      const { shopName } = getShopifyCredentials();
+      
+      if (!shopName) {
+        return res.status(400).json({ error: "Shopify store not configured" });
+      }
+      
+      // Redirect to Shopify admin product page
+      const adminUrl = `https://${shopName}/admin/products/${item.shopifyId}`;
+      res.redirect(adminUrl);
+      
+    } catch (error) {
+      console.error("Error viewing item in Shopify:", error);
+      res.status(500).json({ error: "Failed to open Shopify view" });
+    }
+  });
+
+  // View item in Google Sheets
+  app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const item = await storage.getItem(parseInt(id));
+      
+      if (!item) {
+        return res.status(404).json({ 
+          success: false,
+          error: "Item not found" 
+        });
+      }
+      
+      // Get Google Sheets configuration
+      const sheetId = process.env.GOOGLE_SHEET_ID || process.env.GOOGLE_SHEETS_ID;
+      
+      if (!sheetId) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Google Sheets not configured" 
+        });
+      }
+      
+      // Find the row in the sheet that corresponds to this item
+      // We'll search by SKU or name to locate the item
+      const searchTerm = item.sku || item.name;
+      const sheetsUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
+      
+      res.json({
+        success: true,
+        url: sheetsUrl,
+        message: "Opening Google Sheets view"
+      });
+      
+    } catch (error) {
+      console.error("Error viewing item in Google Sheets:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to open Google Sheets view" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
