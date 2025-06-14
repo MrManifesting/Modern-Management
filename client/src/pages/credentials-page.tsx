@@ -38,7 +38,13 @@ export default function CredentialsPage() {
   // Shopify credentials mutation
   const shopifyMutation = useMutation({
     mutationFn: async (data: { store: string; accessToken: string }) => {
-      const res = await apiRequest("POST", "/api/credentials/shopify", data);
+      const res = await apiRequest("POST", "/api/credentials/shopify", {
+        name: "Shopify Store Credentials",
+        credentials: {
+          shopifyStore: data.store,
+          shopifyAccessToken: data.accessToken
+        }
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -60,7 +66,10 @@ export default function CredentialsPage() {
   // Google Sheets credentials mutation
   const googleSheetsMutation = useMutation({
     mutationFn: async (data: { clientId: string; clientSecret: string; spreadsheetId: string }) => {
-      const res = await apiRequest("POST", "/api/credentials/google-sheets", data);
+      const res = await apiRequest("POST", "/api/credentials/google-sheets", {
+        name: "Google Sheets Credentials",
+        credentials: data
+      });
       return res.json();
     },
     onSuccess: () => {

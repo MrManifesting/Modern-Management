@@ -77,9 +77,12 @@ export default function ShopifyCredentialsForm() {
       await apiRequestSimple<{
         success: boolean;
         message: string;
-      }>('/api/shopify/update-credentials', {
+      }>('/api/credentials/shopify', {
         method: 'POST',
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({
+          name: "Shopify Store Credentials",
+          credentials: credentials
+        }),
         headers: {
           'Content-Type': 'application/json'
         }
