@@ -59,23 +59,20 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
           throw new Error("Canvas ref not available");
         }
 
-        // Dynamically import jsbarcode
-        const JsBarcode = (await import('jsbarcode')).default;
-
         // Get category colors
         const colors = getCategoryColors(item.category || 'Other');
         
-        // Generate barcode using jsbarcode directly on canvas
-        JsBarcode(canvasRef.current, item.sku, {
-          format: "CODE128",
-          width: 2,
-          height: 60,
-          displayValue: true,
-          fontSize: 12,
-          textMargin: 5,
-          background: "#ffffff",
-          lineColor: "#000000"
-        });
+        // Use external barcode service instead of jsbarcode
+        const barcodeUrl = `/api/barcode/${encodeURIComponent(item.sku)}`;
+        const img = new Image();
+        img.onload = () => {
+          const ctx = canvasRef.current?.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+            ctx.drawImage(img, 0, 0, canvasRef.current!.width, canvasRef.current!.height);
+          }
+        };
+        img.src = barcodeUrl;
 
         // Set barcode state to trigger re-render
         setBarcode({
