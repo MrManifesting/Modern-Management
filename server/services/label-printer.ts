@@ -332,7 +332,7 @@ export function generateBulkLabels(
   const labelData: LabelData[] = [];
   
   items.forEach(item => {
-    const quantity = includeQuantities ? (item.quantity || 1) : 1;
+    const quantity = includeQuantities ? Math.max(item.quantity || 1, 1) : 1;
     
     if (includeQuantities && quantity > 1) {
       // Generate numbered labels for each unit
@@ -352,7 +352,7 @@ export function generateBulkLabels(
         });
       }
     } else {
-      // Single label per item
+      // Single label per item (master record)
       labelData.push({
         sku: item.sku || '',
         name: item.name,
@@ -360,7 +360,8 @@ export function generateBulkLabels(
         weight: typeof item.weight === 'string' ? parseFloat(item.weight) : item.weight || undefined,
         category: item.category || undefined,
         vendor: item.brand || undefined,
-        quantity: item.quantity || 1
+        quantity: item.quantity || 1,
+        unitNumber: 0 // Master record
       });
     }
   });
