@@ -30,6 +30,7 @@ import {
   WEIGHT_OPTIONS,
   VENDOR_OPTIONS,
   FLOWER_QUALITY_OPTIONS,
+  PRODUCT_TYPE_OPTIONS,
   getSubcategoriesForCategory
 } from "./category-data";
 import { itemFormSchema, ItemForm, Item } from "@shared/schema";
@@ -66,7 +67,7 @@ export default function ItemFormComponent({
     images: [],
     tags: [],
     marketplace: [],
-    weight: "454", // 1 pound default
+    weight: "1 pound", // 1 pound default
     brand: "Gold Standard",
     attributes: {}, // Will store flowerQuality, flowerCategory, and other custom attributes
   },
@@ -493,6 +494,36 @@ export default function ItemFormComponent({
               </FormItem>
             )}
           />
+
+          {/* Product Type field */}
+          <FormItem>
+            <FormLabel>Type</FormLabel>
+            <Select 
+              onValueChange={(value) => {
+                // Store product type in attributes
+                const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
+                form.setValue("attributes", {
+                  ...currentAttributes,
+                  productType: value
+                } as any);
+              }}
+              defaultValue={(form.getValues("attributes") as any)?.productType || ""}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {PRODUCT_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
 
           <FormField
             control={form.control}
