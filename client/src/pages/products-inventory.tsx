@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
 import { WorkingBarcode } from '@/components/inventory/working-barcode';
+import { NumberedLabelsDialog } from '@/components/inventory/numbered-labels-dialog';
 import { 
   Plus, 
   UploadCloud, 
@@ -28,6 +29,7 @@ import {
   Image as ImageIcon,
   Printer,
   ChevronDown,
+  Hash,
   Store,
   PackageOpen,
   Barcode,
