@@ -89,37 +89,19 @@ export class ShopifyService implements IMarketplaceService {
    */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      // Get a client, possibly creating it from env vars
-      const client = await this.getClient();
+      // Use the shared testShopifyConnection function for consistency
+      const { testShopifyConnection } = await import('../shopify-auth');
+      const connectionResult = await testShopifyConnection();
       
-      if (!client) {
-        return { 
-          success: false, 
-          message: 'Shopify client not initialized' 
-        };
-      }
-      
-      // Try to get shop info to test connection
-      // Access the shopify object correctly from the client object
-      if (client.shopify) {
-        // If client has a shopify property (from createShopifyClient), use it
-        const shop = await client.shopify.shop.get();
-        return { 
-          success: true, 
-          message: `Connected to Shopify store: ${shop.name}` 
-        };
-      } else {
-        // Otherwise try to use the client directly
-        const shop = await client.shop.get();
-        return { 
-          success: true, 
-          message: `Connected to Shopify store: ${shop.name}` 
-        };
-      }
+      return {
+        success: connectionResult.connected,
+        message: connectionResult.message || (connectionResult.connected ? 'Successfully connected to Shopify' : 'Failed to connect to Shopify')
+      };
     } catch (error: any) {
+      log(`Marketplace Shopify test connection error: ${error.message}`, 'marketplace-shopify-error');
       return { 
         success: false, 
-        message: `Error connecting to Shopify: ${error.message}` 
+        message: `Error testing Shopify connection: ${error.message}` 
       };
     }
   }
