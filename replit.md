@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **CSV Import System Fixed and Fully Operational**
+  - Resolved missing module error preventing Shopify CSV imports from working
+  - Fixed parseRobustCSV function import issues in routes-shopify-import.ts
+  - Added comprehensive CSV parsing functions to shopify-import.ts service
+  - Successfully tested with Shopify product export format (49 columns)
+  - System now properly handles both product exports and inventory exports from Shopify
+  - CSV parser correctly processes quoted fields, handles commas within descriptions, and detects format automatically
+  - Import endpoint at /api/items/import-shopify now fully functional for all Shopify export files
 - June 14, 2025: **Complete Shopify Webhook System Deployed and Configured**
   - Created comprehensive webhook infrastructure with 9 secure endpoints for full bidirectional sync
   - All webhooks successfully configured in MrListersCurations Shopify store
