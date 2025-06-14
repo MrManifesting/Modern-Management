@@ -514,12 +514,11 @@
 }
 
 .btn-ghost {
-  @apply bg-transparent text-gray-700 font-semibold px-4 py-2 rounded-md;
-  @apply hover:bg-gray-100 active:bg-gray-200;
-  @apply focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
-  @apply transition-all duration-200 ease-in-out;
+  @apply bg-white text-gray-800 font-semibold px-4 py-2 rounded-md;
+  @apply border border-gray-300 hover:bg-gray-100 active:bg-gray-200;
+  @apply hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out shadow-sm hover:shadow-md;
   min-height: 40px;
-  border: 2px solid transparent;
 }
 
 .btn-sm {
@@ -534,11 +533,84 @@
 
 /* Dark mode button variants */
 .dark .btn-ghost {
-  @apply text-gray-200 hover:bg-gray-800 active:bg-gray-700;
+  @apply bg-gray-800 text-gray-100 border-gray-600 hover:bg-gray-700 active:bg-gray-600;
 }
 
 .dark .btn-warning {
   @apply text-gray-900;
+}
+
+/* Enhanced dropdown and submenu styling */
+.dropdown-content {
+  @apply bg-white border border-gray-300 shadow-lg rounded-md p-1;
+  @apply min-w-[200px] z-50;
+  backdrop-filter: blur(10px);
+}
+
+.dark .dropdown-content {
+  @apply bg-gray-800 border-gray-600 text-gray-100;
+}
+
+.dropdown-item {
+  @apply px-3 py-2 text-sm text-gray-800 hover:bg-gray-100 rounded cursor-pointer;
+  @apply transition-colors duration-150;
+}
+
+.dark .dropdown-item {
+  @apply text-gray-200 hover:bg-gray-700;
+}
+
+.dropdown-item:focus {
+  @apply outline-none ring-2 ring-blue-500;
+}
+
+/* Fix overlapping issues */
+.ui-container {
+  position: relative;
+  z-index: 1;
+}
+
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+}
+
+.ui-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+}
+
+/* Submenu styling fixes */
+.submenu {
+  @apply bg-white border border-gray-300 shadow-lg rounded-md;
+  @apply min-w-[180px] z-50;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+}
+
+.dark .submenu {
+  @apply bg-gray-800 border-gray-600;
+}
+
+/* Text contrast improvements */
+.text-readable {
+  @apply text-gray-900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark .text-readable {
+  @apply text-gray-100;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Loading state */
