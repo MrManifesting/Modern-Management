@@ -11,11 +11,10 @@ import { log } from './vite';
 import { 
   analyzeProductImage, 
   generateProductDescription, 
-  suggestListingImprovements,
-  analyzeInventoryData
+  analyzeSentiment,
+  generateInventoryInsights
 } from './services/openai';
 import { IStorage } from './storage';
-import { ImageEnhancer } from './services/image-enhancer';
 
 // Configure multer for file uploads
 // Use import.meta.url to get the current module's URL
@@ -84,73 +83,18 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
       // Read the original file
       const originalBuffer = fs.readFileSync(req.file.path);
       
-      // Try multiple enhancement techniques for better barcode detection
-      try {
-        const enhancedVariants = await ImageEnhancer.createMultipleEnhanced(originalBuffer);
-        log(`Created ${enhancedVariants.length} enhanced image variants`, 'ai-routes');
-        
-        let bestResult = null;
-        let extractedText = '';
-        
-        // Try analyzing each enhanced variant
-        for (let i = 0; i < enhancedVariants.length; i++) {
-          try {
-            const base64Image = enhancedVariants[i].toString('base64');
-            const analysis = await analyzeProductImage(base64Image);
-            
-            // Check if this variant extracted more text
-            if (analysis.extractedText && analysis.extractedText.length > extractedText.length) {
-              bestResult = analysis;
-              extractedText = analysis.extractedText;
-              log(`Variant ${i + 1} extracted better text: "${extractedText.substring(0, 50)}..."`, 'ai-routes');
-            }
-          } catch (variantError) {
-            console.warn(`Analysis failed for variant ${i + 1}:`, variantError);
-            continue;
-          }
-        }
-        
-        // If no enhanced variants worked, try the original
-        if (!bestResult) {
-          log('Enhanced variants failed, trying original image', 'ai-routes');
-          const base64Image = originalBuffer.toString('base64');
-          bestResult = await analyzeProductImage(base64Image);
-        }
-        
-        // Delete the temporary file
-        fs.unlinkSync(req.file.path);
-        
-        // Add debugging info about enhancement
-        const result = {
-          ...bestResult,
-          debug: {
-            variantsProcessed: enhancedVariants.length,
-            enhancementUsed: !!extractedText,
-            originalFileSize: originalBuffer.length,
-            extractedTextLength: extractedText.length
-          }
-        };
-        
-        res.json(result);
-        
-      } catch (enhancementError) {
-        log(`Image enhancement failed, falling back to original: ${enhancementError}`, 'ai-routes');
-        
-        // Fallback to original image if enhancement fails
-        const base64Image = originalBuffer.toString('base64');
-        const analysis = await analyzeProductImage(base64Image);
-        
-        // Delete the temporary file
-        fs.unlinkSync(req.file.path);
-        
-        res.json({
-          ...analysis,
-          debug: {
-            enhancementFailed: true,
-            fallbackUsed: true
-          }
-        });
-      }
+      // Convert image to base64 for OpenAI analysis
+      const base64Image = originalBuffer.toString('base64');
+      
+      const analysis = await analyzeProductImage(base64Image);
+      
+      // Delete the temporary file
+      fs.unlinkSync(req.file.path);
+      
+      res.json({
+        success: true,
+        ...analysis
+      });
       
     } catch (error: any) {
       log(`Error in image analysis: ${error.message}`, 'ai-routes-error');
@@ -197,38 +141,7 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
     }
   });
   
-  // Suggest improvements for product listings
-  app.post('/api/ai/suggest-improvements', async (req: Request, res: Response) => {
-    try {
-      const { productName, description, category, price } = req.body;
-      
-      if (!productName || !description || !category || price === undefined) {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing required fields: productName, description, category, and price are required'
-        });
-      }
-      
-      log(`Generating listing improvements for ${productName}`, 'ai-routes');
-      
-      const result = await suggestListingImprovements(
-        productName,
-        description,
-        category,
-        parseFloat(price)
-      );
-      
-      res.json(result);
-    } catch (error: any) {
-      log(`Error suggesting improvements: ${error.message}`, 'ai-routes-error');
-      res.status(500).json({
-        success: false,
-        error: `Error suggesting improvements: ${error.message}`
-      });
-    }
-  });
-  
-  // Analyze inventory data for insights
+  // Analyze inventory data for insights using real OpenAI integration
   app.get('/api/ai/inventory-insights', async (_req: Request, res: Response) => {
     try {
       // Get all inventory items
@@ -237,17 +150,20 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
       if (!items || items.length === 0) {
         return res.json({
           success: true,
-          insights: ['No inventory data available for analysis.'],
           recommendations: ['Add inventory items to receive AI-powered insights.'],
-          trendingCategories: []
+          lowStockAlerts: [],
+          categoryAnalysis: 'No inventory data available for analysis.'
         });
       }
       
       log(`Analyzing inventory data (${items.length} items)`, 'ai-routes');
       
-      const result = await analyzeInventoryData(items);
+      const result = await generateInventoryInsights(items);
       
-      res.json(result);
+      res.json({
+        success: true,
+        ...result
+      });
     } catch (error: any) {
       log(`Error analyzing inventory: ${error.message}`, 'ai-routes-error');
       res.status(500).json({
@@ -281,13 +197,9 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
       
       log(`Analyzing item: ${item.name} (ID: ${itemId})`, 'ai-routes');
       
-      // Generate improved listing
-      const improvements = await suggestListingImprovements(
-        item.name,
-        item.description,
-        item.category,
-        item.basePrice
-      );
+      // Generate sentiment analysis and description improvements using real OpenAI
+      const sentimentResult = await analyzeSentiment(item.description || item.name);
+      const improvedDescription = await generateProductDescription(item.name, item.category || 'general');
       
       res.json({
         success: true,
@@ -297,7 +209,15 @@ export function registerAIRoutes(app: Express, storage: IStorage) {
           category: item.category,
           description: item.description
         },
-        analysis: improvements
+        analysis: {
+          sentiment: sentimentResult,
+          improvedDescription,
+          recommendations: [
+            'Consider updating product description for better engagement',
+            'Add more specific product details',
+            'Include quality indicators in the title'
+          ]
+        }
       });
     } catch (error: any) {
       log(`Error analyzing item: ${error.message}`, 'ai-routes-error');
