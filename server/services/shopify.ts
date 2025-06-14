@@ -1,5 +1,10 @@
 import { Item, ItemType, BreakdownStatus } from "@shared/schema";
 import { generateSKU } from './sku-generator';
+import { 
+  getShopifyStoreName as getShopifyStoreNameAuth, 
+  getShopifyCredentials as getShopifyCredentialsAuth, 
+  testShopifyConnection as testShopifyAuth 
+} from './shopify-auth';
 
 // Safety functions consolidated into main shopify service
 const logShopifyOperation = (operation: string, details: any) => {
@@ -8,11 +13,6 @@ const logShopifyOperation = (operation: string, details: any) => {
 
 const isOperationAllowed = (operation: string) => true; // Always allow operations
 const isConfirmationValid = (confirmation: any) => true; // Always confirm operations
-import { 
-  getShopifyStoreName as getShopifyStoreNameAuth, 
-  getShopifyCredentials as getShopifyCredentialsAuth, 
-  testShopifyConnection as testShopifyAuth 
-} from './shopify-auth';
 
 interface ShopifyProduct {
   id?: number;

@@ -1,10 +1,15 @@
 import { type Item } from '@shared/schema';
-import { updateItemWithShopifyId } from '../shopify-utils';
 import { IMarketplaceService } from '../marketplace';
+
 import Shopify from 'shopify-api-node';
 import { log } from '../../vite';
 import { createShopifyClient } from '../shopify-auth';
 import { getShopifyCredentials } from '../shopify-auth';
+
+// Utility function consolidated into this service
+const updateItemWithShopifyId = (item: Item, shopifyId: string) => {
+  return { ...item, externalId: shopifyId };
+};
 
 /**
  * Shopify marketplace integration service
