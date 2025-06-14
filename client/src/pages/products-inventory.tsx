@@ -1976,71 +1976,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       {/* Right Column - Barcode and Category */}
                                       <div className="space-y-6">
                                         <div className="space-y-2">
-                                          <h4 className="text-sm font-medium text-muted-foreground">Product Barcode</h4>
-                                          <div className="border rounded-lg p-4 bg-white">
-                                            <div className="text-center space-y-2">
-                                              <div className="text-xs font-medium">{product.category}</div>
-                                              <div className="space-y-1">
-                                                {product.barcode ? (
-                                                  <div 
-                                                    dangerouslySetInnerHTML={{ __html: product.barcode }} 
-                                                    className="flex justify-center"
-                                                  />
-                                                ) : product.sku ? (
-                                                  <div className="flex flex-col items-center space-y-1">
-                                                    <div
-                                                      ref={(ref) => {
-                                                        if (ref && product.sku) {
-                                                          // Clear existing content
-                                                          ref.innerHTML = '';
-                                                          try {
-                                                            // Import JsBarcode dynamically
-                                                            import('jsbarcode').then((JsBarcode) => {
-                                                              // Create a canvas element
-                                                              const canvas = document.createElement('canvas');
-                                                              JsBarcode.default(canvas, product.sku, {
-                                                                format: "CODE128",
-                                                                width: 1.5,
-                                                                height: 30,
-                                                                displayValue: true,
-                                                                fontSize: 10,
-                                                                margin: 5,
-                                                                background: "#ffffff",
-                                                                lineColor: "#000000"
-                                                              });
-                                                              ref.appendChild(canvas);
-                                                            }).catch(() => {
-                                                              // Fallback to simple text display
-                                                              ref.innerHTML = `<div class="text-xs font-mono">${product.sku}</div>`;
-                                                            });
-                                                          } catch (error) {
-                                                            ref.innerHTML = `<div class="text-xs font-mono">${product.sku}</div>`;
-                                                          }
-                                                        }
-                                                      }}
-                                                      className="bg-white border rounded p-2"
-                                                    />
-                                                  </div>
-                                                ) : (
-                                                  <div className="text-xs text-muted-foreground">
-                                                    Generate SKU first to create barcode
-                                                  </div>
-                                                )}
-                                              </div>
-                                              <div className="text-xs">
-                                                SKU: {product.sku || "Not assigned"}
-                                              </div>
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                className="w-full mt-2"
-                                                onClick={() => handlePrintBarcodeClick(product.id)}
-                                              >
-                                                <Printer className="h-3 w-3 mr-1" />
-                                                Print Barcode
-                                              </Button>
-                                            </div>
-                                          </div>
+                                          <SimpleBarcode item={product} />
                                         </div>
                                         
                                         <div className="space-y-2">
