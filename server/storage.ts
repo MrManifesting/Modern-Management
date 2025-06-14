@@ -42,6 +42,7 @@ export interface IStorage {
   
   // Item methods
   getItems(): Promise<Item[]>;
+  getAllItems(): Promise<Item[]>; // Alias for OpenAI integration
   getItem(id: number): Promise<Item | undefined>;
   getItemBySku(sku: string): Promise<Item | undefined>;
   getItemByBarcode(barcode: string): Promise<Item | undefined>;
@@ -1928,6 +1929,11 @@ export class DatabaseStorage implements IStorage {
       // Return empty array instead of failing completely
       return [];
     }
+  }
+
+  // Alias for OpenAI integration
+  async getAllItems(): Promise<Item[]> {
+    return this.getItems();
   }
   
   async getItem(id: number): Promise<Item | undefined> {

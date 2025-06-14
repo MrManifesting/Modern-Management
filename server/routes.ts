@@ -9,7 +9,13 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { Parser } from "@json2csv/plainjs";
 import { log } from "./vite";
-import { analyzeProductImage, generateProductDescription } from "./services/openai";
+import { 
+  analyzeProductImage, 
+  generateProductDescription, 
+  analyzeSentiment, 
+  generateSkuSuggestion, 
+  generateInventoryInsights 
+} from "./services/openai";
 import { generateSKU, generateSKUBatch } from "./services/sku-generator";
 import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode-generator";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
@@ -4258,6 +4264,78 @@ ${topCustomersCsv}`;
   registerBarcodeFulfillmentRoutes(app, storage);
   
   registerShopifyInventorySyncRoutes(app, storage);
+
+  // OpenAI-powered AI features - real integrations, no mock data
+  app.post("/api/ai/generate-description", async (req: Request, res: Response) => {
+    try {
+      const { name, category, attributes } = req.body;
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category required" });
+      }
+      
+      const description = await generateProductDescription(name, category, attributes);
+      res.json({ description });
+    } catch (error) {
+      console.error('AI description generation error:', error);
+      res.status(500).json({ error: "AI description generation failed - check OpenAI API credentials" });
+    }
+  });
+
+  app.post("/api/ai/analyze-image", async (req: Request, res: Response) => {
+    try {
+      const { imageBase64 } = req.body;
+      if (!imageBase64) {
+        return res.status(400).json({ error: "Base64 image data required" });
+      }
+      
+      const analysis = await analyzeProductImage(imageBase64);
+      res.json(analysis);
+    } catch (error) {
+      console.error('AI image analysis error:', error);
+      res.status(500).json({ error: "AI image analysis failed - check OpenAI API credentials" });
+    }
+  });
+
+  app.post("/api/ai/analyze-sentiment", async (req: Request, res: Response) => {
+    try {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Text required for sentiment analysis" });
+      }
+      
+      const sentiment = await analyzeSentiment(text);
+      res.json(sentiment);
+    } catch (error) {
+      console.error('AI sentiment analysis error:', error);
+      res.status(500).json({ error: "AI sentiment analysis failed - check OpenAI API credentials" });
+    }
+  });
+
+  app.post("/api/ai/generate-sku", async (req: Request, res: Response) => {
+    try {
+      const { name, category, vendor } = req.body;
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category required" });
+      }
+      
+      const sku = await generateSkuSuggestion(name, category, vendor);
+      res.json({ sku });
+    } catch (error) {
+      console.error('AI SKU generation error:', error);
+      res.status(500).json({ error: "AI SKU generation failed - check OpenAI API credentials" });
+    }
+  });
+
+  app.post("/api/ai/inventory-insights", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getAllItems();
+      const insights = await generateInventoryInsights(items);
+      res.json(insights);
+    } catch (error) {
+      console.error('AI inventory insights error:', error);
+      res.status(500).json({ error: "AI inventory analysis failed - check OpenAI API credentials" });
+    }
+  });
 
   // Google Sheets webhook generation route
   app.post("/api/shopify/sheets/generate-webhook", async (req: Request, res: Response) => {
