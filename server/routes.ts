@@ -1388,8 +1388,7 @@ export function registerRoutes(app: Express): Server {
         console.log(`Scanning barcode: ${barcode}`);
         
         // First check if the barcode exists in our database as a barcode
-        const items = await storage.getItems();
-        let existingItem = items.find(item => item.barcode === barcode);
+        let existingItem = await storage.getItemByBarcode(barcode);
         console.log(`Barcode lookup result: ${existingItem ? 'Found' : 'Not found'}`);
         
         // If not found by barcode, try to find it by SKU (since the barcode might be the SKU)
@@ -1402,6 +1401,7 @@ export function registerRoutes(app: Express): Server {
         // If not found by SKU, try to find it by name containing the code (more flexible search)
         if (!existingItem) {
           console.log(`Trying to find item by name containing: ${barcode}`);
+          const items = await storage.getItems();
           existingItem = items.find(item => item.name && item.name.includes(barcode));
           console.log(`Name lookup result: ${existingItem ? 'Found' : 'Not found'}`);
         }
@@ -2389,13 +2389,16 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/items/barcode/:barcode", async (req: Request, res: Response) => {
     try {
       const { barcode } = req.params;
-      const items = await storage.getItems();
-      const item = items.find(item => item.barcode === barcode);
+      console.log(`API: Looking up item by barcode: ${barcode}`);
+      
+      const item = await storage.getItemByBarcode(barcode);
       
       if (!item) {
+        console.log(`API: No item found with barcode ${barcode}`);
         return res.status(404).json({ error: "Item not found with this barcode" });
       }
       
+      console.log(`API: Found item by barcode: ${item.name} (SKU: ${item.sku})`);
       res.json(item);
     } catch (error) {
       console.error("Failed to find item by barcode:", error);
