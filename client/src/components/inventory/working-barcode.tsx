@@ -13,28 +13,65 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!item.sku) return;
     
-    const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head><title>Barcode Label - ${item.sku}</title></head>
-          <body style="margin: 20px; text-align: center; font-family: Arial, sans-serif;">
-            <h2>${item.name}</h2>
-            <div style="border: 2px solid #000; padding: 20px; margin: 20px 0; background: white;">
-              <img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0" alt="Barcode for ${item.sku}" style="max-width: 100%;" />
-            </div>
-            <p>SKU: ${item.sku}</p>
-            <p>Category: ${item.category || 'N/A'}</p>
-            <p>Quantity: ${item.quantity || 0}</p>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
+    setLoading(true);
+    try {
+      const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
+      
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Barcode Label - ${item.sku}</title>
+              <style>
+                body { margin: 20px; text-align: center; font-family: Arial, sans-serif; }
+                .barcode-container { border: 2px solid #000; padding: 20px; margin: 20px 0; background: white; }
+                img { max-width: 100%; height: auto; }
+                @media print {
+                  body { margin: 0; }
+                  .no-print { display: none; }
+                }
+              </style>
+            </head>
+            <body>
+              <h2>${item.name}</h2>
+              <div class="barcode-container">
+                <img src="${barcodeUrl}" alt="Barcode for ${item.sku}" onload="window.print(); window.close();" onerror="alert('Failed to load barcode image');" />
+              </div>
+              <p>SKU: ${item.sku}</p>
+              <p>Category: ${item.category || 'N/A'}</p>
+              <p>Quantity: ${item.quantity || 0}</p>
+              <div class="no-print">
+                <p><em>Close this window after printing</em></p>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        
+        toast({
+          title: "Print Window Opened",
+          description: "Barcode label ready for printing",
+        });
+      } else {
+        toast({
+          title: "Print Blocked",
+          description: "Please allow popups for this site to enable printing",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Print Error",
+        description: "Failed to open print window",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,9 +183,14 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
                   <Download className="h-3 w-3 mr-1" />
                   {loading ? 'Downloading...' : 'Download'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={handlePrint}>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handlePrint}
+                  disabled={loading}
+                >
                   <Printer className="h-3 w-3 mr-1" />
-                  Print
+                  {loading ? 'Opening...' : 'Print'}
                 </Button>
               </div>
             </div>
