@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Complete Google Apps Script Bidirectional Sync Integration Deployed and Tested**
+  - Configured comprehensive Google Apps Script webhook system for real-time bidirectional sync
+  - Successfully connected inventory system, Shopify, and Google Sheets through middleware automation
+  - Environment variables configured: GOOGLE_APPS_SCRIPT_WEBHOOK, GOOGLE_APPS_SCRIPT_API, GOOGLE_SHEETS_SYNC_ID
+  - Built admin interface at /google-apps-script-admin for managing sync operations and monitoring status
+  - Tested complete sync flow: 332 inventory items successfully synced to Google Sheets via webhook
+  - Verified bidirectional communication: webhook receives and processes sync requests from Google Apps Script
+  - Tested Shopify order processing simulation: system correctly processes order updates and reduces inventory quantities
+  - Integration handles: inventory_sync, shopify_order_update, inventory_update, and sync_request webhook actions
+  - Complete audit logging and error handling implemented for all sync operations
 - June 14, 2025: **Google Sheets Integration Fully Configured and Operational**
   - Configured direct Google Sheets integration with user's specific inventory spreadsheet (ID: 1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU)
   - Fixed "View in Google Sheets" buttons to link directly to inventory spreadsheet with item search functionality
