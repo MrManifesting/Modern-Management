@@ -140,7 +140,7 @@ const SimpleScanner: React.FC<SimpleScannerProps> = ({
     if (action === 'check') return;
     
     inventoryMutation.mutate({
-      itemId: item.id,
+      sku: item.sku,
       action: action,
       quantity: quantity
     });
