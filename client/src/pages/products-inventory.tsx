@@ -1987,32 +1987,37 @@ const ProductsInventoryPage: React.FC = () => {
                                                   />
                                                 ) : product.sku ? (
                                                   <div className="flex flex-col items-center space-y-1">
-                                                    <canvas 
-                                                      ref={(canvas) => {
-                                                        if (canvas && product.sku) {
+                                                    <div
+                                                      ref={(ref) => {
+                                                        if (ref && product.sku) {
+                                                          // Clear existing content
+                                                          ref.innerHTML = '';
                                                           try {
-                                                            // Use jsbarcode to generate actual scannable barcode
-                                                            const JsBarcode = require('jsbarcode');
-                                                            JsBarcode(canvas, product.sku, {
-                                                              format: "CODE128",
-                                                              width: 1.5,
-                                                              height: 30,
-                                                              displayValue: true,
-                                                              fontSize: 10,
-                                                              margin: 5,
-                                                              background: "#ffffff",
-                                                              lineColor: "#000000"
+                                                            // Import JsBarcode dynamically
+                                                            import('jsbarcode').then((JsBarcode) => {
+                                                              // Create a canvas element
+                                                              const canvas = document.createElement('canvas');
+                                                              JsBarcode.default(canvas, product.sku, {
+                                                                format: "CODE128",
+                                                                width: 1.5,
+                                                                height: 30,
+                                                                displayValue: true,
+                                                                fontSize: 10,
+                                                                margin: 5,
+                                                                background: "#ffffff",
+                                                                lineColor: "#000000"
+                                                              });
+                                                              ref.appendChild(canvas);
+                                                            }).catch(() => {
+                                                              // Fallback to simple text display
+                                                              ref.innerHTML = `<div class="text-xs font-mono">${product.sku}</div>`;
                                                             });
                                                           } catch (error) {
-                                                            console.log("Barcode generation not available, showing SKU text");
-                                                            if (canvas.getContext) {
-                                                              const ctx = canvas.getContext('2d');
-                                                              ctx.fillText(product.sku, 10, 20);
-                                                            }
+                                                            ref.innerHTML = `<div class="text-xs font-mono">${product.sku}</div>`;
                                                           }
                                                         }
                                                       }}
-                                                      className="bg-white border"
+                                                      className="bg-white border rounded p-2"
                                                     />
                                                   </div>
                                                 ) : (
