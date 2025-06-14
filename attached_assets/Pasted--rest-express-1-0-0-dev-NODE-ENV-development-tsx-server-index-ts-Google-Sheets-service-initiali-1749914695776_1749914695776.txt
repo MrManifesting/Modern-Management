@@ -1,0 +1,76 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+Google Sheets service initialized successfully
+3:24:07 PM [marketplace-scheduler] Initializing marketplace scheduler service
+Telegram bot initialized with token: 78983...
+Google Sheets service initialized successfully
+Google Sheets service initialized successfully
+***DEBUG: Using SHOPIFY_STORE value: simplifiedcurations.myshopify.com
+Shopify store connection: simplifiedcurations.myshopify.com [TOKEN PRESENT]
+3:24:07 PM [express] serving on port 5000
+3:24:09 PM [marketplace-scheduler] Initialized scheduling for 4 marketplaces
+Failed to set Telegram webhook: {
+  ok: false,
+  error_code: 400,
+  description: 'Bad Request: invalid webhook URL specified'
+}
+Warning: Unable to initialize employees due to schema mismatch: error: column "name" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.initializeData (/home/runner/workspace/server/storage.ts:1785:35) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '29',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3722',
+  routine: 'errorMissingColumn'
+}
+Skipping employee initialization due to database schema issue
+3:24:16 PM [shopify-debug] Admin token length: 38
+3:24:16 PM [shopify-debug] Admin token starts with: shpat...
+3:24:16 PM [shopify-debug] Storefront token length: 32
+3:24:16 PM [shopify] Creating Shopify client for store: simplifiedcurations.myshopify.com
+3:24:16 PM [shopify-details] Cleaned up shop URL: simplifiedcurations.myshopify.com (from simplifiedcurations.myshopify.com)
+3:24:16 PM [shopify-details] Token length: 38
+3:24:16 PM [shopify-debug] Attempting to connect with shopName: "simplifiedcurations.myshopify.com" and API version: "2023-10"
+3:24:16 PM [shopify] Creating Shopify client with special handling for simplifiedcurations: true
+3:24:16 PM [shopify] Using special connection method for simplifiedcurations store
+3:24:16 PM [shopify-details] Token length: 38
+3:24:16 PM [shopify-details] Token starts with: shpat_...
+3:24:16 PM [shopify-debug] Analyzing token prefix: shpat_
+3:24:16 PM [shopify-details] Detected token type: Likely Admin API
+3:24:16 PM [shopify] Attempting to connect to Shopify API...
+3:24:16 PM [shopify-debug] First trying endpoint based on detected token type: Admin API
+3:24:16 PM [shopify-debug] Using Admin API endpoint with REST
+3:24:16 PM [shopify-debug] Full URL for Admin API: https://simplifiedcurations.myshopify.com/admin/api/2023-10/shop.json
+3:24:16 PM [shopify-details] Making API request to: simplifiedcurations.myshopify.com/admin/api/2023-10/shop.json with token type: Admin
+3:24:16 PM [express] GET /api/user 401 in 2ms :: {"message":"Not authenticated"}
+3:24:16 PM [express] GET /api/items 304 in 212ms :: [{"id":10200,"name":"CRTTS0 (CRTTS0)","descripti…
+3:24:16 PM [shopify-debug] Admin API redirect received to: https://4dbf98-3.myshopify.com/admin/api/2023-10/shop.json
+3:24:16 PM [shopify-debug] Following Admin API redirect to: https://4dbf98-3.myshopify.com/admin/api/2023-10/shop.json
+Retrieved 331 items for stats calculation
+3:24:16 PM [express] GET /api/stats 304 in 260ms :: {"inventory":{"total":331,"listed":0,"inStock":4…
+3:24:16 PM [shopify-debug] Redirect response status: 200
+3:24:16 PM [shopify-debug] Successfully retrieved shop data from redirect
+3:24:16 PM [shopify] Successfully connected to Shopify store: My Store
+3:24:16 PM [shopify-debug] Fetching orders with params: {"status":"any","created_at_min":"2025-06-07T15:24:16.785Z","created_at_max":"2025-06-14T15:24:16.785Z","limit":250}
+3:24:16 PM [shopify-debug] Orders API path: /admin/api/2023-10/orders.json?limit=250
+3:24:16 PM [shopify-debug] Orders API redirect received to: https://4dbf98-3.myshopify.com/admin/api/2023-10/orders.json?limit=250
+3:24:16 PM [shopify-debug] Following orders API redirect to: https://4dbf98-3.myshopify.com/admin/api/2023-10/orders.json?limit=250
+3:24:17 PM [shopify-debug] Redirect response status: 200
+3:24:17 PM [shopify-debug] Successfully retrieved 0 orders from redirect
+3:24:17 PM [express] GET /api/shopify/reports/sales/7d 304 in 688ms :: {"totalOrders":0,"totalRevenu…
