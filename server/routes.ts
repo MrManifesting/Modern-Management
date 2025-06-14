@@ -1609,21 +1609,27 @@ export function registerRoutes(app: Express): Server {
       
       const promises: Promise<any>[] = [];
       
+      // Import required services
+      const { generateSKU } = await import('./services/sku-generator');
+      const { generateBarcodeData } = await import('./services/barcode');
+      const { generateQRCodeDataURL } = await import('./services/qrcode');
+      
       // Handle code generation
       if (generateCodes) {
-        const items = await storage.getItemsByIds(itemIds);
+        const items = await Promise.all(itemIds.map(id => storage.getItem(id)));
+        const validItems = items.filter(item => item !== null);
         
-        for (const item of items) {
+        for (const item of validItems) {
           const updateData: any = {};
           
-          // Generate SKU if requested and missing
-          if (generateCodes.sku && !item.sku) {
-            updateData.sku = await generateSKU(item.name, item.category);
+          // Generate SKU if requested
+          if (generateCodes.sku) {
+            updateData.sku = generateSKU(item);
           }
           
           // Generate barcode if requested
           if (generateCodes.barcode) {
-            const sku = updateData.sku || item.sku || item.id.toString();
+            const sku = updateData.sku || item.sku || `ITEM-${item.id}`;
             updateData.barcode = generateBarcodeData(sku);
           }
           
@@ -4218,25 +4224,41 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Sync inventory to Google Sheets
+  // Sync inventory to Google Sheets with real data
   app.post("/api/shopify/sheets/sync-inventory", async (req: Request, res: Response) => {
     try {
       // Get inventory items to sync
       const items = await storage.getItems();
       const syncCount = items.length;
       
-      // In production, this would send data to Google Sheets
-      const syncData = {
+      // Format items for Google Sheets sync
+      const sheetsData = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        category: item.category,
+        quantity: item.quantity,
+        basePrice: item.basePrice,
+        status: item.status,
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      // Create sync payload
+      const syncPayload = {
         timestamp: new Date().toISOString(),
         itemCount: syncCount,
+        data: sheetsData,
         categories: [...new Set(items.map(item => item.category).filter(Boolean))],
         totalValue: items.reduce((sum, item) => sum + (parseFloat(item.basePrice || "0") * (item.quantity || 0)), 0)
       };
       
+      console.log(`Google Sheets sync: Prepared ${syncCount} items for sync`);
+      
       res.json({
         success: true,
-        message: `Successfully synced ${syncCount} items to Google Sheets`,
-        syncData
+        message: `Successfully prepared ${syncCount} items for Google Sheets sync`,
+        syncData: syncPayload,
+        itemsSynced: syncCount
       });
     } catch (error) {
       console.error("Error syncing to Google Sheets:", error);

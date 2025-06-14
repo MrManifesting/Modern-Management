@@ -1,347 +1,292 @@
 /**
  * Robust CSV Parser for Shopify Exports
- * 
- * This parser handles complex CSV files with:
- * - Quoted fields containing commas
- * - Multi-line quoted content (HTML descriptions)
- * - Escaped quotes within fields
- * - Mixed delimiters and encodings
+ * Handles complex CSV files with quoted fields, multi-line content, and various delimiters
  */
 
-export interface CSVParseResult {
+export interface ParsedCSV {
   headers: string[];
   rows: string[][];
+  format: 'product' | 'inventory' | 'unknown';
+  success: boolean;
   errors: string[];
-  stats: {
-    totalRows: number;
-    validRows: number;
-    invalidRows: number;
-    headerCount: number;
-  };
-}
-
-export interface CSVField {
-  value: string;
-  isQuoted: boolean;
-  position: number;
 }
 
 /**
- * State machine states for CSV parsing
+ * Parse CSV content with proper handling of quotes, escapes, and multi-line fields
  */
-enum ParseState {
-  START_FIELD,
-  IN_QUOTED_FIELD,
-  IN_UNQUOTED_FIELD,
-  QUOTE_IN_QUOTED_FIELD,
-  END_FIELD
-}
-
-/**
- * Advanced CSV parser using finite state machine
- * Handles RFC 4180 compliance with extended support for:
- * - Multi-line quoted fields
- * - HTML content within quotes
- * - Nested quotes and special characters
- */
-export class RobustCSVParser {
-  private delimiter: string = ',';
-  private quoteChar: string = '"';
-  private escapeChar: string = '"';
-  private lineBreak: string = '\n';
+export function parseRobustCSV(content: string): ParsedCSV {
+  const errors: string[] = [];
   
-  constructor(options?: {
-    delimiter?: string;
-    quoteChar?: string;
-    escapeChar?: string;
-    lineBreak?: string;
-  }) {
-    if (options) {
-      this.delimiter = options.delimiter || this.delimiter;
-      this.quoteChar = options.quoteChar || this.quoteChar;
-      this.escapeChar = options.escapeChar || this.escapeChar;
-      this.lineBreak = options.lineBreak || this.lineBreak;
+  try {
+    // Normalize line endings and handle BOM
+    let normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (normalizedContent.charCodeAt(0) === 0xFEFF) {
+      normalizedContent = normalizedContent.slice(1);
     }
-  }
 
-  /**
-   * Parse CSV content with comprehensive error handling
-   */
-  public parse(csvContent: string): CSVParseResult {
-    const result: CSVParseResult = {
-      headers: [],
-      rows: [],
-      errors: [],
-      stats: {
-        totalRows: 0,
-        validRows: 0,
-        invalidRows: 0,
-        headerCount: 0
+    const lines = normalizedContent.split('\n');
+    const allRows: string[][] = [];
+    
+    // Find the actual header line by skipping metadata lines
+    let headerLineIndex = 0;
+    let headerFound = false;
+    
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      
+      // Skip empty lines and obvious metadata
+      if (!line || line.match(/^(products|inventory)$/i) || line.match(/^[^,]*export[^,]*\(\d+\)$/i)) {
+        continue;
       }
-    };
-
-    try {
-      // Normalize line endings
-      const normalizedContent = this.normalizeLineEndings(csvContent);
       
-      // Parse using state machine
-      const parsedData = this.parseWithStateMachine(normalizedContent);
-      
-      if (parsedData.length === 0) {
-        result.errors.push('No data found in CSV');
-        return result;
+      // Try to parse this line as potential headers
+      const parsed = parseCSVLine(line);
+      if (parsed.length > 5 && hasShopifyHeaders(parsed)) {
+        headerLineIndex = i;
+        headerFound = true;
+        break;
       }
-
-      // Extract headers
-      result.headers = parsedData[0];
-      result.stats.headerCount = result.headers.length;
-      
-      // Process data rows
-      for (let i = 1; i < parsedData.length; i++) {
-        const row = parsedData[i];
-        result.stats.totalRows++;
-        
-        // Validate row length
-        if (row.length !== result.headers.length) {
-          // Try to fix common issues
-          const fixedRow = this.attemptRowFix(row, result.headers.length);
-          if (fixedRow.length === result.headers.length) {
-            result.rows.push(fixedRow);
-            result.stats.validRows++;
-          } else {
-            result.errors.push(`Row ${i}: Expected ${result.headers.length} fields, got ${row.length}`);
-            result.stats.invalidRows++;
-            // Include the row anyway with padding/truncation
-            result.rows.push(this.padOrTruncateRow(row, result.headers.length));
-          }
-        } else {
-          result.rows.push(row);
-          result.stats.validRows++;
+    }
+    
+    if (!headerFound) {
+      // Fallback: use the first line with substantial content
+      for (let i = 0; i < Math.min(5, lines.length); i++) {
+        const line = lines[i].trim();
+        if (line && line.includes(',')) {
+          headerLineIndex = i;
+          break;
         }
       }
-
-    } catch (error) {
-      result.errors.push(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    return result;
-  }
-
-  /**
-   * Normalize line endings to consistent format
-   */
-  private normalizeLineEndings(content: string): string {
-    return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  }
-
-  /**
-   * Parse CSV using finite state machine for maximum accuracy
-   */
-  private parseWithStateMachine(content: string): string[][] {
-    const rows: string[][] = [];
-    let currentRow: string[] = [];
-    let currentField = '';
-    let state = ParseState.START_FIELD;
-    let i = 0;
-
-    while (i < content.length) {
-      const char = content[i];
-      const nextChar = i + 1 < content.length ? content[i + 1] : null;
-
-      switch (state) {
-        case ParseState.START_FIELD:
-          if (char === this.quoteChar) {
-            state = ParseState.IN_QUOTED_FIELD;
-          } else if (char === this.delimiter) {
-            currentRow.push('');
-            // Stay in START_FIELD
-          } else if (char === '\n') {
-            currentRow.push(currentField);
-            rows.push(currentRow);
-            currentRow = [];
-            currentField = '';
-            // Stay in START_FIELD
-          } else {
-            currentField = char;
-            state = ParseState.IN_UNQUOTED_FIELD;
-          }
-          break;
-
-        case ParseState.IN_QUOTED_FIELD:
-          if (char === this.quoteChar) {
-            if (nextChar === this.quoteChar) {
-              // Escaped quote
-              currentField += this.quoteChar;
-              i++; // Skip next character
-            } else {
-              state = ParseState.QUOTE_IN_QUOTED_FIELD;
-            }
-          } else {
-            currentField += char;
-          }
-          break;
-
-        case ParseState.QUOTE_IN_QUOTED_FIELD:
-          if (char === this.delimiter) {
-            currentRow.push(currentField);
-            currentField = '';
-            state = ParseState.START_FIELD;
-          } else if (char === '\n') {
-            currentRow.push(currentField);
-            rows.push(currentRow);
-            currentRow = [];
-            currentField = '';
-            state = ParseState.START_FIELD;
-          } else if (char === this.quoteChar) {
-            // Another quote after closing quote - treat as escaped
-            currentField += char;
-            state = ParseState.IN_QUOTED_FIELD;
-          } else {
-            // Non-delimiter after closing quote - this is technically malformed
-            // but we'll be lenient and continue
-            currentField += char;
-            state = ParseState.IN_UNQUOTED_FIELD;
-          }
-          break;
-
-        case ParseState.IN_UNQUOTED_FIELD:
-          if (char === this.delimiter) {
-            currentRow.push(currentField);
-            currentField = '';
-            state = ParseState.START_FIELD;
-          } else if (char === '\n') {
-            currentRow.push(currentField);
-            rows.push(currentRow);
-            currentRow = [];
-            currentField = '';
-            state = ParseState.START_FIELD;
-          } else {
-            currentField += char;
-          }
-          break;
+    
+    // Parse headers
+    const headerLine = lines[headerLineIndex]?.trim();
+    if (!headerLine) {
+      return { headers: [], rows: [], format: 'unknown', success: false, errors: ['No valid header line found'] };
+    }
+    
+    const headers = parseCSVLine(headerLine);
+    
+    // Parse data rows
+    let i = headerLineIndex + 1;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      
+      if (!line) {
+        i++;
+        continue;
       }
-
+      
+      try {
+        const row = parseCSVLine(line, headers.length);
+        
+        // Skip rows that don't have enough data
+        if (row.length >= Math.max(3, Math.floor(headers.length * 0.3))) {
+          allRows.push(row);
+        }
+      } catch (error) {
+        errors.push(`Error parsing line ${i + 1}: ${error}`);
+      }
+      
       i++;
     }
-
-    // Handle final field and row
-    if (currentField || state === ParseState.QUOTE_IN_QUOTED_FIELD) {
-      currentRow.push(currentField);
-    }
-    if (currentRow.length > 0) {
-      rows.push(currentRow);
-    }
-
-    return rows;
-  }
-
-  /**
-   * Attempt to fix common row parsing issues
-   */
-  private attemptRowFix(row: string[], expectedLength: number): string[] {
-    // If row is too short, it might be due to missing trailing commas
-    if (row.length < expectedLength) {
-      const paddedRow = [...row];
-      while (paddedRow.length < expectedLength) {
-        paddedRow.push('');
-      }
-      return paddedRow;
-    }
-
-    // If row is too long, it might be due to unescaped commas in fields
-    if (row.length > expectedLength) {
-      // Try to merge adjacent fields that might have been split incorrectly
-      const fixedRow: string[] = [];
-      let i = 0;
-      
-      while (i < row.length && fixedRow.length < expectedLength) {
-        if (fixedRow.length === expectedLength - 1) {
-          // Last field - merge remaining
-          fixedRow.push(row.slice(i).join(','));
-          break;
-        } else {
-          fixedRow.push(row[i]);
-          i++;
-        }
-      }
-      
-      return fixedRow;
-    }
-
-    return row;
-  }
-
-  /**
-   * Pad short rows or truncate long rows to match expected length
-   */
-  private padOrTruncateRow(row: string[], expectedLength: number): string[] {
-    if (row.length < expectedLength) {
-      const paddedRow = [...row];
-      while (paddedRow.length < expectedLength) {
-        paddedRow.push('');
-      }
-      return paddedRow;
-    } else if (row.length > expectedLength) {
-      return row.slice(0, expectedLength);
-    }
-    return row;
-  }
-
-  /**
-   * Detect delimiter automatically
-   */
-  public static detectDelimiter(csvContent: string): string {
-    const sample = csvContent.substring(0, 1024); // First 1KB
-    const delimiters = [',', ';', '\t', '|'];
-    const counts: { [key: string]: number } = {};
-
-    for (const delimiter of delimiters) {
-      counts[delimiter] = (sample.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
-    }
-
-    return Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
-  }
-}
-
-/**
- * Convenience function for parsing CSV content
- */
-export function parseCSV(csvContent: string, options?: {
-  delimiter?: string;
-  autoDetectDelimiter?: boolean;
-}): CSVParseResult {
-  let delimiter = options?.delimiter || ',';
-  
-  if (options?.autoDetectDelimiter) {
-    delimiter = RobustCSVParser.detectDelimiter(csvContent);
-  }
-
-  const parser = new RobustCSVParser({ delimiter });
-  return parser.parse(csvContent);
-}
-
-/**
- * Parse Shopify CSV with specific handling for common Shopify export formats
- */
-export function parseShopifyCSV(csvContent: string): CSVParseResult {
-  // Shopify typically uses comma delimiters
-  const parser = new RobustCSVParser({ delimiter: ',' });
-  const result = parser.parse(csvContent);
-  
-  // Apply Shopify-specific post-processing
-  if (result.headers.length > 0) {
-    // Clean up common Shopify header variations
-    result.headers = result.headers.map(header => 
-      header.trim().replace(/[""]/g, '"').replace(/\s+/g, ' ')
-    );
     
-    // Clean up row data
-    result.rows = result.rows.map(row => 
-      row.map(cell => 
-        typeof cell === 'string' ? cell.trim() : cell
-      )
-    );
+    // Determine format
+    const format = detectShopifyFormat(headers);
+    
+    return {
+      headers,
+      rows: allRows,
+      format,
+      success: true,
+      errors
+    };
+    
+  } catch (error) {
+    return {
+      headers: [],
+      rows: [],
+      format: 'unknown',
+      success: false,
+      errors: [`Critical parsing error: ${error}`]
+    };
+  }
+}
+
+/**
+ * Parse a single CSV line with proper quote handling
+ */
+function parseCSVLine(line: string, expectedColumns?: number): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let i = 0;
+  
+  while (i < line.length) {
+    const char = line[i];
+    const nextChar = i + 1 < line.length ? line[i + 1] : null;
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        i += 2;
+        continue;
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+    
+    i++;
+  }
+  
+  // Add the last field
+  result.push(current.trim());
+  
+  // Pad with empty strings if we know the expected column count
+  if (expectedColumns && result.length < expectedColumns) {
+    while (result.length < expectedColumns) {
+      result.push('');
+    }
   }
   
   return result;
+}
+
+/**
+ * Check if headers contain typical Shopify export fields
+ */
+function hasShopifyHeaders(headers: string[]): boolean {
+  const headerText = headers.join(' ').toLowerCase();
+  
+  const shopifyKeywords = [
+    'handle', 'title', 'sku', 'variant', 'price', 'inventory',
+    'vendor', 'type', 'tags', 'published', 'available', 'barcode'
+  ];
+  
+  const matches = shopifyKeywords.filter(keyword => headerText.includes(keyword)).length;
+  return matches >= 3;
+}
+
+/**
+ * Detect the type of Shopify export based on headers
+ */
+function detectShopifyFormat(headers: string[]): 'product' | 'inventory' | 'unknown' {
+  const headerText = headers.join(' ').toLowerCase();
+  
+  // Product export indicators
+  if (headerText.includes('handle') && (headerText.includes('title') || headerText.includes('body'))) {
+    return 'product';
+  }
+  
+  // Inventory export indicators
+  if (headerText.includes('sku') && (headerText.includes('available') || headerText.includes('on hand'))) {
+    return 'inventory';
+  }
+  
+  // Fallback detection
+  const productScore = ['handle', 'title', 'vendor', 'type', 'tags'].filter(k => headerText.includes(k)).length;
+  const inventoryScore = ['sku', 'available', 'inventory', 'location'].filter(k => headerText.includes(k)).length;
+  
+  if (productScore >= 2) return 'product';
+  if (inventoryScore >= 2) return 'inventory';
+  
+  return 'unknown';
+}
+
+/**
+ * Extract product data from Shopify product export row
+ */
+export function extractProductFromRow(headers: string[], row: string[]): any {
+  const data: any = {};
+  
+  for (let i = 0; i < headers.length && i < row.length; i++) {
+    const header = headers[i].toLowerCase().trim();
+    const value = row[i]?.trim() || '';
+    
+    switch (header) {
+      case 'handle':
+        data.handle = value;
+        break;
+      case 'title':
+        data.name = value;
+        break;
+      case 'body (html)':
+      case 'body html':
+        data.description = value;
+        break;
+      case 'vendor':
+        data.vendor = value;
+        break;
+      case 'product type':
+      case 'type':
+        data.category = value;
+        break;
+      case 'variant sku':
+      case 'sku':
+        data.sku = value;
+        break;
+      case 'variant price':
+      case 'price':
+        data.basePrice = value;
+        break;
+      case 'variant inventory qty':
+      case 'variant quantity':
+        data.quantity = parseInt(value) || 0;
+        break;
+      case 'variant barcode':
+      case 'barcode':
+        data.barcode = value;
+        break;
+      case 'variant grams':
+      case 'variant weight':
+        data.weight = value;
+        break;
+      case 'tags':
+        data.tags = value;
+        break;
+    }
+  }
+  
+  return data;
+}
+
+/**
+ * Extract inventory data from Shopify inventory export row
+ */
+export function extractInventoryFromRow(headers: string[], row: string[]): any {
+  const data: any = {};
+  
+  for (let i = 0; i < headers.length && i < row.length; i++) {
+    const header = headers[i].toLowerCase().trim();
+    const value = row[i]?.trim() || '';
+    
+    switch (header) {
+      case 'handle':
+        data.handle = value;
+        break;
+      case 'title':
+        data.name = value;
+        break;
+      case 'sku':
+        data.sku = value;
+        break;
+      case 'available':
+      case 'on hand':
+        data.quantity = parseInt(value) || 0;
+        break;
+      case 'location':
+        data.location = value;
+        break;
+    }
+  }
+  
+  return data;
 }
