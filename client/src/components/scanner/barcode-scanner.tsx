@@ -2,8 +2,11 @@ import { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Search, Package } from 'lucide-react';
+import { Camera, Search, Package, Plus, Edit } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ScannedItem {
   id: number;
@@ -26,6 +29,17 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
   const [isProcessing, setIsProcessing] = useState(false);
   const [scannedItem, setScannedItem] = useState<ScannedItem | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [showItemNotFoundDialog, setShowItemNotFoundDialog] = useState(false);
+  const [notFoundCode, setNotFoundCode] = useState('');
+  const [newItemForm, setNewItemForm] = useState({
+    name: '',
+    category: 'Flower',
+    weight: '1 pound',
+    vendor: 'Gold Standard',
+    quality: 'Top Shelf',
+    quantity: 1,
+    basePrice: ''
+  });
   const { toast } = useToast();
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -67,11 +81,9 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
           onItemScanned(item);
         }
       } else {
-        toast({
-          title: "Item Not Found",
-          description: "No matching item in inventory",
-          variant: "destructive"
-        });
+        // Show dialog for creating new item with this barcode
+        setNotFoundCode(code);
+        setShowItemNotFoundDialog(true);
         setScannedItem(null);
       }
     } catch (error) {
@@ -85,6 +97,88 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
       setIsProcessing(false);
     }
   }, [onItemScanned, toast]);
+
+  // Create new item with scanned barcode
+  const createNewItem = useCallback(async () => {
+    if (!newItemForm.name.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a product name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('/api/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newItemForm.name,
+          category: newItemForm.category,
+          weight: newItemForm.weight,
+          vendor: newItemForm.vendor,
+          quality: newItemForm.quality,
+          quantity: newItemForm.quantity,
+          basePrice: parseFloat(newItemForm.basePrice) || 0,
+          barcode: notFoundCode, // Use the scanned barcode
+          generateCodes: true // Auto-generate SKU and QR codes
+        }),
+      });
+
+      if (response.ok) {
+        const newItem = await response.json();
+        
+        toast({
+          title: "Item Created",
+          description: `${newItem.name} added to inventory with barcode ${notFoundCode}`,
+          variant: "default"
+        });
+
+        setShowItemNotFoundDialog(false);
+        setScannedItem(newItem);
+        
+        // Reset form
+        setNewItemForm({
+          name: '',
+          category: 'Flower',
+          weight: '1 pound',
+          vendor: 'Gold Standard',
+          quality: 'Top Shelf',
+          quantity: 1,
+          basePrice: ''
+        });
+
+        if (onItemScanned) {
+          onItemScanned(newItem);
+        }
+        
+        if (onActionComplete) {
+          onActionComplete({ action: 'created', item: newItem });
+        }
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Creation Failed",
+          description: error.message || "Could not create item",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Create item error:', error);
+      toast({
+        title: "Creation Failed",
+        description: "Could not create item",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [newItemForm, notFoundCode, onItemScanned, onActionComplete, toast]);
 
   // Start camera scanning
   const startScanning = useCallback(async () => {
@@ -341,6 +435,161 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
           )}
         </div>
       )}
+
+      {/* Item Not Found Dialog */}
+      <Dialog open={showItemNotFoundDialog} onOpenChange={setShowItemNotFoundDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Item Not Found</DialogTitle>
+            <DialogDescription>
+              Barcode "{notFoundCode}" was not found in your inventory. Would you like to create a new item with this barcode?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="item-name">Product Name *</Label>
+              <Input
+                id="item-name"
+                value={newItemForm.name}
+                onChange={(e) => setNewItemForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter product name"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select 
+                  value={newItemForm.category} 
+                  onValueChange={(value) => setNewItemForm(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Flower">Flower</SelectItem>
+                    <SelectItem value="Concentrates">Concentrates</SelectItem>
+                    <SelectItem value="Edibles">Edibles</SelectItem>
+                    <SelectItem value="Topicals">Topicals</SelectItem>
+                    <SelectItem value="Accessories">Accessories</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="weight">Weight</Label>
+                <Select 
+                  value={newItemForm.weight} 
+                  onValueChange={(value) => setNewItemForm(prev => ({ ...prev, weight: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 pound">1 pound</SelectItem>
+                    <SelectItem value="half pound">half pound</SelectItem>
+                    <SelectItem value="quarter pound">quarter pound</SelectItem>
+                    <SelectItem value="ounce">ounce</SelectItem>
+                    <SelectItem value="half ounce">half ounce</SelectItem>
+                    <SelectItem value="quarter ounce">quarter ounce</SelectItem>
+                    <SelectItem value="eighth">eighth</SelectItem>
+                    <SelectItem value="gram">gram</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="vendor">Vendor</Label>
+                <Select 
+                  value={newItemForm.vendor} 
+                  onValueChange={(value) => setNewItemForm(prev => ({ ...prev, vendor: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Gold Standard">Gold Standard</SelectItem>
+                    <SelectItem value="Mason Jar Co">Mason Jar Co</SelectItem>
+                    <SelectItem value="Premium Supply">Premium Supply</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="quality">Quality</Label>
+                <Select 
+                  value={newItemForm.quality} 
+                  onValueChange={(value) => setNewItemForm(prev => ({ ...prev, quality: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Top Shelf">Top Shelf</SelectItem>
+                    <SelectItem value="Premium">Premium</SelectItem>
+                    <SelectItem value="Standard">Standard</SelectItem>
+                    <SelectItem value="Budget">Budget</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  value={newItemForm.quantity}
+                  onChange={(e) => setNewItemForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                  min="1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="price">Base Price ($)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={newItemForm.basePrice}
+                  onChange={(e) => setNewItemForm(prev => ({ ...prev, basePrice: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded">
+              <p className="text-sm text-gray-600">
+                <strong>Barcode:</strong> {notFoundCode}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                SKU and QR code will be generated automatically
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowItemNotFoundDialog(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={createNewItem}
+              disabled={isProcessing || !newItemForm.name.trim()}
+              className="flex-1"
+            >
+              {isProcessing ? 'Creating...' : 'Create Item'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
