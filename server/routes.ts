@@ -5759,8 +5759,8 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Get available label formats
-  app.get("/api/labels/formats", async (_req: Request, res: Response) => {
+  // Get available label formats for numbered labels
+  app.get("/api/labels/numbered-formats", async (_req: Request, res: Response) => {
     try {
       const { LABEL_FORMATS } = await import('./services/label-printer');
       

@@ -32,7 +32,7 @@ export function NumberedLabelsDialog({ item, children }: NumberedLabelsDialogPro
 
   // Get available label formats
   const { data: formats = [], isLoading: formatsLoading } = useQuery<LabelFormat[]>({
-    queryKey: ["/api/labels/formats"],
+    queryKey: ["/api/labels/numbered-formats"],
     enabled: open
   });
 
