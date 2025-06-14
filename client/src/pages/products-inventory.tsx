@@ -1923,7 +1923,7 @@ const ProductsInventoryPage: React.FC = () => {
                                           </div>
                                           <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Brand</h4>
-                                            <p className="text-sm">{product.vendor || "No brand"}</p>
+                                            <p className="text-sm">{product.vendor || "Gold Standard"}</p>
                                           </div>
                                         </div>
                                         
@@ -1978,19 +1978,50 @@ const ProductsInventoryPage: React.FC = () => {
                                           <h4 className="text-sm font-medium text-muted-foreground">Product Barcode</h4>
                                           <div className="border rounded-lg p-4 bg-white">
                                             <div className="text-center space-y-2">
-                                              <div className="text-xs font-medium">Flower</div>
+                                              <div className="text-xs font-medium">{product.category}</div>
                                               <div className="space-y-1">
-                                                <div style={{fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px'}}>
-                                                  ||||||||||||||||||||||||||||
-                                                </div>
-                                                <div style={{fontSize: '10px', fontFamily: 'monospace'}}>
-                                                  {product.sku || "FLW-GOL-TEST-317089-QT118"}
-                                                </div>
+                                                {product.barcode ? (
+                                                  <div dangerouslySetInnerHTML={{ __html: product.barcode }} />
+                                                ) : product.sku ? (
+                                                  <div className="flex flex-col items-center space-y-1">
+                                                    <svg width="140" height="40" className="bg-white">
+                                                      <g fill="black">
+                                                        {/* Generate barcode bars based on SKU */}
+                                                        {product.sku.split('').map((char, index) => {
+                                                          const charCode = char.charCodeAt(0);
+                                                          const barWidth = (charCode % 3) + 1;
+                                                          const spacing = index * 3;
+                                                          return (
+                                                            <rect 
+                                                              key={index}
+                                                              x={spacing * 2 + 10} 
+                                                              y={5} 
+                                                              width={barWidth} 
+                                                              height={25}
+                                                            />
+                                                          );
+                                                        })}
+                                                      </g>
+                                                      <text x="70" y="38" textAnchor="middle" fontSize="8" fontFamily="monospace">
+                                                        {product.sku}
+                                                      </text>
+                                                    </svg>
+                                                  </div>
+                                                ) : (
+                                                  <div className="text-xs text-muted-foreground">
+                                                    Generate SKU first to create barcode
+                                                  </div>
+                                                )}
                                               </div>
                                               <div className="text-xs">
-                                                SKU: {product.sku || "FLW-GOL-TEST-317089-QT118"}
+                                                SKU: {product.sku || "Not assigned"}
                                               </div>
-                                              <Button size="sm" variant="outline" className="w-full mt-2">
+                                              <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="w-full mt-2"
+                                                onClick={() => handlePrintBarcodeClick(product.id)}
+                                              >
                                                 <Printer className="h-3 w-3 mr-1" />
                                                 Print Barcode
                                               </Button>
