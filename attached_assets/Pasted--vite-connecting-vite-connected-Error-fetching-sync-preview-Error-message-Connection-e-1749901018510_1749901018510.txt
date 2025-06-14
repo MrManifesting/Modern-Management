@@ -1,0 +1,76 @@
+[vite] connecting...
+[vite] connected.
+Error fetching sync preview: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at fetchSyncPreview (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-sync-preview.tsx:154:15)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error fetching sync preview: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at fetchSyncPreview (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-sync-preview.tsx:154:15)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Failed to test connection: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at apiRequestSimple (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/lib/queryClient.ts:76:11)↵ at async testConnection (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-credentials-form.tsx:109:22)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Failed to test connection: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at apiRequestSimple (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/lib/queryClient.ts:76:11)↵ at async testConnection (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-credentials-form.tsx:109:22)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Failed to test connection: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at apiRequestSimple (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/lib/queryClient.ts:76:11)↵ at async testConnection (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-credentials-form.tsx:109:22)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Fetching items from API...
+Fetched items: 331
+Fetching items from API...
+Fetched items: 331
+Shopify connection test failed: 500 Internal Server Error
+Shopify sync error: 
+Error {}
+
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error fetching sync preview: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at fetchSyncPreview (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-sync-preview.tsx:154:15)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Error fetching sync preview: 
+Error {}
+message: "Connection error: testConnection is not defined"
+stack: "Error: Connection error: testConnection is not defined↵ at fetchSyncPreview (https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/src/components/shopify/shopify-sync-preview.tsx:154:15)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Fetching items from API...
+Fetched items: 331
