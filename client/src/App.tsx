@@ -44,6 +44,7 @@ import CredentialsPage from "@/pages/credentials-page";
 import CredentialsManagement from "@/pages/credentials-management";
 import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
+import BarcodeScannerPage from "@/pages/barcode-scanner";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -101,6 +102,7 @@ function Router() {
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
+        <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />

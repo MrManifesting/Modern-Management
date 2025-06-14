@@ -99,6 +99,7 @@ export interface IStorage {
   getInventoryActions(filters?: { itemId?: number, employeeId?: number, actionType?: string }): Promise<InventoryAction[]>;
   getInventoryAction(id: number): Promise<InventoryAction | undefined>;
   createInventoryAction(action: InsertInventoryAction): Promise<InventoryAction>;
+  logInventoryAction?(action: InsertInventoryAction): Promise<InventoryAction>;
   getInventoryActionsByItem(itemId: number): Promise<InventoryAction[]>;
   getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]>;
   
