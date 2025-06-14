@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Item } from "@shared/schema";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,38 +17,88 @@ interface ColorBarcode {
   colorClass: string;
 }
 
+// Color mapping for different categories
+const getCategoryColors = (category: string) => {
+  const colors = {
+    'Flower': { primary: '#10B981', secondary: '#059669' }, // Green
+    'Edibles': { primary: '#F59E0B', secondary: '#D97706' }, // Amber
+    'Concentrates': { primary: '#8B5CF6', secondary: '#7C3AED' }, // Purple
+    'Vapes': { primary: '#EF4444', secondary: '#DC2626' }, // Red
+    'Topicals': { primary: '#06B6D4', secondary: '#0891B2' }, // Cyan
+    'Accessories': { primary: '#6B7280', secondary: '#4B5563' }, // Gray
+    'Bulk': { primary: '#FB7185', secondary: '#F43F5E' }, // Rose
+    'Other': { primary: '#84CC16', secondary: '#65A30D' }, // Lime
+  };
+  
+  return colors[category as keyof typeof colors] || colors['Other'];
+};
+
 export function ColorBarcode({ item }: ColorBarcodeProps) {
   const [barcode, setBarcode] = useState<ColorBarcode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!item.id) return;
+    if (!item.sku) {
+      setIsLoading(false);
+      setError("No SKU available for barcode generation");
+      return;
+    }
 
-    // Fetch the color-coded barcode for this item
-    const fetchBarcode = async () => {
+    const generateBarcode = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/items/${item.id}/color-barcode`);
+        setError(null);
+
+        // Dynamically import jsbarcode
+        const JsBarcode = (await import('jsbarcode')).default;
         
-        if (!response.ok) {
-          throw new Error("Failed to fetch barcode");
+        if (!canvasRef.current) {
+          throw new Error("Canvas ref not available");
         }
+
+        // Get category colors
+        const colors = getCategoryColors(item.category || 'Other');
         
-        const data = await response.json();
-        if (data.success && data.barcodeSvg) {
-          setBarcode({
-            barcodeSvg: data.barcodeSvg,
-            primaryColor: data.primaryColor,
-            secondaryColor: data.secondaryColor,
-            colorClass: data.colorClass
-          });
-        }
+        // Generate barcode using jsbarcode
+        JsBarcode(canvasRef.current, item.sku, {
+          format: "CODE128",
+          width: 2,
+          height: 60,
+          displayValue: true,
+          fontSize: 12,
+          textMargin: 5,
+          background: "#ffffff",
+          lineColor: "#000000"
+        });
+
+        // Convert canvas to SVG string for storage
+        const canvas = canvasRef.current;
+        const svgString = `
+          <svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">
+            <foreignObject width="100%" height="100%">
+              <div xmlns="http://www.w3.org/1999/xhtml">
+                <canvas width="${canvas.width}" height="${canvas.height}"></canvas>
+              </div>
+            </foreignObject>
+          </svg>
+        `;
+
+        setBarcode({
+          barcodeSvg: svgString,
+          primaryColor: colors.primary,
+          secondaryColor: colors.secondary,
+          colorClass: item.category || 'Other'
+        });
+
       } catch (error) {
-        console.error("Error fetching barcode:", error);
+        console.error("Error generating barcode:", error);
+        setError("Failed to generate barcode");
         toast({
           title: "Error",
-          description: "Failed to load barcode",
+          description: "Failed to generate barcode",
           variant: "destructive"
         });
       } finally {
@@ -56,8 +106,8 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
       }
     };
 
-    fetchBarcode();
-  }, [item.id]);
+    generateBarcode();
+  }, [item.sku, item.category]);
 
   // Function to open the printable barcode in a new window
   const openPrintableBarcode = () => {
@@ -109,6 +159,10 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
       <CardContent>
         {isLoading ? (
           <div className="h-24 w-full animate-pulse bg-muted rounded-md"></div>
+        ) : error ? (
+          <div className="text-center py-3 text-sm text-red-600">
+            {error}
+          </div>
         ) : barcode ? (
           <div 
             className="barcode-container"
@@ -119,8 +173,15 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
               borderRadius: '0.25rem',
               background: `linear-gradient(90deg, ${barcode.primaryColor}15 0%, white 50%, ${barcode.secondaryColor}15 100%)`
             }}
-            dangerouslySetInnerHTML={{ __html: barcode.barcodeSvg }}
-          />
+          >
+            <div className="flex justify-center">
+              <canvas 
+                ref={canvasRef}
+                className="max-w-full"
+                style={{ display: barcode ? 'block' : 'none' }}
+              />
+            </div>
+          </div>
         ) : (
           <div className="text-center py-3 text-sm text-muted-foreground">
             No barcode available for this item
