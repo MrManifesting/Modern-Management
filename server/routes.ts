@@ -25,6 +25,7 @@ import {
   fetchShopifyInventoryReport, 
   fetchShopifyCustomerReport 
 } from "./services/shopify-reports";
+import { testShopifyConnection } from "./services/shopify-auth";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
