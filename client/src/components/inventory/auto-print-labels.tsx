@@ -74,7 +74,7 @@ export function AutoPrintLabels({ item, quantity = 1, autoOpen = false }: AutoPr
             <h3>Print Preview - ${printQuantity} Label${printQuantity > 1 ? 's' : ''}</h3>
             <p>This window will automatically trigger print when the barcode images load.</p>
             <p><strong>Item:</strong> ${item.name}</p>
-            <p><strong>SKU:</strong> ${item.sku}</p>
+            <p><strong>SKU:</strong> ${item.sku || 'N/A'}</p>
             <p><strong>Labels to print:</strong> ${printQuantity}</p>
             <button onclick="window.print()" style="padding: 10px 20px; margin: 10px; cursor: pointer;">Print Now</button>
             <button onclick="window.close()" style="padding: 10px 20px; margin: 10px; cursor: pointer;">Close</button>

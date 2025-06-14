@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ItemForm, Item } from "@shared/schema";
+import { InsertItem, Item } from "@shared/schema";
 import ItemFormComponent from "@/components/inventory/item-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,7 @@ export default function AddItemModal({
   const isEditing = !!editItem;
 
   const createMutation = useMutation({
-    mutationFn: async (data: ItemForm) => {
+    mutationFn: async (data: InsertItem) => {
       // Create FormData for sending files
       const formData = new FormData();
       
@@ -55,7 +55,7 @@ export default function AddItemModal({
         return res.json();
       }
     },
-    onSuccess: (newItem: Item, variables: ItemForm) => {
+    onSuccess: (newItem: Item, variables: InsertItem) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
       
       // Auto-print labels for new items only
