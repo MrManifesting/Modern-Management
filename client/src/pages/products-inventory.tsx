@@ -1981,31 +1981,39 @@ const ProductsInventoryPage: React.FC = () => {
                                               <div className="text-xs font-medium">{product.category}</div>
                                               <div className="space-y-1">
                                                 {product.barcode ? (
-                                                  <div dangerouslySetInnerHTML={{ __html: product.barcode }} />
+                                                  <div 
+                                                    dangerouslySetInnerHTML={{ __html: product.barcode }} 
+                                                    className="flex justify-center"
+                                                  />
                                                 ) : product.sku ? (
                                                   <div className="flex flex-col items-center space-y-1">
-                                                    <svg width="140" height="40" className="bg-white">
-                                                      <g fill="black">
-                                                        {/* Generate barcode bars based on SKU */}
-                                                        {product.sku.split('').map((char, index) => {
-                                                          const charCode = char.charCodeAt(0);
-                                                          const barWidth = (charCode % 3) + 1;
-                                                          const spacing = index * 3;
-                                                          return (
-                                                            <rect 
-                                                              key={index}
-                                                              x={spacing * 2 + 10} 
-                                                              y={5} 
-                                                              width={barWidth} 
-                                                              height={25}
-                                                            />
-                                                          );
-                                                        })}
-                                                      </g>
-                                                      <text x="70" y="38" textAnchor="middle" fontSize="8" fontFamily="monospace">
-                                                        {product.sku}
-                                                      </text>
-                                                    </svg>
+                                                    <canvas 
+                                                      ref={(canvas) => {
+                                                        if (canvas && product.sku) {
+                                                          try {
+                                                            // Use jsbarcode to generate actual scannable barcode
+                                                            const JsBarcode = require('jsbarcode');
+                                                            JsBarcode(canvas, product.sku, {
+                                                              format: "CODE128",
+                                                              width: 1.5,
+                                                              height: 30,
+                                                              displayValue: true,
+                                                              fontSize: 10,
+                                                              margin: 5,
+                                                              background: "#ffffff",
+                                                              lineColor: "#000000"
+                                                            });
+                                                          } catch (error) {
+                                                            console.log("Barcode generation not available, showing SKU text");
+                                                            if (canvas.getContext) {
+                                                              const ctx = canvas.getContext('2d');
+                                                              ctx.fillText(product.sku, 10, 20);
+                                                            }
+                                                          }
+                                                        }
+                                                      }}
+                                                      className="bg-white border"
+                                                    />
                                                   </div>
                                                 ) : (
                                                   <div className="text-xs text-muted-foreground">
