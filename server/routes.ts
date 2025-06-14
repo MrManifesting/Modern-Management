@@ -4265,6 +4265,115 @@ ${topCustomersCsv}`;
   
   registerShopifyInventorySyncRoutes(app, storage);
 
+  // LIVE SHOPIFY WEBHOOK: Order Processing for Inventory Updates
+  app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
+    try {
+      console.log('Live Shopify order webhook received');
+      
+      // Parse the webhook payload
+      const orderData = req.body;
+      console.log(`Processing live order: ${orderData.order_number || orderData.id}`);
+      console.log(`Line items: ${orderData.line_items?.length || 0}`);
+
+      const processedItems = [];
+      const errors = [];
+
+      // Process each line item in the order
+      for (const lineItem of orderData.line_items || []) {
+        try {
+          console.log(`Processing: ${lineItem.sku} (qty: ${lineItem.quantity})`);
+          
+          // Find the item by SKU
+          const items = await storage.getItems();
+          const item = items.find(i => i.sku === lineItem.sku);
+          
+          if (!item) {
+            console.warn(`Item not found for SKU: ${lineItem.sku}`);
+            errors.push(`Item not found for SKU: ${lineItem.sku}`);
+            continue;
+          }
+
+          // Record previous quantity
+          const previousQuantity = item.quantity || 0;
+          
+          // Calculate new quantity (don't go below 0)
+          const orderedQuantity = lineItem.quantity;
+          const newQuantity = Math.max(0, previousQuantity - orderedQuantity);
+          
+          // Update inventory
+          await storage.updateItem(item.id, { quantity: newQuantity });
+          
+          // Log the inventory action
+          await storage.createInventoryAction({
+            itemId: item.id,
+            action: 'fulfillment',
+            quantity: -orderedQuantity,
+            previousQuantity,
+            newQuantity,
+            reason: `Live Shopify order #${orderData.order_number || orderData.id}`,
+            performedBy: 'shopify-webhook',
+            notes: `Order fulfillment: ${lineItem.name}`
+          });
+
+          processedItems.push({
+            itemId: item.id,
+            name: item.name,
+            sku: item.sku,
+            previousQuantity,
+            orderedQuantity,
+            newQuantity,
+            updated: true
+          });
+
+          console.log(`Updated: ${item.name} from ${previousQuantity} to ${newQuantity}`);
+        } catch (itemError) {
+          console.error(`Error processing ${lineItem.sku}:`, itemError);
+          errors.push(`Failed to process ${lineItem.sku}: ${itemError.message}`);
+        }
+      }
+
+      // Create sale records
+      for (const processedItem of processedItems) {
+        try {
+          const saleData = {
+            orderId: String(orderData.id),
+            itemId: processedItem.itemId,
+            items: orderData.line_items,
+            subtotal: orderData.total_price,
+            total: orderData.total_price,
+            status: 'completed',
+            externalOrderId: String(orderData.id),
+            metadata: {
+              liveOrder: true,
+              processedAt: new Date().toISOString(),
+              order_number: orderData.order_number,
+              financial_status: orderData.financial_status,
+              fulfillment_status: orderData.fulfillment_status
+            }
+          };
+
+          await storage.createSale(saleData);
+          console.log(`Sale record created for ${processedItem.name}`);
+        } catch (saleError) {
+          console.error('Sale record error:', saleError);
+        }
+      }
+
+      console.log(`Live order complete: ${processedItems.length} items, ${errors.length} errors`);
+      
+      // Shopify requires 200 response
+      res.status(200).json({ 
+        received: true, 
+        processed: processedItems.length,
+        errors: errors.length 
+      });
+
+    } catch (error) {
+      console.error('Live order processing error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
   // TEST ENDPOINT: Shopify Order Processing for Inventory Updates
   app.post("/api/test/shopify-order", async (req: Request, res: Response) => {
     try {
