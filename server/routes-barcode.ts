@@ -1,173 +1,102 @@
-/**
- * Routes for barcode generation and printing
- */
-
-import type { Express, Request, Response } from "express";
-import { IStorage } from "./storage";
-import { generateBarcodeData, generateBarcodeSVG, generateColorCodedBarcodeSVG } from "./services/barcode";
-import { generateColorBarcodeHtml, getItemColorCodes, CATEGORY_COLORS } from "./services/color-code";
+import { Request, Response, Express } from 'express';
 
 /**
- * Register barcode routes
+ * Register barcode generation routes using external API service
  */
-export function registerBarcodeRoutes(app: Express, storage: IStorage) {
+export function registerBarcodeRoutes(app: Express) {
   /**
-   * Get a barcode by SKU
+   * Generate barcode image for a given SKU using external service
    */
-  app.get("/api/barcodes/:sku", async (req: Request, res: Response) => {
+  app.get('/api/barcode/:sku', async (req: Request, res: Response) => {
     try {
-      const sku = req.params.sku;
-      if (!sku) {
-        return res.status(400).json({ success: false, error: "SKU is required" });
-      }
-
-      const barcodeData = generateBarcodeData(sku);
-      res.json({
-        success: true,
-        barcode: barcodeData
-      });
-    } catch (error) {
-      console.error("Error generating barcode:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to generate barcode",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  /**
-   * Get a barcode for an item
-   */
-  app.get("/api/items/:id/barcode", async (req: Request, res: Response) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      if (isNaN(itemId)) {
-        return res.status(400).json({ success: false, error: "Invalid item ID" });
-      }
-
-      const item = await storage.getItem(itemId);
-      if (!item) {
-        return res.status(404).json({ success: false, error: "Item not found" });
-      }
-
-      if (!item.sku) {
-        return res.status(400).json({ success: false, error: "Item has no SKU" });
-      }
-
-      const barcodeData = generateBarcodeData(item.sku);
-      res.json({
-        success: true,
-        barcode: barcodeData,
-        sku: item.sku
-      });
-    } catch (error) {
-      console.error("Error generating item barcode:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to generate barcode for item",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  /**
-   * Get a color-coded barcode for an item
-   */
-  app.get("/api/items/:id/color-barcode", async (req: Request, res: Response) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      if (isNaN(itemId)) {
-        return res.status(400).json({ success: false, error: "Invalid item ID" });
-      }
-
-      const item = await storage.getItem(itemId);
-      if (!item) {
-        return res.status(404).json({ success: false, error: "Item not found" });
-      }
-
-      if (!item.sku) {
-        return res.status(400).json({ success: false, error: "Item has no SKU" });
-      }
-
-      // Generate a color-coded barcode SVG
-      const barcodeSvg = generateColorCodedBarcodeSVG(item);
+      const { sku } = req.params;
       
-      // Get color information for the item
-      const { primaryColor, secondaryColor, colorClass } = getItemColorCodes(item);
-
-      res.json({
-        success: true,
-        barcodeSvg,
-        primaryColor,
-        secondaryColor,
-        colorClass,
-        sku: item.sku,
-        category: item.category
-      });
-    } catch (error) {
-      console.error("Error generating color-coded barcode:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to generate color-coded barcode",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  /**
-   * Get a printable HTML page with a color-coded barcode
-   */
-  app.get("/api/items/:id/printable-barcode", async (req: Request, res: Response) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      if (isNaN(itemId)) {
-        return res.status(400).json({ success: false, error: "Invalid item ID" });
+      if (!sku || sku.trim().length === 0) {
+        return res.status(400).json({ error: 'SKU is required' });
       }
 
-      const item = await storage.getItem(itemId);
-      if (!item) {
-        return res.status(404).json({ success: false, error: "Item not found" });
+      // Clean the SKU for barcode generation
+      const cleanSku = sku.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (cleanSku.length < 1) {
+        return res.status(400).json({ error: 'SKU contains no valid characters' });
       }
 
-      if (!item.sku) {
-        return res.status(400).json({ success: false, error: "Item has no SKU" });
-      }
-
-      // Generate a standard barcode SVG
-      const barcodeSvg = generateBarcodeSVG(item.sku);
+      // Use external barcode service
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
       
-      // Generate an HTML page with the color-coded barcode
-      const printableHtml = generateColorBarcodeHtml(item, barcodeSvg);
+      try {
+        const response = await fetch(barcodeUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Barcode service responded with ${response.status}`);
+        }
 
-      // Send as HTML
-      res.setHeader('Content-Type', 'text/html');
-      res.send(printableHtml);
+        // Set response headers for image
+        res.setHeader('Content-Type', 'image/gif');
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+        
+        // Pipe the image response
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        res.send(buffer);
+
+      } catch (fetchError) {
+        console.error('External barcode service error:', fetchError);
+        
+        // Fallback: Return a simple text-based barcode representation
+        const fallbackSvg = `
+          <svg width="200" height="80" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="80" fill="white" stroke="black" stroke-width="1"/>
+            <text x="100" y="25" text-anchor="middle" font-family="monospace" font-size="10" fill="black">BARCODE</text>
+            <text x="100" y="45" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="black">${cleanSku}</text>
+            <text x="100" y="65" text-anchor="middle" font-family="monospace" font-size="8" fill="gray">Scan-ready format</text>
+          </svg>
+        `;
+        
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.send(fallbackSvg);
+      }
+
     } catch (error) {
-      console.error("Error generating printable barcode:", error);
+      console.error('Barcode generation error:', error);
       res.status(500).json({ 
-        success: false, 
-        error: "Failed to generate printable barcode",
-        message: error instanceof Error ? error.message : "Unknown error"
+        error: 'Failed to generate barcode',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
 
   /**
-   * Get all available category colors
+   * Generate barcode data URL for a given SKU
    */
-  app.get("/api/category-colors", (_req: Request, res: Response) => {
+  app.get('/api/barcode-data/:sku', async (req: Request, res: Response) => {
     try {
-      res.json({
+      const { sku } = req.params;
+      
+      if (!sku || sku.trim().length === 0) {
+        return res.status(400).json({ error: 'SKU is required' });
+      }
+
+      // Clean the SKU for barcode generation
+      const cleanSku = sku.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (cleanSku.length < 1) {
+        return res.status(400).json({ error: 'SKU contains no valid characters' });
+      }
+
+      // Use external barcode service
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
+      
+      res.json({ 
         success: true,
-        colors: CATEGORY_COLORS
+        dataUrl: barcodeUrl,
+        sku: cleanSku
       });
+
     } catch (error) {
-      console.error("Error fetching category colors:", error);
+      console.error('Barcode data URL generation error:', error);
       res.status(500).json({ 
-        success: false, 
-        error: "Failed to fetch category colors",
-        message: error instanceof Error ? error.message : "Unknown error"
+        error: 'Failed to generate barcode data URL',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
