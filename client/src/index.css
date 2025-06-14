@@ -454,17 +454,189 @@
   padding: 0.125rem 0.5rem;
 }
 
-/* Custom button styles */
-.primary-btn {
-  @apply bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors;
+/* Enhanced Button System - High Contrast & Responsive */
+.btn-primary {
+  @apply bg-blue-600 text-white font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-blue-700 active:bg-blue-800;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  @apply shadow-md hover:shadow-lg;
+  min-height: 40px;
+  border: 2px solid transparent;
 }
 
-.outline-btn {
-  @apply bg-transparent border border-blue-500 text-blue-500 transition-colors;
+.btn-secondary {
+  @apply bg-purple-600 text-white font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-purple-700 active:bg-purple-800;
+  @apply focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  @apply shadow-md hover:shadow-lg;
+  min-height: 40px;
+  border: 2px solid transparent;
 }
 
-.outline-btn:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+.btn-success {
+  @apply bg-green-600 text-white font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-green-700 active:bg-green-800;
+  @apply focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  @apply shadow-md hover:shadow-lg;
+  min-height: 40px;
+  border: 2px solid transparent;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-red-700 active:bg-red-800;
+  @apply focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  @apply shadow-md hover:shadow-lg;
+  min-height: 40px;
+  border: 2px solid transparent;
+}
+
+.btn-warning {
+  @apply bg-yellow-500 text-black font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-yellow-600 active:bg-yellow-700;
+  @apply focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  @apply shadow-md hover:shadow-lg;
+  min-height: 40px;
+  border: 2px solid transparent;
+}
+
+.btn-outline {
+  @apply bg-transparent border-2 border-blue-600 text-blue-600 font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-blue-600 hover:text-white active:bg-blue-700;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  min-height: 40px;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-gray-700 font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-gray-100 active:bg-gray-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  @apply transition-all duration-200 ease-in-out;
+  min-height: 40px;
+  border: 2px solid transparent;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-sm;
+  min-height: 32px;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-lg;
+  min-height: 48px;
+}
+
+/* Dark mode button variants */
+.dark .btn-ghost {
+  @apply text-gray-200 hover:bg-gray-800 active:bg-gray-700;
+}
+
+.dark .btn-warning {
+  @apply text-gray-900;
+}
+
+/* Loading state */
+.btn-loading {
+  @apply opacity-75 cursor-not-allowed;
+  position: relative;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Button group styles */
+.btn-group {
+  @apply inline-flex rounded-md shadow-sm;
+}
+
+.btn-group .btn-primary:not(:last-child),
+.btn-group .btn-secondary:not(:last-child),
+.btn-group .btn-outline:not(:last-child) {
+  @apply rounded-r-none border-r-0;
+}
+
+.btn-group .btn-primary:not(:first-child),
+.btn-group .btn-secondary:not(:first-child),
+.btn-group .btn-outline:not(:first-child) {
+  @apply rounded-l-none;
+}
+
+/* Mobile responsiveness for buttons */
+@media (max-width: 640px) {
+  .btn-responsive {
+    @apply w-full mb-2 text-center;
+    min-height: 44px; /* Touch target size */
+  }
+  
+  .btn-group-mobile {
+    @apply flex flex-col gap-2;
+  }
+  
+  .btn-group-mobile .btn-primary,
+  .btn-group-mobile .btn-secondary,
+  .btn-group-mobile .btn-outline {
+    @apply rounded-md w-full;
+  }
+  
+  /* Ensure all buttons meet mobile touch targets */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Stack button groups vertically on mobile */
+  .flex-wrap > button {
+    @apply mb-2 w-full sm:w-auto sm:mb-0;
+  }
+}
+
+/* Fast loading optimizations */
+.fast-load {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .btn-loading::after {
+    animation: none;
+  }
+}
+
+/* Performance optimized button hover states */
+.btn-hover-optimize {
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
 }
 
 /* Mobile responsiveness improvements */
