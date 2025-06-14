@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Media Thumbnail Integration and Column Mapping Fixed**
+  - Fixed column mapping issues in inventory table display with proper data source alignment
+  - Implemented comprehensive media image thumbnail system in inventory grid
+  - Created `/api/items/with-media` endpoint that associates media files with inventory items
+  - Added intelligent media file matching by SKU, item name, and ID patterns
+  - Enhanced inventory table with proper image thumbnails, hover previews, and fallback icons
+  - Updated frontend to use new media-integrated API endpoint for real thumbnail display
+  - Fixed mobile responsiveness with enhanced button styling and proper touch targets (44px minimum)
+  - Applied high contrast color scheme for better readability and accessibility
+  - All inventory items now display associated media images from Telegram uploads and file storage
 - June 14, 2025: **CSV Import System Fixed and Fully Operational**
   - Resolved missing module error preventing Shopify CSV imports from working
   - Fixed parseRobustCSV function import issues in routes-shopify-import.ts
