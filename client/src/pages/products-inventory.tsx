@@ -1883,7 +1883,7 @@ const ProductsInventoryPage: React.FC = () => {
                               <div className="flex justify-center gap-2">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline">
+                                    <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
                                       <Eye className="h-3 w-3 mr-1" />
                                       View
                                     </Button>
@@ -2025,7 +2025,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 {/* Action Dropdown Menu */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button size="sm" variant="outline">
+                                    <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
                                       Actions <ChevronDown className="ml-1 h-3 w-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -2253,7 +2253,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 <div className="flex justify-center gap-2">
                                   <Dialog>
                                     <DialogTrigger asChild>
-                                      <Button size="sm" variant="outline">
+                                      <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
                                         <Eye className="h-3 w-3 mr-1" />
                                         View
                                       </Button>
@@ -2308,7 +2308,7 @@ const ProductsInventoryPage: React.FC = () => {
 
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button size="sm" variant="outline">
+                                      <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
                                         Actions <ChevronDown className="ml-1 h-3 w-3" />
                                       </Button>
                                     </DropdownMenuTrigger>
@@ -2506,7 +2506,8 @@ const ProductsInventoryPage: React.FC = () => {
                               <div className="flex justify-center gap-2">
                                 <Button 
                                   size="sm" 
-                                  variant="outline"
+                                  variant="ghost" 
+                                  className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
                                   onClick={() => {
                                     if (product.id !== undefined) {
                                       handleViewClick(product.id);
@@ -2519,7 +2520,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
+                                    <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
                                       Actions <ChevronDown className="ml-1 h-3 w-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
