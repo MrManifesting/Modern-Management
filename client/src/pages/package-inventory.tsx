@@ -48,79 +48,7 @@ interface PackageProduct {
   imageUrl?: string;
 }
 
-// Mock data for demonstration
-const mockPackageProducts: PackageProduct[] = [
-  {
-    id: 1,
-    name: "Complete Wellness Bundle",
-    category: "Bundle",
-    source: "Gold Standard",
-    originalSkus: ["GS-FS-1000", "GS-TOP-MRC", "GS-BS-SGC"],
-    packageSku: "PKG-GS-WELL-1",
-    quantity: 15,
-    retailPrice: 149.99,
-    wholesalePrice: 74.99,
-    status: "In Stock",
-    contents: "Full Spectrum CBD Oil, Muscle Relief Cream, Broad Spectrum CBD Softgels",
-    description: "Complete wellness bundle with our top selling CBD products"
-  },
-  {
-    id: 2,
-    name: "Delta 8 Starter Pack",
-    category: "Bundle",
-    source: "Tree Mason",
-    originalSkus: ["TM-D8-VAP-1", "TM-D8-GUM-1"],
-    packageSku: "PKG-TM-D8-1",
-    quantity: 22,
-    retailPrice: 59.99,
-    wholesalePrice: 29.99,
-    status: "In Stock",
-    contents: "Delta 8 Vape, Delta 8 Gummies",
-    description: "Perfect starter pack for Delta 8 enthusiasts"
-  },
-  {
-    id: 3,
-    name: "Relaxation Gift Set",
-    category: "Gift Set",
-    source: "Mixed",
-    originalSkus: ["GS-TOP-MRC", "TM-D8-TNC-1"],
-    packageSku: "PKG-MIX-RLX-1",
-    quantity: 8,
-    retailPrice: 79.99,
-    wholesalePrice: 39.99,
-    status: "Low Stock",
-    contents: "Muscle Relief Cream, Delta 8 Tincture",
-    description: "Perfect gift set for relaxation and stress relief"
-  },
-  {
-    id: 4,
-    name: "Pet Lover Bundle",
-    category: "Bundle",
-    source: "Gold Standard",
-    originalSkus: ["GS-PET-TRT", "GS-FS-1000"],
-    packageSku: "PKG-GS-PET-1",
-    quantity: 18,
-    retailPrice: 69.99,
-    wholesalePrice: 34.99,
-    status: "In Stock",
-    contents: "CBD Pet Treats, Full Spectrum CBD Oil",
-    description: "Everything your pet needs for wellness"
-  },
-  {
-    id: 5,
-    name: "Summer Party Pack",
-    category: "Gift Set",
-    source: "Tree Mason",
-    originalSkus: ["TM-HHC-DSP-1", "TM-MIX-GUM-1"],
-    packageSku: "PKG-TM-SUM-1",
-    quantity: 5,
-    retailPrice: 69.99,
-    wholesalePrice: 34.99,
-    status: "Low Stock",
-    contents: "HHC Disposable Vape, HHC + Delta 8 Gummies",
-    description: "Perfect for summer entertaining"
-  }
-];
+// Package products are loaded from real API data - no mock data used
 
 // Product categories
 const categories = [
@@ -132,7 +60,7 @@ const categories = [
 ];
 
 const PackageInventoryPage: React.FC = () => {
-  const [products, setProducts] = useState<PackageProduct[]>(mockPackageProducts);
+  const [products, setProducts] = useState<PackageProduct[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSource, setSelectedSource] = useState("All");

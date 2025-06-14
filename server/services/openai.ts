@@ -1,53 +1,89 @@
-/**
- * OpenAI Service Integration
- * This service provides image analysis and content generation capabilities for Inventory Pro
- */
-
 import OpenAI from "openai";
-import { log } from "../vite";
+
+/*
+Follow these instructions when using this blueprint:
+1. Note that the newest OpenAI model is "gpt-4o", not "gpt-4". gpt-4o was released after your knowledge cutoff. Always prefer using gpt-4o as it is the latest model. When copying code from this blueprint, ensure you also mention this information verbatim as a comment so that you don't revert it to "gpt-4": `// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user`
+2. Use the response_format: { type: "json_object" } option
+3. Request output in JSON format in the prompt
+*/
 
 // Initialize OpenAI client
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/**
- * Analyze product image and extract key details
- * 
- * @param base64Image Base64-encoded image data
- * @returns Object containing extracted product details
- */
-export async function analyzeProductImage(base64Image: string): Promise<{
-  success: boolean;
-  description?: string;
-  suggestedCategory?: string;
-  features?: string[];
-  error?: string;
+// Basic text analysis for inventory descriptions
+export async function generateProductDescription(name: string, category: string, attributes?: any): Promise<string> {
+  const prompt = `Generate a professional product description for a cannabis inventory item with the following details:
+  
+  Name: ${name}
+  Category: ${category}
+  ${attributes ? `Additional attributes: ${JSON.stringify(attributes)}` : ''}
+  
+  Create a concise, professional description suitable for inventory management and e-commerce listings. Focus on quality, characteristics, and benefits. Keep it under 200 characters.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 150,
+    });
+
+    return response.choices[0].message.content || "Premium quality cannabis product";
+  } catch (error) {
+    console.error('Failed to generate product description:', error);
+    throw new Error('AI description generation failed - check OpenAI API credentials');
+  }
+}
+
+// Analyze sentiment for customer feedback or product reviews
+export async function analyzeSentiment(text: string): Promise<{
+  rating: number,
+  confidence: number
 }> {
   try {
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      log("OpenAI API key is missing", "openai-error");
-      return {
-        success: false,
-        error: "OpenAI API key is not configured. Please add your OPENAI_API_KEY to environment variables."
-      };
-    }
-
-    log("Analyzing product image with OpenAI Vision API", "openai");
-
-    // Call the OpenAI API with the image
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a product analysis expert for an inventory management system. Extract detailed product information from images."
+          content:
+            "You are a sentiment analysis expert. Analyze the sentiment of the text and provide a rating from 1 to 5 stars and a confidence score between 0 and 1. Respond with JSON in this format: { 'rating': number, 'confidence': number }",
         },
+        {
+          role: "user",
+          content: text,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{"rating": 3, "confidence": 0.5}');
+
+    return {
+      rating: Math.max(1, Math.min(5, Math.round(result.rating))),
+      confidence: Math.max(0, Math.min(1, result.confidence)),
+    };
+  } catch (error) {
+    console.error('Failed to analyze sentiment:', error);
+    throw new Error("Failed to analyze sentiment: " + (error as Error).message);
+  }
+}
+
+// Image analysis for product photos
+export async function analyzeProductImage(base64Image: string): Promise<{
+  description: string;
+  suggestedCategory: string;
+  qualityAssessment: string;
+}> {
+  try {
+    const visionResponse = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Analyze this product image and extract the following information: 1) Detailed product description, 2) Suggested product category, 3) List of key product features or attributes. Format your response as JSON with keys 'description', 'suggestedCategory', and 'features' (as an array)."
+              text: "Analyze this cannabis product image and provide: 1) Detailed description, 2) Suggested product category, 3) Quality assessment. Respond in JSON format: {\"description\": \"...\", \"suggestedCategory\": \"...\", \"qualityAssessment\": \"...\"}"
             },
             {
               type: "image_url",
@@ -59,245 +95,131 @@ export async function analyzeProductImage(base64Image: string): Promise<{
         },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 1000,
+      max_tokens: 500,
     });
 
-    // Parse the response
-    const result = JSON.parse(response.choices[0].message.content);
-    
-    log("Successfully analyzed product image", "openai");
+    const result = JSON.parse(visionResponse.choices[0].message.content || '{"description": "Cannabis product", "suggestedCategory": "Flower", "qualityAssessment": "Good quality"}');
     
     return {
-      success: true,
-      description: result.description || "",
-      suggestedCategory: result.suggestedCategory || "",
-      features: result.features || []
+      description: result.description || "Cannabis product image analyzed",
+      suggestedCategory: result.suggestedCategory || "Flower",
+      qualityAssessment: result.qualityAssessment || "Quality assessment pending"
     };
-  } catch (error: any) {
-    log(`Error analyzing image: ${error.message}`, "openai-error");
-    return {
-      success: false,
-      error: `Error analyzing image: ${error.message}`
-    };
+  } catch (error) {
+    console.error('Failed to analyze product image:', error);
+    throw new Error('AI image analysis failed - check OpenAI API credentials');
   }
 }
 
-/**
- * Generate product descriptions based on key details
- * 
- * @param productName Product name
- * @param category Product category
- * @param features Key product features/specifications
- * @returns Generated product description
- */
-export async function generateProductDescription(
-  productName: string,
-  category: string,
-  features: string[]
-): Promise<{ success: boolean; description?: string; error?: string }> {
+// Generate intelligent SKU suggestions based on product details
+export async function generateSkuSuggestion(name: string, category: string, vendor?: string): Promise<string> {
+  const prompt = `Generate a professional SKU code for a cannabis inventory item:
+  
+  Name: ${name}
+  Category: ${category}
+  ${vendor ? `Vendor: ${vendor}` : ''}
+  
+  Create a short, memorable SKU following cannabis industry standards. Use abbreviations and alphanumeric codes. Maximum 12 characters. Respond with just the SKU code.`;
+
   try {
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      log("OpenAI API key is missing", "openai-error");
-      return {
-        success: false,
-        error: "OpenAI API key is not configured. Please add your OPENAI_API_KEY to environment variables."
-      };
-    }
-
-    log(`Generating description for product: ${productName}`, "openai");
-
-    const featuresText = features.join(", ");
-    
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional product description writer for an e-commerce platform. Create compelling, detailed product descriptions."
-        },
-        {
-          role: "user",
-          content: `Write a professional and compelling product description for the following:
-            Product Name: ${productName}
-            Category: ${category}
-            Features: ${featuresText}
-            
-            The description should be 2-3 paragraphs long, highlight key selling points, and be written in a professional tone.`
-        }
-      ],
-      max_tokens: 500
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 50,
     });
 
-    const description = response.choices[0].message.content;
-    
-    log("Successfully generated product description", "openai");
-    
-    return {
-      success: true,
-      description
-    };
-  } catch (error: any) {
-    log(`Error generating description: ${error.message}`, "openai-error");
-    return {
-      success: false,
-      error: `Error generating description: ${error.message}`
-    };
+    const sku = response.choices[0].message.content?.trim() || "";
+    // Ensure SKU is alphanumeric and reasonable length
+    return sku.replace(/[^A-Z0-9-]/gi, '').substring(0, 12);
+  } catch (error) {
+    console.error('Failed to generate SKU suggestion:', error);
+    throw new Error('AI SKU generation failed - check OpenAI API credentials');
   }
 }
 
-/**
- * Suggest improvements for a product listing based on current information
- * 
- * @param productName Product name
- * @param description Current product description
- * @param category Product category
- * @param price Product price
- * @returns Suggestions for improving the product listing
- */
-export async function suggestListingImprovements(
-  productName: string,
-  description: string,
-  category: string,
-  price: number
-): Promise<{
-  success: boolean;
-  suggestions?: string[];
-  improvedTitle?: string;
-  improvedDescription?: string;
-  error?: string;
+// Inventory optimization suggestions
+export async function generateInventoryInsights(items: any[]): Promise<{
+  recommendations: string[];
+  lowStockAlerts: string[];
+  categoryAnalysis: string;
 }> {
+  const prompt = `Analyze this cannabis inventory data and provide business insights:
+  
+  ${JSON.stringify(items.slice(0, 50))} // Limit data for API efficiency
+  
+  Provide analysis in JSON format:
+  {
+    "recommendations": ["recommendation1", "recommendation2"],
+    "lowStockAlerts": ["alert1", "alert2"],
+    "categoryAnalysis": "overall category performance summary"
+  }`;
+
   try {
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      log("OpenAI API key is missing", "openai-error");
-      return {
-        success: false,
-        error: "OpenAI API key is not configured. Please add your OPENAI_API_KEY to environment variables."
-      };
-    }
-
-    log(`Analyzing and improving listing for product: ${productName}`, "openai");
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are an e-commerce optimization expert who helps improve product listings to maximize conversions and SEO performance."
-        },
-        {
-          role: "user",
-          content: `Analyze and suggest improvements for this product listing:
-            Current Title: ${productName}
-            Current Description: ${description}
-            Category: ${category}
-            Price: $${price.toFixed(2)}
-            
-            Provide the following in JSON format:
-            1. A list of suggestions for improving the listing
-            2. An improved product title
-            3. An improved product description`
-        }
-      ],
+      messages: [{ 
+        role: "system", 
+        content: "You are a cannabis inventory management expert. Analyze inventory data and provide actionable business insights." 
+      }, { 
+        role: "user", 
+        content: prompt 
+      }],
       response_format: { type: "json_object" },
-      max_tokens: 800
+      max_tokens: 800,
     });
 
-    // Parse the response
-    const result = JSON.parse(response.choices[0].message.content);
-    
-    log("Successfully generated listing improvements", "openai");
+    const result = JSON.parse(response.choices[0].message.content || '{"recommendations": [], "lowStockAlerts": [], "categoryAnalysis": "Analysis pending"}');
     
     return {
-      success: true,
-      suggestions: result.suggestions || [],
-      improvedTitle: result.improvedTitle || "",
-      improvedDescription: result.improvedDescription || ""
+      recommendations: Array.isArray(result.recommendations) ? result.recommendations : [],
+      lowStockAlerts: Array.isArray(result.lowStockAlerts) ? result.lowStockAlerts : [],
+      categoryAnalysis: result.categoryAnalysis || "Analysis pending"
     };
-  } catch (error: any) {
-    log(`Error generating listing improvements: ${error.message}`, "openai-error");
-    return {
-      success: false,
-      error: `Error generating listing improvements: ${error.message}`
-    };
+  } catch (error) {
+    console.error('Failed to generate inventory insights:', error);
+    throw new Error('AI inventory analysis failed - check OpenAI API credentials');
   }
 }
 
-/**
- * Analyze inventory data to provide insights and suggestions
- * 
- * @param inventoryData Array of inventory items with sales and stock data
- * @returns Analysis results and suggestions
- */
-export async function analyzeInventoryData(inventoryData: any[]): Promise<{
-  success: boolean;
-  insights?: string[];
-  recommendations?: string[];
-  trendingCategories?: string[];
-  error?: string;
+// Parse and enhance CSV import data
+export async function enhanceCsvImportData(csvRow: any): Promise<{
+  enhancedDescription?: string;
+  suggestedCategory?: string;
+  qualityNotes?: string;
 }> {
+  const prompt = `Enhance this cannabis product data from CSV import:
+  
+  ${JSON.stringify(csvRow)}
+  
+  Provide enhancements in JSON format:
+  {
+    "enhancedDescription": "improved product description",
+    "suggestedCategory": "best fit category",
+    "qualityNotes": "quality assessment notes"
+  }`;
+
   try {
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      log("OpenAI API key is missing", "openai-error");
-      return {
-        success: false,
-        error: "OpenAI API key is not configured. Please add your OPENAI_API_KEY to environment variables."
-      };
-    }
-
-    // Prepare inventory data for analysis (limit to essential fields)
-    const simplifiedData = inventoryData.map(item => ({
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      stock: item.currentStock,
-      sales: item.totalSales || 0,
-      price: item.basePrice,
-      lastRestocked: item.lastRestockDate
-    }));
-
-    log(`Analyzing inventory data (${inventoryData.length} items)`, "openai");
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are an inventory management and retail analytics expert. Analyze inventory data to provide actionable business insights."
-        },
-        {
-          role: "user",
-          content: `Analyze this inventory data and provide insights and recommendations:
-            ${JSON.stringify(simplifiedData)}
-            
-            Provide the following in JSON format:
-            1. Key insights about inventory performance
-            2. Actionable recommendations for inventory optimization
-            3. Trending categories based on sales data`
-        }
-      ],
+      messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 1000
+      max_tokens: 300,
     });
 
-    // Parse the response
-    const result = JSON.parse(response.choices[0].message.content);
-    
-    log("Successfully analyzed inventory data", "openai");
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     
     return {
-      success: true,
-      insights: result.insights || [],
-      recommendations: result.recommendations || [],
-      trendingCategories: result.trendingCategories || []
+      enhancedDescription: result.enhancedDescription,
+      suggestedCategory: result.suggestedCategory,
+      qualityNotes: result.qualityNotes
     };
-  } catch (error: any) {
-    log(`Error analyzing inventory data: ${error.message}`, "openai-error");
-    return {
-      success: false,
-      error: `Error analyzing inventory data: ${error.message}`
-    };
+  } catch (error) {
+    console.error('Failed to enhance CSV data:', error);
+    // Return empty object on error - don't block import process
+    return {};
   }
 }
+
+export {
+  openai
+};
