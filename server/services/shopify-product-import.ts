@@ -173,21 +173,25 @@ export class ShopifyProductImportService {
    */
   async updatePricingFromShopify(): Promise<{ updated: number; errors: string[] }> {
     try {
-      const shopify = createShopifyClient();
-      if (!shopify) {
-        throw new Error('Shopify client not available');
+      if (!isShopifyConfigured()) {
+        throw new Error('Shopify not configured');
       }
 
       console.log('Fetching products for pricing update...');
       
-      const products = await shopify.rest.Product.all({
-        session: { 
-          shop: process.env.SHOPIFY_STORE!, 
-          accessToken: process.env.SHOPIFY_ACCESS_TOKEN! 
-        },
-        limit: 250,
-        fields: 'id,title,variants'
+      const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN!,
+          'Content-Type': 'application/json'
+        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
 
       const results = {
         updated: 0,
@@ -196,7 +200,7 @@ export class ShopifyProductImportService {
 
       const existingItems = await this.storage.getItems();
 
-      for (const product of products.data) {
+      for (const product of products) {
         try {
           const primaryVariant = product.variants?.[0];
           if (!primaryVariant) continue;
@@ -236,21 +240,25 @@ export class ShopifyProductImportService {
    */
   async updateImagesFromShopify(): Promise<{ updated: number; errors: string[] }> {
     try {
-      const shopify = createShopifyClient();
-      if (!shopify) {
-        throw new Error('Shopify client not available');
+      if (!isShopifyConfigured()) {
+        throw new Error('Shopify not configured');
       }
 
       console.log('Fetching products for image update...');
       
-      const products = await shopify.rest.Product.all({
-        session: { 
-          shop: process.env.SHOPIFY_STORE!, 
-          accessToken: process.env.SHOPIFY_ACCESS_TOKEN! 
-        },
-        limit: 250,
-        fields: 'id,title,images,variants'
+      const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products.json?limit=250&fields=id,title,images,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN!,
+          'Content-Type': 'application/json'
+        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
 
       const results = {
         updated: 0,
@@ -259,7 +267,7 @@ export class ShopifyProductImportService {
 
       const existingItems = await this.storage.getItems();
 
-      for (const product of products.data) {
+      for (const product of products) {
         try {
           const primaryImage = product.images?.[0];
           const primaryVariant = product.variants?.[0];
