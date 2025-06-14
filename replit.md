@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Comprehensive Google Sheets Mapping System Deployed**
+  - Implemented complete mapping between THCa Flower sheet, Inventory sheet, and InventoryList sheet formats
+  - Created SheetMappingService with conversion methods for all three sheet types
+  - Added comprehensive API endpoints: /api/sheets/thca-import, /api/sheets/inventory-export, /api/sheets/bulk-sync, /api/sheets/mapping-config
+  - Built admin interface at /sheets-mapping-admin for managing bidirectional synchronization
+  - THCa Flower sheet columns: Strain, Amount, %, Tier, Bulk, Distro 25lbs +, Master 50lbs+, Master 2 100lbs +, COAs, Media, Strain type
+  - Inventory sheet columns: Full Shopify format with 73 columns including Handle, Title, Variant SKU, pricing, and metafields
+  - InventoryList sheet columns: Strain, Amount, %, Tier, Strain Type, SKU, KEY-ID
+  - Automatic SKU generation for imported items without existing SKUs
+  - Real-time sync results tracking with success/failure indicators for each sheet type
 - June 14, 2025: **Complete System Testing and Duplicate Cleanup Successfully Completed**
   - Removed 197 duplicate inventory items (99 by strain+price, 98 by SKU) - system now has 136 clean items
   - Verified numbered SKU system working perfectly with sequential numbering (SKU-1, SKU-2, SKU-3, etc.)
