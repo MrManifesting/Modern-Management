@@ -132,6 +132,7 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Test verified: processes orders, reduces inventory by ordered quantities, logs all changes
   - Core inventory reduction logic functional for production Shopify webhook integration
   - Database schema updated with all required columns for sales and inventory tracking
+  - Live webhook endpoint ready at `/api/shopify/webhooks/orders/create` for store integration
 - June 14, 2025: **Fixed Bulk Generation Functions with Product Names in Barcodes**
   - Resolved syntax errors in routes.ts that were preventing bulk generation functions from working
   - Implemented product name inclusion in barcode generation as requested
