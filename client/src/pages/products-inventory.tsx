@@ -601,6 +601,90 @@ const ProductsInventoryPage: React.FC = () => {
     deleteAllMutation.mutate();
   };
   
+  // Function to import all products from Shopify
+  const importAllProductsFromShopify = async () => {
+    try {
+      setSyncLoading(true);
+      
+      const response = await apiRequest('POST', '/api/shopify/import-all-products');
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Shopify Import Complete",
+          description: `${result.imported} new items imported, ${result.updated} items updated`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
+      } else {
+        throw new Error(result.error || "Import failed");
+      }
+    } catch (error) {
+      toast({
+        title: "Import Failed",
+        description: "Failed to import products from Shopify. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  // Function to update pricing from Shopify
+  const updatePricingFromShopify = async () => {
+    try {
+      setSyncLoading(true);
+      
+      const response = await apiRequest('POST', '/api/shopify/update-pricing');
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Pricing Updated",
+          description: `Updated pricing for ${result.updated} items from Shopify`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
+      } else {
+        throw new Error(result.error || "Pricing update failed");
+      }
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update pricing from Shopify. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  // Function to update images from Shopify
+  const updateImagesFromShopify = async () => {
+    try {
+      setSyncLoading(true);
+      
+      const response = await apiRequest('POST', '/api/shopify/update-images');
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Images Updated",
+          description: `Updated images for ${result.updated} items from Shopify`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
+      } else {
+        throw new Error(result.error || "Image update failed");
+      }
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update images from Shopify. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   // Function to sync with Shopify
   const syncWithShopify = async () => {
     try {
@@ -1399,6 +1483,63 @@ const ProductsInventoryPage: React.FC = () => {
                 </>
               )}
               
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={importAllProductsFromShopify}
+                disabled={syncLoading}
+              >
+                {syncLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Store className="h-4 w-4" />
+                    Import All Products
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={updatePricingFromShopify}
+                disabled={syncLoading}
+              >
+                {syncLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <CircleDollarSign className="h-4 w-4" />
+                    Update Pricing
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="gap-1.5"
+                onClick={updateImagesFromShopify}
+                disabled={syncLoading}
+              >
+                {syncLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-4 w-4" />
+                    Update Images
+                  </>
+                )}
+              </Button>
+
               <Button 
                 variant="outline" 
                 className="gap-1.5"
