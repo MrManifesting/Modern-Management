@@ -4328,15 +4328,12 @@ ${topCustomersCsv}`;
           // Create inventory action record
           await storage.createInventoryAction({
             itemId: item.id,
-            action: 'fulfillment',
+            actionType: 'fulfillment',
             quantity: orderedQuantity,
-            reason: `Shopify order fulfillment - Order #${orderData.id}`,
-            metadata: {
-              orderId: orderData.id,
-              shopifyLineItemId: lineItem.id,
-              previousQuantity: currentQuantity,
-              newQuantity: newQuantity
-            }
+            previousQuantity: currentQuantity,
+            notes: `Shopify order fulfillment - Order #${orderData.id}`,
+            locationFrom: 'warehouse',
+            locationTo: 'customer'
           });
 
           processedItems.push({
