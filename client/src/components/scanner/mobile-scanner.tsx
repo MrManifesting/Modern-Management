@@ -70,6 +70,7 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [scannerReady, setScannerReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Load HTML5 QR code scanner
   useEffect(() => {
@@ -167,8 +168,6 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
     } catch (err) {
       console.error('Error starting scanner:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to start camera scanner';
-      setError(`Scanner error: ${errorMessage}`);
-      setIsScanning(false);
       
       // Clean up any partial scanner instance
       if (scannerInstance.current) {
@@ -179,6 +178,20 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
         }
         scannerInstance.current = null;
       }
+      
+      // Retry logic for DOM access issues
+      if (retryCount < 2 && errorMessage.includes('not found')) {
+        setRetryCount(prev => prev + 1);
+        setIsScanning(false);
+        setTimeout(() => {
+          startScanning();
+        }, 1000);
+        setError(`Retrying scanner... (${retryCount + 1}/3)`);
+      } else {
+        setError(`Scanner error: ${errorMessage}`);
+        setIsScanning(false);
+        setRetryCount(0);
+      }
     }
   }, [scannerReady, selectedCamera, isScanning]);
 
@@ -187,8 +200,10 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
       try {
         await scannerInstance.current.stop();
         setIsScanning(false);
+        setRetryCount(0); // Reset retry count on manual stop
       } catch (err) {
         console.error('Error stopping scanner:', err);
+        setIsScanning(false);
       }
     }
   }, [isScanning]);
@@ -309,6 +324,33 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
     }
   };
 
+  const resetScanner = useCallback(async () => {
+    setError(null);
+    setRetryCount(0);
+    setIsScanning(false);
+    setIsProcessing(false);
+    
+    if (scannerInstance.current) {
+      try {
+        await scannerInstance.current.stop();
+      } catch (err) {
+        console.error('Error stopping scanner during reset:', err);
+      }
+      scannerInstance.current = null;
+    }
+    
+    // Clear the scanner element
+    const scannerElement = document.getElementById("mobile-scanner");
+    if (scannerElement) {
+      scannerElement.innerHTML = '';
+    }
+    
+    toast({
+      title: "Scanner Reset",
+      description: "Scanner has been reset. Try starting again."
+    });
+  }, [toast]);
+
   return (
     <div className="space-y-4 max-w-md mx-auto">
       {/* Scanner Card */}
@@ -419,7 +461,17 @@ const MobileScanner: React.FC<MobileScannerProps> = ({
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="flex items-center justify-between">
+                <span>{error}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={resetScanner}
+                  className="ml-2 h-6 text-xs"
+                >
+                  Reset
+                </Button>
+              </AlertDescription>
             </Alert>
           )}
         </CardContent>
