@@ -10,28 +10,20 @@ import { getItemColorCodes, getCategoryColor } from './color-code';
  */
 export function generateBarcodeData(text: string): string {
   try {
-    // For server-side environments, return a placeholder barcode URL
-    // This is a workaround as we can't directly generate image data in the test environment
-    // In a real production environment, you would use bwip-js to generate the actual barcode
+    const png = bwipjs.toBuffer({
+      bcid: 'code128',       // Barcode type
+      text: text,            // Text to encode
+      scale: 3,              // 3x scaling factor
+      height: 10,            // Bar height, in millimeters
+      includetext: true,     // Show human-readable text
+      textxalign: 'center',  // Always good to set this
+    });
     
-    // If we're in a real environment, generate an actual barcode
-    if (process.env.NODE_ENV === 'production') {
-      // Try to generate a barcode using bwip-js
-      try {
-        const png = bwipjs.toBuffer({
-          bcid: 'code128',       // Barcode type
-          text: text,            // Text to encode
-          scale: 3,              // 3x scaling factor
-          height: 10,            // Bar height, in millimeters
-          includetext: true,     // Show human-readable text
-          textxalign: 'center',  // Always good to set this
-        });
-        
-        // Convert to base64 data URL
-        return `data:image/png;base64,${png.toString('base64')}`;
-      } catch (e) {
-        console.error('BWIP-JS error:', e);
-        // Fall back to placeholder if BWIP-JS fails
+    // Convert to base64 data URL
+    return `data:image/png;base64,${png.toString('base64')}`;
+  } catch (e) {
+    console.error('BWIP-JS error:', e);
+    // Return a simple text representation if barcode generation fails
         return generatePlaceholderBarcode(text);
       }
     } else {
