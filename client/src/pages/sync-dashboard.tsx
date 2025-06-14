@@ -394,7 +394,7 @@ export default function SyncDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {syncLogs?.map((log: SyncLog) => (
+                  {Array.isArray(syncLogs?.logs) ? syncLogs.logs.map((log: SyncLog) => (
                     <div key={log.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${getSyncStatusColor(log.status)}`} />
@@ -414,7 +414,7 @@ export default function SyncDashboard() {
                         {new Date(log.timestamp).toLocaleString()}
                       </div>
                     </div>
-                  )) || (
+                  )) : (
                     <div className="text-center py-8 text-gray-500">
                       No sync operations found
                     </div>
