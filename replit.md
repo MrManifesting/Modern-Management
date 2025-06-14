@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Numbered SKU System and Multi-Label Printing Implemented**
+  - Implemented sequential SKU numbering system (SKU-1, SKU-2, SKU-3, etc.) for individual unit tracking
+  - Created comprehensive multi-label printing service with standard formats (Avery 5160, 5261, 5162, 22805, custom cannabis)
+  - Added numbered label generation API endpoints for individual and bulk printing
+  - Integrated "Print Numbered Labels" functionality into inventory item dropdown menus
+  - Labels include unit numbers, numbered SKUs, barcodes, and product information in professional formats
+  - Multiple labels per page with proper spacing for standard label sheets
+  - Fixed API routing issues that were preventing external Google Apps Script access
 - June 14, 2025: **Complete Google Apps Script Bidirectional Sync Integration Deployed and Tested**
   - Configured comprehensive Google Apps Script webhook system for real-time bidirectional sync
   - Successfully connected inventory system, Shopify, and Google Sheets through middleware automation
