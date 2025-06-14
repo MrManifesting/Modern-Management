@@ -30,9 +30,17 @@ const upload = multer({ storage });
 // Telegram configuration and bot instance
 let telegramConfig = {
   token: process.env.TELEGRAM_BOT_TOKEN || "",
-  webhookUrl: process.env.TELEGRAM_WEBHOOK_URL || "",
+  webhookUrl: "",
   configured: false,
 };
+
+// Set proper webhook URL based on environment
+if (process.env.REPLIT_DOMAINS) {
+  const domains = process.env.REPLIT_DOMAINS.split(',');
+  telegramConfig.webhookUrl = `https://${domains[0]}/api/telegram/webhook`;
+} else {
+  telegramConfig.webhookUrl = `${process.env.WEBHOOK_BASE_URL || 'https://localhost:5000'}/api/telegram/webhook`;
+}
 
 // Telegram bot API functions
 const sendTelegramMessage = async (chatId: string, text: string) => {
