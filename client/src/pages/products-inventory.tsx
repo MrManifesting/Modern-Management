@@ -1822,8 +1822,24 @@ const ProductsInventoryPage: React.FC = () => {
                               <Badge variant="outline">{product.category}</Badge>
                             </td>
                             <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                            <td className="py-3 px-4 text-center">{product.size}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(product.price)}</td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                {product.sku && (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <Barcode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">Barcode</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <QrCode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">QR</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
                                 {product.quantity}
