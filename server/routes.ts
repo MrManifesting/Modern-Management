@@ -5449,6 +5449,175 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Google Apps Script integration endpoints
+  app.post("/api/google-apps-script/sync-inventory", async (_req: Request, res: Response) => {
+    try {
+      const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK;
+      
+      if (!webhookUrl) {
+        return res.status(400).json({
+          success: false,
+          message: "Google Apps Script webhook URL not configured"
+        });
+      }
+
+      // Get all inventory items for sync
+      const items = await storage.listItems();
+      
+      // Prepare data for Google Sheets sync
+      const syncData = {
+        action: 'inventory_sync',
+        timestamp: new Date().toISOString(),
+        source: 'inventory_app',
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          quantity: item.quantity,
+          basePrice: item.basePrice,
+          status: item.status,
+          category: item.category,
+          brand: item.brand,
+          lastUpdated: item.updatedAt
+        }))
+      };
+
+      // Send to Google Apps Script webhook
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(syncData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Google Apps Script webhook failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      res.json({
+        success: true,
+        message: `Synced ${items.length} items to Google Sheets`,
+        syncedItems: items.length,
+        timestamp: syncData.timestamp,
+        result: result
+      });
+
+    } catch (error) {
+      console.error("Error syncing inventory to Google Apps Script:", error);
+      res.status(500).json({
+        success: false,
+        message: `Failed to sync inventory: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  });
+
+  app.post("/api/google-apps-script/webhook", async (req: Request, res: Response) => {
+    try {
+      const { action, data, timestamp, source } = req.body;
+
+      console.log(`Google Apps Script webhook received: ${action} from ${source} at ${timestamp}`);
+
+      switch (action) {
+        case 'shopify_order_update':
+          // Handle Shopify order updates from Google Sheets
+          if (data && data.lineItems) {
+            for (const lineItem of data.lineItems) {
+              if (lineItem.sku) {
+                // Find item by SKU and update quantity
+                const items = await storage.listItems();
+                const item = items.find(i => i.sku === lineItem.sku);
+                
+                if (item && item.quantity !== null) {
+                  const newQuantity = Math.max(0, item.quantity - lineItem.quantity);
+                  await storage.updateItem(item.id, { quantity: newQuantity });
+                  
+                  console.log(`Updated item ${item.name} quantity from ${item.quantity} to ${newQuantity}`);
+                }
+              }
+            }
+          }
+          break;
+
+        case 'inventory_update':
+          // Handle inventory updates from Google Sheets
+          if (data && Array.isArray(data.items)) {
+            for (const itemUpdate of data.items) {
+              if (itemUpdate.id) {
+                await storage.updateItem(itemUpdate.id, {
+                  quantity: itemUpdate.quantity,
+                  basePrice: itemUpdate.basePrice,
+                  status: itemUpdate.status
+                });
+                
+                console.log(`Updated item ${itemUpdate.id} from Google Sheets`);
+              }
+            }
+          }
+          break;
+
+        case 'sync_request':
+          // Trigger inventory sync back to Google Sheets
+          const items = await storage.listItems();
+          const syncResponse = {
+            success: true,
+            items: items.map(item => ({
+              id: item.id,
+              name: item.name,
+              sku: item.sku,
+              quantity: item.quantity,
+              basePrice: item.basePrice,
+              status: item.status
+            })),
+            timestamp: new Date().toISOString()
+          };
+          
+          return res.json(syncResponse);
+
+        default:
+          console.log(`Unknown action received from Google Apps Script: ${action}`);
+      }
+
+      res.json({
+        success: true,
+        message: `Processed ${action} webhook`,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("Error processing Google Apps Script webhook:", error);
+      res.status(500).json({
+        success: false,
+        message: `Failed to process webhook: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  });
+
+  app.get("/api/google-apps-script/status", async (_req: Request, res: Response) => {
+    try {
+      const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK;
+      const apiUrl = process.env.GOOGLE_APPS_SCRIPT_API;
+      const syncSheetId = process.env.GOOGLE_SHEETS_SYNC_ID;
+
+      res.json({
+        configured: !!(webhookUrl && apiUrl && syncSheetId),
+        webhookUrl: webhookUrl ? 'Configured' : 'Not set',
+        apiUrl: apiUrl ? 'Configured' : 'Not set',
+        syncSheetId: syncSheetId || 'Not set',
+        lastSync: 'Not available' // Could be stored in database
+      });
+
+    } catch (error) {
+      console.error("Error getting Google Apps Script status:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get status"
+      });
+    }
+  });
+
   // View item in Google Sheets
   app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
     try {
