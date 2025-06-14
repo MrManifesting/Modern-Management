@@ -151,20 +151,152 @@ const SimpleScanner: React.FC<SimpleScannerProps> = ({
     searchItem(manualSku.trim());
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // For now, just show a message that image scanning isn't available
-    toast({
-      title: "Image Scanning",
-      description: "Image-based barcode scanning is not available. Please use manual entry.",
-      variant: "default"
-    });
+    setIsProcessing(true);
     
-    // Clear the file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    try {
+      // Create a canvas to process the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = async () => {
+        // Set canvas size to image size
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Draw image to canvas
+        ctx?.drawImage(img, 0, 0);
+        
+        // Try to extract text/numbers from the image using basic image processing
+        const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Convert to grayscale and enhance contrast for better detection
+        if (imageData) {
+          const data = imageData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            // Enhance contrast
+            const enhanced = gray > 128 ? 255 : 0;
+            data[i] = enhanced;     // red
+            data[i + 1] = enhanced; // green  
+            data[i + 2] = enhanced; // blue
+          }
+          ctx?.putImageData(imageData, 0, 0);
+        }
+        
+        // Convert canvas to blob and send to server for processing
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const formData = new FormData();
+            formData.append('image', blob, 'barcode.png');
+            
+            try {
+              const response = await fetch('/api/analyze-image', {
+                method: 'POST',
+                body: formData
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                
+                // Look for barcode patterns in the extracted text
+                const extractedText = result.extractedText || '';
+                console.log('Extracted text from image:', extractedText);
+                
+                // Enhanced pattern matching for various barcode formats
+                const barcodePatterns = [
+                  /\b\d{12,14}\b/g,        // UPC/EAN barcodes
+                  /\b[A-Z0-9]{8,15}\b/g,   // Code128/Code39 
+                  /\b\d{8,12}\b/g,         // General numeric codes
+                  /\b[A-Z]{2,4}\d{4,8}\b/g, // Mixed alphanumeric
+                  /\b\d{6,10}\b/g          // Shorter numeric codes
+                ];
+                
+                let detectedCode = null;
+                
+                // Try each pattern until we find a match
+                for (const pattern of barcodePatterns) {
+                  const matches = extractedText.match(pattern);
+                  if (matches && matches.length > 0) {
+                    // Prefer longer codes as they're more likely to be complete barcodes
+                    detectedCode = matches.sort((a, b) => b.length - a.length)[0];
+                    break;
+                  }
+                }
+                
+                if (detectedCode) {
+                  console.log('Detected barcode:', detectedCode);
+                  setManualSku(detectedCode);
+                  
+                  toast({
+                    title: "Barcode Detected",
+                    description: `Found barcode: ${detectedCode}`,
+                    variant: "default"
+                  });
+                  
+                  // Auto-search the detected code
+                  searchItem(detectedCode);
+                } else {
+                  // Fallback: show all extracted text for manual selection
+                  if (extractedText.trim()) {
+                    setManualSku(extractedText.trim().split(/\s+/)[0]); // Use first word
+                    toast({
+                      title: "Text Extracted", 
+                      description: "Please verify the code in the input field",
+                      variant: "default"
+                    });
+                  } else {
+                    toast({
+                      title: "No Text Found", 
+                      description: "Could not extract text from image. Try manual entry.",
+                      variant: "destructive"
+                    });
+                  }
+                }
+              } else {
+                throw new Error('Image analysis failed');
+              }
+            } catch (error) {
+              console.error('Image processing error:', error);
+              toast({
+                title: "Processing Failed",
+                description: "Could not process the image. Try manual entry.",
+                variant: "destructive"
+              });
+            }
+          }
+        }, 'image/png');
+      };
+      
+      img.onerror = () => {
+        toast({
+          title: "Image Load Failed",
+          description: "Could not load the image. Please try again.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+      };
+      
+      // Load the image
+      img.src = URL.createObjectURL(file);
+      
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Could not process the image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -182,17 +314,27 @@ const SimpleScanner: React.FC<SimpleScannerProps> = ({
           <div className="text-center space-y-4">
             <div className="w-full h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center">
               <Camera className="h-8 w-8 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">Camera scanning unavailable</p>
-              <p className="text-xs text-gray-400">Use manual entry below</p>
+              <p className="text-sm text-gray-500">Enhanced barcode detection</p>
+              <p className="text-xs text-gray-400">Upload image for AI analysis</p>
             </div>
             
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
               className="w-full"
+              disabled={isProcessing}
             >
-              <Camera className="mr-2 h-4 w-4" />
-              Take Photo of Barcode
+              {isProcessing ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                  Processing Image...
+                </>
+              ) : (
+                <>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Take Photo of Barcode
+                </>
+              )}
             </Button>
             
             <input
