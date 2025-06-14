@@ -4265,6 +4265,149 @@ ${topCustomersCsv}`;
   
   registerShopifyInventorySyncRoutes(app, storage);
 
+  // TEST ENDPOINT: Shopify Order Processing for Inventory Updates
+  app.post("/api/test/shopify-order", async (req: Request, res: Response) => {
+    try {
+      const { testOrderData } = req.body;
+      
+      // Default test order if none provided
+      const orderData = testOrderData || {
+        id: `test_order_${Date.now()}`,
+        line_items: [
+          {
+            product_id: "test_product_1",
+            variant_id: "test_variant_1", 
+            sku: "FLW-GEN-CRTT-057621", // Use existing SKU from inventory
+            name: "Test Product Order",
+            quantity: 2,
+            price: "25.00"
+          }
+        ],
+        total_price: "50.00",
+        created_at: new Date().toISOString(),
+        financial_status: "paid",
+        fulfillment_status: null
+      };
+
+      console.log(`Processing test Shopify order: ${orderData.id}`);
+      
+      let processedItems = [];
+      let errors = [];
+
+      // Process each line item in the order
+      for (const lineItem of orderData.line_items) {
+        try {
+          // Find item by SKU
+          let item = null;
+          if (lineItem.sku) {
+            const items = await storage.getItems();
+            item = items.find(i => i.sku === lineItem.sku);
+          }
+
+          if (!item) {
+            errors.push(`Item not found for SKU: ${lineItem.sku}`);
+            continue;
+          }
+
+          const currentQuantity = item.quantity || 0;
+          const orderedQuantity = parseInt(lineItem.quantity) || 0;
+          const newQuantity = Math.max(0, currentQuantity - orderedQuantity);
+
+          console.log(`Updating inventory for ${item.name}:`);
+          console.log(`  Current quantity: ${currentQuantity}`);
+          console.log(`  Ordered quantity: ${orderedQuantity}`);
+          console.log(`  New quantity: ${newQuantity}`);
+
+          // Update the item quantity
+          const updatedItem = await storage.updateItem(item.id, {
+            ...item,
+            quantity: newQuantity,
+            updatedAt: new Date()
+          });
+
+          // Create inventory action record
+          await storage.createInventoryAction({
+            itemId: item.id,
+            action: 'fulfillment',
+            quantity: orderedQuantity,
+            reason: `Shopify order fulfillment - Order #${orderData.id}`,
+            metadata: {
+              orderId: orderData.id,
+              shopifyLineItemId: lineItem.id,
+              previousQuantity: currentQuantity,
+              newQuantity: newQuantity
+            }
+          });
+
+          processedItems.push({
+            itemId: item.id,
+            name: item.name,
+            sku: lineItem.sku,
+            previousQuantity: currentQuantity,
+            orderedQuantity: orderedQuantity,
+            newQuantity: newQuantity,
+            updated: true
+          });
+
+        } catch (itemError) {
+          console.error(`Error processing line item ${lineItem.sku}:`, itemError);
+          errors.push(`Failed to process ${lineItem.sku}: ${itemError.message}`);
+        }
+      }
+
+      // Create sale record
+      try {
+        const saleData = {
+          orderId: orderData.id,
+          items: orderData.line_items,
+          subtotal: orderData.total_price,
+          total: orderData.total_price,
+          status: 'completed',
+          marketplace: 'shopify',
+          externalOrderId: orderData.id,
+          metadata: {
+            testOrder: true,
+            processedAt: new Date().toISOString(),
+            financial_status: orderData.financial_status,
+            fulfillment_status: orderData.fulfillment_status
+          }
+        };
+
+        await storage.createSale(saleData);
+        console.log(`Created sale record for order ${orderData.id}`);
+      } catch (saleError) {
+        console.error('Error creating sale record:', saleError);
+        errors.push(`Failed to create sale record: ${saleError.message}`);
+      }
+
+      const response = {
+        success: true,
+        message: `Test order processed successfully`,
+        order: {
+          id: orderData.id,
+          totalItems: orderData.line_items.length,
+          totalValue: orderData.total_price
+        },
+        inventoryUpdates: processedItems,
+        errors: errors.length > 0 ? errors : undefined,
+        summary: {
+          itemsProcessed: processedItems.length,
+          itemsWithErrors: errors.length,
+          totalQuantityReduced: processedItems.reduce((sum, item) => sum + item.orderedQuantity, 0)
+        }
+      };
+
+      res.json(response);
+
+    } catch (error) {
+      console.error('Error processing test Shopify order:', error);
+      res.status(500).json({
+        success: false,
+        error: `Failed to process test order: ${error.message}`
+      });
+    }
+  });
+
   // OpenAI-powered AI features - real integrations, no mock data
   app.post("/api/ai/generate-description", async (req: Request, res: Response) => {
     try {
