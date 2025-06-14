@@ -1609,6 +1609,38 @@ export function registerRoutes(app: Express): Server {
       
       const promises: Promise<any>[] = [];
       
+      // Handle code generation
+      if (generateCodes) {
+        const items = await storage.getItemsByIds(itemIds);
+        
+        for (const item of items) {
+          const updateData: any = {};
+          
+          // Generate SKU if requested and missing
+          if (generateCodes.sku && !item.sku) {
+            updateData.sku = await generateSKU(item);
+          }
+          
+          // Generate barcode if requested
+          if (generateCodes.barcode) {
+            const sku = updateData.sku || item.sku;
+            if (sku) {
+              updateData.barcode = generateBarcodeData(sku);
+            }
+          }
+          
+          // Generate QR code if requested
+          if (generateCodes.qrCode) {
+            const qrCodeDataURL = await generateQRCodeDataURL(item);
+            updateData.qrCode = qrCodeDataURL;
+          }
+          
+          if (Object.keys(updateData).length > 0) {
+            promises.push(storage.updateItem(item.id, updateData));
+          }
+        }
+      }
+      
       // Handle sale/discount application
       if (saleDiscount) {
         const { type, value } = saleDiscount;
@@ -1661,30 +1693,7 @@ export function registerRoutes(app: Express): Server {
         }
       }
       
-      // Handle code generation
-      if (generateCodes) {
-        const items = await storage.getItemsByIds(itemIds);
-        
-        for (const item of items) {
-          const codeUpdates: any = {};
-          
-          if (generateCodes.sku && !item.sku) {
-            codeUpdates.sku = await generateSKU(item.name, item.category);
-          }
-          
-          if (generateCodes.barcode && !item.barcode) {
-            codeUpdates.barcode = generateBarcodeData(item.sku || item.id.toString());
-          }
-          
-          if (generateCodes.qrCode && !item.qrCode) {
-            codeUpdates.qrCode = await generateQRCodeDataURL(`${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost'}/items/${item.id}`);
-          }
-          
-          if (Object.keys(codeUpdates).length > 0) {
-            promises.push(storage.updateItem(item.id, codeUpdates));
-          }
-        }
-      }
+
       
       // Wait for all updates to complete
       await Promise.all(promises);
