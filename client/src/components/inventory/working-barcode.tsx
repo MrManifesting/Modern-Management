@@ -16,6 +16,7 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
   const handlePrint = () => {
     if (!item.sku) return;
     
+    const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -24,7 +25,7 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
           <body style="margin: 20px; text-align: center; font-family: Arial, sans-serif;">
             <h2>${item.name}</h2>
             <div style="border: 2px solid #000; padding: 20px; margin: 20px 0; background: white;">
-              <img src="/api/barcode/${encodeURIComponent(item.sku)}" alt="Barcode for ${item.sku}" style="max-width: 100%;" />
+              <img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0" alt="Barcode for ${item.sku}" style="max-width: 100%;" />
             </div>
             <p>SKU: ${item.sku}</p>
             <p>Category: ${item.category || 'N/A'}</p>
@@ -59,14 +60,17 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/barcode/${encodeURIComponent(item.sku)}`);
+      const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
+      
+      const response = await fetch(barcodeUrl);
       if (!response.ok) throw new Error('Failed to generate barcode');
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `barcode-${item.sku}.png`;
+      a.download = `barcode-${cleanSku}.gif`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -97,22 +101,25 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
           <div className="flex justify-center p-4 bg-white border-2 border-dashed border-gray-300 rounded">
             {item.sku ? (
               <div className="text-center">
-                <img 
-                  src={`/api/barcode/${encodeURIComponent(item.sku)}`}
-                  alt={`Barcode for ${item.sku}`}
-                  className="max-w-full h-auto"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const fallback = target.parentElement?.querySelector('.barcode-fallback') as HTMLElement;
-                    if (fallback) fallback.style.display = 'block';
-                  }}
-                />
-                <div className="barcode-fallback text-center py-4" style={{ display: 'none' }}>
-                  <div className="font-mono text-xl font-bold tracking-widest bg-gray-100 px-4 py-2 rounded border">
-                    {item.sku}
+                <div className="text-center">
+                  <img 
+                    src={`https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent((item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase())}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`}
+                    alt={`Barcode for ${item.sku}`}
+                    className="max-w-full h-auto mx-auto"
+                    onError={(e) => {
+                      console.error('Barcode image failed to load');
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }}
+                  />
+                  <div className="barcode-fallback text-center py-4" style={{ display: 'none' }}>
+                    <div className="font-mono text-xl font-bold tracking-widest bg-gray-100 px-4 py-2 rounded border">
+                      {item.sku}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">SKU Code</div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-2">SKU Code (Barcode failed to load)</div>
                 </div>
               </div>
             ) : (
