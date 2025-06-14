@@ -157,7 +157,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ 
         success: false, 
         message: "Force login failed", 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error) 
       });
     }
   });
@@ -168,7 +168,7 @@ export function registerRoutes(app: Express): Server {
       res.json(items);
     } catch (error) {
       console.error("Error fetching items:", error);
-      res.status(500).json({ error: "Failed to fetch items", details: error.message });
+      res.status(500).json({ error: "Failed to fetch items", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -886,7 +886,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid request. 'enabled' must be a boolean value." });
       }
       
-      const status = setPushStatus(enabled);
+      setPushStatus({ enabled });
+      const status = getPushStatus();
       res.json(status);
     } catch (error) {
       console.error("Failed to set Shopify push status:", error);
@@ -924,12 +925,12 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Perform the synchronization
-      const result = await syncProductsFromShopify(storage);
+      const result = await syncProductsFromShopify();
       
       res.json({
         success: true,
-        ...result,
-        message: `Successfully synced ${result.total} products from Shopify. Imported: ${result.imported}, Updated: ${result.updated}.`
+        products: result,
+        message: `Successfully synced ${result.length} products from Shopify.`
       });
     } catch (error) {
       console.error("Failed to sync inventory from Shopify:", error);
