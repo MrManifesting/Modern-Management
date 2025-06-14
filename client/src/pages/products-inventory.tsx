@@ -292,26 +292,28 @@ const ProductsInventoryPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   
-  // Fetch items from API
+  // Fetch items from API with media files
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
-    queryKey: ['/api/items'],
+    queryKey: ['/api/items/with-media'],
     queryFn: async () => {
-      console.log("Fetching items from API...");
-      const res = await apiRequest('GET', '/api/items');
+      console.log("Fetching items with media from API...");
+      const res = await apiRequest('GET', '/api/items/with-media');
       const data = await res.json();
-      console.log("Fetched items:", data.length);
+      console.log("Fetched items with media:", data.length);
       
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
         category: item.category || "Uncategorized",
-        subcategory: item.subcategory || "General",
         price: item.basePrice || 0,
         retailPrice: item.retailPrice || item.basePrice || 0,
         wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
         sku: item.sku || "NO-SKU",
         barcode: item.barcode || "",
         quantity: item.quantity || 0,
+        imageUrl: item.imageUrl || null,
+        images: item.images || [],
+        mediaFiles: item.mediaFiles || [],
         status: item.status || "draft",
         size: item.size || "",
         volume: item.volume || "",
@@ -1756,30 +1758,58 @@ const ProductsInventoryPage: React.FC = () => {
                             <td className="py-3 px-2 text-center">
                               <div className="group relative">
                                 <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border transition-all duration-200 cursor-pointer hover:shadow-md">
-                                  {product.imageUrl ? (
-                                    <img 
-                                      src={product.imageUrl} 
-                                      alt={product.name}
-                                      className="object-cover w-full h-full"
-                                      onError={(e) => {
-                                        const imgElement = e.target as HTMLImageElement;
-                                        const parentContainer = imgElement.parentElement;
-                                        // Hide the image
-                                        imgElement.style.display = 'none';
-                                        // Show icon instead
-                                        if (parentContainer) {
-                                          const iconDiv = document.createElement('div');
-                                          iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
-                                          iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-                                          parentContainer.appendChild(iconDiv);
-                                        }
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
-                                      <ImageIcon className="h-6 w-6 opacity-50" />
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    // Check for images in multiple sources
+                                    let imageUrl = null;
+                                    
+                                    // 1. Check product.imageUrl (direct field)
+                                    if (product.imageUrl) {
+                                      imageUrl = product.imageUrl;
+                                    }
+                                    // 2. Check product.images array (JSON field)
+                                    else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                                      imageUrl = product.images[0];
+                                    }
+                                    // 3. Check for media files by item ID
+                                    else if (product.id) {
+                                      // Try to construct media URL from common patterns
+                                      const mediaPatterns = [
+                                        `/media/${product.sku}.jpg`,
+                                        `/media/${product.sku}.png`,
+                                        `/media/${product.name.toLowerCase().replace(/\s+/g, '_')}.jpg`,
+                                        `/media/item_${product.id}.jpg`,
+                                        `/media/item_${product.id}.png`
+                                      ];
+                                      imageUrl = mediaPatterns[0]; // Try the first pattern
+                                    }
+                                    
+                                    if (imageUrl) {
+                                      return (
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={product.name}
+                                          className="object-cover w-full h-full"
+                                          onError={(e) => {
+                                            const imgElement = e.target as HTMLImageElement;
+                                            const parentContainer = imgElement.parentElement;
+                                            if (parentContainer) {
+                                              imgElement.style.display = 'none';
+                                              const iconDiv = document.createElement('div');
+                                              iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                              iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                              parentContainer.appendChild(iconDiv);
+                                            }
+                                          }}
+                                        />
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                          <ImageIcon className="h-6 w-6 opacity-50" />
+                                        </div>
+                                      );
+                                    }
+                                  })()}
                                 </div>
                                 
                                 {/* Larger preview on hover */}
