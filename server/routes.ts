@@ -48,6 +48,7 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerLabelRoutes } from "./routes-labels";
 import { registerSyncRoutes } from "./routes-sync";
+import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
 import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
@@ -4265,6 +4266,9 @@ ${topCustomersCsv}`;
   
   // Register real-time sync routes for bidirectional marketplace synchronization
   registerSyncRoutes(app, storage);
+  
+  // Register Shopify webhook routes for real-time synchronization
+  registerShopifyWebhookRoutes(app, storage);
   
   // Register inventory breakdown routes
   registerBreakdownRoutes(app, storage);
