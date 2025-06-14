@@ -4352,29 +4352,57 @@ ${topCustomersCsv}`;
         }
       }
 
-      // Create sale record
-      try {
-        const saleData = {
-          orderId: orderData.id,
-          items: orderData.line_items,
-          subtotal: orderData.total_price,
-          total: orderData.total_price,
-          status: 'completed',
-          marketplace: 'shopify',
-          externalOrderId: orderData.id,
-          metadata: {
-            testOrder: true,
-            processedAt: new Date().toISOString(),
-            financial_status: orderData.financial_status,
-            fulfillment_status: orderData.fulfillment_status
-          }
-        };
+      // Create sale record for each processed item
+      for (const processedItem of processedItems) {
+        try {
+          const saleData = {
+            orderId: orderData.id,
+            itemId: processedItem.itemId,
+            items: orderData.line_items,
+            subtotal: orderData.total_price,
+            total: orderData.total_price,
+            status: 'completed',
+            externalOrderId: orderData.id,
+            metadata: {
+              testOrder: true,
+              processedAt: new Date().toISOString(),
+              financial_status: orderData.financial_status,
+              fulfillment_status: orderData.fulfillment_status
+            }
+          };
 
-        await storage.createSale(saleData);
-        console.log(`Created sale record for order ${orderData.id}`);
-      } catch (saleError) {
-        console.error('Error creating sale record:', saleError);
-        errors.push(`Failed to create sale record: ${saleError.message}`);
+          await storage.createSale(saleData);
+          console.log(`Created sale record for item ${processedItem.name} in order ${orderData.id}`);
+        } catch (saleError) {
+          console.error('Error creating sale record:', saleError);
+          errors.push(`Failed to create sale record: ${saleError.message}`);
+        }
+      }
+
+      // If no items were processed, create a general sale record
+      if (processedItems.length === 0) {
+        try {
+          const saleData = {
+            orderId: orderData.id,
+            items: orderData.line_items,
+            subtotal: orderData.total_price,
+            total: orderData.total_price,
+            status: 'completed',
+            externalOrderId: orderData.id,
+            metadata: {
+              testOrder: true,
+              processedAt: new Date().toISOString(),
+              financial_status: orderData.financial_status,
+              fulfillment_status: orderData.fulfillment_status
+            }
+          };
+
+          await storage.createSale(saleData);
+          console.log(`Created sale record for order ${orderData.id}`);
+        } catch (saleError) {
+          console.error('Error creating sale record:', saleError);
+          errors.push(`Failed to create sale record: ${saleError.message}`);
+        }
       }
 
       const response = {
