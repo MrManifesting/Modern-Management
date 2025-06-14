@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Comprehensive Codebase Cleanup and Consolidation Complete**
+  - Removed 6 duplicate route files (routes-shopify-enhanced, routes-shopify-fix, routes-shopify-safety)
+  - Eliminated 8 duplicate service files (shopify-enhanced, csv-parser variants, shopify-utils, etc.)
+  - Fixed all import errors and module not found issues caused by duplicate files
+  - Consolidated overlapping functionality into main routes.ts file
+  - Application starts successfully with all 330 items loading properly
+  - Systematic removal of backup files and old duplicates across the workspace
 - June 14, 2025: **Complete Scanner Functionality with Auto-Item Creation**
   - Scanner successfully detects barcodes using @zxing/library (confirmed working with test barcode "FLWGOLTEST317809QTY")
   - When barcodes aren't found in inventory, scanner automatically shows dialog to create new items

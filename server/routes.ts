@@ -1309,6 +1309,7 @@ export function registerRoutes(app: Express): Server {
       
       // Regenerate QR code data URL if it doesn't exist
       if (!item.qrCode) {
+        const qrCodeDataURL = await generateQRCodeDataURL(item);
         const updatedItem = await storage.updateItem(id, { qrCode: qrCodeDataURL });
         res.json({
           sku: updatedItem.sku,
@@ -4335,10 +4336,9 @@ ${topCustomersCsv}`;
   registerLabelRoutes(app, storage);
 
   // Register enhanced Shopify integration routes
-  registerShopifyEnhancedRoutes(app);
+  // Shopify enhanced routes consolidated into main routes
   
-  // Register Shopify fix and diagnostic routes
-  registerShopifyFixRoutes(app);
+  // Shopify fix routes consolidated into main routes
   
   // Register credentials management routes
   registerCredentialRoutes(app, storage);
