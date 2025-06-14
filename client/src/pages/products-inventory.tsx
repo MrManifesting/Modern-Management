@@ -311,14 +311,13 @@ const ProductsInventoryPage: React.FC = () => {
         sku: item.sku || "NO-SKU",
         barcode: item.barcode || "",
         quantity: item.quantity || 0,
-        imageUrl: item.imageUrl || null,
         images: item.images || [],
         mediaFiles: item.mediaFiles || [],
         status: item.status || "draft",
         size: item.size || "",
         volume: item.volume || "",
         description: item.description || "",
-        imageUrl: item.imageUrl || item.images?.[0] || "",
+        imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
         marketplace: item.marketplace || [],
         shopifyId: item.shopifyId || null,
         shopifySyncStatus: item.shopifySyncStatus || "not_synced"
@@ -334,7 +333,7 @@ const ProductsInventoryPage: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
       toast({
         title: "Item deleted",
         description: "The item has been successfully removed from your inventory."
@@ -741,7 +740,7 @@ const ProductsInventoryPage: React.FC = () => {
     setBulkSelectMode(false);
     
     // Refresh the product list
-    queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
     
     // Show success toast
   };
@@ -776,7 +775,7 @@ const ProductsInventoryPage: React.FC = () => {
           description: `Successfully generated SKUs for ${selectedItems.length} items.`
         });
         // Refresh items to show new SKUs
-        queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
       } else {
         throw new Error(result.message || "Failed to generate SKUs");
       }
