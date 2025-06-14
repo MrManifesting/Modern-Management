@@ -26,23 +26,24 @@ export class MarketplaceService {
     this.marketplace = marketplace;
     
     try {
-      // Create the appropriate service based on marketplace type
-      const type = (marketplace.type || '').toLowerCase();
+      // Create the appropriate service based on marketplace name or marketplaceTypeId
+      const marketplaceName = marketplace.name.toLowerCase();
       
-      // Special handling for Shopify - it could be under 'shopify' or 'general' type
-      // with Shopify-specific credentials
-      if (type === 'shopify' || 
-          (type === 'general' && marketplace.name.toLowerCase().includes('shopify'))) {
+      // Handle Shopify marketplace (marketplaceTypeId 4 or name contains 'shopify')
+      if (marketplace.marketplaceTypeId === 4 || marketplaceName.includes('shopify')) {
         const credentials = marketplace.credentials as Record<string, string>;
         this.service = new ShopifyService(
-          credentials.shopName || credentials.storeUrl || 'simplifiedcurations.myshopify.com', 
-          credentials.apiKey || credentials.accessToken, 
-          credentials.apiSecret || ''
+          credentials.shopName || credentials.storeUrl || marketplace.storeUrl || 'simplifiedcurations.myshopify.com', 
+          credentials.apiKey || credentials.accessToken || marketplace.apiKey || '', 
+          credentials.apiSecret || marketplace.apiSecret || ''
         );
       }
-      // Add other marketplace implementations here
+      // Add other marketplace implementations here based on marketplaceTypeId
+      // eBay: marketplaceTypeId 1
+      // Etsy: marketplaceTypeId 2
+      // Amazon: marketplaceTypeId 3
       else {
-        throw new Error(`Unsupported marketplace type: ${marketplace.type}`);
+        throw new Error(`Unsupported marketplace type ID: ${marketplace.marketplaceTypeId} for ${marketplace.name}`);
       }
     } catch (error) {
       console.error(`Error initializing marketplace service for ${marketplace.name}:`, error);
