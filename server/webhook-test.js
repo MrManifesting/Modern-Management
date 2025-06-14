@@ -3,8 +3,9 @@
  * Tests all Shopify webhook endpoints to verify they're working correctly
  */
 
-const https = require('https');
-const crypto = require('crypto');
+import https from 'https';
+import crypto from 'crypto';
+import http from 'http';
 
 const BASE_URL = 'http://localhost:5000';
 const WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET || '';
@@ -178,7 +179,7 @@ async function testWebhook(topic, endpoint, data) {
       timeout: 10000
     };
 
-    const req = require('http').request(options, (res) => {
+    const req = http.request(options, (res) => {
       let responseData = '';
       
       res.on('data', (chunk) => {
@@ -278,8 +279,6 @@ async function runWebhookTests() {
 }
 
 // Run the tests if this file is executed directly
-if (require.main === module) {
-  runWebhookTests().catch(console.error);
-}
+runWebhookTests().catch(console.error);
 
-module.exports = { runWebhookTests, testWebhook };
+export { runWebhookTests, testWebhook };
