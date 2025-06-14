@@ -1,4 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -4266,12 +4267,31 @@ ${topCustomersCsv}`;
   registerShopifyInventorySyncRoutes(app, storage);
 
   // LIVE SHOPIFY WEBHOOK: Order Processing for Inventory Updates
-  app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
+  app.post("/api/shopify/webhooks/orders/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
     try {
       console.log('Live Shopify order webhook received');
       
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        console.log('Webhook signature verified');
+      }
+      
       // Parse the webhook payload
-      const orderData = req.body;
+      const orderData = JSON.parse(body.toString());
       console.log(`Processing live order: ${orderData.order_number || orderData.id}`);
       console.log(`Line items: ${orderData.line_items?.length || 0}`);
 
