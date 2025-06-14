@@ -4082,6 +4082,9 @@ ${topCustomersCsv}`;
   // Register automatic breakdown routes for bulk items (1lb/454g+)
   registerAutoBreakdownRoutes(app, storage);
   
+  // Register barcode fulfillment routes for inventory subtraction
+  registerBarcodeFulfillmentRoutes(app, storage);
+  
   registerShopifyInventorySyncRoutes(app, storage);
 
   // Google Sheets webhook generation route

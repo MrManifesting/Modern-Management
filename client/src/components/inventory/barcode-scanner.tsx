@@ -1,216 +1,352 @@
-import { useState, useRef, FormEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Scan, Package, Minus, AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, ScanLine, Plus, Minus, Check } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ScanResult {
-  id: number;
-  name: string;
-  sku: string;
-  quantity: number;
-  price: number;
-  action: string;
+  success: boolean;
+  item?: {
+    id: number;
+    name: string;
+    sku: string;
+    previousQuantity: number;
+    newQuantity: number;
+    quantityFulfilled: number;
+  };
+  error?: string;
+  message?: string;
+  availableQuantity?: number;
+}
+
+interface VerificationResult {
+  success: boolean;
+  item?: {
+    id: number;
+    name: string;
+    sku: string;
+    category: string;
+    currentQuantity: number;
+    price: number;
+  };
+  verification?: {
+    canFulfill: boolean;
+    requestedQuantity: number;
+    availableQuantity: number;
+    shortfall: number;
+  };
+  error?: string;
+  message?: string;
 }
 
 export default function BarcodeScanner() {
-  const { toast } = useToast();
-  const [sku, setSku] = useState("");
-  const [action, setAction] = useState("check");
+  const [scanInput, setScanInput] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [scanHistory, setScanHistory] = useState<ScanResult[]>([]);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   
-  const { mutate, isPending } = useMutation({
-    mutationFn: async (formData: { sku: string; action: string; quantity: number }) => {
-      const response = await apiRequest("POST", "/api/scan", formData);
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setScanResult(data);
+  const { toast } = useToast();
+
+  const handleVerify = async () => {
+    if (!scanInput.trim()) {
       toast({
-        title: "Scan successful",
-        description: `${data.action === 'check' ? 'Checked' : data.action === 'add' ? 'Added' : 'Removed'} ${data.action !== 'check' ? quantity : ''} ${data.name}`,
-      });
-      setSku("");
-      setQuantity(1);
-      
-      // Focus back on input field for continuous scanning
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Scan failed",
-        description: error.message || "Item not found or server error",
+        title: "Missing Input",
+        description: "Please enter a SKU or barcode to verify",
         variant: "destructive",
       });
-    },
-  });
-  
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!sku) return;
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationResult(null);
     
-    mutate({ sku, action, quantity });
+    try {
+      const response = await apiRequest("POST", "/api/barcode/verify", {
+        sku: scanInput.trim(),
+        quantity: quantity
+      });
+      
+      const result = await response.json() as VerificationResult;
+      setVerificationResult(result);
+      
+      if (result.success && result.verification?.canFulfill) {
+        toast({
+          title: "Item Verified",
+          description: `${result.item?.name} - ${result.verification.availableQuantity} units available`,
+        });
+      } else if (result.verification && !result.verification.canFulfill) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Only ${result.verification.availableQuantity} units available, need ${result.verification.requestedQuantity}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Verification Failed",
+        description: "Failed to verify item",
+        variant: "destructive",
+      });
+      setVerificationResult({
+        success: false,
+        error: "Verification failed",
+        message: "Could not verify item availability"
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
-  
+
+  const handleScan = async () => {
+    if (!scanInput.trim()) {
+      toast({
+        title: "Missing Input",
+        description: "Please enter a SKU or barcode to scan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (quantity <= 0) {
+      toast({
+        title: "Invalid Quantity",
+        description: "Quantity must be at least 1",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsScanning(true);
+    
+    try {
+      const response = await apiRequest("POST", "/api/barcode/scan-fulfill", {
+        sku: scanInput.trim(),
+        quantity: quantity,
+        employeeId: 1,
+        notes: `Manual scan fulfillment from scanner interface`
+      });
+      
+      const result = await response.json() as ScanResult;
+      
+      if (result.success && result.item) {
+        toast({
+          title: "Scan Successful",
+          description: `${result.item.name} - ${result.item.quantityFulfilled} units fulfilled. New stock: ${result.item.newQuantity}`,
+        });
+        
+        setScanHistory(prev => [result, ...prev.slice(0, 9)]);
+        setScanInput("");
+        setVerificationResult(null);
+      } else {
+        toast({
+          title: "Scan Failed",
+          description: result.message || result.error || "Failed to process scan",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Scan Error",
+        description: "Failed to process barcode scan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        handleScan();
+      } else {
+        handleVerify();
+      }
+    }
+  };
+
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ScanLine className="h-5 w-5" />
-            Scan Item
+            <Scan className="h-5 w-5" />
+            Barcode Scanner - Fulfillment
           </CardTitle>
+          <CardDescription>
+            Scan barcodes to automatically subtract items from inventory for order fulfillment
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU or Barcode</Label>
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  id="sku"
-                  placeholder="Enter SKU or scan barcode"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  className="flex-1"
-                  autoFocus
-                  disabled={isPending}
-                />
-                <Button
-                  type="submit"
-                  disabled={!sku || isPending}
-                  className="flex-shrink-0"
-                >
-                  <ScanLine className="mr-2 h-4 w-4" />
-                  Scan
-                </Button>
-              </div>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">SKU or Barcode</label>
+              <Input
+                placeholder="Scan or enter SKU/barcode..."
+                value={scanInput}
+                onChange={(e) => setScanInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="font-mono"
+                autoFocus
+              />
             </div>
-            
-            <div className="space-y-2">
-              <Label>Action</Label>
-              <RadioGroup 
-                value={action} 
-                onValueChange={setAction}
-                className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4"
-                disabled={isPending}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="check" id="check" />
-                  <Label htmlFor="check" className="flex items-center">
-                    <Check className="mr-1 h-4 w-4 text-green-500" />
-                    Check
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="add" id="add" />
-                  <Label htmlFor="add" className="flex items-center">
-                    <Plus className="mr-1 h-4 w-4 text-blue-500" />
-                    Add Stock
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="remove" id="remove" />
-                  <Label htmlFor="remove" className="flex items-center">
-                    <Minus className="mr-1 h-4 w-4 text-red-500" />
-                    Remove Stock
-                  </Label>
-                </div>
-              </RadioGroup>
+            <div>
+              <label className="text-sm font-medium">Quantity</label>
+              <Input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onKeyPress={handleKeyPress}
+              />
             </div>
-            
-            {(action === "add" || action === "remove") && (
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleVerify}
+              disabled={isVerifying || isScanning}
+              variant="outline"
+            >
+              {isVerifying ? "Checking..." : "Verify (Enter)"}
+            </Button>
+            <Button 
+              onClick={handleScan}
+              disabled={isScanning || isVerifying}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isScanning ? "Processing..." : "Scan & Fulfill (Shift+Enter)"}
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Press Enter to verify item availability, Shift+Enter to scan and fulfill
+          </p>
+        </CardContent>
+      </Card>
+
+      {verificationResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {verificationResult.success ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+              )}
+              Item Verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {verificationResult.success && verificationResult.item ? (
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  disabled={isPending}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Item Name</p>
+                    <p className="text-sm text-muted-foreground">{verificationResult.item.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">SKU</p>
+                    <p className="text-sm font-mono text-muted-foreground">{verificationResult.item.sku}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Category</p>
+                    <p className="text-sm text-muted-foreground">{verificationResult.item.category}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Current Stock</p>
+                    <p className="text-sm text-muted-foreground">{verificationResult.item.currentQuantity} units</p>
+                  </div>
+                </div>
+                
+                {verificationResult.verification && (
+                  <div className="mt-4 p-3 rounded-lg bg-muted">
+                    <div className="flex items-center gap-2 mb-2">
+                      {verificationResult.verification.canFulfill ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      )}
+                      <span className="text-sm font-medium">
+                        {verificationResult.verification.canFulfill ? "Can Fulfill" : "Cannot Fulfill"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Requested: {verificationResult.verification.requestedQuantity} units, 
+                      Available: {verificationResult.verification.availableQuantity} units
+                      {verificationResult.verification.shortfall > 0 && 
+                        `, Shortfall: ${verificationResult.verification.shortfall} units`
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-red-600">
+                {verificationResult.message || verificationResult.error || "Item not found"}
               </div>
             )}
-          </form>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Barcode className="h-5 w-5" />
-            Item Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isPending ? (
+          </CardContent>
+        </Card>
+      )}
+
+      {scanHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Recent Scans
+            </CardTitle>
+            <CardDescription>
+              Last {scanHistory.length} fulfillment scans
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-2/3" />
+              {scanHistory.map((scan, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant={scan.success ? "default" : "destructive"}>
+                        {scan.success ? "Success" : "Failed"}
+                      </Badge>
+                      {scan.item && (
+                        <span className="text-sm font-medium">{scan.item.name}</span>
+                      )}
+                    </div>
+                    
+                    {scan.item ? (
+                      <div className="text-xs text-muted-foreground">
+                        SKU: {scan.item.sku} • 
+                        Fulfilled: {scan.item.quantityFulfilled} units • 
+                        Stock: {scan.item.previousQuantity} → {scan.item.newQuantity}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-red-600">
+                        {scan.message || scan.error}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {scan.success && scan.item && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <Minus className="h-3 w-3" />
+                        <span className="text-xs">{scan.item.quantityFulfilled}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : scanResult ? (
-            <div className="space-y-3">
-              <h3 className="text-xl font-semibold">{scanResult.name}</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">SKU</p>
-                  <p className="font-medium">{scanResult.sku}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Price</p>
-                  <p className="font-medium">${scanResult.price.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Current Quantity</p>
-                  <p className="font-medium">{scanResult.quantity}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Status</p>
-                  <p className="font-medium">
-                    {scanResult.quantity > 0 ? "In Stock" : "Out of Stock"}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 rounded-md border border-dashed border-gray-300 p-3">
-                <p className="text-sm text-gray-500">
-                  Last Action: <span className="font-medium text-gray-700">
-                    {scanResult.action === "check" 
-                      ? "Inventory Check" 
-                      : scanResult.action === "add" 
-                        ? `Added ${quantity} units` 
-                        : `Removed ${quantity} units`}
-                  </span>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-gray-500">
-              <ScanLine className="mx-auto h-12 w-12 text-gray-300" />
-              <p className="mt-2">Scan an item to see details</p>
-              <p className="text-xs">Enter SKU or use barcode scanner</p>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-center border-t pt-4">
-          <p className="text-xs text-gray-500">
-            Scan history is recorded and synchronized with inventory
-          </p>
-        </CardFooter>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
