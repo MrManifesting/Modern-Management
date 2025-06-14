@@ -5813,6 +5813,14 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register bidirectional sync routes
+  try {
+    const { registerBidirectionalSyncRoutes } = require('./routes-bidirectional-sync');
+    registerBidirectionalSyncRoutes(app, storage);
+  } catch (error) {
+    console.log('Bidirectional sync routes not available:', error);
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }

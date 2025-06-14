@@ -221,6 +221,174 @@ export function registerBidirectionalSyncRoutes(app: Express, storage: IStorage)
   });
 
   /**
+   * Manual sync from app to Google Sheets
+   */
+  app.post("/api/sync/app-to-sheets", async (req: Request, res: Response) => {
+    try {
+      const result = await syncService.syncAppToSheets();
+      
+      res.json({
+        success: true,
+        message: `Successfully synced ${result.synced} items to Google Sheets`,
+        synced: result.synced,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error("Error in app-to-sheets sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to sync to Google Sheets",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  /**
+   * Manual sync from Google Sheets to app
+   */
+  app.post("/api/sync/sheets-to-app", async (req: Request, res: Response) => {
+    try {
+      const result = await syncService.syncSheetsToApp();
+      
+      res.json({
+        success: true,
+        message: `Successfully synced ${result.synced} items from Google Sheets`,
+        synced: result.synced,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error("Error in sheets-to-app sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to sync from Google Sheets",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  /**
+   * Google Apps Script webhook endpoint
+   */
+  app.post("/api/sync/google-apps-script", async (req: Request, res: Response) => {
+    try {
+      const { action, data } = req.body;
+      
+      switch (action) {
+        case 'inventory_sync':
+          // Handle inventory sync request from Google Apps Script
+          const items = await storage.getItems();
+          res.json({
+            success: true,
+            items: items.map(item => ({
+              sku: item.sku,
+              name: item.name,
+              category: item.category,
+              vendor: item.brand,
+              quantity: item.quantity,
+              weight: item.weight,
+              price: item.basePrice,
+              cost: item.costPrice,
+              status: item.status,
+              lastUpdated: new Date().toISOString()
+            }))
+          });
+          break;
+          
+        case 'shopify_order_update':
+          // Handle Shopify order update from Google Apps Script
+          if (data && data.line_items) {
+            for (const lineItem of data.line_items) {
+              if (lineItem.sku) {
+                const item = await storage.getItemBySKU(lineItem.sku);
+                if (item) {
+                  const newQuantity = Math.max(0, item.quantity - lineItem.quantity);
+                  await storage.updateItem(item.id, { quantity: newQuantity });
+                }
+              }
+            }
+          }
+          res.json({ success: true, message: "Order processed successfully" });
+          break;
+          
+        case 'inventory_update':
+          // Handle inventory update from Google Apps Script
+          if (data && data.sku) {
+            const item = await storage.getItemBySKU(data.sku);
+            if (item) {
+              await storage.updateItem(item.id, {
+                quantity: data.quantity || item.quantity,
+                basePrice: data.price || item.basePrice,
+                status: data.status || item.status
+              });
+            }
+          }
+          res.json({ success: true, message: "Inventory updated successfully" });
+          break;
+          
+        case 'sync_request':
+          // Handle sync request from Google Apps Script
+          const syncResult = await syncService.syncAppToSheets();
+          res.json({
+            success: true,
+            message: `Synced ${syncResult.synced} items`,
+            synced: syncResult.synced
+          });
+          break;
+          
+        default:
+          res.status(400).json({
+            success: false,
+            message: `Unknown action: ${action}`
+          });
+      }
+    } catch (error) {
+      console.error("Error in Google Apps Script webhook:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process Google Apps Script request",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  /**
+   * Manual sync trigger endpoint
+   */
+  app.post("/api/sync/manual", async (req: Request, res: Response) => {
+    try {
+      const { source, target } = req.body;
+      
+      if (source === 'app' && target === 'sheets') {
+        const result = await syncService.syncAppToSheets();
+        res.json({
+          success: true,
+          message: `Synced ${result.synced} items from app to Google Sheets`,
+          synced: result.synced
+        });
+      } else if (source === 'sheets' && target === 'app') {
+        const result = await syncService.syncSheetsToApp();
+        res.json({
+          success: true,
+          message: `Synced ${result.synced} items from Google Sheets to app`,
+          synced: result.synced
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Invalid sync direction. Use source: 'app'|'sheets' and target: 'sheets'|'app'"
+        });
+      }
+    } catch (error) {
+      console.error("Error in manual sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to perform manual sync",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  /**
    * Perform full bidirectional sync
    */
   app.post("/api/sync/full", async (_req: Request, res: Response) => {
