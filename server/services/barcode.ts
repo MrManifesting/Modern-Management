@@ -2,6 +2,7 @@
  * Barcode generation service
  */
 import * as bwipjs from 'bwip-js';
+import QRCode from 'qrcode';
 import { Item } from '@shared/schema';
 import { getItemColorCodes, getCategoryColor } from './color-code';
 
@@ -23,16 +24,7 @@ export function generateBarcodeData(text: string): string {
     return `data:image/png;base64,${png.toString('base64')}`;
   } catch (e) {
     console.error('BWIP-JS error:', e);
-    // Return a simple text representation if barcode generation fails
-        return generatePlaceholderBarcode(text);
-      }
-    } else {
-      // In development or test environment, use a placeholder
-      return generatePlaceholderBarcode(text);
-    }
-  } catch (error) {
-    console.error('Error generating barcode:', error);
-    return generatePlaceholderBarcode(text);
+    return `barcode:${text}`;
   }
 }
 

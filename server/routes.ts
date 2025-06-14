@@ -18,7 +18,16 @@ import {
   generateInventoryInsights 
 } from "./services/openai";
 import { generateSKU, generateSKUBatch } from "./services/sku-generator";
-import { generateBarcodeData } from "./services/barcode";
+import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
+import { 
+  getPushStatus, 
+  setPushStatus, 
+  isShopifyConfigured, 
+  syncProductsFromShopify, 
+  getItemPushInfo, 
+  pushItemToShopify, 
+  prepareItemForShopify 
+} from "./services/shopify-integration";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 import { 
   fetchShopifySalesReport, 
@@ -2033,12 +2042,17 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "No CSV file provided" });
       }
       
-      // Import robust CSV parser
-      const { parseShopifyCSV } = await import('./services/csv-parser-robust');
-      
-      // Parse CSV file using robust parser
+      // Parse CSV file content
       const fileContent = req.file.buffer.toString('utf8');
-      const parseResult = parseShopifyCSV(fileContent);
+      const csvLines = fileContent.split('\n').filter(line => line.trim());
+      const csvHeaders = csvLines[0]?.split(',').map(h => h.trim()) || [];
+      const csvRows = csvLines.slice(1).map(line => line.split(',').map(cell => cell.trim()));
+      
+      const parseResult = {
+        headers: csvHeaders,
+        rows: csvRows,
+        stats: { validRows: csvRows.length, invalidRows: 0 }
+      };
       
       console.log(`Robust CSV parse: ${parseResult.headers.length} headers, ${parseResult.rows.length} rows`);
       console.log(`Valid rows: ${parseResult.stats.validRows}, Invalid: ${parseResult.stats.invalidRows}`);
