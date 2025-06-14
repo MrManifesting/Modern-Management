@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Item } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, Copy } from "lucide-react";
+import { Printer, Copy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SimpleBarcodeProps {
@@ -15,51 +15,76 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
+  const generateBarcode = useCallback(async () => {
     if (!item.sku) {
       setIsLoading(false);
       setError("No SKU available");
       return;
     }
 
-    const generateBarcode = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // Small delay to ensure canvas is ready
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        if (!canvasRef.current) {
-          throw new Error("Canvas not ready");
-        }
-
-        // Import and use jsbarcode
-        const JsBarcode = (await import('jsbarcode')).default;
-        
-        // Generate barcode directly on canvas
-        JsBarcode(canvasRef.current, item.sku, {
-          format: "CODE128",
-          width: 2,
-          height: 50,
-          displayValue: true,
-          fontSize: 11,
-          textMargin: 3,
-          background: "#ffffff",
-          lineColor: "#000000"
-        });
-
-        setIsLoading(false);
-
-      } catch (error) {
-        console.error("Barcode generation failed:", error);
-        setError("Could not generate barcode");
-        setIsLoading(false);
+      // Wait for canvas to be ready
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        throw new Error("Canvas element not found");
       }
-    };
 
-    generateBarcode();
+      // Test if jsbarcode is available
+      let JsBarcode;
+      try {
+        const module = await import('jsbarcode');
+        JsBarcode = module.default;
+        if (!JsBarcode) {
+          throw new Error("JsBarcode not loaded properly");
+        }
+      } catch (importError) {
+        console.error("Failed to import jsbarcode:", importError);
+        throw new Error("Barcode library not available");
+      }
+      
+      // Clean the SKU for barcode generation
+      const cleanSku = item.sku.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (cleanSku.length < 1) {
+        throw new Error("SKU contains no valid characters");
+      }
+      
+      // Set canvas size explicitly
+      canvas.width = 200;
+      canvas.height = 80;
+      
+      // Generate barcode
+      JsBarcode(canvas, cleanSku, {
+        format: "CODE128",
+        width: 1.5,
+        height: 40,
+        displayValue: true,
+        fontSize: 10,
+        textMargin: 2,
+        background: "#ffffff",
+        lineColor: "#000000",
+        margin: 5
+      });
+
+      setIsLoading(false);
+
+    } catch (error) {
+      console.error("Barcode generation failed:", error);
+      console.error("Item SKU:", item.sku);
+      console.error("Canvas element:", canvasRef.current);
+      console.error("Error details:", error);
+      setError(error instanceof Error ? error.message : "Barcode generation failed");
+      setIsLoading(false);
+    }
   }, [item.sku]);
+
+  useEffect(() => {
+    generateBarcode();
+  }, [generateBarcode]);
 
   const handlePrint = () => {
     if (!canvasRef.current) return;
@@ -111,7 +136,17 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
           {isLoading ? (
             <div className="h-16 w-full animate-pulse bg-muted rounded"></div>
           ) : error ? (
-            <div className="text-center py-4 text-sm text-red-600">{error}</div>
+            <div className="space-y-2">
+              <div className="text-center py-2 text-xs text-amber-600 bg-amber-50 rounded border border-amber-200">
+                Barcode generation issue - showing SKU
+              </div>
+              <div className="flex justify-center p-3 bg-white border rounded">
+                <div className="text-center">
+                  <div className="font-mono text-lg font-bold">{item.sku}</div>
+                  <div className="text-xs text-muted-foreground mt-1">SKU Code</div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex justify-center p-2 bg-white border rounded">
               <canvas ref={canvasRef} />
@@ -126,6 +161,12 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
                   <Copy className="h-3 w-3 mr-1" />
                   Copy
                 </Button>
+                {error && (
+                  <Button size="sm" variant="outline" onClick={generateBarcode}>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Retry
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={handlePrint}>
                   <Printer className="h-3 w-3 mr-1" />
                   Print
