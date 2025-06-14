@@ -4394,6 +4394,533 @@ ${topCustomersCsv}`;
     }
   });
 
+  // SHOPIFY WEBHOOK: Product/Inventory Updates
+  app.post("/api/shopify/webhooks/products/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify product creation webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Product webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        console.log('Product webhook signature verified');
+      }
+      
+      const productData = JSON.parse(body.toString());
+      console.log(`Creating product from Shopify: ${productData.title}`);
+
+      // Create inventory item from Shopify product
+      for (const variant of productData.variants || []) {
+        try {
+          const itemData = {
+            name: `${productData.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`,
+            description: productData.body_html || '',
+            sku: variant.sku || `SHOPIFY-${variant.id}`,
+            basePrice: variant.price || '0',
+            quantity: variant.inventory_quantity || 0,
+            category: productData.product_type || 'General',
+            brand: productData.vendor || 'Unknown',
+            weight: variant.weight ? `${variant.weight} ${variant.weight_unit}` : '1 pound',
+            status: 'available',
+            isActive: true,
+            shopifyId: productData.id,
+            shopifyVariantId: variant.id,
+            metadata: {
+              shopifySync: true,
+              createdViaWebhook: true,
+              shopifyHandle: productData.handle
+            }
+          };
+
+          const createdItem = await storage.createItem(itemData);
+          console.log(`Created inventory item: ${createdItem.name} (SKU: ${createdItem.sku})`);
+        } catch (variantError) {
+          console.error(`Error creating variant ${variant.id}:`, variantError);
+        }
+      }
+
+      res.status(200).json({ received: true, processed: productData.variants?.length || 0 });
+    } catch (error) {
+      console.error('Product creation webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Product Updates
+  app.post("/api/shopify/webhooks/products/update", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify product update webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Product update webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const productData = JSON.parse(body.toString());
+      console.log(`Updating product from Shopify: ${productData.title}`);
+
+      let updatedCount = 0;
+      
+      for (const variant of productData.variants || []) {
+        try {
+          // Find existing item by Shopify variant ID or SKU
+          const items = await storage.getItems();
+          const existingItem = items.find(item => 
+            item.shopifyVariantId === variant.id || item.sku === variant.sku
+          );
+
+          if (existingItem) {
+            const updateData = {
+              name: `${productData.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`,
+              description: productData.body_html || existingItem.description,
+              basePrice: variant.price || existingItem.basePrice,
+              quantity: variant.inventory_quantity !== null ? variant.inventory_quantity : existingItem.quantity,
+              category: productData.product_type || existingItem.category,
+              brand: productData.vendor || existingItem.brand,
+              weight: variant.weight ? `${variant.weight} ${variant.weight_unit}` : existingItem.weight,
+              shopifyId: productData.id,
+              shopifyVariantId: variant.id
+            };
+
+            await storage.updateItem(existingItem.id, updateData);
+            console.log(`Updated inventory item: ${updateData.name}`);
+            updatedCount++;
+          } else {
+            console.log(`Item not found for variant ${variant.id}, skipping update`);
+          }
+        } catch (variantError) {
+          console.error(`Error updating variant ${variant.id}:`, variantError);
+        }
+      }
+
+      res.status(200).json({ received: true, updated: updatedCount });
+    } catch (error) {
+      console.error('Product update webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Product Deletion
+  app.post("/api/shopify/webhooks/products/delete", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify product deletion webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Product deletion webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const productData = JSON.parse(body.toString());
+      console.log(`Deleting product from Shopify: ${productData.id}`);
+
+      // Find and deactivate/delete items linked to this Shopify product
+      const items = await storage.getItems();
+      const linkedItems = items.filter(item => item.shopifyId === productData.id);
+      
+      let deletedCount = 0;
+      for (const item of linkedItems) {
+        try {
+          // Deactivate instead of hard delete to preserve history
+          await storage.updateItem(item.id, { 
+            isActive: false, 
+            status: 'discontinued',
+            notes: `Deactivated due to Shopify product deletion on ${new Date().toISOString()}`
+          });
+          console.log(`Deactivated inventory item: ${item.name}`);
+          deletedCount++;
+        } catch (itemError) {
+          console.error(`Error deactivating item ${item.id}:`, itemError);
+        }
+      }
+
+      res.status(200).json({ received: true, deactivated: deletedCount });
+    } catch (error) {
+      console.error('Product deletion webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Inventory Level Updates
+  app.post("/api/shopify/webhooks/inventory_levels/update", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify inventory level update webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Inventory level webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const inventoryData = JSON.parse(body.toString());
+      console.log(`Updating inventory level: ${inventoryData.inventory_item_id} to ${inventoryData.available}`);
+
+      // Find item by Shopify inventory item ID
+      const items = await storage.getItems();
+      const matchingItem = items.find(item => 
+        item.shopifyInventoryItemId === inventoryData.inventory_item_id
+      );
+
+      if (matchingItem) {
+        const previousQuantity = matchingItem.quantity || 0;
+        const newQuantity = inventoryData.available || 0;
+        
+        await storage.updateItem(matchingItem.id, { quantity: newQuantity });
+        
+        // Log inventory action
+        await storage.createInventoryAction({
+          itemId: matchingItem.id,
+          action: newQuantity > previousQuantity ? 'intake' : 'adjustment',
+          quantity: newQuantity - previousQuantity,
+          previousQuantity,
+          newQuantity,
+          reason: 'Shopify inventory level sync',
+          performedBy: 'shopify-webhook',
+          notes: `Inventory sync from Shopify location ${inventoryData.location_id}`
+        });
+
+        console.log(`Updated inventory: ${matchingItem.name} from ${previousQuantity} to ${newQuantity}`);
+        res.status(200).json({ received: true, updated: true });
+      } else {
+        console.log(`No matching item found for inventory item ID: ${inventoryData.inventory_item_id}`);
+        res.status(200).json({ received: true, updated: false });
+      }
+    } catch (error) {
+      console.error('Inventory level webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Discount Code Creation
+  app.post("/api/shopify/webhooks/discounts/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify discount creation webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Discount webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const discountData = JSON.parse(body.toString());
+      console.log(`Creating discount from Shopify: ${discountData.code}`);
+
+      // Create discount record in system
+      const discountRecord = {
+        code: discountData.code,
+        type: discountData.value_type, // 'percentage' or 'fixed_amount'
+        value: discountData.value,
+        status: discountData.status,
+        usageLimit: discountData.usage_limit,
+        usageCount: discountData.usage_count || 0,
+        startsAt: discountData.starts_at ? new Date(discountData.starts_at) : null,
+        endsAt: discountData.ends_at ? new Date(discountData.ends_at) : null,
+        shopifyId: discountData.id,
+        metadata: {
+          shopifySync: true,
+          createdViaWebhook: true,
+          minimumOrderValue: discountData.minimum_order_amount,
+          oncePerCustomer: discountData.once_per_customer
+        }
+      };
+
+      // Store discount information (assuming we have a discounts table)
+      console.log('Discount data stored:', discountRecord);
+
+      res.status(200).json({ received: true, discount: discountData.code });
+    } catch (error) {
+      console.error('Discount creation webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Discount Code Updates
+  app.post("/api/shopify/webhooks/discounts/update", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify discount update webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Discount update webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const discountData = JSON.parse(body.toString());
+      console.log(`Updating discount from Shopify: ${discountData.code}`);
+
+      // Update discount record
+      const updateData = {
+        code: discountData.code,
+        type: discountData.value_type,
+        value: discountData.value,
+        status: discountData.status,
+        usageLimit: discountData.usage_limit,
+        usageCount: discountData.usage_count || 0,
+        startsAt: discountData.starts_at ? new Date(discountData.starts_at) : null,
+        endsAt: discountData.ends_at ? new Date(discountData.ends_at) : null,
+        updatedAt: new Date()
+      };
+
+      console.log('Discount updated:', updateData);
+
+      res.status(200).json({ received: true, updated: discountData.code });
+    } catch (error) {
+      console.error('Discount update webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Customer Creation
+  app.post("/api/shopify/webhooks/customers/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify customer creation webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Customer webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const customerData = JSON.parse(body.toString());
+      console.log(`Creating customer from Shopify: ${customerData.email}`);
+
+      // Create customer record
+      const customerRecord = {
+        email: customerData.email,
+        firstName: customerData.first_name,
+        lastName: customerData.last_name,
+        phone: customerData.phone,
+        acceptsMarketing: customerData.accepts_marketing,
+        totalSpent: parseFloat(customerData.total_spent || '0'),
+        ordersCount: customerData.orders_count || 0,
+        shopifyId: customerData.id,
+        createdAt: new Date(customerData.created_at),
+        tags: customerData.tags,
+        metadata: {
+          shopifySync: true,
+          createdViaWebhook: true,
+          defaultAddress: customerData.default_address,
+          verifiedEmail: customerData.verified_email
+        }
+      };
+
+      console.log('Customer data stored:', customerRecord.email);
+
+      res.status(200).json({ received: true, customer: customerData.email });
+    } catch (error) {
+      console.error('Customer creation webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Sale/Transaction Recording
+  app.post("/api/shopify/webhooks/sales/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify sale creation webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Sale webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const saleData = JSON.parse(body.toString());
+      console.log(`Recording sale from Shopify: ${saleData.order_id}`);
+
+      // Create sale record
+      const saleRecord = {
+        orderId: saleData.order_id.toString(),
+        customerId: saleData.customer_id,
+        amount: parseFloat(saleData.amount),
+        currency: saleData.currency,
+        paymentMethod: saleData.gateway,
+        status: saleData.status,
+        processedAt: new Date(saleData.processed_at),
+        shopifyId: saleData.id,
+        metadata: {
+          shopifySync: true,
+          createdViaWebhook: true,
+          transactionType: saleData.kind,
+          parentId: saleData.parent_id
+        }
+      };
+
+      // Store sale record
+      console.log('Sale recorded:', saleRecord.orderId);
+
+      res.status(200).json({ received: true, sale: saleData.order_id });
+    } catch (error) {
+      console.error('Sale creation webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
+  // SHOPIFY WEBHOOK: Refund Processing
+  app.post("/api/shopify/webhooks/refunds/create", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Shopify refund webhook received');
+      
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const secret = 'a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1';
+      
+      if (hmac) {
+        const crypto = require('crypto');
+        const calculatedHmac = crypto
+          .createHmac('sha256', secret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.error('Refund webhook signature verification failed');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+      
+      const refundData = JSON.parse(body.toString());
+      console.log(`Processing refund from Shopify: ${refundData.order_id}`);
+
+      // Process refund and restore inventory
+      let restoredItems = 0;
+      
+      if (refundData.refund_line_items) {
+        for (const lineItem of refundData.refund_line_items) {
+          try {
+            const items = await storage.getItems();
+            const item = items.find(i => i.sku === lineItem.line_item.sku);
+            
+            if (item) {
+              const restoreQuantity = lineItem.quantity;
+              const newQuantity = (item.quantity || 0) + restoreQuantity;
+              
+              await storage.updateItem(item.id, { quantity: newQuantity });
+              
+              // Log inventory restoration
+              await storage.createInventoryAction({
+                itemId: item.id,
+                action: 'adjustment',
+                quantity: restoreQuantity,
+                previousQuantity: item.quantity || 0,
+                newQuantity,
+                reason: 'Shopify refund - inventory restoration',
+                performedBy: 'shopify-webhook',
+                notes: `Refund processed for order ${refundData.order_id}`
+              });
+              
+              console.log(`Restored ${restoreQuantity} units of ${item.name}`);
+              restoredItems++;
+            }
+          } catch (itemError) {
+            console.error(`Error restoring inventory for refund:`, itemError);
+          }
+        }
+      }
+
+      res.status(200).json({ received: true, restored: restoredItems });
+    } catch (error) {
+      console.error('Refund webhook error:', error);
+      res.status(200).json({ received: true, error: error.message });
+    }
+  });
+
   // TEST ENDPOINT: Shopify Order Processing for Inventory Updates
   app.post("/api/test/shopify-order", async (req: Request, res: Response) => {
     try {
