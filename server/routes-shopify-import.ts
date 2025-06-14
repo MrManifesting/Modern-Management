@@ -18,39 +18,115 @@ const upload = multer({
  * Register Shopify import routes
  */
 export function registerShopifyImportRoutes(app: any, storage: IStorage) {
-  // Special endpoint just for Shopify imports
+  // Special endpoint just for Shopify imports with robust CSV parsing
   app.post("/api/items/import-shopify", upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
       
-      // Parse CSV
+      console.log("Starting Shopify CSV import process...");
+      
+      // Parse CSV with robust parser
       const csvContent = req.file.buffer.toString('utf-8');
+      console.log(`First 5 lines of raw CSV: ${JSON.stringify(csvContent.split('\n').slice(0, 5))}`);
       
-      // Process the CSV content
-      const result = await importShopifyCSV(
-        csvContent, 
-        storage,
-        generateBarcodeData,
-        generateQRCodeDataURL
-      );
+      // Import the robust CSV parser
+      const { parseRobustCSV, extractProductFromRow, extractInventoryFromRow } = await import('./services/csv-parser-robust');
       
-      if (!result.success) {
+      console.log("Using robust CSV parser...");
+      const parseResult = parseRobustCSV(csvContent);
+      
+      console.log(`Robust CSV parsed with ${parseResult.headers.length} headers and ${parseResult.rows.length} data rows`);
+      console.log(`Format detected: ${parseResult.format}`);
+      console.log(`Parse success: ${parseResult.success}`);
+      
+      if (!parseResult.success) {
         return res.status(400).json({
           error: "Import failed",
-          message: result.message,
-          errors: result.errors.slice(0, 5) // Just show the first 5 errors
+          message: "CSV parsing failed",
+          details: parseResult.errors
         });
+      }
+      
+      if (parseResult.format === 'unknown') {
+        return res.status(400).json({
+          error: "Import failed", 
+          message: "Unrecognized CSV format. Please ensure you're uploading a Shopify product or inventory export.",
+          headers: parseResult.headers
+        });
+      }
+      
+      // Process rows based on detected format
+      const importedItems = [];
+      const errors = [];
+      
+      for (let i = 0; i < parseResult.rows.length; i++) {
+        try {
+          const row = parseResult.rows[i];
+          let itemData;
+          
+          if (parseResult.format === 'product') {
+            itemData = extractProductFromRow(parseResult.headers, row);
+          } else if (parseResult.format === 'inventory') {
+            itemData = extractInventoryFromRow(parseResult.headers, row);
+          } else {
+            continue;
+          }
+          
+          // Skip rows without essential data
+          if (!itemData.name && !itemData.sku) {
+            continue;
+          }
+          
+          // Generate missing data
+          if (!itemData.sku) {
+            itemData.sku = `IMPORT-${Date.now()}-${i}`;
+          }
+          
+          if (!itemData.name) {
+            itemData.name = `Imported Item ${i}`;
+          }
+          
+          if (!itemData.basePrice) {
+            itemData.basePrice = "0.00";
+          }
+          
+          // Generate barcode and QR code
+          if (!itemData.barcode) {
+            itemData.barcode = generateBarcodeData(itemData.sku);
+          }
+          
+          itemData.qrCode = await generateQRCodeDataURL({
+            id: Date.now() + i,
+            name: itemData.name,
+            sku: itemData.sku
+          });
+          
+          // Set defaults
+          itemData.status = itemData.status || 'active';
+          itemData.category = itemData.category || 'Imported';
+          itemData.quantity = itemData.quantity || 0;
+          
+          // Create item in storage
+          const createdItem = await storage.createItem(itemData);
+          importedItems.push(createdItem);
+          
+        } catch (error) {
+          errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       
       res.json({ 
         success: true,
-        message: result.message,
-        items: result.items,
-        totalErrors: result.errors.length,
-        errors: result.errors.length > 0 ? result.errors.slice(0, 5) : undefined
+        message: `Successfully imported ${importedItems.length} items from Shopify ${parseResult.format} export`,
+        imported: importedItems.length,
+        items: importedItems,
+        totalErrors: errors.length,
+        errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+        format: parseResult.format
       });
+      
     } catch (error) {
       console.error("Failed to import Shopify CSV:", error);
       res.status(500).json({ 

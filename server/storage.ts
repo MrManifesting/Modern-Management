@@ -44,6 +44,7 @@ export interface IStorage {
   getItems(): Promise<Item[]>;
   getItem(id: number): Promise<Item | undefined>;
   getItemBySku(sku: string): Promise<Item | undefined>;
+  getItemByBarcode(barcode: string): Promise<Item | undefined>;
   getItemsByIds(ids: number[]): Promise<Item[]>;
   createItem(item: InsertItem): Promise<Item>;
   updateItem(id: number, item: Partial<InsertItem>): Promise<Item | undefined>;
