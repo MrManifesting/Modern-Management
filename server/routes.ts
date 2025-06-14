@@ -18,7 +18,7 @@ import {
   generateInventoryInsights 
 } from "./services/openai";
 import { generateSKU, generateSKUBatch } from "./services/sku-generator";
-import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode-generator";
+import { generateBarcodeData } from "./services/barcode";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
 import { 
   fetchShopifySalesReport, 
