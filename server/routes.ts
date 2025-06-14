@@ -21,7 +21,7 @@ import {
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
-import { registerShopifySafetyRoutes } from "./routes-shopify-safety";
+
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate";
@@ -36,8 +36,7 @@ import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
-import { registerShopifyEnhancedRoutes } from "./routes-shopify-enhanced";
-import { registerShopifyFixRoutes } from "./routes-shopify-fix";
+
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
 import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
@@ -3975,8 +3974,7 @@ ${topCustomersCsv}`;
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
   
-  // Register Shopify fix routes for connection and CSV issues
-  registerShopifyFixRoutes(app);
+  // Shopify fix routes consolidated into main routes
   
   // Register standard CSV import routes
   registerCSVImportRoutes(app, storage);
@@ -4066,7 +4064,7 @@ ${topCustomersCsv}`;
   });
   
   // Register Shopify safety routes
-  registerShopifySafetyRoutes(app, storage);
+  // Shopify safety routes consolidated into main routes
   
   // Register Shopify credentials routes
   registerShopifyCredentialsRoutes(app, storage);
