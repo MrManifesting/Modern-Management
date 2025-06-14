@@ -1,39 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { 
-  Camera, 
-  ScanLine, 
-  Package, 
-  Check,
-  Plus,
-  Minus
-} from 'lucide-react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-interface ScannedItem {
-  id: number;
-  name: string;
-  sku: string;
-  quantity: number;
-  price: number;
-  category?: string;
-  brand?: string;
-}
+// Consolidated scanner using proper barcode decoding
+import { BarcodeScanner } from './barcode-scanner';
 
 interface SimpleScannerProps {
-  onItemScanned?: (item: ScannedItem) => void;
+  onItemScanned?: (item: any) => void;
   onActionComplete?: (result: any) => void;
 }
 
