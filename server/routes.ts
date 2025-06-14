@@ -5668,6 +5668,32 @@ ${topCustomersCsv}`;
     }
   });
 
+  // API diagnostic endpoints - must be last to ensure all API routes are registered
+  app.get("/api/diagnostic", (_req: Request, res: Response) => {
+    res.json({
+      status: "API routes are working",
+      timestamp: new Date().toISOString(),
+      server: "inventory-management-system",
+      environment: process.env.NODE_ENV || "development",
+      port: 5000
+    });
+  });
+
+  // Google Apps Script diagnostic endpoint
+  app.get("/api/google-apps-script/diagnostic", (_req: Request, res: Response) => {
+    res.json({
+      status: "Google Apps Script endpoints are accessible",
+      timestamp: new Date().toISOString(),
+      webhookConfigured: !!process.env.GOOGLE_APPS_SCRIPT_WEBHOOK,
+      syncSheetConfigured: !!process.env.GOOGLE_SHEETS_SYNC_ID,
+      endpoints: {
+        webhook: "/api/google-apps-script/webhook",
+        syncInventory: "/api/google-apps-script/sync-inventory", 
+        status: "/api/google-apps-script/status"
+      }
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
