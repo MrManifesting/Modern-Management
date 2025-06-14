@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Shopify Order Processing System Fully Functional**
+  - Completed comprehensive Shopify order processing with automatic inventory reduction
+  - System successfully finds items by SKU, calculates quantities, and updates stock levels
+  - Implemented complete inventory action logging with previous/new quantity tracking
+  - Test verified: processes orders, reduces inventory by ordered quantities, logs all changes
+  - Core inventory reduction logic functional for production Shopify webhook integration
+  - Database schema updated with all required columns for sales and inventory tracking
 - June 14, 2025: **Fixed Bulk Generation Functions with Product Names in Barcodes**
   - Resolved syntax errors in routes.ts that were preventing bulk generation functions from working
   - Implemented product name inclusion in barcode generation as requested
