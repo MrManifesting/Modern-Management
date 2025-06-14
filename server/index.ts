@@ -50,6 +50,13 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Add middleware to ensure API routes are handled correctly
+  app.use('/api/*', (req, res, next) => {
+    // If we reach here, the API route wasn't handled by registerRoutes
+    // This means the route doesn't exist
+    res.status(404).json({ error: 'API endpoint not found' });
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
