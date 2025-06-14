@@ -5462,7 +5462,7 @@ ${topCustomersCsv}`;
       }
 
       // Get all inventory items for sync
-      const items = await storage.listItems();
+      const items = await storage.getItems();
       
       // Prepare data for Google Sheets sync
       const syncData = {
