@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
-import { ReliableBarcode } from '@/components/inventory/reliable-barcode';
+import { ServerBarcode } from '@/components/inventory/server-barcode';
 import { 
   Plus, 
   UploadCloud, 
@@ -1976,7 +1976,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       {/* Right Column - Barcode and Category */}
                                       <div className="space-y-6">
                                         <div className="space-y-2">
-                                          <ReliableBarcode item={product} />
+                                          <ServerBarcode item={product} />
                                         </div>
                                         
                                         <div className="space-y-2">
