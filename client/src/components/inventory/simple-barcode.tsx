@@ -26,57 +26,82 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
       setIsLoading(true);
       setError(null);
 
-      // Wait for canvas to be ready
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait longer for canvas to be ready
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const canvas = canvasRef.current;
       if (!canvas) {
-        throw new Error("Canvas element not found");
+        throw new Error("Canvas element not found in DOM");
       }
 
-      // Test if jsbarcode is available
+      console.log("Canvas found:", canvas);
+      console.log("Canvas parent:", canvas.parentElement);
+
+      // Import jsbarcode with detailed error handling
       let JsBarcode;
       try {
+        console.log("Importing jsbarcode...");
         const module = await import('jsbarcode');
+        console.log("Module imported:", module);
         JsBarcode = module.default;
-        if (!JsBarcode) {
-          throw new Error("JsBarcode not loaded properly");
+        console.log("JsBarcode function:", typeof JsBarcode);
+        if (!JsBarcode || typeof JsBarcode !== 'function') {
+          throw new Error("JsBarcode not loaded properly or not a function");
         }
       } catch (importError) {
         console.error("Failed to import jsbarcode:", importError);
-        throw new Error("Barcode library not available");
+        throw new Error(`Barcode library import failed: ${importError.message}`);
       }
       
-      // Clean the SKU for barcode generation
+      // Validate and clean the SKU
+      console.log("Original SKU:", item.sku);
       const cleanSku = item.sku.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      console.log("Cleaned SKU:", cleanSku);
       if (cleanSku.length < 1) {
-        throw new Error("SKU contains no valid characters");
+        throw new Error("SKU contains no valid characters for barcode");
       }
       
       // Set canvas size explicitly
       canvas.width = 200;
       canvas.height = 80;
+      console.log("Canvas size set to:", canvas.width, "x", canvas.height);
       
-      // Generate barcode
-      JsBarcode(canvas, cleanSku, {
-        format: "CODE128",
-        width: 1.5,
-        height: 40,
-        displayValue: true,
-        fontSize: 10,
-        textMargin: 2,
-        background: "#ffffff",
-        lineColor: "#000000",
-        margin: 5
-      });
+      // Generate barcode with validation
+      console.log("Generating barcode...");
+      try {
+        JsBarcode(canvas, cleanSku, {
+          format: "CODE128",
+          width: 1.5,
+          height: 40,
+          displayValue: true,
+          fontSize: 10,
+          textMargin: 2,
+          background: "#ffffff",
+          lineColor: "#000000",
+          margin: 5,
+          valid: function(valid) {
+            console.log("Barcode validation result:", valid);
+            if (!valid) {
+              throw new Error(`Invalid barcode data for SKU: ${cleanSku}`);
+            }
+          }
+        });
+        console.log("Barcode generated successfully");
+      } catch (barcodeError) {
+        console.error("JsBarcode generation failed:", barcodeError);
+        throw new Error(`Barcode generation failed: ${barcodeError.message}`);
+      }
 
       setIsLoading(false);
 
     } catch (error) {
-      console.error("Barcode generation failed:", error);
-      console.error("Item SKU:", item.sku);
-      console.error("Canvas element:", canvasRef.current);
-      console.error("Error details:", error);
+      console.error("Error generating barcode:", error);
+      console.error("SKU:", item.sku);
+      console.error("Canvas:", canvasRef.current);
+      console.error("Canvas width/height:", canvasRef.current?.width, canvasRef.current?.height);
+      console.error("Error type:", typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
       setError(error instanceof Error ? error.message : "Barcode generation failed");
       setIsLoading(false);
     }
