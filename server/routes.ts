@@ -173,6 +173,49 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get items with media files
+  app.get("/api/items/with-media", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const mediaFiles = getMediaFiles('all', 1000, 0);
+      
+      // Associate media files with items
+      const itemsWithMedia = items.map(item => {
+        // Look for media files that match this item
+        const associatedMedia = mediaFiles.filter(file => {
+          const fileName = file.name.toLowerCase();
+          const itemName = item.name?.toLowerCase() || '';
+          const itemSku = item.sku?.toLowerCase() || '';
+          
+          // Check various matching patterns
+          return fileName.includes(itemSku) ||
+                 fileName.includes(itemName.replace(/\s+/g, '_')) ||
+                 fileName.includes(`item_${item.id}`) ||
+                 fileName.includes(itemName.replace(/\s+/g, ''));
+        });
+        
+        // Update item with media URLs
+        let imageUrl = null;
+        if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+          imageUrl = item.images[0];
+        } else if (associatedMedia.length > 0) {
+          imageUrl = associatedMedia[0].url;
+        }
+        
+        return {
+          ...item,
+          imageUrl,
+          mediaFiles: associatedMedia
+        };
+      });
+      
+      res.json(itemsWithMedia);
+    } catch (error) {
+      console.error("Error fetching items with media:", error);
+      res.status(500).json({ error: "Failed to fetch items with media", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Get item by barcode - must be defined BEFORE the general /api/items/:id route
   app.get("/api/items/barcode/:barcode", async (req: Request, res: Response) => {
     try {
