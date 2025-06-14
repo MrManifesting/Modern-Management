@@ -710,32 +710,16 @@ export async function createShopifyClient() {
         log(`Redirect issue with shop URL: ${cleanShopUrl}`, 'shopify');
       }
       
-      // Fall back to mock if API call fails
-      log('Falling back to mock Shopify client after API error', 'shopify');
-      const mockShopify = createMockShopifyClient();
-      const mockShopInfo = getMockShopInfo();
-      
-      return {
-        shopify: mockShopify,
-        shopInfo: mockShopInfo,
-        credentials: { ...credentials, storeUrl: cleanShopUrl },
-        isMock: true
-      };
+      // Don't fall back to mock - return error instead
+      log('API call failed - returning error instead of mock fallback', 'shopify');
+      throw new Error(`Shopify API connection failed: ${error.message}`);
     }
   } catch (error) {
     log(`Failed to initialize Shopify client: ${error}`, 'shopify');
     
-    // Fall back to mock if initialization fails
-    log('Falling back to mock Shopify client', 'shopify');
-    const mockShopify = createMockShopifyClient();
-    const mockShopInfo = getMockShopInfo();
-    
-    return {
-      shopify: mockShopify,
-      shopInfo: mockShopInfo,
-      credentials,
-      isMock: true
-    };
+    // Don't fall back to mock - throw error instead
+    log('Shopify client initialization failed - throwing error instead of mock fallback', 'shopify');
+    throw new Error(`Shopify client initialization failed: ${error}`);
   }
 }
 
