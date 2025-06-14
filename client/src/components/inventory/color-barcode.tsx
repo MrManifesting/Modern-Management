@@ -52,17 +52,20 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
         setIsLoading(true);
         setError(null);
 
-        // Dynamically import jsbarcode
-        const JsBarcode = (await import('jsbarcode')).default;
+        // Wait for canvas to be available
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         if (!canvasRef.current) {
           throw new Error("Canvas ref not available");
         }
 
+        // Dynamically import jsbarcode
+        const JsBarcode = (await import('jsbarcode')).default;
+
         // Get category colors
         const colors = getCategoryColors(item.category || 'Other');
         
-        // Generate barcode using jsbarcode
+        // Generate barcode using jsbarcode directly on canvas
         JsBarcode(canvasRef.current, item.sku, {
           format: "CODE128",
           width: 2,
@@ -74,20 +77,9 @@ export function ColorBarcode({ item }: ColorBarcodeProps) {
           lineColor: "#000000"
         });
 
-        // Convert canvas to SVG string for storage
-        const canvas = canvasRef.current;
-        const svgString = `
-          <svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">
-            <foreignObject width="100%" height="100%">
-              <div xmlns="http://www.w3.org/1999/xhtml">
-                <canvas width="${canvas.width}" height="${canvas.height}"></canvas>
-              </div>
-            </foreignObject>
-          </svg>
-        `;
-
+        // Set barcode state to trigger re-render
         setBarcode({
-          barcodeSvg: svgString,
+          barcodeSvg: "canvas-rendered", // Just a flag since we're using canvas directly
           primaryColor: colors.primary,
           secondaryColor: colors.secondary,
           colorClass: item.category || 'Other'

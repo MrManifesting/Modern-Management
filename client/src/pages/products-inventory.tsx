@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
+import { SimpleBarcode } from '@/components/inventory/simple-barcode';
 import { 
   Plus, 
   UploadCloud, 
