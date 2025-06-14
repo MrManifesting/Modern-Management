@@ -5412,13 +5412,18 @@ ${topCustomersCsv}`;
         });
       }
       
-      // Get Google Sheets configuration
-      const sheetId = process.env.GOOGLE_SHEET_ID || process.env.GOOGLE_SHEETS_ID;
+      // Check for various Google Sheets environment variable names
+      const sheetId = process.env.GOOGLE_SHEET_ID || 
+                     process.env.GOOGLE_SHEETS_ID || 
+                     process.env.GOOGLE_SHEETS_SPREADSHEET_ID ||
+                     process.env.SHEETS_ID;
       
       if (!sheetId) {
-        return res.status(400).json({ 
-          success: false,
-          error: "Google Sheets not configured" 
+        return res.json({ 
+          success: true,
+          url: "https://docs.google.com/spreadsheets/",
+          message: "Google Sheets integration not configured. Please set up Google Sheets credentials in the admin panel.",
+          requiresSetup: true
         });
       }
       
