@@ -888,7 +888,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
     try {
       console.log("Testing Shopify connection from frontend...");
-      const connectionStatus = await testConnection();
+      const connectionStatus = await testShopifyConnection();
       console.log("Shopify connection test result:", connectionStatus);
       res.json(connectionStatus);
     } catch (error) {
