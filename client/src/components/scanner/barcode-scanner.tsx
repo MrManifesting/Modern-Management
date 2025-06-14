@@ -40,6 +40,27 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
     quantity: 1,
     basePrice: ''
   });
+
+  // Auto-generate item name from barcode
+  const generateItemName = useCallback((barcode: string) => {
+    // Extract meaningful parts from barcode
+    const parts = barcode.split(/[^A-Za-z0-9]/);
+    let name = parts.join(' ').trim();
+    
+    // If barcode looks like a standard format, create a better name
+    if (barcode.includes('FLW')) {
+      name = 'Flower Product';
+    } else if (barcode.includes('CON')) {
+      name = 'Concentrate Product';
+    } else if (barcode.includes('EDI')) {
+      name = 'Edible Product';
+    } else {
+      // Use first meaningful part or default
+      name = parts.find(p => p.length > 2) || 'Scanned Product';
+    }
+    
+    return `${name} (${barcode})`;
+  }, []);
   const { toast } = useToast();
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -83,6 +104,9 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
       } else {
         // Show dialog for creating new item with this barcode
         setNotFoundCode(code);
+        // Auto-generate name when dialog opens
+        const autoName = generateItemName(code);
+        setNewItemForm(prev => ({ ...prev, name: autoName }));
         setShowItemNotFoundDialog(true);
         setScannedItem(null);
       }
@@ -126,6 +150,8 @@ export function BarcodeScanner({ onItemScanned, onActionComplete, actionType = '
           quantity: newItemForm.quantity,
           basePrice: parseFloat(newItemForm.basePrice) || 0,
           barcode: notFoundCode, // Use the scanned barcode
+          status: 'available', // Set as available/in stock
+          isActive: true, // Mark as active
           generateCodes: true // Auto-generate SKU and QR codes
         }),
       });
