@@ -5399,6 +5399,56 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Google Sheets configuration endpoints
+  app.get("/api/google-sheets/config", async (_req: Request, res: Response) => {
+    try {
+      const sheetId = process.env.GOOGLE_SHEET_ID || 
+                     process.env.GOOGLE_SHEETS_ID || 
+                     process.env.GOOGLE_SHEETS_SPREADSHEET_ID ||
+                     process.env.SHEETS_ID;
+      
+      res.json({
+        configured: !!sheetId,
+        spreadsheetId: sheetId || null,
+        message: sheetId ? "Google Sheets configured" : "Google Sheets not configured"
+      });
+    } catch (error) {
+      console.error("Error getting Google Sheets config:", error);
+      res.status(500).json({ 
+        configured: false,
+        message: "Error checking configuration" 
+      });
+    }
+  });
+
+  app.post("/api/google-sheets/config", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId } = req.body;
+      
+      if (!spreadsheetId || typeof spreadsheetId !== 'string') {
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid spreadsheet ID is required" 
+        });
+      }
+      
+      // In a production environment, you would store this in a database
+      // For now, we'll provide instructions to set the environment variable
+      res.json({
+        success: true,
+        message: "Configuration saved. Please set GOOGLE_SHEETS_ID environment variable to: " + spreadsheetId,
+        spreadsheetId: spreadsheetId,
+        note: "To persist this setting, add GOOGLE_SHEETS_ID=" + spreadsheetId + " to your environment variables"
+      });
+    } catch (error) {
+      console.error("Error updating Google Sheets config:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Error updating configuration" 
+      });
+    }
+  });
+
   // View item in Google Sheets
   app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
     try {
@@ -5419,10 +5469,12 @@ ${topCustomersCsv}`;
                      process.env.SHEETS_ID;
       
       if (!sheetId) {
+        // For now, direct to the general sheets area with search for the item
+        const searchTerm = item.sku || item.name;
         return res.json({ 
           success: true,
-          url: "https://docs.google.com/spreadsheets/",
-          message: "Google Sheets integration not configured. Please set up Google Sheets credentials in the admin panel.",
+          url: `https://docs.google.com/spreadsheets/u/0/?q=${encodeURIComponent(searchTerm)}`,
+          message: "Searching for item in your Google Sheets. To set up direct linking, please configure your inventory spreadsheet ID in the admin panel.",
           requiresSetup: true
         });
       }

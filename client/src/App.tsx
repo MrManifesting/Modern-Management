@@ -35,6 +35,7 @@ import AiToolsPage from "@/pages/ai/tools";
 import CSVValidatorPage from "@/pages/csv-validator";
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import GoogleSheetsPage from "@/pages/google-sheets-page";
+import SheetsConfigPage from "@/pages/sheets-config";
 import CustomersPage from "@/pages/customers";
 import AuthPage from "@/pages/auth-page-simple";
 import QrScanPage from "@/pages/qr-scan";
@@ -100,6 +101,7 @@ function Router() {
         <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
+        <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
