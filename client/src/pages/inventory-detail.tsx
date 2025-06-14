@@ -27,7 +27,7 @@ import {
   PackageOpen
 } from "lucide-react";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-import { ColorBarcode, CategoryColorLegend } from "@/components/inventory/color-barcode";
+import { WorkingBarcode } from "@/components/inventory/working-barcode";
 import ShopifyStorePreview from "@/components/inventory/shopify-store-preview";
 import { format } from "date-fns";
 import AddItemModal from "@/components/modals/add-item-modal";
@@ -486,11 +486,8 @@ export default function InventoryDetailPage() {
         
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Color Barcode */}
-          <ColorBarcode item={item} />
-          
-          {/* Category Color Legend */}
-          <CategoryColorLegend />
+          {/* Working Barcode */}
+          <WorkingBarcode item={item} />
         </div>
       </div>
       
