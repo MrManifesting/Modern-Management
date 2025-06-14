@@ -5,7 +5,7 @@
 
 import Shopify from 'shopify-api-node';
 import { log } from '../vite';
-import { createMockShopifyClient, getMockShopInfo } from '../shopify-mock';
+// Mock functions removed - using real Shopify integration only
 import https from 'https';
 
 // Function to get Shopify store name in correct format
