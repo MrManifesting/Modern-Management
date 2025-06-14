@@ -41,6 +41,7 @@ import { registerShopifyFixRoutes } from "./routes-shopify-fix";
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
 import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
+import { registerBarcodeFulfillmentRoutes } from "./routes-barcode-fulfillment";
 import { setupAuth, requireAuth } from "./auth-simple";
 import { 
   insertItemSchema, 
