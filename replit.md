@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Fixed Bulk Code Generation "Update Failed" Error**
+  - Resolved critical bug in bulk update endpoint that was causing "Update Failed" error during code generation
+  - Implemented missing generateCodes functionality in /api/items/bulk-update endpoint
+  - Fixed SKU generation, barcode creation, and QR code generation for bulk operations
+  - Bulk code generation dialog now works properly for selected inventory items
+  - Eliminated scanner DOM access crashes by replacing problematic HTML5 QR Code library with reliable SimpleScanner component
+  - Added manual SKU/barcode entry system with photo capture option for inventory management
+  - Connected scanner to existing inventory update endpoints for seamless stock management
 - June 13, 2025: **Database Cleanup and Bug Fixes Complete**
   - Removed 9 duplicate user accounts sharing the same email address, maintaining only the most recent entry
   - Fixed runtime errors: null checking for event targets preventing crashes when clicking inventory items
