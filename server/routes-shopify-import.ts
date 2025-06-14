@@ -31,8 +31,8 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
       const csvContent = req.file.buffer.toString('utf-8');
       console.log(`First 5 lines of raw CSV: ${JSON.stringify(csvContent.split('\n').slice(0, 5))}`);
       
-      // Import the robust CSV parser
-      const { parseRobustCSV, extractProductFromRow, extractInventoryFromRow } = await import('./services/csv-parser-robust');
+      // Import the existing CSV parser
+      const { parseRobustCSV, extractProductFromRow, extractInventoryFromRow } = await import('./services/shopify-import');
       
       console.log("Using robust CSV parser...");
       const parseResult = parseRobustCSV(csvContent);

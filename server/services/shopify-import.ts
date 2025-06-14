@@ -10,7 +10,7 @@ import { storage } from '../storage';
 import { log } from '../vite';
 import { generateBarcodeData } from './barcode';
 import { generateQRCodeDataURL } from './qrcode';
-import { parseShopifyCSV } from './csv-parser-robust';
+// CSV parsing functionality is implemented in this file
 
 /**
  * Import products from Shopify API data
@@ -293,6 +293,86 @@ export function parseCSV(csvContent: string): ParsedCsvData {
   console.log(`CSV parsing complete: ${result.headers.length} headers, ${result.rows.length} rows`);
   
   return result;
+}
+
+/**
+ * Robust CSV parser with format detection
+ */
+export function parseRobustCSV(csvContent: string): {
+  success: boolean;
+  headers: string[];
+  rows: string[][];
+  format: 'product' | 'inventory' | 'unknown';
+  errors: string[];
+} {
+  try {
+    console.log('Starting robust CSV parsing...');
+    
+    // Parse the CSV content
+    const parsed = parseCSVContent(csvContent);
+    
+    // Determine the format
+    const format = determineCSVFormat(parsed.headers);
+    
+    console.log(`CSV parsed successfully: ${parsed.headers.length} headers, ${parsed.rows.length} rows, format: ${format}`);
+    
+    return {
+      success: true,
+      headers: parsed.headers,
+      rows: parsed.rows,
+      format,
+      errors: []
+    };
+  } catch (error) {
+    console.error('CSV parsing failed:', error);
+    return {
+      success: false,
+      headers: [],
+      rows: [],
+      format: 'unknown',
+      errors: [error instanceof Error ? error.message : 'Unknown parsing error']
+    };
+  }
+}
+
+/**
+ * Extract product data from a row based on product export format
+ */
+export function extractProductFromRow(headers: string[], row: string[]): any {
+  const productInfo = extractProductInfo(row, headers, 'product', 0);
+  if (!productInfo) return null;
+  
+  return {
+    name: productInfo.title,
+    sku: productInfo.sku || `IMPORT-${Date.now()}`,
+    basePrice: productInfo.price?.toString() || '0.00',
+    description: productInfo.description || '',
+    category: productInfo.productType || 'Imported',
+    vendor: productInfo.vendor || 'Unknown',
+    quantity: productInfo.quantity || 0,
+    weight: productInfo.weight || '1 pound',
+    status: productInfo.published ? 'active' : 'inactive'
+  };
+}
+
+/**
+ * Extract inventory data from a row based on inventory export format
+ */
+export function extractInventoryFromRow(headers: string[], row: string[]): any {
+  const inventoryInfo = extractProductInfo(row, headers, 'inventory', 0);
+  if (!inventoryInfo) return null;
+  
+  return {
+    name: inventoryInfo.title,
+    sku: inventoryInfo.sku || `IMPORT-${Date.now()}`,
+    basePrice: inventoryInfo.price?.toString() || '0.00',
+    description: inventoryInfo.description || '',
+    category: inventoryInfo.productType || 'Cannabis',
+    vendor: inventoryInfo.vendor || 'Unknown',
+    quantity: inventoryInfo.quantity || 0,
+    weight: '1 pound',
+    status: 'active'
+  };
 }
 
 /**
