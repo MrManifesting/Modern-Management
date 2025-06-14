@@ -643,6 +643,41 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // API route for updating item quantity (for scanner actions)
+  app.patch("/api/items/:id/quantity", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { action, quantity = 1, reason = "Scanner action" } = req.body;
+
+      if (!["add", "remove"].includes(action)) {
+        return res.status(400).json({ error: "Action must be 'add' or 'remove'" });
+      }
+
+      const item = await storage.getItem(id);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      let newQuantity: number;
+      if (action === "add") {
+        newQuantity = (item.quantity || 0) + quantity;
+      } else {
+        newQuantity = Math.max(0, (item.quantity || 0) - quantity);
+      }
+
+      const updatedItem = await storage.updateItem(id, { quantity: newQuantity });
+      
+      if (!updatedItem) {
+        return res.status(500).json({ error: "Failed to update item quantity" });
+      }
+
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating item quantity:", error);
+      res.status(500).json({ error: "Failed to update item quantity" });
+    }
+  });
+
   // API route for bulk deleting items
   app.delete("/api/items/bulk-delete", async (req: Request, res: Response) => {
     const { ids } = req.body;

@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Complete Scanner Functionality with Auto-Item Creation**
+  - Scanner successfully detects barcodes using @zxing/library (confirmed working with test barcode "FLWGOLTEST317809QTY")
+  - When barcodes aren't found in inventory, scanner automatically shows dialog to create new items
+  - Auto-generates intelligent item names from barcodes (e.g., "Flower Product (FLWGOLTEST317809QTY10)")
+  - New scanned items automatically set to "available" status and marked as active
+  - Fixed database schema issue: changed weight field from numeric to text to support weight descriptions like "1 pound"
+  - Added missing /api/items/:id/quantity endpoint for inventory actions (intake/fulfillment)
+  - End-to-end scanner workflow complete: scan → detect → create item if not found → perform inventory actions
 - June 14, 2025: **Scanner Consolidation and Proper Barcode Decoding Complete**
   - Removed 5 duplicate scanner components (mobile-scanner, quick-scanner, scanner-error-boundary, universal-scanner, plus complex duplicated logic)
   - Replaced text-extraction approach with proper @zxing/library barcode decoding functionality
