@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Complete System Testing and Duplicate Cleanup Successfully Completed**
+  - Removed 197 duplicate inventory items (99 by strain+price, 98 by SKU) - system now has 136 clean items
+  - Verified numbered SKU system working perfectly with sequential numbering (SKU-1, SKU-2, SKU-3, etc.)
+  - Tested multi-label printing system - generates proper Avery 5160 labels with barcodes and unit numbers
+  - Confirmed Shopify webhook integration functional - successfully processes orders and updates inventory
+  - Verified bulk code generation system working correctly for SKUs, barcodes, and QR codes
+  - Fixed inventory table data alignment issues - all columns display correct information
+  - Changed "Size" column to "Weight" and restored proper price display using basePrice field
+  - Added barcode/QR code indicators in inventory table for better visual feedback
+  - Completed Google Sheets integration with order logging functionality
+  - All core systems operational: inventory management, Shopify sync, label printing, webhook processing
 - June 14, 2025: **Numbered SKU System and Multi-Label Printing Implemented**
   - Implemented sequential SKU numbering system (SKU-1, SKU-2, SKU-3, etc.) for individual unit tracking
   - Created comprehensive multi-label printing service with standard formats (Avery 5160, 5261, 5162, 22805, custom cannabis)
