@@ -1618,20 +1618,22 @@ export function registerRoutes(app: Express): Server {
           
           // Generate SKU if requested and missing
           if (generateCodes.sku && !item.sku) {
-            updateData.sku = await generateSKU(item);
+            updateData.sku = await generateSKU(item.name, item.category);
           }
           
           // Generate barcode if requested
           if (generateCodes.barcode) {
-            const sku = updateData.sku || item.sku;
-            if (sku) {
-              updateData.barcode = generateBarcodeData(sku);
-            }
+            const sku = updateData.sku || item.sku || item.id.toString();
+            updateData.barcode = generateBarcodeData(sku);
           }
           
           // Generate QR code if requested
           if (generateCodes.qrCode) {
-            const qrCodeDataURL = await generateQRCodeDataURL(item);
+            const qrCodeDataURL = await generateQRCodeDataURL({
+              id: item.id,
+              name: item.name,
+              sku: updateData.sku || item.sku
+            });
             updateData.qrCode = qrCodeDataURL;
           }
           
