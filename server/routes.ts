@@ -177,7 +177,16 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/items/with-media", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
-      const mediaFiles = getMediaFiles('all', 1000, 0);
+      
+      // Import the media functions
+      let mediaFiles = [];
+      try {
+        const telegramService = await import('./services/telegram.js');
+        mediaFiles = telegramService.getMediaFiles('all', 1000, 0);
+      } catch (error) {
+        console.log('Media service not available, continuing without media files');
+        mediaFiles = [];
+      }
       
       // Associate media files with items
       const itemsWithMedia = items.map(item => {
