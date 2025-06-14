@@ -133,25 +133,21 @@ export function SimpleBarcode({ item }: SimpleBarcodeProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {isLoading ? (
-            <div className="h-16 w-full animate-pulse bg-muted rounded"></div>
-          ) : error ? (
-            <div className="space-y-2">
-              <div className="text-center py-2 text-xs text-amber-600 bg-amber-50 rounded border border-amber-200">
-                Barcode generation issue - showing SKU
+          <div className="flex justify-center p-2 bg-white border rounded relative">
+            <canvas 
+              ref={canvasRef} 
+              style={{ display: !isLoading && !error ? 'block' : 'none' }}
+            />
+            {isLoading && (
+              <div className="h-16 w-48 animate-pulse bg-muted rounded"></div>
+            )}
+            {error && (
+              <div className="text-center py-6">
+                <div className="font-mono text-lg font-bold">{item.sku}</div>
+                <div className="text-xs text-amber-600 mt-1">Barcode unavailable</div>
               </div>
-              <div className="flex justify-center p-3 bg-white border rounded">
-                <div className="text-center">
-                  <div className="font-mono text-lg font-bold">{item.sku}</div>
-                  <div className="text-xs text-muted-foreground mt-1">SKU Code</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center p-2 bg-white border rounded">
-              <canvas ref={canvasRef} />
-            </div>
-          )}
+            )}
+          </div>
 
           {item.sku && (
             <div className="flex items-center justify-between text-sm">
