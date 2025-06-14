@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Google Sheets Integration Fully Configured and Operational**
+  - Configured direct Google Sheets integration with user's specific inventory spreadsheet (ID: 1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU)
+  - Fixed "View in Google Sheets" buttons to link directly to inventory spreadsheet with item search functionality
+  - Added GOOGLE_SHEETS_ID environment variable for persistent configuration
+  - Created /sheets-config admin interface for future spreadsheet ID updates
+  - Successfully tested with "new test item classic reserve" - system opens correct spreadsheet and searches for specific items
+  - Team can now easily verify newly added inventory items are appearing in Google Sheets
 - June 14, 2025: **Application Startup Issues Resolved and System Fully Operational**
   - Fixed critical sync dashboard component error (syncLogs?.map is not a function) preventing app startup
   - Resolved JSX parsing syntax error in sync-dashboard.tsx that was causing build failures
