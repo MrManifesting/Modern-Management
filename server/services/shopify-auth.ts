@@ -125,20 +125,9 @@ export async function getShopifyCredentials() {
 export async function createShopifyClient() {
   const credentials = await getShopifyCredentials();
   
-  // Check if we should use mock client - only if credentials are missing
-  const useMock = !credentials.storeUrl || !credentials.accessToken;
-  
-  if (useMock) {
-    log('Using mock Shopify client due to missing credentials', 'shopify');
-    const mockShopify = createMockShopifyClient();
-    const mockShopInfo = getMockShopInfo();
-    
-    return {
-      shopify: mockShopify,
-      shopInfo: mockShopInfo,
-      credentials,
-      isMock: true
-    };
+  // Check if credentials are missing
+  if (!credentials.storeUrl || !credentials.accessToken) {
+    throw new Error('Shopify credentials not configured. Please set SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN environment variables.');
   }
   
   try {
@@ -710,15 +699,15 @@ export async function createShopifyClient() {
         log(`Redirect issue with shop URL: ${cleanShopUrl}`, 'shopify');
       }
       
-      // Don't fall back to mock - return error instead
-      log('API call failed - returning error instead of mock fallback', 'shopify');
+      // Return error for failed API calls
+      log('API call failed - Shopify connection error', 'shopify');
       throw new Error(`Shopify API connection failed: ${error.message}`);
     }
   } catch (error) {
     log(`Failed to initialize Shopify client: ${error}`, 'shopify');
     
-    // Don't fall back to mock - throw error instead
-    log('Shopify client initialization failed - throwing error instead of mock fallback', 'shopify');
+    // Return error for failed initialization
+    log('Shopify client initialization failed', 'shopify');
     throw new Error(`Shopify client initialization failed: ${error}`);
   }
 }
