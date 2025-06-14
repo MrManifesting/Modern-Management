@@ -1642,12 +1642,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Item IDs are required" });
       }
       
-      const promises: Promise<any>[] = [];
-      
       // Import required services
       const { generateSKU } = await import('./services/sku-generator');
-      const { generateBarcodeData } = await import('./services/barcode');
       const { generateQRCodeDataURL } = await import('./services/qrcode');
+      
+      let updatedCount = 0;
+      const errors: string[] = [];
       
       // Handle code generation
       if (generateCodes) {
@@ -1655,84 +1655,220 @@ export function registerRoutes(app: Express): Server {
         const validItems = items.filter(item => item !== null);
         
         for (const item of validItems) {
-          const updateData: any = {};
-          
-          // Generate SKU if requested
-          if (generateCodes.sku) {
-            updateData.sku = generateSKU(item);
-          }
-          
-          // Generate barcode if requested
-          if (generateCodes.barcode) {
-            const sku = updateData.sku || item.sku || `ITEM-${item.id}`;
-            updateData.barcode = generateBarcodeData(sku);
-          }
-          
-          // Generate QR code if requested
-          if (generateCodes.qrCode) {
-            const qrCodeDataURL = await generateQRCodeDataURL({
-              id: item.id,
-              name: item.name,
-              sku: updateData.sku || item.sku
-            });
-            updateData.qrCode = qrCodeDataURL;
-          }
-          
-          if (Object.keys(updateData).length > 0) {
-            promises.push(storage.updateItem(item.id, updateData));
-          }
-        }
-      }
-      
-      // Handle sale/discount application
-      if (saleDiscount) {
-        const { type, value } = saleDiscount;
-        const items = await storage.getItemsByIds(itemIds);
-        
-        for (const item of items) {
-          let newSalePrice = null;
-          const basePrice = parseFloat(item.basePrice?.toString() || '0');
-          
-          if (type === 'percentage' && basePrice > 0) {
-            newSalePrice = (basePrice * (100 - value) / 100).toFixed(2);
-          } else if (type === 'fixed' && basePrice > value) {
-            newSalePrice = (basePrice - value).toFixed(2);
-          }
-          
-          if (newSalePrice) {
-            promises.push(storage.updateItem(item.id, { salePrice: newSalePrice }));
+          try {
+            const updateData: any = {};
+            
+            // Generate SKU if requested
+            if (generateCodes.sku) {
+              updateData.sku = generateSKU(item);
+            }
+            
+            // Generate barcode if requested (include product name)
+            if (generateCodes.barcode) {
+              const sku = updateData.sku || item.sku || `ITEM-${item.id}`;
+              // Create barcode that includes product name
+              const barcodeData = `${sku}-${item.name.replace(/[^A-Za-z0-9]/g, '').substring(0, 10)}`;
+              updateData.barcode = barcodeData;
+            }
+            
+            // Generate QR code if requested
+            if (generateCodes.qrCode) {
+              const qrCodeDataURL = await generateQRCodeDataURL({
+                id: item.id,
+                name: item.name,
+                sku: updateData.sku || item.sku
+              });
+              updateData.qrCode = qrCodeDataURL;
+            }
+            
+            // Apply the updates
+            await storage.updateItem(item.id, updateData);
+            updatedCount++;
+          } catch (error) {
+            errors.push(`Failed to update item ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           }
         }
       }
       
-      // Handle quantity updates
-      if (quantity) {
-        const { operation, value } = quantity;
-        const items = await storage.getItemsByIds(itemIds);
-        
-        for (const item of items) {
-          let newQuantity = item.quantity;
-          
-          switch (operation) {
-            case 'set':
-              newQuantity = value;
-              break;
-            case 'add':
-              newQuantity = item.quantity + value;
-              break;
-            case 'subtract':
-              newQuantity = Math.max(0, item.quantity - value);
-              break;
-          }
-          
-          promises.push(storage.updateItem(item.id, { quantity: newQuantity }));
-        }
-      }
-      
-      // Handle status updates
+      // Handle other bulk updates
       if (status) {
-        for (const itemId of itemIds) {
-          promises.push(storage.updateItem(itemId, { status }));
+        for (const id of itemIds) {
+          try {
+            await storage.updateItem(id, { status });
+            if (!generateCodes) updatedCount++;
+          } catch (error) {
+            errors.push(`Failed to update status for item ${id}`);
+          }
+        }
+      }
+      
+      if (quantity) {
+        for (const id of itemIds) {
+          try {
+            const item = await storage.getItem(id);
+            if (item) {
+              let newQuantity = item.quantity || 0;
+              if (quantity.operation === 'set') {
+                newQuantity = quantity.value;
+              } else if (quantity.operation === 'add') {
+                newQuantity += quantity.value;
+              } else if (quantity.operation === 'subtract') {
+                newQuantity = Math.max(0, newQuantity - quantity.value);
+              }
+              await storage.updateItem(id, { quantity: newQuantity });
+              if (!generateCodes && !status) updatedCount++;
+            }
+          } catch (error) {
+            errors.push(`Failed to update quantity for item ${id}`);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Successfully updated ${updatedCount} items`,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk update:", error);
+      res.status(500).json({ error: "Failed to perform bulk update" });
+    }
+  });
+
+  // Add specific endpoints for bulk barcode and QR code generation
+  app.post("/api/items/generate-barcodes-bulk", async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Item IDs are required" });
+      }
+      
+      const { generateSKU } = await import('./services/sku-generator');
+      let updatedCount = 0;
+      const errors: string[] = [];
+      
+      for (const id of ids) {
+        try {
+          const item = await storage.getItem(id);
+          if (!item) {
+            errors.push(`Item ${id} not found`);
+            continue;
+          }
+          
+          // Generate SKU if missing
+          let sku = item.sku;
+          if (!sku) {
+            sku = generateSKU(item);
+          }
+          
+          // Create barcode that includes product name
+          const cleanName = item.name.replace(/[^A-Za-z0-9]/g, '').substring(0, 10);
+          const barcodeData = `${sku}-${cleanName}`;
+          
+          await storage.updateItem(id, { 
+            sku: sku,
+            barcode: barcodeData 
+          });
+          updatedCount++;
+        } catch (error) {
+          errors.push(`Failed to update item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated barcodes for ${updatedCount} of ${ids.length} items`,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk barcode generation:", error);
+      res.status(500).json({ error: "Failed to generate barcodes" });
+    }
+  });
+
+  app.post("/api/items/generate-qrcodes-bulk", async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Item IDs are required" });
+      }
+      
+      const { generateQRCodeDataURL } = await import('./services/qrcode');
+      let updatedCount = 0;
+      const errors: string[] = [];
+      
+      for (const id of ids) {
+        try {
+          const item = await storage.getItem(id);
+          if (!item) {
+            errors.push(`Item ${id} not found`);
+            continue;
+          }
+          
+          const qrCodeDataURL = await generateQRCodeDataURL({
+            id: item.id,
+            name: item.name,
+            sku: item.sku
+          });
+          
+          await storage.updateItem(id, { qrCode: qrCodeDataURL });
+          updatedCount++;
+        } catch (error) {
+          errors.push(`Failed to update item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated QR codes for ${updatedCount} of ${ids.length} items`,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk QR code generation:", error);
+      res.status(500).json({ error: "Failed to generate QR codes" });
+    }
+  });
+
+  app.post("/api/items/generate-skus-bulk", async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Item IDs are required" });
+      }
+      
+      const { generateSKU } = await import('./services/sku-generator');
+      let updatedCount = 0;
+      const errors: string[] = [];
+      
+      for (const id of ids) {
+        try {
+          const item = await storage.getItem(id);
+          if (!item) {
+            errors.push(`Item ${id} not found`);
+            continue;
+          }
+          
+          const sku = generateSKU(item);
+          await storage.updateItem(id, { sku });
+          updatedCount++;
+        } catch (error) {
+          errors.push(`Failed to update item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Generated SKUs for ${updatedCount} of ${ids.length} items`,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk SKU generation:", error);
+      res.status(500).json({ error: "Failed to generate SKUs" });
+    }
+  });
         }
       }
       
