@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Scanner Consolidation and Proper Barcode Decoding Complete**
+  - Removed 5 duplicate scanner components (mobile-scanner, quick-scanner, scanner-error-boundary, universal-scanner, plus complex duplicated logic)
+  - Replaced text-extraction approach with proper @zxing/library barcode decoding functionality
+  - Consolidated all scanner functionality into single BarcodeScanner component with actual barcode scanning capabilities
+  - Fixed import errors and component references throughout scanner pages
+  - Scanner now uses real barcode decoding instead of attempting to extract text patterns from images
+  - Eliminated overly complex multi-variant image processing approach that was fundamentally flawed
+  - Application starts successfully with proper barcode scanning functionality ready for testing
 - June 14, 2025: **Fixed Bulk Code Generation "Update Failed" Error**
   - Resolved critical bug in bulk update endpoint that was causing "Update Failed" error during code generation
   - Implemented missing generateCodes functionality in /api/items/bulk-update endpoint
