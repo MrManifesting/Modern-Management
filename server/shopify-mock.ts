@@ -552,25 +552,25 @@ export class MockShopifyClient {
   };
 }
 
-// Export functions to get mock data directly
+// This file is deprecated - all Shopify integrations now use real API connections
+// Mock functionality has been removed to ensure authentic data only
+
 export function getMockShopInfo() {
-  return mockShopInfo;
+  throw new Error('Mock data disabled - use real Shopify API with proper credentials');
 }
 
 export function getMockProducts() {
-  return mockProducts;
+  throw new Error('Mock data disabled - use real Shopify API with proper credentials');
 }
 
 export function getMockOrders() {
-  return mockOrders;
+  throw new Error('Mock data disabled - use real Shopify API with proper credentials');
 }
 
 export function getMockCustomers() {
-  return mockCustomers;
+  throw new Error('Mock data disabled - use real Shopify API with proper credentials');
 }
 
-// Create a functioning mock client
 export function createMockShopifyClient() {
-  log('Creating mock Shopify client for development/testing', 'shopify-mock');
-  return new MockShopifyClient();
+  throw new Error('Mock Shopify client disabled - configure real API credentials');
 }
