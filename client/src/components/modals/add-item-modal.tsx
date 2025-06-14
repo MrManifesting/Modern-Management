@@ -6,6 +6,7 @@ import ItemFormComponent from "@/components/inventory/item-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
+import { AutoPrintLabels } from "@/components/inventory/auto-print-labels";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -54,13 +55,27 @@ export default function AddItemModal({
         return res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (newItem: Item, variables: ItemForm) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      
+      // Auto-print labels for new items only
+      if (!isEditing && newItem && variables.quantity && variables.quantity > 0) {
+        // Delay to allow modal to close first
+        setTimeout(() => {
+          const printLabels = AutoPrintLabels({ 
+            item: newItem, 
+            quantity: variables.quantity || 1, 
+            autoOpen: true 
+          });
+          printLabels.openPrintPreview(variables.quantity || 1);
+        }, 500);
+      }
+      
       toast({
         title: isEditing ? "Item updated" : "Item created",
         description: isEditing
           ? "The item has been successfully updated."
-          : "The item has been successfully added to your inventory.",
+          : `Item added to inventory. ${!isEditing && variables.quantity ? `Printing ${variables.quantity} label${variables.quantity > 1 ? 's' : ''}...` : ''}`,
       });
       onClose();
     },
