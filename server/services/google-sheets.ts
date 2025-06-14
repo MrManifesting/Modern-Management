@@ -383,6 +383,49 @@ export class GoogleSheetsService {
   }
 
   /**
+   * Log order data to Google Sheets for webhook processing
+   */
+  async logOrderToSheet(orderData: any, config: SheetConfig): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    try {
+      const orderLogSheetName = `${config.worksheetName}_Orders`;
+      
+      // Ensure order log sheet exists
+      await this.ensureOrderLogSheetExists(config.spreadsheetId, orderLogSheetName);
+
+      const orderRow = [
+        orderData.id || '',
+        orderData.order_number || orderData.name || '',
+        orderData.email || '',
+        orderData.total_price || '0',
+        orderData.financial_status || '',
+        orderData.fulfillment_status || '',
+        new Date().toISOString(),
+        JSON.stringify(orderData.line_items || []),
+        orderData.customer?.first_name || '',
+        orderData.customer?.last_name || ''
+      ];
+
+      await this.sheets!.spreadsheets.values.append({
+        spreadsheetId: config.spreadsheetId,
+        range: `${orderLogSheetName}!A:J`,
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [orderRow]
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error logging order to sheet:', error);
+      return false;
+    }
+  }
+
+  /**
    * Helper methods
    */
   private async clearSheetData(config: SheetConfig): Promise<void> {
@@ -455,6 +498,50 @@ export class GoogleSheetsService {
       }
     } catch (error) {
       console.error('Error ensuring log sheet exists:', error);
+    }
+  }
+
+  private async ensureOrderLogSheetExists(spreadsheetId: string, orderLogSheetName: string): Promise<void> {
+    try {
+      const spreadsheet = await this.sheets!.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+
+      const orderLogSheetExists = spreadsheet.data.sheets?.some(
+        sheet => sheet.properties?.title === orderLogSheetName
+      );
+
+      if (!orderLogSheetExists) {
+        await this.sheets!.spreadsheets.batchUpdate({
+          spreadsheetId: spreadsheetId,
+          requestBody: {
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: orderLogSheetName,
+                  gridProperties: {
+                    rowCount: 5000,
+                    columnCount: 10
+                  }
+                }
+              }
+            }]
+          }
+        });
+
+        // Add headers to order log sheet
+        const headers = ['Order ID', 'Order Number', 'Customer Email', 'Total', 'Payment Status', 'Fulfillment Status', 'Timestamp', 'Line Items', 'First Name', 'Last Name'];
+        await this.sheets!.spreadsheets.values.update({
+          spreadsheetId: spreadsheetId,
+          range: `${orderLogSheetName}!A1:J1`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [headers]
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error ensuring order log sheet exists:', error);
     }
   }
 }
