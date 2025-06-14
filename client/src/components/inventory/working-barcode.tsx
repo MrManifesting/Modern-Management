@@ -1,9 +1,12 @@
 import { Item } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, Copy, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Printer, Copy, Download, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { AutoPrintLabels } from "./auto-print-labels";
 
 interface WorkingBarcodeProps {
   item: Item;
@@ -12,6 +15,7 @@ interface WorkingBarcodeProps {
 export function WorkingBarcode({ item }: WorkingBarcodeProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [labelQuantity, setLabelQuantity] = useState(1);
 
   const handlePrint = async () => {
     if (!item.sku) return;
@@ -98,34 +102,54 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
     setLoading(true);
     try {
       const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=150&imagetype=Png&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
       
-      const response = await fetch(barcodeUrl);
-      if (!response.ok) throw new Error('Failed to generate barcode');
+      // Direct link approach for better mobile/browser compatibility
+      const link = document.createElement('a');
+      link.href = barcodeUrl;
+      link.download = `barcode-${cleanSku}.png`;
+      link.target = '_blank';
       
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `barcode-${cleanSku}.gif`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Download Complete",
-        description: `Barcode for ${item.sku} downloaded`,
-      });
+      // For mobile devices, open in new tab with instructions
+      if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+        window.open(barcodeUrl, '_blank');
+        toast({
+          title: "Barcode Opened",
+          description: "Long press the barcode image to save it to your device",
+        });
+      } else {
+        // Desktop - attempt direct download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({
+          title: "Download Started",
+          description: `Barcode for ${item.sku} downloading`,
+        });
+      }
     } catch (error) {
+      // Fallback - always open in new tab
+      const cleanSku = (item.sku || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(cleanSku)}&code=Code128&translate-esc=on&unit=Fit&dpi=150&imagetype=Png&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`;
+      window.open(barcodeUrl, '_blank');
       toast({
-        title: "Download Failed",
-        description: "Could not download barcode image",
-        variant: "destructive"
+        title: "Barcode Opened",
+        description: "Right-click the barcode image to save it",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintLabels = () => {
+    if (!item.sku || labelQuantity < 1) return;
+    
+    const printLabels = AutoPrintLabels({ 
+      item, 
+      quantity: labelQuantity, 
+      autoOpen: false 
+    });
+    printLabels.openPrintPreview(labelQuantity);
   };
 
   return (
@@ -192,6 +216,42 @@ export function WorkingBarcode({ item }: WorkingBarcodeProps) {
                   <Printer className="h-3 w-3 mr-1" />
                   {loading ? 'Opening...' : 'Print'}
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Print Labels Section */}
+          {item.sku && (
+            <div className="pt-3 border-t">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Print Labels</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="label-quantity" className="text-xs">Quantity:</Label>
+                  <Input
+                    id="label-quantity"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={labelQuantity}
+                    onChange={(e) => setLabelQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 h-8 text-sm"
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={handlePrintLabels}
+                    disabled={loading || !item.sku}
+                    className="flex-1"
+                  >
+                    <Printer className="h-3 w-3 mr-1" />
+                    Print {labelQuantity} Label{labelQuantity > 1 ? 's' : ''}
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Perfect for warehouse labeling and inventory tracking
+                </div>
               </div>
             </div>
           )}
