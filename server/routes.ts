@@ -3888,8 +3888,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Inventory item not found" });
       }
       
-      // Create the product
-      const result = await createShopifyProduct(inventoryItem, sku);
+      // Create the product using the Shopify service
+      const { ShopifyInventorySync } = await import('./services/shopify-inventory-sync');
+      const shopifySync = new ShopifyInventorySync();
+      const result = await shopifySync.createProductFromItem(inventoryItem);
       
       res.json(result);
     } catch (error) {
@@ -4480,31 +4482,45 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Real inventory quantity sync from Shopify
+  // Real inventory quantity sync from Shopify with rate limiting
   app.post("/api/shopify/sync-real-quantities", async (req: Request, res: Response) => {
     try {
       console.log('Starting real inventory quantity sync from Shopify...');
       
-      const { ShopifyInventoryLevels } = await import('./services/shopify-inventory-levels');
-      const inventoryService = new ShopifyInventoryLevels();
+      const { shopifyRateLimiter } = await import('./services/rate-limiter');
       
-      // Get all current inventory items
+      // Get all current inventory items with shopifyId
       const items = await storage.getItems();
+      const itemsWithShopifyId = items.filter(item => item.shopifyId);
+      
       let updated = 0;
       const errors: string[] = [];
       
-      for (const item of items) {
+      console.log(`Found ${itemsWithShopifyId.length} items with Shopify IDs to sync`);
+      
+      // Process items with rate limiting
+      for (const item of itemsWithShopifyId) {
         try {
-          if (item.shopifyId) {
-            // Get real quantity from Shopify for this variant
-            const realQuantity = await inventoryService.getVariantInventoryQuantity(item.shopifyId);
+          await shopifyRateLimiter.executeWithBackoff(async () => {
+            const { getShopifyClient } = await import('./services/shopify-auth');
+            const { shopify } = await getShopifyClient();
             
-            if (item.quantity !== realQuantity) {
-              await storage.updateItem(item.id, { quantity: realQuantity });
-              console.log(`Updated ${item.name}: ${item.quantity} → ${realQuantity}`);
-              updated++;
+            // Get product variant to check inventory
+            const variant = await shopify.rest.ProductVariant.find({
+              session: shopify.session,
+              id: parseInt(item.shopifyId!)
+            });
+            
+            if (variant && variant.inventory_quantity !== undefined) {
+              const realQuantity = variant.inventory_quantity;
+              
+              if (item.quantity !== realQuantity) {
+                await storage.updateItem(item.id, { quantity: realQuantity });
+                console.log(`Updated ${item.name}: ${item.quantity} → ${realQuantity}`);
+                updated++;
+              }
             }
-          }
+          });
         } catch (error) {
           const errorMsg = `Failed to sync ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           console.error(errorMsg);
