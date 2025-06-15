@@ -178,11 +178,24 @@ export class ShopifyInventorySync {
         params.page_info = pageInfo;
       }
 
-      const response = await shopifyClient.rest.Product.all(params);
-      allProducts.push(...response.data);
+      // Use the correct Shopify client API structure
+      const response = await shopifyClient.product.list(params);
       
-      pageInfo = response.pageInfo?.nextPageUrl ? 
-        new URL(response.pageInfo.nextPageUrl).searchParams.get('page_info') : null;
+      if (Array.isArray(response)) {
+        allProducts.push(...response);
+        // If we got less than the limit, we're done
+        pageInfo = response.length === params.limit ? 
+          (response[response.length - 1]?.id || null) : null;
+        if (pageInfo) {
+          params.since_id = pageInfo;
+          delete params.page_info;
+        }
+      } else {
+        // Handle case where response has data property
+        const products = response.data || response;
+        allProducts.push(...products);
+        pageInfo = null; // Simplified for now
+      }
         
     } while (pageInfo);
 

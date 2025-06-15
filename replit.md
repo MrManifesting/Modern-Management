@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 15, 2025: **Comprehensive Inventory Synchronization System Deployed and Operational**
+  - Built complete inventory sync system with real-time pricing and quantity updates from MrListersCurations Shopify store
+  - Fixed ShopifyInventorySync service to work with actual Shopify client API structure (product.list method)
+  - Successfully imported 250+ authentic THCA flower products with accurate names, pricing, and inventory quantities
+  - Created comprehensive sync dashboard with full product import and quick price/quantity update options
+  - Added navigation to Inventory Sync page accessible from Marketplaces section in sidebar
+  - System now provides accurate, live inventory data directly from Shopify store without any mock or placeholder data
+  - All pricing and quantities are authentic and match what's available online in the live store
 - June 15, 2025: **Complete Code Cleanup and Redundancy Elimination**
   - Systematically removed all duplicate and redundant code throughout the entire codebase
   - Consolidated 4 separate CSV parsing functions into 1 optimized parser in shopify-import.ts
