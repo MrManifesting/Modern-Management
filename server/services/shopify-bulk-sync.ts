@@ -195,35 +195,36 @@ export class ShopifyBulkSync {
   }
 
   /**
-   * Fetch all products from Shopify efficiently
+   * Fetch all products from Shopify efficiently using existing service
    */
   private async fetchAllShopifyProducts(): Promise<ShopifyProduct[]> {
-    const shopifyClient = await getShopifyClient();
-    if (!shopifyClient || !shopifyClient.shopify) {
-      throw new Error('Shopify client not available');
+    try {
+      // Use the existing working /api/shopify/products endpoint
+      const response = await fetch('http://localhost:5000/api/shopify/products');
+      
+      if (!response.ok) {
+        throw new Error(`Products API error: ${response.status} - ${response.statusText}`);
+      }
+
+      const products = await response.json();
+      console.log(`Fetched ${products.length} products from existing API`);
+
+      return products.map((product: any) => ({
+        id: product.id.toString(),
+        handle: product.handle,
+        title: product.title,
+        vendor: product.vendor || 'Unknown',
+        product_type: product.product_type || 'Flower',
+        variants: (product.variants || []).map((variant: any) => ({
+          id: variant.id.toString(),
+          sku: variant.sku || '',
+          price: variant.price || '0.00',
+          inventory_quantity: variant.inventory_quantity || 0
+        }))
+      }));
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      throw new Error(`Failed to fetch products: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const { shopify } = shopifyClient;
-    
-    // Use the product list method that works with the existing client
-    const products = await shopify.rest.Product.all({
-      session: shopify.session,
-      limit: 250,
-      fields: 'id,handle,title,vendor,product_type,variants'
-    });
-
-    return products.data.map((product: any) => ({
-      id: product.id.toString(),
-      handle: product.handle,
-      title: product.title,
-      vendor: product.vendor,
-      product_type: product.product_type,
-      variants: (product.variants || []).map((variant: any) => ({
-        id: variant.id.toString(),
-        sku: variant.sku,
-        price: variant.price,
-        inventory_quantity: variant.inventory_quantity || 0
-      }))
-    }));
   }
 }
