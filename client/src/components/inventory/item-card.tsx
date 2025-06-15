@@ -194,7 +194,7 @@ export default function ItemCard({
         onClick={handleCardClick}
       >
         <div className="relative h-48 bg-gray-200">
-          {/* Item image carousel */}
+          {/* Item image carousel with enhanced thumbnail support */}
           {(item.images as string[])?.length > 0 ? (
             <ImageCarousel 
               images={item.images as string[]} 

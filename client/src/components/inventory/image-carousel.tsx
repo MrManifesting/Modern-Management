@@ -45,6 +45,24 @@ export default function ImageCarousel({ images, alt, className = "" }: ImageCaro
     );
   }
 
+  // Helper function to get image URL with proper fallback
+  const getImageUrl = (imageUrl: string) => {
+    // Handle Shopify CDN URLs
+    if (imageUrl?.includes('shopify.com') || imageUrl?.includes('cdn.shopify.com')) {
+      return imageUrl;
+    }
+    // Handle local media files
+    if (imageUrl?.startsWith('/media/') || imageUrl?.startsWith('/uploads/')) {
+      return imageUrl;
+    }
+    // Handle external URLs
+    if (imageUrl?.startsWith('http')) {
+      return imageUrl;
+    }
+    // Fallback for relative paths
+    return `/media/${imageUrl}`;
+  };
+
   // If there's only one image, show it without the carousel
   if (images.length === 1) {
     return (

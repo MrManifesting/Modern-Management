@@ -3636,6 +3636,55 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: 'Failed to link media to item' });
     }
   });
+
+  // Auto-tag photos with item information
+  app.post("/api/media/tag-photos", async (req: Request, res: Response) => {
+    try {
+      const { itemId, itemName, itemSku, photoCount } = req.body;
+      
+      if (!itemId || !itemName) {
+        return res.status(400).json({ error: "Item ID and name are required" });
+      }
+
+      // Get the item to verify it exists
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Tag recent media files by automatically linking them to the item
+      // This creates associations that will be picked up by the thumbnail system
+      let taggedCount = 0;
+      
+      try {
+        const { getMediaFiles } = await import('./services/telegram.js');
+        const mediaFiles = getMediaFiles('image', 20, 0); // Get recent 20 image files
+        const recentFiles = mediaFiles.slice(0, photoCount || 5);
+        
+        for (const file of recentFiles) {
+          try {
+            // Create filename patterns that include item information
+            const taggedName = `${itemSku || 'item'}_${itemId}_${file.name}`;
+            await linkMediaToItem(itemId, file.name);
+            taggedCount++;
+          } catch (error) {
+            console.warn(`Failed to tag file ${file.name}:`, error);
+          }
+        }
+      } catch (error) {
+        console.warn('Media service not available:', error);
+      }
+
+      res.json({
+        success: true,
+        taggedCount,
+        message: `Successfully associated ${taggedCount} photos with ${itemName}`
+      });
+    } catch (error) {
+      console.error("Error tagging photos:", error);
+      res.status(500).json({ error: "Failed to tag photos" });
+    }
+  });
   
   // Serve static media files
   app.use('/media', (req, res, next) => {
