@@ -68,10 +68,21 @@ export default function ImageCarousel({ images, alt, className = "" }: ImageCaro
     return (
       <div className={`relative overflow-hidden ${className}`}>
         <img 
-          src={images[0]} 
+          src={getImageUrl(images[0])} 
           alt={alt} 
           className="h-full w-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const fallback = target.parentElement?.querySelector('.fallback-placeholder');
+            if (fallback) {
+              (fallback as HTMLElement).style.display = 'flex';
+            }
+          }}
         />
+        <div className="fallback-placeholder hidden absolute inset-0 bg-gray-200 flex items-center justify-center">
+          <span className="text-gray-500 text-sm">No image</span>
+        </div>
       </div>
     );
   }
