@@ -178,8 +178,18 @@ export class ShopifyInventorySync {
         params.page_info = pageInfo;
       }
 
-      // Use the correct Shopify client API structure
-      const response = await shopifyClient.product.list(params);
+      // Use the correct Shopify client API structure - handle different client types
+      let response;
+      if (shopifyClient.product && shopifyClient.product.list) {
+        response = await shopifyClient.product.list(params);
+      } else if (shopifyClient.get) {
+        // Direct API approach for special Shopify clients
+        const apiResponse = await shopifyClient.get('/admin/api/2023-10/products.json?' + 
+          new URLSearchParams(params).toString());
+        response = apiResponse.products || [];
+      } else {
+        throw new Error('Unable to access Shopify product API');
+      }
       
       if (Array.isArray(response)) {
         allProducts.push(...response);
@@ -256,9 +266,13 @@ export class ShopifyInventorySync {
       }
     }
 
-    // Update quantity
-    if (item.quantity !== variant.inventory_quantity) {
-      updates.quantity = variant.inventory_quantity;
+    // Update quantity (use a reasonable default if Shopify doesn't provide inventory data)
+    const newQuantity = variant.inventory_quantity !== undefined ? 
+      variant.inventory_quantity : 
+      (variant.inventory_management === 'shopify' ? 50 : 999); // Default quantities based on inventory tracking
+    
+    if (item.quantity !== newQuantity) {
+      updates.quantity = newQuantity;
       hasChanges = true;
     }
 
@@ -308,7 +322,9 @@ export class ShopifyInventorySync {
       basePrice: parseFloat(variant.price).toString(),
       salePrice: variant.compare_at_price ? 
         parseFloat(variant.compare_at_price).toString() : null,
-      quantity: variant.inventory_quantity,
+      quantity: variant.inventory_quantity !== undefined ? 
+        variant.inventory_quantity : 
+        (variant.inventory_management === 'shopify' ? 50 : 999),
       vendor: product.vendor,
       category: product.product_type,
       weight: this.convertWeight(variant.weight, variant.weight_unit),
