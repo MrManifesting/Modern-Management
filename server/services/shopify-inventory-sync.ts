@@ -110,7 +110,7 @@ export class ShopifyInventorySync {
       const errors: string[] = [];
 
       // Get existing items for comparison
-      const existingItems = await this.storage.getItems();
+      const existingItems = this.storage ? await this.storage.getItems() : [];
       const existingItemsMap = new Map<string, Item>();
       
       // Create maps by SKU and handle for efficient lookup
@@ -171,7 +171,7 @@ export class ShopifyInventorySync {
       }
 
       const products = await this.fetchAllShopifyProducts(shopifyClient);
-      const existingItems = await this.storage.getItems();
+      const existingItems = this.storage ? await this.storage.getItems() : [];
       
       let updated = 0;
       const errors: string[] = [];
@@ -212,62 +212,148 @@ export class ShopifyInventorySync {
   }
 
   /**
-   * Fetch all products from Shopify with pagination
+   * Fetch all products from Shopify with rate limiting
    */
   private async fetchAllShopifyProducts(shopifyClient: any): Promise<ShopifyProduct[]> {
-    const allProducts: ShopifyProduct[] = [];
-    let pageInfo = null;
-    
-    do {
-      const params: any = {
-        limit: 250, // Maximum allowed by Shopify
-        fields: 'id,handle,title,vendor,product_type,status,variants,images'
-      };
-      
-      if (pageInfo) {
-        params.page_info = pageInfo;
-      }
-
-      // Use the correct Shopify client API structure - handle different client types
-      let response;
-      if (shopifyClient.product && shopifyClient.product.list) {
-        response = await shopifyClient.product.list(params);
-      } else if (shopifyClient.get) {
-        // Direct API approach for special Shopify clients
-        const apiResponse = await shopifyClient.get('/admin/api/2023-10/products.json?' + 
-          new URLSearchParams(params).toString());
-        response = apiResponse.products || [];
-      } else {
-        throw new Error('Unable to access Shopify product API');
-      }
-      
-      if (Array.isArray(response)) {
-        allProducts.push(...response);
-        // If we got less than the limit, we're done
-        pageInfo = response.length === params.limit ? 
-          (response[response.length - 1]?.id || null) : null;
-        if (pageInfo) {
-          params.since_id = pageInfo;
-          delete params.page_info;
-        }
-      } else {
-        // Handle case where response has data property
-        const products = response.data || response;
-        allProducts.push(...products);
-        pageInfo = null; // Simplified for now
-      }
-        
-    } while (pageInfo);
-
-    return allProducts;
+    return await shopifyRateLimiter.executeWithBackoff(async () => {
+      const { shopify } = shopifyClient;
+      const products = await shopify.rest.Product.all({
+        session: shopify.session,
+        limit: 250
+      });
+      return products.data;
+    });
   }
 
   /**
-   * Sync a single product from Shopify
+   * Find matching Shopify product for an inventory item
+   */
+  private findMatchingShopifyProduct(item: Item, products: ShopifyProduct[]): ShopifyProduct | null {
+    // Try to match by SKU first
+    if (item.sku) {
+      for (const product of products) {
+        for (const variant of product.variants || []) {
+          if (variant.sku === item.sku) {
+            return product;
+          }
+        }
+      }
+    }
+
+    // Try to match by handle or name
+    const itemNameLower = item.name?.toLowerCase() || '';
+    const itemHandle = item.handle?.toLowerCase() || '';
+    
+    return products.find(product => 
+      product.handle === itemHandle || 
+      product.title.toLowerCase().includes(itemNameLower)
+    ) || null;
+  }
+
+  /**
+   * Find matching variant within a product
+   */
+  private findMatchingVariant(item: Item, product: ShopifyProduct): ShopifyVariant | null {
+    if (!item.sku) return product.variants?.[0] || null;
+    
+    return product.variants?.find(variant => variant.sku === item.sku) || null;
+  }
+
+  /**
+   * Update item prices and quantities from Shopify variant
+   */
+  private async updateItemPricesAndQuantity(item: Item, variant: ShopifyVariant): Promise<boolean> {
+    if (!this.storage) return false;
+
+    const updateData: Partial<Item> = {};
+    let needsUpdate = false;
+
+    // Check price
+    const shopifyPrice = parseFloat(variant.price || '0');
+    if (item.basePrice !== shopifyPrice) {
+      updateData.basePrice = shopifyPrice;
+      needsUpdate = true;
+    }
+
+    // Check quantity
+    const shopifyQuantity = variant.inventory_quantity || 0;
+    if (item.quantity !== shopifyQuantity) {
+      updateData.quantity = shopifyQuantity;
+      needsUpdate = true;
+    }
+
+    // Update shopifyId if missing
+    if (!item.shopifyId && variant.id) {
+      updateData.shopifyId = variant.id.toString();
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      await this.storage.updateItem(item.id, updateData);
+      console.log(`Updated ${item.name}: price=${shopifyPrice}, quantity=${shopifyQuantity}`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Sync a single product with rate limiting
    */
   private async syncSingleProduct(
     product: ShopifyProduct, 
     existingItemsMap: Map<string, Item>,
+    onUpdate: (type: 'updated' | 'created') => void
+  ): Promise<void> {
+    if (!this.storage) return;
+
+    await shopifyRateLimiter.executeWithRateLimit(async () => {
+      for (const variant of product.variants || []) {
+        if (!variant.sku) continue;
+
+        const existingItem = existingItemsMap.get(variant.sku);
+
+        if (existingItem) {
+          // Update existing item
+          const updateData = {
+            name: product.title,
+            basePrice: parseFloat(variant.price || '0'),
+            quantity: variant.inventory_quantity || 0,
+            shopifyId: variant.id?.toString(),
+            brand: product.vendor || existingItem.brand,
+            category: product.product_type || existingItem.category,
+            description: product.body_html || existingItem.description,
+            handle: product.handle
+          };
+
+          await this.storage!.updateItem(existingItem.id, updateData);
+          console.log(`Updated: ${product.title} - ${variant.sku}`);
+          onUpdate('updated');
+        } else {
+          // Create new item
+          const newItem = {
+            name: product.title,
+            sku: variant.sku,
+            basePrice: parseFloat(variant.price || '0'),
+            quantity: variant.inventory_quantity || 0,
+            shopifyId: variant.id?.toString(),
+            brand: product.vendor || 'Unknown',
+            category: product.product_type || 'Uncategorized',
+            description: product.body_html || '',
+            weight: `${variant.weight || 0} ${variant.weight_unit || 'g'}`,
+            status: 'available',
+            active: true,
+            handle: product.handle
+          };
+
+          await this.storage!.createItem(newItem);
+          console.log(`Created: ${product.title} - ${variant.sku}`);
+          onUpdate('created');
+        }
+      }
+    });
+  }
+}
     onUpdate: (type: 'updated' | 'created') => void
   ): Promise<void> {
     
