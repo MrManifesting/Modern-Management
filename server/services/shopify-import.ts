@@ -356,6 +356,7 @@ export function extractProductFromRow(headers: string[], row: string[]): any {
     weight: productInfo.weight || '1 pound',
     status: productInfo.published ? 'active' : 'inactive',
     imageUrl: productInfo.imageUrl || '',
+    images: productInfo.imageUrl ? [productInfo.imageUrl] : [],
     tags: productInfo.tags || ''
   };
 }
@@ -381,6 +382,7 @@ export function extractInventoryFromRow(headers: string[], row: string[]): any {
     weight: '1 pound',
     status: 'active',
     imageUrl: inventoryInfo.imageUrl || '',
+    images: inventoryInfo.imageUrl ? [inventoryInfo.imageUrl] : [],
     tags: inventoryInfo.tags || ''
   };
 }
@@ -1099,7 +1101,7 @@ export async function importShopifyCSV(
             const productInfo = extractProductInfo(row, headers, format, i + 1);
             if (!productInfo) continue;
             
-            const { title, handle, sku, price, weight, quantity, description, productType, vendor, published, tags } = productInfo;
+            const { title, handle, sku, price, weight, quantity, description, productType, vendor, published, tags, imageUrl } = productInfo;
             
             // Skip if already processed this handle
             if (processedHandles.has(handle)) continue;
@@ -1120,7 +1122,7 @@ export async function importShopifyCSV(
               quantity: quantity,
               status: published ? 'active' : 'inactive',
               tags: tagsArray,
-              images: [], // Start with empty array for images
+              images: imageUrl ? [imageUrl] : [], // Include image URL if available
               marketplace: [], // Empty marketplace array
               metadata: {}, // Empty metadata object
               itemType: 'standard',
