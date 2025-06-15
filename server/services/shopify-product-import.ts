@@ -178,7 +178,7 @@ export class ShopifyProductImportService {
         console.log(`Updated item: ${product.title}`);
       } else {
         // Create new item from Shopify product
-        await this.storage.addItem({
+        await this.storage.createItem({
           ...itemData,
           createdAt: new Date(),
           updatedAt: new Date()
