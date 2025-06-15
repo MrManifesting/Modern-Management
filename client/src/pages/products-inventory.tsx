@@ -1481,24 +1481,65 @@ const ProductsInventoryPage: React.FC = () => {
                 </>
               )}
               
-              <Button 
-                variant="outline" 
-                className="gap-1.5"
-                onClick={importAllProductsFromShopify}
-                disabled={syncLoading}
-              >
-                {syncLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Store className="h-4 w-4" />
+              {/* Enhanced Shopify Import Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="gap-1.5"
+                    disabled={syncLoading}
+                  >
+                    {syncLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Store className="h-4 w-4" />
+                        Shopify Import
+                        <ChevronDown className="h-4 w-4 ml-1" />
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Import Options</DropdownMenuLabel>
+                  <DropdownMenuItem 
+                    className="flex items-center cursor-pointer"
+                    onClick={importAllProductsFromShopify}
+                    disabled={syncLoading}
+                  >
+                    <Store className="mr-2 h-4 w-4" />
                     Import All Products
-                  </>
-                )}
-              </Button>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="flex items-center cursor-pointer"
+                    onClick={updatePricingFromShopify}
+                    disabled={syncLoading}
+                  >
+                    <CircleDollarSign className="mr-2 h-4 w-4" />
+                    Update Pricing Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="flex items-center cursor-pointer"
+                    onClick={updateImagesFromShopify}
+                    disabled={syncLoading}
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Update Images Only
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="flex items-center cursor-pointer text-blue-600"
+                    onClick={syncWithShopify}
+                    disabled={syncLoading}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Full Sync
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button 
                 variant="outline" 
