@@ -1292,7 +1292,7 @@ const ProductsInventoryPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="container mx-auto py-6 space-y-6">
+      <main className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
             <div>
@@ -2057,8 +2057,7 @@ const ProductsInventoryPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-    </main>
+      </main>
 
     {/* Delete Confirmation Dialog */}
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
