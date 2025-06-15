@@ -2055,11 +2055,13 @@ const ProductsInventoryPage: React.FC = () => {
                 </TabsContent>
               </Tabs>
             )}
-          </div>
-        </main>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Item</AlertDialogTitle>
