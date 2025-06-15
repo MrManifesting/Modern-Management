@@ -345,10 +345,10 @@ export function extractProductFromRow(headers: string[], row: string[]): any {
   return {
     name: productInfo.title,
     sku: productInfo.sku || `IMPORT-${Date.now()}`,
-    basePrice: productInfo.price?.toString() || '0.00',
-    costPrice: productInfo.costPrice?.toString() || '0.00',
-    salePrice: productInfo.compareAtPrice?.toString() || '0.00',
-    wholesalePrice: (productInfo.price * 0.8)?.toString() || '0.00', // 20% discount for wholesale
+    basePrice: productInfo.price > 0 ? productInfo.price.toFixed(2) : '0.00',
+    costPrice: productInfo.costPrice > 0 ? productInfo.costPrice.toFixed(2) : '0.00',
+    salePrice: productInfo.compareAtPrice > 0 ? productInfo.compareAtPrice.toFixed(2) : '0.00',
+    wholesalePrice: productInfo.price > 0 ? (productInfo.price * 0.8).toFixed(2) : '0.00', // 20% discount for wholesale
     description: productInfo.description || '',
     category: productInfo.productType || 'Imported',
     vendor: productInfo.vendor || 'Unknown',
@@ -370,10 +370,10 @@ export function extractInventoryFromRow(headers: string[], row: string[]): any {
   return {
     name: inventoryInfo.title,
     sku: inventoryInfo.sku || `IMPORT-${Date.now()}`,
-    basePrice: inventoryInfo.price?.toString() || '0.00',
-    costPrice: inventoryInfo.costPrice?.toString() || '0.00',
-    salePrice: inventoryInfo.compareAtPrice?.toString() || '0.00',
-    wholesalePrice: (inventoryInfo.price * 0.8)?.toString() || '0.00',
+    basePrice: inventoryInfo.price > 0 ? inventoryInfo.price.toFixed(2) : '0.00',
+    costPrice: inventoryInfo.costPrice > 0 ? inventoryInfo.costPrice.toFixed(2) : '0.00',
+    salePrice: inventoryInfo.compareAtPrice > 0 ? inventoryInfo.compareAtPrice.toFixed(2) : '0.00',
+    wholesalePrice: inventoryInfo.price > 0 ? (inventoryInfo.price * 0.8).toFixed(2) : '0.00',
     description: inventoryInfo.description || '',
     category: inventoryInfo.productType || 'Cannabis',
     vendor: inventoryInfo.vendor || 'Unknown',

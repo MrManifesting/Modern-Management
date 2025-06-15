@@ -386,19 +386,18 @@ export default function ItemCard({
             <div className="text-right ml-2">
               {/* Main Price Display */}
               <div className="font-semibold text-primary-600">
-                ${typeof item.basePrice === 'string' ? parseFloat(item.basePrice || '0').toFixed(2) : 
-                  typeof item.salePrice === 'string' ? parseFloat(item.salePrice || '0').toFixed(2) : '0.00'}
+                ${parseFloat(item.basePrice || '0').toFixed(2)}
               </div>
               
               {/* Sale Price Indicator */}
-              {item.salePrice && item.basePrice && parseFloat(item.salePrice || '0') < parseFloat(item.basePrice || '0') && (
-                <div className="text-xs text-red-600 line-through">
-                  ${parseFloat(item.basePrice || '0').toFixed(2)}
+              {item.salePrice && parseFloat(item.salePrice || '0') > 0 && parseFloat(item.salePrice || '0') !== parseFloat(item.basePrice || '0') && (
+                <div className="text-xs text-green-600">
+                  Sale: ${parseFloat(item.salePrice || '0').toFixed(2)}
                 </div>
               )}
               
               {/* Wholesale Price */}
-              {item.wholesalePrice && (
+              {item.wholesalePrice && parseFloat(item.wholesalePrice || '0') > 0 && (
                 <div className="text-xs text-gray-500">
                   Wholesale: ${parseFloat(item.wholesalePrice || '0').toFixed(2)}
                 </div>
@@ -412,10 +411,10 @@ export default function ItemCard({
           </p>
           
           {/* Cost and Margin Info */}
-          {item.costPrice && (
+          {item.costPrice && parseFloat(item.costPrice || '0') > 0 && (
             <div className="mt-2 text-xs text-gray-500 flex justify-between">
               <span>Cost: ${parseFloat(item.costPrice || '0').toFixed(2)}</span>
-              {item.basePrice && (
+              {item.basePrice && parseFloat(item.basePrice || '0') > 0 && (
                 <span className="text-green-600">
                   Margin: {((parseFloat(item.basePrice || '0') - parseFloat(item.costPrice || '0')) / parseFloat(item.basePrice || '1') * 100).toFixed(0)}%
                 </span>
