@@ -4480,6 +4480,57 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Real inventory quantity sync from Shopify
+  app.post("/api/shopify/sync-real-quantities", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting real inventory quantity sync from Shopify...');
+      
+      const { ShopifyInventoryLevels } = await import('./services/shopify-inventory-levels');
+      const inventoryService = new ShopifyInventoryLevels();
+      
+      // Get all current inventory items
+      const items = await storage.getItems();
+      let updated = 0;
+      const errors: string[] = [];
+      
+      for (const item of items) {
+        try {
+          if (item.shopifyId) {
+            // Get real quantity from Shopify for this variant
+            const realQuantity = await inventoryService.getVariantInventoryQuantity(item.shopifyId);
+            
+            if (item.quantity !== realQuantity) {
+              await storage.updateItem(item.id, { quantity: realQuantity });
+              console.log(`Updated ${item.name}: ${item.quantity} → ${realQuantity}`);
+              updated++;
+            }
+          }
+        } catch (error) {
+          const errorMsg = `Failed to sync ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+      
+      console.log(`Real quantity sync completed: ${updated} items updated`);
+      res.json({
+        success: true,
+        message: `Successfully synced real quantities for ${updated} items`,
+        updated,
+        errors
+      });
+      
+    } catch (error) {
+      console.error("Real quantity sync failed:", error);
+      res.status(500).json({
+        success: false,
+        message: `Real quantity sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        updated: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  });
+
   // Register Shopify credentials routes
   registerShopifyCredentialsRoutes(app, storage);
   
@@ -5743,31 +5794,117 @@ ${topCustomersCsv}`;
   // Register bidirectional sync routes for app, Google Sheets, and Shopify
   registerBidirectionalSyncRoutes(app, storage);
 
-  // View item in Shopify store
+  // View item in Shopify store with proper product search
   app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const item = await storage.getItem(parseInt(id));
       
       if (!item) {
-        return res.status(404).json({ error: "Item not found" });
+        return res.status(404).json({ 
+          success: false, 
+          message: "Item not found" 
+        });
       }
       
-      // If item has Shopify ID, redirect to admin product page
-      if (item.shopifyId) {
-        const adminUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
-        res.redirect(adminUrl);
-        return;
-      }
+      console.log(`Trying to fetch item with ID: ${id}`);
+      console.log(`Found item: ${item.name}`);
       
-      // For items without Shopify ID, search the live store
-      const searchTerm = item.sku || item.name || '';
-      const storeUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
-      res.redirect(storeUrl);
+      // Try to find product in Shopify by SKU or name
+      try {
+        const { getShopifyClient } = await import('./services/shopify-auth');
+        const { shopify, credentials } = await getShopifyClient();
+        
+        // Search for product using direct HTTPS API call
+        const searchUrl = `https://${credentials.storeUrl}/admin/api/2023-10/products.json?limit=50`;
+        
+        const https = require('https');
+        const searchResult = await new Promise<any>((resolve, reject) => {
+          const req = https.request(searchUrl, {
+            method: 'GET',
+            headers: {
+              'X-Shopify-Access-Token': credentials.accessToken,
+              'Content-Type': 'application/json'
+            }
+          }, (response: any) => {
+            let data = '';
+            response.on('data', (chunk: any) => data += chunk);
+            response.on('end', () => {
+              if (response.statusCode === 200) {
+                resolve(JSON.parse(data));
+              } else {
+                reject(new Error(`API error: ${response.statusCode}`));
+              }
+            });
+          });
+          req.on('error', reject);
+          req.end();
+        });
+        
+        // Find matching product by SKU or name
+        let matchingProduct = null;
+        if (searchResult.products) {
+          for (const product of searchResult.products) {
+            // Check variants for matching SKU
+            for (const variant of product.variants || []) {
+              if (variant.sku === item.sku) {
+                matchingProduct = { product, variant };
+                break;
+              }
+            }
+            if (matchingProduct) break;
+            
+            // Check product title
+            if (product.title.toLowerCase().includes(item.name.toLowerCase().substring(0, 20))) {
+              matchingProduct = { product, variant: product.variants[0] };
+              break;
+            }
+          }
+        }
+        
+        if (matchingProduct) {
+          const adminUrl = `https://${credentials.storeUrl}/admin/products/${matchingProduct.product.id}`;
+          return res.json({
+            success: true,
+            message: "Product found in Shopify",
+            url: adminUrl,
+            productId: matchingProduct.product.id,
+            item: { id: item.id, name: item.name, sku: item.sku }
+          });
+        } else {
+          // If not found, provide search URL
+          const searchTerm = item.sku || item.name.substring(0, 30);
+          const storeSearchUrl = `https://${credentials.storeUrl}/search?q=${encodeURIComponent(searchTerm)}`;
+          return res.json({
+            success: true,
+            message: "Product not found in admin, searching store",
+            url: storeSearchUrl,
+            item: { id: item.id, name: item.name, sku: item.sku }
+          });
+        }
+        
+      } catch (searchError) {
+        console.log('GraphQL search failed or not available, trying another approach...');
+        
+        // Fallback to store search
+        const searchTerm = item.sku || item.name.substring(0, 30);
+        const storeUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
+        
+        return res.json({
+          success: false,
+          message: "Cannot search products. Shopify API client doesn't have REST product search capability.",
+          url: storeUrl,
+          item: { id: item.id, name: item.name, sku: item.sku }
+        });
+      }
       
     } catch (error) {
       console.error("Error viewing item in Shopify:", error);
-      res.status(500).json({ error: "Failed to open Shopify view" });
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to search Shopify products",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

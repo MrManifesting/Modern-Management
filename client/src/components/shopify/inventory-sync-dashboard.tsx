@@ -106,7 +106,36 @@ export function InventorySyncDashboard() {
     }
   });
 
-  const isAnyMutationLoading = fullSyncMutation.isPending || priceQuantitySyncMutation.isPending;
+  // Real inventory quantity sync mutation
+  const realQuantitySyncMutation = useMutation({
+    mutationFn: async (): Promise<SyncResult> => {
+      setSyncProgress(10);
+      const response = await apiRequest('POST', '/api/shopify/sync-real-quantities');
+      setSyncProgress(100);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shopify/sync-status'] });
+      setSyncProgress(0);
+      
+      toast({
+        title: "Real Quantities Synced",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      setSyncProgress(0);
+      toast({
+        title: "Quantity Sync Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const isAnyMutationLoading = fullSyncMutation.isPending || priceQuantitySyncMutation.isPending || realQuantitySyncMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -153,7 +182,7 @@ export function InventorySyncDashboard() {
       )}
 
       {/* Sync Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Full Inventory Sync */}
         <Card className="border-2 border-blue-200 bg-blue-50/50">
           <CardHeader>
@@ -242,6 +271,53 @@ export function InventorySyncDashboard() {
                 <>
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   Update Prices & Quantities
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Real Inventory Quantities Sync */}
+        <Card className="border-2 border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Package className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-orange-800">Real Inventory Quantities</CardTitle>
+            </div>
+            <CardDescription>
+              Fetch authentic inventory quantities from your Shopify store's inventory API.
+              Replaces default quantities with real stock levels.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">What this does:</span>
+              </div>
+              <ul className="text-sm space-y-1 text-muted-foreground ml-4">
+                <li>• Fetches real inventory quantities from Shopify</li>
+                <li>• Updates all items with authentic stock levels</li>
+                <li>• Replaces placeholder quantities (like 50)</li>
+                <li>• Uses Shopify's inventory API for accuracy</li>
+                <li>• Shows true available quantities</li>
+              </ul>
+            </div>
+            <Separator />
+            <Button 
+              onClick={() => realQuantitySyncMutation.mutate()}
+              disabled={!syncStatus?.isConnected || isAnyMutationLoading}
+              className="w-full bg-orange-600 hover:bg-orange-700"
+              size="lg"
+            >
+              {realQuantitySyncMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing Real Quantities...
+                </>
+              ) : (
+                <>
+                  <Package className="mr-2 h-4 w-4" />
+                  Sync Real Quantities
                 </>
               )}
             </Button>
