@@ -4430,6 +4430,31 @@ ${topCustomersCsv}`;
       console.log(`Processing live order: ${orderData.order_number || orderData.id}`);
       console.log(`Line items: ${orderData.line_items?.length || 0}`);
 
+      // Log order to Google Sheets for tracking
+      try {
+        const { GoogleSheetsService } = await import('./services/google-sheets.js');
+        const googleSheetsService = new GoogleSheetsService();
+        
+        const orderRow = [
+          new Date().toISOString(),
+          orderData.id || orderData.order_number,
+          orderData.customer?.email || '',
+          orderData.customer?.first_name || '',
+          orderData.customer?.last_name || '',
+          orderData.total_price || '0.00',
+          orderData.line_items?.length || 0,
+          orderData.fulfillment_status || 'unfulfilled',
+          orderData.financial_status || 'pending',
+          'Shopify',
+          JSON.stringify(orderData.line_items || [])
+        ];
+
+        await googleSheetsService.appendToSheet('Orders', [orderRow]);
+        console.log('Order logged to Google Sheets:', orderData.id);
+      } catch (sheetsError) {
+        console.error('Failed to log order to Google Sheets:', sheetsError);
+      }
+
       const processedItems = [];
       const errors = [];
 
@@ -5511,24 +5536,126 @@ ${topCustomersCsv}`;
         return res.status(404).json({ error: "Item not found" });
       }
       
-      if (!item.shopifyId) {
-        return res.status(400).json({ error: "Item not available in Shopify" });
+      // If item has Shopify ID, redirect to admin product page
+      if (item.shopifyId) {
+        const adminUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+        res.redirect(adminUrl);
+        return;
       }
       
-      // Get Shopify credentials
-      const { shopName } = getShopifyCredentials();
-      
-      if (!shopName) {
-        return res.status(400).json({ error: "Shopify store not configured" });
-      }
-      
-      // Redirect to Shopify admin product page
-      const adminUrl = `https://${shopName}/admin/products/${item.shopifyId}`;
-      res.redirect(adminUrl);
+      // For items without Shopify ID, search the live store
+      const searchTerm = item.sku || item.name || '';
+      const storeUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
+      res.redirect(storeUrl);
       
     } catch (error) {
       console.error("Error viewing item in Shopify:", error);
       res.status(500).json({ error: "Failed to open Shopify view" });
+    }
+  });
+
+  // Google Sheets Order Tracking System
+  app.post("/api/sheets/log-order", async (req: Request, res: Response) => {
+    try {
+      const { orderData } = req.body;
+      
+      // Log order to Google Sheets for tracking
+      const { GoogleSheetsService } = await import('./services/google-sheets.js');
+      const googleSheetsService = new GoogleSheetsService();
+      
+      const orderRow = [
+        new Date().toISOString(),
+        orderData.orderNumber || orderData.id,
+        orderData.customer?.email || '',
+        orderData.customer?.firstName || '',
+        orderData.customer?.lastName || '',
+        orderData.totalPrice || '0.00',
+        orderData.lineItems?.length || 0,
+        orderData.fulfillmentStatus || 'unfulfilled',
+        orderData.financialStatus || 'pending',
+        'Shopify',
+        JSON.stringify(orderData.lineItems || [])
+      ];
+
+      await googleSheetsService.appendToSheet('Orders', [
+        ['Date', 'Order ID', 'Customer Email', 'First Name', 'Last Name', 'Total Price', 'Item Count', 'Fulfillment Status', 'Payment Status', 'Source', 'Line Items'],
+        orderRow
+      ]);
+
+      res.json({ success: true, message: "Order logged to Google Sheets" });
+    } catch (error) {
+      console.error('Error logging order to Google Sheets:', error);
+      res.status(500).json({ error: "Failed to log order to Google Sheets" });
+    }
+  });
+
+  // Enhanced webhook to log orders to Google Sheets
+  app.post("/api/shopify/webhooks/orders/create-with-sheets", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      // Verify webhook signature
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const body = req.body;
+      const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+      
+      if (webhookSecret && hmac) {
+        const crypto = await import('crypto');
+        const calculatedHmac = crypto.createHmac('sha256', webhookSecret)
+          .update(body, 'utf8')
+          .digest('base64');
+        
+        if (calculatedHmac !== hmac) {
+          console.log('Webhook signature verification failed');
+          return res.status(401).send('Unauthorized');
+        }
+      }
+
+      const order = JSON.parse(body.toString());
+      console.log('Processing Shopify order for Google Sheets:', order.id);
+
+      // Log order to Google Sheets
+      try {
+        const { GoogleSheetsService } = await import('./services/google-sheets.js');
+        const googleSheetsService = new GoogleSheetsService();
+        
+        const orderRow = [
+          new Date().toISOString(),
+          order.id || order.order_number,
+          order.customer?.email || '',
+          order.customer?.first_name || '',
+          order.customer?.last_name || '',
+          order.total_price || '0.00',
+          order.line_items?.length || 0,
+          order.fulfillment_status || 'unfulfilled',
+          order.financial_status || 'pending',
+          'Shopify',
+          JSON.stringify(order.line_items || [])
+        ];
+
+        await googleSheetsService.appendToSheet('Orders', [orderRow]);
+        console.log('Order logged to Google Sheets:', order.id);
+      } catch (sheetsError) {
+        console.error('Failed to log order to Google Sheets:', sheetsError);
+      }
+
+      // Process inventory updates
+      for (const lineItem of order.line_items || []) {
+        if (lineItem.sku) {
+          const items = await storage.getItems();
+          const item = items.find(i => i.sku === lineItem.sku);
+          
+          if (item) {
+            const newQuantity = Math.max(0, (item.quantity || 0) - lineItem.quantity);
+            await storage.updateItem(item.id, { quantity: newQuantity });
+            
+            console.log(`Updated ${item.name} quantity: ${item.quantity} → ${newQuantity}`);
+          }
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Error processing order webhook:', error);
+      res.status(500).send('Internal Server Error');
     }
   });
 

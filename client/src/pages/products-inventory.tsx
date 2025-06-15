@@ -1118,15 +1118,13 @@ const ProductsInventoryPage: React.FC = () => {
                   Quick Breakdown
                 </DropdownMenuItem>
               )}
-              {product.shopifyId && (
-                <DropdownMenuItem
-                  className="flex items-center cursor-pointer"
-                  onClick={() => handleViewShopifyClick(product.id || 0)}
-                >
-                  <Store className="mr-2 h-4 w-4" />
-                  View in Shopify
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                className="flex items-center cursor-pointer"
+                onClick={() => handleViewShopifyClick(product.id || 0)}
+              >
+                <Store className="mr-2 h-4 w-4" />
+                {product.shopifyId ? "View in Shopify" : "View Live on Shopify"}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => handleDeleteClick(product.id || 0)}
