@@ -6,6 +6,7 @@
 import { IStorage } from '../storage';
 import { Item } from '@shared/schema';
 import { getShopifyClient } from './shopify-auth';
+import { shopifyRateLimiter } from './rate-limiter';
 
 interface ShopifyProduct {
   id: string;
@@ -31,7 +32,56 @@ interface ShopifyVariant {
 }
 
 export class ShopifyInventorySync {
-  constructor(private storage: IStorage) {}
+  constructor(private storage?: IStorage) {}
+
+  /**
+   * Create a Shopify product from an inventory item
+   */
+  async createProductFromItem(item: Item): Promise<{
+    success: boolean;
+    message: string;
+    productId?: string;
+  }> {
+    try {
+      const { shopify } = await getShopifyClient();
+      
+      // Create product data
+      const productData = {
+        title: item.name,
+        body_html: item.description || `High-quality ${item.category} product`,
+        vendor: item.brand || 'Gold Standard',
+        product_type: item.category || 'Flower',
+        status: 'draft' as const,
+        variants: [{
+          title: 'Default Title',
+          sku: item.sku,
+          price: item.basePrice || '0.00',
+          inventory_quantity: item.quantity || 0,
+          inventory_management: 'shopify',
+          weight: parseFloat(item.weight?.replace(/[^0-9.]/g, '') || '0'),
+          weight_unit: 'g'
+        }]
+      };
+
+      const product = await shopify.rest.Product.save({
+        session: shopify.session,
+        ...productData
+      });
+
+      return {
+        success: true,
+        message: `Product created successfully: ${product.title}`,
+        productId: product.id?.toString()
+      };
+
+    } catch (error) {
+      console.error('Error creating Shopify product:', error);
+      return {
+        success: false,
+        message: `Failed to create product: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
 
   /**
    * Sync all inventory data from Shopify store
