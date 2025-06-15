@@ -733,11 +733,12 @@ export function extractProductInfo(
       const handle = getField('handle');
       const title = getField('title');
       
-      // Try multiple SKU field variations
-      const sku = getField('variant sku') || 
-                  getField('sku') || 
+      // Try multiple SKU field variations with proper field names from export
+      const sku = getField('sku') || 
+                  getField('variant sku') || 
                   getField('variant inventory item id') || 
-                  'Default Title';
+                  getField('shopify variant id') ||
+                  `SKU-${Date.now()}-${rowIndex}`;
       
       // Try multiple description field variations  
       const description = getField('body (html)') || 
@@ -758,20 +759,17 @@ export function extractProductInfo(
       let quantity = 0;
       const qtyStr = getField('variant inventory qty') || 
                      getField('available') || 
+                     getField('on hand') ||
                      getField('inventory qty') || 
                      getField('quantity') || '0';
       quantity = parseInt(String(qtyStr).replace(/[^0-9]/g, '')) || 0;
       
-      // Extract price with comprehensive field options using safe access
+      // Extract price with comprehensive field options matching CSV format
       let price = 0;
       const priceStr = getField('variant price') || 
                        getField('price') || 
-                       getField('price / united states') ||
-                       getField('variant price / united states') ||
                        getField('cost per item') || 
                        getField('variant cost') ||
-                       getField('compare at price') ||
-                       getField('variant compare at price') ||
                        '0';
       
       // Enhanced price parsing to handle currency symbols and formatting
@@ -789,7 +787,7 @@ export function extractProductInfo(
         weight = parseFloat(String(weightStr).replace(/[^0-9.]/g, '')) || null;
       }
       
-      // Extract image URL using safe access
+      // Extract image URL using safe access with exact column name from CSV
       const imageUrl = getField('image src') || 
                       getField('image') || 
                       getField('variant image') || 
