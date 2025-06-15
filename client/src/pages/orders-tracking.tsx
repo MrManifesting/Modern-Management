@@ -78,7 +78,7 @@ export default function OrdersTracking() {
     },
   });
 
-  const orders: OrderRow[] = ordersData?.orders || [];
+  const orders: OrderRow[] = (ordersData as any)?.orders || [];
 
   return (
     <div className="container mx-auto p-6 space-y-6">

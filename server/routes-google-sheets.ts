@@ -448,4 +448,42 @@ export function registerGoogleSheetsRoutes(app: Express, storage: IStorage) {
       });
     }
   });
+
+  /**
+   * Test order processing system
+   */
+  app.post("/api/google-sheets/test-system", async (req: Request, res: Response) => {
+    try {
+      const { testOrderProcessing, testTelegramIntegration, runCompleteTest } = await import('../test-order-processing.js');
+      
+      const { testType } = req.body;
+      
+      let results;
+      
+      switch (testType) {
+        case 'orders':
+          results = await testOrderProcessing();
+          break;
+        case 'telegram':
+          results = await testTelegramIntegration();
+          break;
+        case 'complete':
+        default:
+          results = await runCompleteTest();
+          break;
+      }
+      
+      res.json({
+        success: true,
+        testResults: results,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error running system test:', error);
+      res.status(500).json({ 
+        error: "Failed to run system test",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }
