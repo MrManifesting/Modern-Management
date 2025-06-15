@@ -62,6 +62,7 @@ import csvDirectRoutes from "./routes-csv-direct";
 import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
 import { registerBarcodeFulfillmentRoutes } from "./routes-barcode-fulfillment";
 import { setupAuth, requireAuth } from "./auth-simple";
+import priceSheetRoutes from "./routes-price-sheet";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
