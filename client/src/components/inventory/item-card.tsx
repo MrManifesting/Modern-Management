@@ -386,20 +386,29 @@ export default function ItemCard({
             <div className="text-right ml-2">
               {/* Main Price Display */}
               <div className="font-semibold text-primary-600">
-                ${parseFloat(item.basePrice || '0').toFixed(2)}
+                ${Number(item.basePrice || 0).toLocaleString('en-US', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
               </div>
               
               {/* Sale Price Indicator */}
-              {item.salePrice && parseFloat(item.salePrice || '0') > 0 && parseFloat(item.salePrice || '0') !== parseFloat(item.basePrice || '0') && (
+              {item.salePrice && Number(item.salePrice) > 0 && Number(item.salePrice) !== Number(item.basePrice) && (
                 <div className="text-xs text-green-600">
-                  Sale: ${parseFloat(item.salePrice || '0').toFixed(2)}
+                  Sale: ${Number(item.salePrice).toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}
                 </div>
               )}
               
               {/* Wholesale Price */}
-              {item.wholesalePrice && parseFloat(item.wholesalePrice || '0') > 0 && (
+              {item.wholesalePrice && Number(item.wholesalePrice) > 0 && (
                 <div className="text-xs text-gray-500">
-                  Wholesale: ${parseFloat(item.wholesalePrice || '0').toFixed(2)}
+                  Wholesale: ${Number(item.wholesalePrice).toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}
                 </div>
               )}
             </div>
@@ -411,12 +420,15 @@ export default function ItemCard({
           </p>
           
           {/* Cost and Margin Info */}
-          {item.costPrice && parseFloat(item.costPrice || '0') > 0 && (
+          {item.costPrice && Number(item.costPrice) > 0 && (
             <div className="mt-2 text-xs text-gray-500 flex justify-between">
-              <span>Cost: ${parseFloat(item.costPrice || '0').toFixed(2)}</span>
-              {item.basePrice && parseFloat(item.basePrice || '0') > 0 && (
+              <span>Cost: ${Number(item.costPrice).toLocaleString('en-US', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}</span>
+              {item.basePrice && Number(item.basePrice) > 0 && (
                 <span className="text-green-600">
-                  Margin: {((parseFloat(item.basePrice || '0') - parseFloat(item.costPrice || '0')) / parseFloat(item.basePrice || '1') * 100).toFixed(0)}%
+                  Margin: {((Number(item.basePrice) - Number(item.costPrice)) / Number(item.basePrice) * 100).toFixed(0)}%
                 </span>
               )}
             </div>
