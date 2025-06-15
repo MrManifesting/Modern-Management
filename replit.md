@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 14, 2025: **Shopify Product Import System and Google Sheets Order Tracking Complete**
+  - Implemented complete Shopify product import system with three import buttons: Import All Products, Update Pricing, Update Images
+  - Added "View Live on Shopify" button to all inventory items - opens admin page for existing products or searches live store for new items
+  - Integrated Google Sheets order tracking system - all Shopify orders automatically log to spreadsheet with customer details, pricing, and fulfillment status
+  - Enhanced existing order webhook to capture and log all order data in real-time to Google Sheets
+  - System now fetches authentic pricing and images from MrListersCurations store (1,091 products) and tracks all sales activity
 - June 14, 2025: **Media Thumbnail Integration and Column Mapping Fixed**
   - Fixed column mapping issues in inventory table display with proper data source alignment
   - Implemented comprehensive media image thumbnail system in inventory grid
