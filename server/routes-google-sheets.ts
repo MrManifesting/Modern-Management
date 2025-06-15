@@ -374,4 +374,78 @@ export function registerGoogleSheetsRoutes(app: Express, storage: IStorage) {
       res.status(500).json({ error: "Failed to get configuration guide" });
     }
   });
+
+  /**
+   * Process orders from Google Sheets and update inventory
+   */
+  app.post("/api/google-sheets/process-orders", async (req: Request, res: Response) => {
+    try {
+      const { orderSpreadsheetId, inventorySpreadsheetId } = req.body;
+      
+      if (!orderSpreadsheetId || !inventorySpreadsheetId) {
+        return res.status(400).json({ 
+          error: "Missing required spreadsheet IDs",
+          required: ["orderSpreadsheetId", "inventorySpreadsheetId"]
+        });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const results = await sheetsService.readAndProcessOrders(
+        orderSpreadsheetId,
+        inventorySpreadsheetId
+      );
+
+      res.json({
+        success: true,
+        ordersProcessed: results.ordersProcessed,
+        inventoryUpdated: results.inventoryUpdated,
+        errors: results.errors,
+        message: `Processed ${results.ordersProcessed} orders and updated ${results.inventoryUpdated} inventory items`
+      });
+    } catch (error) {
+      console.error('Error processing orders from sheets:', error);
+      res.status(500).json({ 
+        error: "Failed to process orders from Google Sheets",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Get orders from Google Sheets for display
+   */
+  app.get("/api/google-sheets/orders", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId } = req.query;
+      
+      if (!spreadsheetId) {
+        return res.status(400).json({ error: "Missing spreadsheetId parameter" });
+      }
+
+      if (!sheetsService.isConfigured()) {
+        return res.status(400).json({ 
+          error: "Google Sheets service not configured" 
+        });
+      }
+
+      const orders = await sheetsService.getOrdersFromSheet(spreadsheetId as string);
+      
+      res.json({
+        orders,
+        count: orders.length,
+        message: `Retrieved ${orders.length} orders from Google Sheets`
+      });
+    } catch (error) {
+      console.error('Error getting orders from sheets:', error);
+      res.status(500).json({ 
+        error: "Failed to get orders from Google Sheets",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }
