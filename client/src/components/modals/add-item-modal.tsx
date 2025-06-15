@@ -55,8 +55,31 @@ export default function AddItemModal({
         return res.json();
       }
     },
-    onSuccess: (newItem: Item, variables: InsertItem) => {
+    onSuccess: async (newItem: Item, variables: InsertItem) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      
+      // Auto-tag uploaded photos with item name for new items
+      if (!isEditing && newItem && variables.files && variables.files.length > 0) {
+        try {
+          await fetch('/api/media/tag-photos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemId: newItem.id,
+              itemName: newItem.name,
+              itemSku: newItem.sku,
+              photoCount: variables.files.length
+            })
+          });
+          
+          toast({
+            title: "Photos Tagged",
+            description: `${variables.files.length} photo${variables.files.length > 1 ? 's' : ''} automatically tagged with item name`,
+          });
+        } catch (error) {
+          console.warn('Failed to tag photos:', error);
+        }
+      }
       
       // Auto-print labels for new items only
       if (!isEditing && newItem && variables.quantity && variables.quantity > 0) {
