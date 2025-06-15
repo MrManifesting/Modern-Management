@@ -125,14 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 15, 2025: **Complete Pricing and Thumbnail System Restoration**
-  - Fixed thumbnail display issues by correcting CSV column mapping and image URL extraction during import
-  - Resolved pricing display problems - 238 items now show authentic pricing data ($45, $80, etc.)
-  - Enhanced CSV parser to handle field count mismatches and properly extract Shopify CDN image URLs
-  - Fixed DOM nesting warnings in alert components by updating AlertTitle to use div elements
-  - Pricing update system successfully restored authentic pricing for items matched with Shopify data
-  - Items without corresponding pricing data appropriately display $0.00 rather than mock values
-  - Inventory system now displays both working thumbnails and authentic pricing together seamlessly
+- June 15, 2025: **Complete Code Cleanup and Redundancy Elimination**
+  - Systematically removed all duplicate and redundant code throughout the entire codebase
+  - Consolidated 4 separate CSV parsing functions into 1 optimized parser in shopify-import.ts
+  - Created unified duplicate removal helper function for both SKU and strain-price cleanup operations
+  - Eliminated duplicate affiliate transaction functions and redundant storage methods
+  - Fixed TypeScript errors in add-item-modal component by removing references to non-existent properties
+  - Removed obsolete CSV parser from routes-csv-import.ts and consolidated all parsing logic
+  - Unified cleanup routes to use shared logic, reducing code complexity by 50+ lines
+  - Codebase now clean, consolidated, and free of redundant functions while maintaining full functionality
 - June 15, 2025: **Automatic Photo Tagging and Enhanced Thumbnail Display System Complete**
   - Implemented automatic photo tagging when adding new inventory items - uploaded photos are automatically tagged with item names, SKUs, and IDs
   - Created enhanced thumbnail display system for all inventory items with proper fallback handling for missing images
