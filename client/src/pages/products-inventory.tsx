@@ -94,6 +94,7 @@ import AddItemModal from '@/components/modals/add-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
 import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
+import ItemGrid from '@/components/inventory/item-grid';
 
 // Define the Product interface
 interface Product {
@@ -1899,138 +1900,26 @@ const ProductsInventoryPage: React.FC = () => {
                 </TabsList>
                 
                 <TabsContent value="all" className="mt-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-border">
-                          {bulkSelectMode && (
-                            <th className="py-3 px-2 w-10">
-                              <Checkbox 
-                                checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
-                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked)}
-                              />
-                            </th>
-                          )}
-                          <th className="text-center py-3 px-2 w-16">Image</th>
-                          <th className="text-left py-3 px-4">Product</th>
-                          <th className="text-left py-3 px-4">Category</th>
-                          <th className="text-center py-3 px-4">SKU</th>
-                          <th className="text-center py-3 px-4">Barcode/QR</th>
-                          <th className="text-center py-3 px-4">Weight</th>
-                          <th className="text-right py-3 px-4">Price</th>
-                          <th className="text-center py-3 px-4">Qty</th>
-                          <th className="text-center py-3 px-4">Status</th>
-                          <th className="text-center py-3 px-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProducts.map((product: Product) => (
-                          <tr key={product.id} className="border-b border-border hover:bg-muted/50">
-                            {bulkSelectMode && (
-                              <td className="py-3 px-2">
-                                <Checkbox 
-                                  checked={selectedItems.some(item => item.id === product.id)}
-                                  onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
-                                />
-                              </td>
-                            )}
-                            <td className="py-3 px-2 text-center">
-                              <div className="group relative">
-                                <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border transition-all duration-200 cursor-pointer hover:shadow-md">
-                                  {(() => {
-                                    // Check for images in multiple sources
-                                    let imageUrl = null;
-                                    
-                                    // 1. Check product.imageUrl (direct field)
-                                    if (product.imageUrl) {
-                                      imageUrl = product.imageUrl;
-                                    }
-                                    // 2. Check product.images array (JSON field)
-                                    else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-                                      imageUrl = product.images[0];
-                                    }
-                                    // 3. Check for media files by item ID
-                                    else if (product.id) {
-                                      // Try to construct media URL from common patterns
-                                      const mediaPatterns = [
-                                        `/media/${product.sku}.jpg`,
-                                        `/media/${product.sku}.png`,
-                                        `/media/${product.name.toLowerCase().replace(/\s+/g, '_')}.jpg`,
-                                        `/media/item_${product.id}.jpg`,
-                                        `/media/item_${product.id}.png`
-                                      ];
-                                      imageUrl = mediaPatterns[0]; // Try the first pattern
-                                    }
-                                    
-                                    if (imageUrl) {
-                                      return (
-                                        <img 
-                                          src={imageUrl} 
-                                          alt={product.name}
-                                          className="object-cover w-full h-full"
-                                          onError={(e) => {
-                                            const imgElement = e.target as HTMLImageElement;
-                                            const parentContainer = imgElement.parentElement;
-                                            if (parentContainer) {
-                                              imgElement.style.display = 'none';
-                                              const iconDiv = document.createElement('div');
-                                              iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
-                                              iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-                                              parentContainer.appendChild(iconDiv);
-                                            }
-                                          }}
-                                        />
-                                      );
-                                    } else {
-                                      return (
-                                        <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
-                                          <ImageIcon className="h-6 w-6 opacity-50" />
-                                        </div>
-                                      );
-                                    }
-                                  })()}
-                                </div>
-                                
-                                {/* Larger preview on hover */}
-                                {product.imageUrl && (
-                                  <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
-                                    <div className="relative w-48 h-48 overflow-hidden rounded">
-                                      <img 
-                                        src={product.imageUrl} 
-                                        alt={product.name} 
-                                        className="object-contain w-full h-full"
-                                        onError={(e) => {
-                                          const imgElement = e.target as HTMLImageElement;
-                                          const parentContainer = imgElement.parentElement;
-                                          // Hide the image
-                                          imgElement.style.display = 'none';
-                                          // Show icon instead
-                                          if (parentContainer) {
-                                            const iconDiv = document.createElement('div');
-                                            iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
-                                            iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-                                            parentContainer.appendChild(iconDiv);
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
-                                      {product.name}
-                                    </div>
-                                    {/* Triangle pointer */}
-                                    <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-sm text-muted-foreground">{product.subcategory}</div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <Badge variant="outline">{product.category}</Badge>
-                            </td>
-                            <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                  <ItemGrid 
+                    items={filteredProducts.map(product => ({
+                      ...product,
+                      images: product.images || [],
+                      basePrice: product.basePrice || 0,
+                      quantity: product.quantity || 0
+                    }))}
+                    onEdit={(item) => {
+                      setSelectedItem(item);
+                      setEditItemModalOpen(true);
+                    }}
+                    onDelete={(id) => {
+                      setProductIdToDelete(id);
+                      setDeleteDialogOpen(true);
+                    }}
+                    showHeader={false}
+                    limit={null}
+                    showViewAll={false}
+                  />
+                </TabsContent>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 {product.sku && (
