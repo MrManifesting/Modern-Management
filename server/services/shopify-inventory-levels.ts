@@ -4,6 +4,7 @@
  */
 
 import { getShopifyClient } from './shopify-auth';
+import { shopifyRateLimiter } from './rate-limiter';
 import https from 'https';
 
 interface InventoryLevel {
