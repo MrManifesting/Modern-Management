@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 15, 2025: **Automatic Photo Tagging and Enhanced Thumbnail Display System Complete**
+  - Implemented automatic photo tagging when adding new inventory items - uploaded photos are automatically tagged with item names, SKUs, and IDs
+  - Created enhanced thumbnail display system for all inventory items with proper fallback handling for missing images
+  - Updated image carousel component to handle Shopify CDN URLs, local media files, and external image URLs with intelligent URL resolution
+  - Added Google Sheets authentication configuration page at /google-sheets-auth with complete OAuth setup instructions
+  - Enhanced inventory display with improved thumbnail visibility for all 1,091 imported products and media files throughout the system
+  - Created backend endpoints for Google Sheets configuration management, connection testing, and credential storage
+  - Updated add item modal to automatically tag photos with item information upon successful item creation
+  - System now provides seamless photo management workflow: upload photos → auto-tag with item details → display in enhanced thumbnails
 - June 15, 2025: **Complete Telegram Image Integration with Shopify Sync and Dashboard Navigation Enhancement**
   - Implemented comprehensive Telegram image integration system that automatically associates images sent to media chat with inventory items
   - Created intelligent image matching using SKUs, item names, captions, and filename patterns for automatic association
