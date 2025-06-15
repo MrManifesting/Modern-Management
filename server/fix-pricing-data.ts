@@ -21,9 +21,9 @@ async function fixPricingData() {
       const updates: any = {};
       
       // Fix basePrice if it's a large number that should be a decimal
-      if (item.basePrice && typeof item.basePrice === 'string') {
-        const basePrice = parseFloat(item.basePrice);
-        if (basePrice > 100 && basePrice.toString().indexOf('.') === -1) {
+      if (item.basePrice !== null && item.basePrice !== undefined) {
+        const basePrice = typeof item.basePrice === 'string' ? parseFloat(item.basePrice) : item.basePrice;
+        if (basePrice > 100 && Number.isInteger(basePrice)) {
           // Convert large whole numbers to decimals (e.g., 1155 -> 11.55)
           updates.basePrice = (basePrice / 100).toFixed(2);
           needsUpdate = true;
@@ -31,27 +31,27 @@ async function fixPricingData() {
       }
       
       // Fix salePrice if it's a large number that should be a decimal
-      if (item.salePrice && typeof item.salePrice === 'string') {
-        const salePrice = parseFloat(item.salePrice);
-        if (salePrice > 100 && salePrice.toString().indexOf('.') === -1) {
+      if (item.salePrice !== null && item.salePrice !== undefined) {
+        const salePrice = typeof item.salePrice === 'string' ? parseFloat(item.salePrice) : item.salePrice;
+        if (salePrice > 100 && Number.isInteger(salePrice)) {
           updates.salePrice = (salePrice / 100).toFixed(2);
           needsUpdate = true;
         }
       }
       
       // Fix wholesalePrice if it's a large number that should be a decimal
-      if (item.wholesalePrice && typeof item.wholesalePrice === 'string') {
-        const wholesalePrice = parseFloat(item.wholesalePrice);
-        if (wholesalePrice > 100 && wholesalePrice.toString().indexOf('.') === -1) {
+      if (item.wholesalePrice !== null && item.wholesalePrice !== undefined) {
+        const wholesalePrice = typeof item.wholesalePrice === 'string' ? parseFloat(item.wholesalePrice) : item.wholesalePrice;
+        if (wholesalePrice > 100 && Number.isInteger(wholesalePrice)) {
           updates.wholesalePrice = (wholesalePrice / 100).toFixed(2);
           needsUpdate = true;
         }
       }
       
       // Fix costPrice if it's a large number that should be a decimal
-      if (item.costPrice && typeof item.costPrice === 'string') {
-        const costPrice = parseFloat(item.costPrice);
-        if (costPrice > 100 && costPrice.toString().indexOf('.') === -1) {
+      if (item.costPrice !== null && item.costPrice !== undefined) {
+        const costPrice = typeof item.costPrice === 'string' ? parseFloat(item.costPrice) : item.costPrice;
+        if (costPrice > 100 && Number.isInteger(costPrice)) {
           updates.costPrice = (costPrice / 100).toFixed(2);
           needsUpdate = true;
         }
