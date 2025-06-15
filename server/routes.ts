@@ -3998,10 +3998,10 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Starting bulk import from Shopify...');
       
-      const { ShopifyBulkSync } = await import('./services/shopify-bulk-sync');
-      const bulkSync = new ShopifyBulkSync(storage);
+      const { DirectShopifySync } = await import('./services/direct-shopify-sync');
+      const directSync = new DirectShopifySync(storage);
       
-      const result = await bulkSync.syncFromShopify();
+      const result = await directSync.bulkImportFromShopify();
       console.log(`Bulk import completed: ${result.updated} updated, ${result.created} created`);
       res.json(result);
     } catch (error) {
@@ -4020,10 +4020,10 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Starting bulk pricing update from Shopify...');
       
-      const { ShopifyBulkSync } = await import('./services/shopify-bulk-sync');
-      const bulkSync = new ShopifyBulkSync(storage);
+      const { DirectShopifySync } = await import('./services/direct-shopify-sync');
+      const directSync = new DirectShopifySync(storage);
       
-      const result = await bulkSync.updatePricingOnly();
+      const result = await directSync.bulkUpdatePricing();
       console.log(`Bulk pricing completed: ${result.updated} items updated`);
       res.json(result);
     } catch (error) {
