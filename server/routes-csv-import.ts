@@ -19,63 +19,7 @@ const upload = multer({
   },
 }).any(); // Accept any field name for the file
 
-/**
- * Parse CSV content
- */
-function parseCSV(content: string): { headers: string[]; rows: string[][] } {
-  const rows: string[][] = [];
-  const lines = content.split(/\r?\n/);
-  
-  console.log(`Parsing CSV with ${lines.length} lines`);
-  
-  for (const line of lines) {
-    if (!line.trim()) {
-      console.log('Skipping empty line');
-      continue;
-    }
-    
-    const row: string[] = [];
-    let cell = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
-        cell = '';
-      } else {
-        cell += char;
-      }
-    }
-    
-    // Add the last cell
-    row.push(cell.trim().replace(/^"(.*)"$/, '$1'));
-    rows.push(row);
-  }
-  
-  // Add better logging
-  const headers = rows[0]?.map(h => h.trim().toLowerCase()) || [];
-  console.log(`CSV Headers (${headers.length}): ${headers.join(', ')}`);
-  
-  if (rows.length > 1) {
-    console.log(`First row data (${rows[1].length} columns):`);
-    rows[1].forEach((cell, index) => {
-      if (headers[index]) {
-        console.log(`  ${headers[index]}: ${cell}`);
-      } else {
-        console.log(`  Column ${index}: ${cell}`);
-      }
-    });
-  }
-  
-  return { 
-    headers: headers,
-    rows: rows.slice(1) 
-  };
-}
+// CSV parsing moved to shopify-import.ts service for reuse
 
 /**
  * Validate CSV data without importing

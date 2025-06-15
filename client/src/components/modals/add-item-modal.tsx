@@ -122,15 +122,7 @@ export default function AddItemModal({
   const [shopifySyncMessage, setShopifySyncMessage] = useState<string>('');
   
   const handleSubmit = async (data: InsertItem) => {
-    // Add the marketplace field if not present
-    if (!data.marketplace || !Array.isArray(data.marketplace)) {
-      data.marketplace = [];
-    }
-    
-    // Add shopify to marketplace list if not already there
-    if (!data.marketplace.includes('shopify')) {
-      data.marketplace.push('shopify');
-    }
+    // Removed marketplace field handling due to schema changes
     
     setShopifySyncStatus('syncing');
     createMutation.mutate(data, {
