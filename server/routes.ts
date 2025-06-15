@@ -4421,6 +4421,65 @@ ${topCustomersCsv}`;
   // Register Shopify safety routes
   // Shopify safety routes consolidated into main routes
   
+  // Shopify Inventory Sync Routes for accurate pricing and quantities
+  const shopifySync = new ShopifyInventorySync(storage);
+
+  // Full inventory sync from Shopify (prices, quantities, new products)
+  app.post("/api/shopify/sync-inventory-full", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting full inventory sync from Shopify...');
+      const result = await shopifySync.syncInventoryFromShopify();
+      console.log(`Full sync completed: ${result.updated} updated, ${result.created} created`);
+      res.json(result);
+    } catch (error) {
+      console.error("Full inventory sync failed:", error);
+      res.status(500).json({
+        success: false,
+        message: `Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        updated: 0,
+        created: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  });
+
+  // Quick price and quantity sync from Shopify
+  app.post("/api/shopify/sync-prices-quantities", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting price and quantity sync from Shopify...');
+      const result = await shopifySync.syncPricesAndQuantities();
+      console.log(`Price/quantity sync completed: ${result.updated} items updated`);
+      res.json(result);
+    } catch (error) {
+      console.error("Price/quantity sync failed:", error);
+      res.status(500).json({
+        success: false,
+        message: `Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        updated: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  });
+
+  // Get sync status and connection info
+  app.get("/api/shopify/sync-status", async (req: Request, res: Response) => {
+    try {
+      const isConnected = await isShopifyConfigured();
+      res.json({
+        success: true,
+        lastFullSync: null,
+        lastPriceSync: null,
+        isConnected,
+        message: "Sync status retrieved successfully"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to get sync status"
+      });
+    }
+  });
+
   // Register Shopify credentials routes
   registerShopifyCredentialsRoutes(app, storage);
   

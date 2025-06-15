@@ -51,6 +51,7 @@ import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import OrdersTracking from "@/pages/orders-tracking";
 import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
+import InventorySyncPage from "@/pages/InventorySyncPage";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -115,6 +116,7 @@ function Router() {
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
+        <ProtectedRoute path="/inventory-sync" component={() => <InventorySyncPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
