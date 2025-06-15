@@ -39,7 +39,7 @@ import { getShopifyProducts } from "./services/shopify-sync";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
-import { ShopifyInventorySync } from "./services/shopify-inventory-sync";
+
 
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
@@ -3849,11 +3849,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Inventory item not found" });
       }
       
-      // Update the product using Shopify service
-      const { ShopifyInventorySync } = await import('./services/shopify-inventory-sync');
-      const shopifySync = new ShopifyInventorySync(storage);
-      
-      // Update item with new pricing and data
+      // Update item with new pricing and data directly
       const updateData: Partial<Item> = {};
       if (updatePrice && inventoryItem.basePrice) {
         updateData.basePrice = inventoryItem.basePrice;
