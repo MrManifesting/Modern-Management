@@ -22,15 +22,21 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, FilterIcon } from "lucide-react";
 
 type ItemGridProps = {
+  items?: Item[];
   limit?: number;
   showHeader?: boolean;
   showViewAll?: boolean;
+  onEdit?: (item: Item) => void;
+  onDelete?: (id: number) => void;
 };
 
 export default function ItemGrid({ 
+  items: propItems,
   limit,
   showHeader = true,
-  showViewAll = true
+  showViewAll = true,
+  onEdit,
+  onDelete
 }: ItemGridProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -40,11 +46,14 @@ export default function ItemGrid({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
-  // Fetch items
-  const { data: items = [], isLoading } = useQuery<Item[]>({
+  // Use provided items or fetch from API if not provided
+  const { data: fetchedItems = [], isLoading } = useQuery<Item[]>({
     queryKey: ['/api/items'],
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !propItems, // Only fetch if items not provided as props
   });
+
+  const items = propItems || fetchedItems;
 
   // Delete item mutation
   const deleteMutation = useMutation({
@@ -54,6 +63,7 @@ export default function ItemGrid({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
       toast({
         title: "Item deleted",
         description: "The item has been successfully deleted.",
@@ -103,13 +113,21 @@ export default function ItemGrid({
 
   // Handle edit item
   const handleEditItem = (item: Item) => {
-    setEditingItem(item);
-    setIsAddModalOpen(true);
+    if (onEdit) {
+      onEdit(item);
+    } else {
+      setEditingItem(item);
+      setIsAddModalOpen(true);
+    }
   };
 
   // Handle delete item
   const handleDeleteItem = (id: number) => {
-    setItemToDelete(id);
+    if (onDelete) {
+      onDelete(id);
+    } else {
+      setItemToDelete(id);
+    }
   };
 
   // Confirm delete item
