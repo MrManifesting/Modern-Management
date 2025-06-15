@@ -9,10 +9,12 @@ import {
   Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
   AffiliateTransaction, InsertAffiliateTransaction,
   Credential, InsertCredential,
+  PriceSheet, InsertPriceSheet, OrderTransaction, InsertOrderTransaction,
   
   // Import schema tables for Drizzle
   users, items, sales, employees, inventoryActions, productBreakdowns,
-  affiliates, qrCodes, affiliateTransactions, stores, marketplaceTypes, customers, customerTiers, credentials
+  affiliates, qrCodes, affiliateTransactions, stores, marketplaceTypes, customers, customerTiers, credentials,
+  priceSheet, orderTransactions
 } from "@shared/schema";
 
 // Import Telegram photo schema
@@ -190,6 +192,25 @@ export interface IStorage {
   getCustomerTier(id: number): Promise<typeof customerTiers.$inferSelect | undefined>;
   createCustomerTier(tier: typeof customerTiers.$inferInsert): Promise<typeof customerTiers.$inferSelect>;
   updateCustomerTier(id: number, tier: Partial<typeof customerTiers.$inferInsert>): Promise<typeof customerTiers.$inferSelect | undefined>;
+
+  // Price Sheet methods
+  getPriceSheets(): Promise<PriceSheet[]>;
+  getPriceSheet(id: number): Promise<PriceSheet | undefined>;
+  getPriceSheetByItemId(itemId: number): Promise<PriceSheet | undefined>;
+  getPriceSheetBySku(sku: string): Promise<PriceSheet | undefined>;
+  getPriceSheetByShopifyId(shopifyId: string): Promise<PriceSheet | undefined>;
+  createPriceSheet(priceSheet: InsertPriceSheet): Promise<PriceSheet>;
+  updatePriceSheet(id: number, priceSheet: Partial<InsertPriceSheet>): Promise<PriceSheet | undefined>;
+  deletePriceSheet(id: number): Promise<boolean>;
+  syncPriceSheetFromShopify(itemId: number, shopifyData: any): Promise<PriceSheet>;
+  updateStockLevels(priceSheetId: number, quantityChange: number, transactionType: string): Promise<PriceSheet | undefined>;
+  
+  // Order Transaction methods
+  getOrderTransactions(filters?: { priceSheetId?: number, itemId?: number, transactionType?: string }): Promise<OrderTransaction[]>;
+  getOrderTransaction(id: number): Promise<OrderTransaction | undefined>;
+  createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
+  getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
+  getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
 }
 
 // Memory storage implementation
