@@ -82,6 +82,8 @@ export default function ItemCard({
   // Handle click to view item details
   const handleViewDetails = (e: React.MouseEvent) => {
     // Don't navigate if we're clicking on a button
+    if (!e || !e.target) return;
+    
     const target = e.target as HTMLElement;
     if (target && (target.closest('button') || target.closest('.dropdown-menu'))) {
       return;
@@ -326,6 +328,7 @@ export default function ItemCard({
                       {item.status === 'listed' && (
                         <DropdownMenuItem
                           onClick={(e) => {
+                            if (!e) return;
                             e.preventDefault();
                             e.stopPropagation();
                             document.getElementById(`shopify-preview-${item.id}`)?.click();
@@ -340,6 +343,7 @@ export default function ItemCard({
                       {item.shopifyId && item.status !== 'listed' && (
                         <DropdownMenuItem
                           onClick={(e) => {
+                            if (!e) return;
                             e.preventDefault();
                             e.stopPropagation();
                             // Use the ShopifyStorePreview for drafts too
