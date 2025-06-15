@@ -309,10 +309,10 @@ export function parseRobustCSV(csvContent: string): {
     console.log('Starting robust CSV parsing...');
     
     // Parse the CSV content
-    const parsed = parseCSVContent(csvContent);
+    const parsed = this.parseCSVContent(csvContent);
     
     // Determine the format
-    const format = determineCSVFormat(parsed.headers);
+    const format = this.determineCSVFormat(parsed.headers);
     
     console.log(`CSV parsed successfully: ${parsed.headers.length} headers, ${parsed.rows.length} rows, format: ${format}`);
     
