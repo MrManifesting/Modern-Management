@@ -205,18 +205,40 @@ export function registerRoutes(app: Express): Server {
                  fileName.includes(itemName.replace(/\s+/g, ''));
         });
         
-        // Update item with media URLs
+        // Enhanced image URL handling with Shopify CDN support
         let imageUrl = null;
+        let allImages: string[] = [];
+        
+        // Priority order: Shopify imageUrl, item.images array, associated media
+        if (item.imageUrl && (item.imageUrl.includes('shopify.com') || item.imageUrl.includes('cdn.shopify.com'))) {
+          imageUrl = item.imageUrl;
+          allImages.push(item.imageUrl);
+        }
+        
+        // Add images from item.images array (for Shopify imports)
         if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-          imageUrl = item.images[0];
-        } else if (associatedMedia.length > 0) {
-          imageUrl = associatedMedia[0].url;
+          allImages = [...allImages, ...item.images.filter(img => img && !allImages.includes(img))];
+          if (!imageUrl) imageUrl = item.images[0];
+        }
+        
+        // Add associated media files
+        if (associatedMedia.length > 0) {
+          const mediaUrls = associatedMedia.map(media => media.url);
+          allImages = [...allImages, ...mediaUrls.filter(url => !allImages.includes(url))];
+          if (!imageUrl) imageUrl = associatedMedia[0].url;
         }
         
         return {
           ...item,
           imageUrl,
-          mediaFiles: associatedMedia
+          images: allImages,
+          mediaFiles: associatedMedia,
+          // Ensure pricing fields are properly formatted
+          costPrice: typeof item.costPrice === 'string' ? item.costPrice : item.costPrice?.toString(),
+          basePrice: typeof item.basePrice === 'string' ? item.basePrice : item.basePrice?.toString(),
+          salePrice: typeof item.salePrice === 'string' ? item.salePrice : item.salePrice?.toString(),
+          wholesalePrice: typeof item.wholesalePrice === 'string' ? item.wholesalePrice : item.wholesalePrice?.toString(),
+          retailPrice: typeof item.retailPrice === 'string' ? item.retailPrice : item.retailPrice?.toString()
         };
       });
       

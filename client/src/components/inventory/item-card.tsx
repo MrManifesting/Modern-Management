@@ -381,18 +381,58 @@ export default function ItemCard({
         </div>
 
         <CardContent className="p-4">
-          <div className="flex justify-between">
-            <h3 className="font-medium text-gray-800">{item.name}</h3>
-            <span className="font-semibold text-primary-600">
-              ${item.basePrice?.toFixed(2) || (item.salePrice?.toFixed(2)) || '0.00'}
-            </span>
+          <div className="flex justify-between items-start">
+            <h3 className="font-medium text-gray-800 flex-1">{item.name}</h3>
+            <div className="text-right ml-2">
+              {/* Main Price Display */}
+              <div className="font-semibold text-primary-600">
+                ${typeof item.basePrice === 'string' ? parseFloat(item.basePrice || '0').toFixed(2) : 
+                  typeof item.salePrice === 'string' ? parseFloat(item.salePrice || '0').toFixed(2) : '0.00'}
+              </div>
+              
+              {/* Sale Price Indicator */}
+              {item.salePrice && item.basePrice && parseFloat(item.salePrice || '0') < parseFloat(item.basePrice || '0') && (
+                <div className="text-xs text-red-600 line-through">
+                  ${parseFloat(item.basePrice || '0').toFixed(2)}
+                </div>
+              )}
+              
+              {/* Wholesale Price */}
+              {item.wholesalePrice && (
+                <div className="text-xs text-gray-500">
+                  Wholesale: ${parseFloat(item.wholesalePrice || '0').toFixed(2)}
+                </div>
+              )}
+            </div>
           </div>
+          
           <p className="mt-1 text-sm text-gray-600 line-clamp-1">
             {item.category}
             {(item.tags as string[]).length > 0 && `, ${(item.tags as string[])[0]}`}
           </p>
-          <div className="mt-3 flex items-center">
+          
+          {/* Cost and Margin Info */}
+          {item.costPrice && (
+            <div className="mt-2 text-xs text-gray-500 flex justify-between">
+              <span>Cost: ${parseFloat(item.costPrice || '0').toFixed(2)}</span>
+              {item.basePrice && (
+                <span className="text-green-600">
+                  Margin: {((parseFloat(item.basePrice || '0') - parseFloat(item.costPrice || '0')) / parseFloat(item.basePrice || '1') * 100).toFixed(0)}%
+                </span>
+              )}
+            </div>
+          )}
+          
+          <div className="mt-3 flex items-center justify-between">
             <span className="text-xs text-gray-500">Added {formattedDate}</span>
+            {/* Stock Level Indicator */}
+            <span className={`text-xs px-2 py-1 rounded ${
+              (item.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
+              (item.quantity || 0) > 0 ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              Stock: {item.quantity || 0}
+            </span>
           </div>
         </CardContent>
       </Card>
