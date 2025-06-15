@@ -14,7 +14,7 @@ import {
   Clock, 
   DollarSign, 
   Package,
-  Sync,
+  ArrowUpDown,
   TrendingUp
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
@@ -240,7 +240,7 @@ export function InventorySyncDashboard() {
                 </>
               ) : (
                 <>
-                  <Sync className="mr-2 h-4 w-4" />
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
                   Update Prices & Quantities
                 </>
               )}
