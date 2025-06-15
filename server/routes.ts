@@ -39,6 +39,7 @@ import { getShopifyProducts } from "./services/shopify-sync";
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
+import { ShopifyInventorySync } from "./services/shopify-inventory-sync";
 
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
