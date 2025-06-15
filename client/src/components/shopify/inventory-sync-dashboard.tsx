@@ -52,7 +52,7 @@ export function InventorySyncDashboard() {
   const fullSyncMutation = useMutation({
     mutationFn: async (): Promise<SyncResult> => {
       setSyncProgress(10);
-      const response = await apiRequest('POST', '/api/shopify/sync-inventory-full');
+      const response = await apiRequest('POST', '/api/shopify/bulk-import');
       setSyncProgress(100);
       return response.json();
     },
@@ -81,7 +81,7 @@ export function InventorySyncDashboard() {
   const priceQuantitySyncMutation = useMutation({
     mutationFn: async (): Promise<SyncResult> => {
       setSyncProgress(10);
-      const response = await apiRequest('POST', '/api/shopify/sync-prices-quantities');
+      const response = await apiRequest('POST', '/api/shopify/bulk-pricing');
       setSyncProgress(100);
       return response.json();
     },
@@ -110,7 +110,7 @@ export function InventorySyncDashboard() {
   const realQuantitySyncMutation = useMutation({
     mutationFn: async (): Promise<SyncResult> => {
       setSyncProgress(10);
-      const response = await apiRequest('POST', '/api/shopify/sync-real-quantities');
+      const response = await apiRequest('POST', '/api/shopify/bulk-pricing');
       setSyncProgress(100);
       return response.json();
     },

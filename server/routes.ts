@@ -3993,6 +3993,50 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Bulk Shopify Sync Routes - Properly update database with real pricing
+  app.post("/api/shopify/bulk-import", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting bulk import from Shopify...');
+      
+      const { ShopifyBulkSync } = await import('./services/shopify-bulk-sync');
+      const bulkSync = new ShopifyBulkSync(storage);
+      
+      const result = await bulkSync.syncFromShopify();
+      console.log(`Bulk import completed: ${result.updated} updated, ${result.created} created`);
+      res.json(result);
+    } catch (error) {
+      console.error("Bulk import failed:", error);
+      res.status(500).json({
+        success: false,
+        message: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        updated: 0,
+        created: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  });
+
+  app.post("/api/shopify/bulk-pricing", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting bulk pricing update from Shopify...');
+      
+      const { ShopifyBulkSync } = await import('./services/shopify-bulk-sync');
+      const bulkSync = new ShopifyBulkSync(storage);
+      
+      const result = await bulkSync.updatePricingOnly();
+      console.log(`Bulk pricing completed: ${result.updated} items updated`);
+      res.json(result);
+    } catch (error) {
+      console.error("Bulk pricing failed:", error);
+      res.status(500).json({
+        success: false,
+        message: `Pricing update failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        updated: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  });
+
   // Update a product breakdown
   app.patch("/api/product-breakdowns/:id", async (req: Request, res: Response) => {
     try {
