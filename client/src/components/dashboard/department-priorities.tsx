@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   ShoppingCart,
 } from 'lucide-react';
+import { Link } from 'wouter';
 import { apiRequestSimple } from '@/lib/queryClient';
 import { format } from 'date-fns';
 
@@ -124,39 +125,39 @@ export function DepartmentPriorities() {
     }
 
     return marketingItems.map((item: any) => (
-      <div key={item.id} className="flex items-start space-x-4 py-3 border-b last:border-0">
-        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-          {item.images && item.images.length > 0 ? (
-            <img 
-              src={item.images[0]} 
-              alt={item.name} 
-              className="w-full h-full object-cover rounded" 
-            />
-          ) : (
-            <Tag className="h-6 w-6 text-amber-500" />
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <h4 className="font-medium text-sm">{item.name}</h4>
-            <Button size="sm" variant="ghost" className="h-auto p-1">
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
+      <Link key={item.id} href={`/inventory?search=${encodeURIComponent(item.name)}&highlight=${item.id}`}>
+        <div className="flex items-start space-x-4 py-3 border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors cursor-pointer">
+          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+            {item.images && item.images.length > 0 ? (
+              <img 
+                src={item.images[0]} 
+                alt={item.name} 
+                className="w-full h-full object-cover rounded" 
+              />
+            ) : (
+              <Tag className="h-6 w-6 text-amber-500" />
+            )}
           </div>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {!item.description || item.description.length < 50 ? (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                Needs Description
-              </Badge>
-            ) : null}
-            {!item.images || item.images.length === 0 ? (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                Needs Images
-              </Badge>
-            ) : null}
+          <div className="flex-1">
+            <div className="flex justify-between">
+              <h4 className="font-medium text-sm">{item.name}</h4>
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {!item.description || item.description.length < 50 ? (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                  Needs Description
+                </Badge>
+              ) : null}
+              {!item.images || item.images.length === 0 ? (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                  Needs Images
+                </Badge>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      </Link>
     ));
   };
 
@@ -187,18 +188,18 @@ export function DepartmentPriorities() {
     }
 
     return shopifyOrders.slice(0, 5).map((order: any, index: number) => (
-      <div key={index} className="flex items-start space-x-4 py-3 border-b last:border-0">
-        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded flex items-center justify-center">
-          <ShoppingBag className="h-6 w-6 text-blue-500" />
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <h4 className="font-medium text-sm">
-              Order {order.orderId || `#${1000 + index}`}
-            </h4>
-            <Button size="sm" variant="ghost" className="h-auto p-1">
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
+      <Link key={index} href="/shopify/orders">
+        <div className="flex items-start space-x-4 py-3 border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors cursor-pointer">
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded flex items-center justify-center">
+            <ShoppingBag className="h-6 w-6 text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between">
+              <h4 className="font-medium text-sm">
+                Order {order.orderId || `#${1000 + index}`}
+              </h4>
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 mt-1">
             <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
@@ -212,7 +213,7 @@ export function DepartmentPriorities() {
             </div>
           </div>
         </div>
-      </div>
+      </Link>
     ));
   };
 
