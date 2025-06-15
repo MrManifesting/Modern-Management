@@ -798,6 +798,13 @@ export function extractProductInfo(
       
       console.log(`Image URL extraction: raw="${imageUrl}"`);
       
+      // Debug: Check if we're getting the wrong field due to column mismatch
+      if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('//')) {
+        console.log(`WARNING: Image URL doesn't look like a URL: "${imageUrl}"`);
+        console.log(`Image Src field index: ${headerMap['image src']}`);
+        console.log(`Row length: ${row.length}, Headers length: ${headers.length}`);
+      }
+      
       // Extract additional pricing fields for comprehensive pricing data
       const compareAtPriceStr = getField('variant compare at price') || 
                                getField('compare at price') || '';
