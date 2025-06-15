@@ -49,6 +49,7 @@ import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import OrdersTracking from "@/pages/orders-tracking";
+import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
 import NotFound from "@/pages/not-found";
 
@@ -109,6 +110,7 @@ function Router() {
         <ProtectedRoute path="/google-apps-script-admin" component={() => <GoogleAppsScriptAdminPage />} />
         <ProtectedRoute path="/sheets-mapping-admin" component={() => <SheetsMappingAdmin />} />
         <ProtectedRoute path="/orders-tracking" component={() => <OrdersTracking />} />
+        <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
