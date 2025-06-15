@@ -336,10 +336,10 @@ export function parseRobustCSV(csvContent: string): {
 }
 
 /**
- * Extract product data from a row based on product export format
+ * Extract product data from a row - unified function for both product and inventory formats
  */
-export function extractProductFromRow(headers: string[], row: string[]): any {
-  const productInfo = extractProductInfo(row, headers, 'product', 0);
+export function extractProductFromRow(headers: string[], row: string[], format: 'product' | 'inventory' = 'product'): any {
+  const productInfo = extractProductInfo(row, headers, format, 0);
   if (!productInfo) return null;
   
   return {
@@ -348,9 +348,9 @@ export function extractProductFromRow(headers: string[], row: string[]): any {
     basePrice: productInfo.price > 0 ? productInfo.price.toFixed(2) : '0.00',
     costPrice: productInfo.costPrice > 0 ? productInfo.costPrice.toFixed(2) : '0.00',
     salePrice: productInfo.compareAtPrice > 0 ? productInfo.compareAtPrice.toFixed(2) : '0.00',
-    wholesalePrice: productInfo.price > 0 ? (productInfo.price * 0.8).toFixed(2) : '0.00', // 20% discount for wholesale
+    wholesalePrice: productInfo.price > 0 ? (productInfo.price * 0.8).toFixed(2) : '0.00',
     description: productInfo.description || '',
-    category: productInfo.productType || 'Imported',
+    category: productInfo.productType || (format === 'inventory' ? 'Cannabis' : 'Imported'),
     vendor: productInfo.vendor || 'Unknown',
     quantity: productInfo.quantity || 0,
     weight: productInfo.weight || '1 pound',
@@ -362,29 +362,10 @@ export function extractProductFromRow(headers: string[], row: string[]): any {
 }
 
 /**
- * Extract inventory data from a row based on inventory export format
+ * @deprecated Use extractProductFromRow with format parameter instead
  */
 export function extractInventoryFromRow(headers: string[], row: string[]): any {
-  const inventoryInfo = extractProductInfo(row, headers, 'inventory', 0);
-  if (!inventoryInfo) return null;
-  
-  return {
-    name: inventoryInfo.title,
-    sku: inventoryInfo.sku || `IMPORT-${Date.now()}`,
-    basePrice: inventoryInfo.price > 0 ? inventoryInfo.price.toFixed(2) : '0.00',
-    costPrice: inventoryInfo.costPrice > 0 ? inventoryInfo.costPrice.toFixed(2) : '0.00',
-    salePrice: inventoryInfo.compareAtPrice > 0 ? inventoryInfo.compareAtPrice.toFixed(2) : '0.00',
-    wholesalePrice: inventoryInfo.price > 0 ? (inventoryInfo.price * 0.8).toFixed(2) : '0.00',
-    description: inventoryInfo.description || '',
-    category: inventoryInfo.productType || 'Cannabis',
-    vendor: inventoryInfo.vendor || 'Unknown',
-    quantity: inventoryInfo.quantity || 0,
-    weight: '1 pound',
-    status: 'active',
-    imageUrl: inventoryInfo.imageUrl || '',
-    images: inventoryInfo.imageUrl ? [inventoryInfo.imageUrl] : [],
-    tags: inventoryInfo.tags || ''
-  };
+  return extractProductFromRow(headers, row, 'inventory');
 }
 
 /**
@@ -496,60 +477,7 @@ function parseBulletproofCSV(csvContent: string): ParsedCsvData {
   };
 }
 
-/**
- * Advanced CSV parser that handles quoted fields with commas and newlines
- * Uses a robust finite state machine approach
- */
-function parseCSVContent(content: string): ParsedCsvData {
-  const lines = content.split(/\r?\n/);
-  const result: string[][] = [];
-  
-  let i = 0;
-  while (i < lines.length) {
-    if (!lines[i].trim()) {
-      i++;
-      continue;
-    }
-    
-    // Parse the current line and potentially following lines if quotes span multiple lines
-    const { row, linesConsumed } = parseCSVRow(lines, i);
-    if (row.length > 0) {
-      result.push(row);
-    }
-    i += linesConsumed;
-  }
-  
-  // Find headers and return structured data
-  if (result.length === 0) {
-    return { headers: [], rows: [] };
-  }
-  
-  // Find the header row (look for common Shopify headers)
-  let headerRowIndex = 0;
-  for (let i = 0; i < Math.min(3, result.length); i++) {
-    const row = result[i];
-    const hasShopifyHeaders = row.some(cell => {
-      const lower = cell.toLowerCase();
-      return lower.includes('handle') || lower.includes('title') || 
-             lower.includes('variant') || lower.includes('sku');
-    });
-    
-    if (hasShopifyHeaders && row.length > 10) {
-      headerRowIndex = i;
-      console.log(`Found Shopify header row at index ${i} with ${row.length} columns`);
-      break;
-    }
-  }
-  
-  const headers = result[headerRowIndex] || [];
-  const dataRows = result.slice(headerRowIndex + 1);
-  
-  console.log(`Headers found: ${headers.length}`);
-  console.log(`Sample headers: ${headers.slice(0, 5).join(', ')}`);
-  console.log(`Data rows: ${dataRows.length}`);
-  
-  return { headers, rows: dataRows };
-}
+
 
 /**
  * Parse a single CSV row, handling multi-line quoted fields

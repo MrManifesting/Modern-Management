@@ -413,10 +413,6 @@ export class MemStorage implements IStorage {
     return updatedQrCode;
   }
 
-  async getAllAffiliateTransactions(): Promise<AffiliateTransaction[]> {
-    return Array.from(this.affiliateTransactions.values());
-  }
-  
   async getAffiliateTransactions(): Promise<AffiliateTransaction[]> {
     return Array.from(this.affiliateTransactions.values());
   }
