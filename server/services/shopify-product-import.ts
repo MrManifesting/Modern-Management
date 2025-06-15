@@ -42,8 +42,8 @@ interface ShopifyVariant {
 export class ShopifyProductImportService {
   private storage: DatabaseStorage;
 
-  constructor(storage: DatabaseStorage) {
-    this.storage = storage;
+  constructor(storage?: DatabaseStorage) {
+    this.storage = storage || new DatabaseStorage();
   }
 
   /**
@@ -298,6 +298,59 @@ export class ShopifyProductImportService {
       return results;
     } catch (error) {
       console.error('Error updating images from Shopify:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update product image in Shopify
+   */
+  async updateProductImage(itemId: number, imageUrl: string): Promise<void> {
+    try {
+      if (!isShopifyConfigured()) {
+        throw new Error('Shopify not configured');
+      }
+
+      // Get the item to find its Shopify ID
+      const items = await this.storage.getItems();
+      const item = items.find(i => i.id === itemId);
+      if (!item || !item.shopifyId) {
+        console.log(`Item ${itemId} does not have a Shopify ID, skipping image sync`);
+        return;
+      }
+
+      console.log(`Updating Shopify product ${item.shopifyId} with image: ${imageUrl}`);
+
+      // Convert relative URL to absolute URL
+      const fullImageUrl = imageUrl.startsWith('http') 
+        ? imageUrl 
+        : `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://localhost:5000'}${imageUrl}`;
+
+      // Add image to Shopify product
+      const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products/${item.shopifyId}/images.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN!,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          image: {
+            src: fullImageUrl,
+            alt: item.name || 'Product Image'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Shopify API error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`Successfully added image to Shopify product ${item.shopifyId}:`, result.image?.id);
+
+    } catch (error) {
+      console.error(`Error updating Shopify product image for item ${itemId}:`, error);
       throw error;
     }
   }
