@@ -47,8 +47,136 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Price sheet and stock tracking table
+export const priceSheet = pgTable("price_sheet", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").notNull().references(() => items.id, { onDelete: 'cascade' }),
+  sku: varchar("sku").notNull(),
+  itemName: varchar("item_name").notNull(),
+  shopifyId: varchar("shopify_id"),
+  shopifyHandle: varchar("shopify_handle"),
+  
+  // Pricing information
+  costPrice: numeric("cost_price", { precision: 10, scale: 2 }),
+  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }),
+  salePrice: numeric("sale_price", { precision: 10, scale: 2 }),
+  currentPrice: numeric("current_price", { precision: 10, scale: 2 }).notNull(),
+  
+  // Stock tracking
+  totalStock: integer("total_stock").default(0).notNull(),
+  availableStock: integer("available_stock").default(0).notNull(),
+  reservedStock: integer("reserved_stock").default(0).notNull(),
+  onOrderStock: integer("on_order_stock").default(0).notNull(),
+  
+  // Weight and unit information
+  weight: varchar("weight"),
+  weightUnit: varchar("weight_unit").default("g"),
+  unitSize: varchar("unit_size"),
+  
+  // Category and classification
+  category: varchar("category"),
+  brand: varchar("brand"),
+  vendor: varchar("vendor"),
+  strain: varchar("strain"),
+  potency: varchar("potency"),
+  
+  // Stock status and alerts
+  lowStockThreshold: integer("low_stock_threshold").default(5),
+  isLowStock: boolean("is_low_stock").default(false),
+  isOutOfStock: boolean("is_out_of_stock").default(false),
+  
+  // Marketplace sync status
+  shopifyInSync: boolean("shopify_in_sync").default(false),
+  lastShopifySync: timestamp("last_shopify_sync"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_price_sheet_item_id").on(table.itemId),
+  index("idx_price_sheet_sku").on(table.sku),
+  index("idx_price_sheet_shopify_id").on(table.shopifyId),
+  index("idx_price_sheet_low_stock").on(table.isLowStock),
+  index("idx_price_sheet_out_of_stock").on(table.isOutOfStock),
+]);
+
+// Order transactions table for tracking quantity changes
+export const orderTransactions = pgTable("order_transactions", {
+  id: serial("id").primaryKey(),
+  priceSheetId: integer("price_sheet_id").notNull().references(() => priceSheet.id, { onDelete: 'cascade' }),
+  itemId: integer("item_id").notNull().references(() => items.id, { onDelete: 'cascade' }),
+  
+  // Transaction details
+  transactionType: varchar("transaction_type").notNull(), // 'order', 'adjustment', 'intake', 'return', 'loss'
+  quantityChanged: integer("quantity_changed").notNull(),
+  previousStock: integer("previous_stock").notNull(),
+  newStock: integer("new_stock").notNull(),
+  
+  // Order reference information
+  orderId: varchar("order_id"),
+  shopifyOrderId: varchar("shopify_order_id"),
+  customerName: varchar("customer_name"),
+  
+  // Pricing at time of transaction
+  unitPrice: numeric("unit_price", { precision: 10, scale: 2 }),
+  totalValue: numeric("total_value", { precision: 10, scale: 2 }),
+  
+  // Notes and metadata
+  notes: text("notes"),
+  employeeId: integer("employee_id"),
+  locationFrom: varchar("location_from"),
+  locationTo: varchar("location_to"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_order_transactions_price_sheet").on(table.priceSheetId),
+  index("idx_order_transactions_item").on(table.itemId),
+  index("idx_order_transactions_type").on(table.transactionType),
+  index("idx_order_transactions_order").on(table.orderId),
+  index("idx_order_transactions_shopify").on(table.shopifyOrderId),
+]);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+export type PriceSheet = typeof priceSheet.$inferSelect;
+export type InsertPriceSheet = typeof priceSheet.$inferInsert;
+
+export type OrderTransaction = typeof orderTransactions.$inferSelect;
+export type InsertOrderTransaction = typeof orderTransactions.$inferInsert;
+
+// Relations for price sheet and order transactions
+export const priceSheetRelations = {
+  item: {
+    type: 'one' as const,
+    to: 'items',
+    from: priceSheet.itemId,
+    to_field: 'id'
+  },
+  transactions: {
+    type: 'many' as const,
+    to: 'orderTransactions',
+    from: priceSheet.id,
+    to_field: 'priceSheetId'
+  }
+};
+
+export const orderTransactionRelations = {
+  priceSheet: {
+    type: 'one' as const,
+    to: 'priceSheet',
+    from: orderTransactions.priceSheetId,
+    to_field: 'id'
+  },
+  item: {
+    type: 'one' as const,
+    to: 'items',
+    from: orderTransactions.itemId,
+    to_field: 'id'
+  }
+};
 
 // User credentials table for storing encrypted API keys and tokens
 export const userCredentials = pgTable("user_credentials", {
