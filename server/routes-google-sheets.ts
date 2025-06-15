@@ -450,34 +450,80 @@ export function registerGoogleSheetsRoutes(app: Express, storage: IStorage) {
   });
 
   /**
-   * Test order processing system
+   * Test complete order processing system
    */
   app.post("/api/google-sheets/test-system", async (req: Request, res: Response) => {
     try {
-      const { testOrderProcessing, testTelegramIntegration, runCompleteTest } = await import('../test-order-processing.js');
+      console.log('🧪 Testing Google Sheets Order Processing System');
       
-      const { testType } = req.body;
-      
-      let results;
-      
-      switch (testType) {
-        case 'orders':
-          results = await testOrderProcessing();
-          break;
-        case 'telegram':
-          results = await testTelegramIntegration();
-          break;
-        case 'complete':
-        default:
-          results = await runCompleteTest();
-          break;
+      const orderSpreadsheetId = '1SW_o292VqhW0_RAIBIEb3J_9srmZGg2uyo1Kob3CU-s';
+      const inventorySpreadsheetId = '1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU';
+
+      // Check Google Sheets configuration
+      const isConfigured = sheetsService.isConfigured();
+      console.log('📊 Google Sheets configured:', isConfigured);
+
+      if (!isConfigured) {
+        return res.json({
+          success: false,
+          message: 'Google Sheets authentication not configured',
+          configuration: {
+            required: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN'],
+            status: 'missing_credentials'
+          }
+        });
       }
-      
+
+      // Test reading orders from spreadsheet
+      console.log('📖 Reading orders from Google Sheets...');
+      const orders = await sheetsService.getOrdersFromSheet(orderSpreadsheetId);
+      console.log(`Found ${orders.length} orders in spreadsheet`);
+
+      // Test order processing
+      console.log('⚙️ Processing orders and updating inventory...');
+      const results = await sheetsService.readAndProcessOrders(
+        orderSpreadsheetId,
+        inventorySpreadsheetId
+      );
+
+      // Get current inventory stats
+      const items = await storage.getItems();
+      const totalItems = items.length;
+      const itemsWithStock = items.filter(item => (item.quantity || 0) > 0).length;
+
+      // Check Telegram configuration
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      const mediaChat = process.env.TELEGRAM_MEDIA_CHAT_ID;
+
+      const testResults = {
+        orderProcessing: {
+          success: true,
+          ordersFound: orders.length,
+          ordersProcessed: results.ordersProcessed,
+          inventoryUpdated: results.inventoryUpdated,
+          errors: results.errors,
+          totalItems,
+          itemsWithStock
+        },
+        telegramIntegration: {
+          configured: !!(botToken && mediaChat),
+          botToken: botToken ? 'Present' : 'Missing',
+          mediaChat: mediaChat ? 'Present' : 'Missing'
+        },
+        googleSheets: {
+          configured: isConfigured,
+          orderSpreadsheet: orderSpreadsheetId,
+          inventorySpreadsheet: inventorySpreadsheetId
+        }
+      };
+
       res.json({
         success: true,
-        testResults: results,
+        testResults,
+        message: `Successfully processed ${results.ordersProcessed} orders and updated ${results.inventoryUpdated} inventory items`,
         timestamp: new Date().toISOString()
       });
+
     } catch (error) {
       console.error('Error running system test:', error);
       res.status(500).json({ 
