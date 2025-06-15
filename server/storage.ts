@@ -4045,6 +4045,159 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(credentials).where(eq(credentials.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
+
+  // Price Sheet methods implementation
+  async getPriceSheets(): Promise<PriceSheet[]> {
+    return await db.select().from(priceSheet).orderBy(desc(priceSheet.updatedAt));
+  }
+
+  async getPriceSheet(id: number): Promise<PriceSheet | undefined> {
+    const [sheet] = await db.select().from(priceSheet).where(eq(priceSheet.id, id));
+    return sheet;
+  }
+
+  async getPriceSheetByItemId(itemId: number): Promise<PriceSheet | undefined> {
+    const [sheet] = await db.select().from(priceSheet).where(eq(priceSheet.itemId, itemId));
+    return sheet;
+  }
+
+  async getPriceSheetBySku(sku: string): Promise<PriceSheet | undefined> {
+    const [sheet] = await db.select().from(priceSheet).where(eq(priceSheet.sku, sku));
+    return sheet;
+  }
+
+  async getPriceSheetByShopifyId(shopifyId: string): Promise<PriceSheet | undefined> {
+    const [sheet] = await db.select().from(priceSheet).where(eq(priceSheet.shopifyProductId, shopifyId));
+    return sheet;
+  }
+
+  async createPriceSheet(priceSheetData: InsertPriceSheet): Promise<PriceSheet> {
+    const [newSheet] = await db.insert(priceSheet).values(priceSheetData).returning();
+    return newSheet;
+  }
+
+  async updatePriceSheet(id: number, priceSheetData: Partial<InsertPriceSheet>): Promise<PriceSheet | undefined> {
+    const [updatedSheet] = await db
+      .update(priceSheet)
+      .set({ ...priceSheetData, updatedAt: new Date() })
+      .where(eq(priceSheet.id, id))
+      .returning();
+    return updatedSheet;
+  }
+
+  async deletePriceSheet(id: number): Promise<boolean> {
+    const result = await db.delete(priceSheet).where(eq(priceSheet.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async syncPriceSheetFromShopify(itemId: number, shopifyData: any): Promise<PriceSheet> {
+    // Check if price sheet already exists for this item
+    let existingSheet = await this.getPriceSheetByItemId(itemId);
+    
+    const priceSheetData: InsertPriceSheet = {
+      itemId,
+      sku: shopifyData.variants?.[0]?.sku || shopifyData.handle,
+      shopifyProductId: shopifyData.id?.toString(),
+      shopifyVariantId: shopifyData.variants?.[0]?.id?.toString(),
+      cost: parseFloat(shopifyData.variants?.[0]?.cost || '0'),
+      basePrice: parseFloat(shopifyData.variants?.[0]?.price || '0'),
+      compareAtPrice: parseFloat(shopifyData.variants?.[0]?.compare_at_price || '0'),
+      currentStock: parseInt(shopifyData.variants?.[0]?.inventory_quantity || '0'),
+      reservedStock: 0,
+      availableStock: parseInt(shopifyData.variants?.[0]?.inventory_quantity || '0'),
+      lastSyncedAt: new Date(),
+      shopifyInventoryItemId: shopifyData.variants?.[0]?.inventory_item_id?.toString(),
+      shopifyTitle: shopifyData.title,
+      shopifyHandle: shopifyData.handle,
+      shopifyStatus: shopifyData.status,
+      taxable: shopifyData.variants?.[0]?.taxable || false,
+      requiresShipping: shopifyData.variants?.[0]?.requires_shipping || true,
+      trackQuantity: shopifyData.variants?.[0]?.inventory_management === 'shopify',
+      inventoryPolicy: shopifyData.variants?.[0]?.inventory_policy || 'deny',
+      fulfillmentService: shopifyData.variants?.[0]?.fulfillment_service || 'manual',
+      weightValue: parseFloat(shopifyData.variants?.[0]?.weight || '0'),
+      weightUnit: shopifyData.variants?.[0]?.weight_unit || 'lb'
+    };
+
+    if (existingSheet) {
+      // Update existing price sheet
+      return await this.updatePriceSheet(existingSheet.id, priceSheetData) || existingSheet;
+    } else {
+      // Create new price sheet
+      return await this.createPriceSheet(priceSheetData);
+    }
+  }
+
+  async updateStockLevels(priceSheetId: number, quantityChange: number, transactionType: string): Promise<PriceSheet | undefined> {
+    const sheet = await this.getPriceSheet(priceSheetId);
+    if (!sheet) return undefined;
+
+    const newCurrentStock = Math.max(0, sheet.currentStock + quantityChange);
+    const newAvailableStock = Math.max(0, newCurrentStock - sheet.reservedStock);
+
+    // Create transaction record
+    await this.createOrderTransaction({
+      priceSheetId,
+      itemId: sheet.itemId,
+      transactionType,
+      quantityBefore: sheet.currentStock,
+      quantityChange,
+      quantityAfter: newCurrentStock,
+      notes: `Stock ${transactionType}: ${quantityChange > 0 ? '+' : ''}${quantityChange}`
+    });
+
+    // Update stock levels
+    return await this.updatePriceSheet(priceSheetId, {
+      currentStock: newCurrentStock,
+      availableStock: newAvailableStock
+    });
+  }
+
+  // Order Transaction methods implementation
+  async getOrderTransactions(filters?: { priceSheetId?: number, itemId?: number, transactionType?: string }): Promise<OrderTransaction[]> {
+    let query = db.select().from(orderTransactions).orderBy(desc(orderTransactions.createdAt));
+    
+    if (filters) {
+      const conditions = [];
+      if (filters.priceSheetId) {
+        conditions.push(eq(orderTransactions.priceSheetId, filters.priceSheetId));
+      }
+      if (filters.itemId) {
+        conditions.push(eq(orderTransactions.itemId, filters.itemId));
+      }
+      if (filters.transactionType) {
+        conditions.push(eq(orderTransactions.transactionType, filters.transactionType));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    return await query;
+  }
+
+  async getOrderTransaction(id: number): Promise<OrderTransaction | undefined> {
+    const [transaction] = await db.select().from(orderTransactions).where(eq(orderTransactions.id, id));
+    return transaction;
+  }
+
+  async createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction> {
+    const [newTransaction] = await db.insert(orderTransactions).values(transaction).returning();
+    return newTransaction;
+  }
+
+  async getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]> {
+    return await db.select().from(orderTransactions)
+      .where(eq(orderTransactions.priceSheetId, priceSheetId))
+      .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getTransactionsByItem(itemId: number): Promise<OrderTransaction[]> {
+    return await db.select().from(orderTransactions)
+      .where(eq(orderTransactions.itemId, itemId))
+      .orderBy(desc(orderTransactions.createdAt));
+  }
 }
 
 // Use the database storage implementation
