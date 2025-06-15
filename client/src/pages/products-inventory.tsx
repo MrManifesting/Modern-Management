@@ -33,7 +33,9 @@ import {
   Store,
   PackageOpen,
   Barcode,
-  QrCode
+  QrCode,
+  FileText,
+  MoreHorizontal
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -79,6 +81,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Alert,
   AlertTitle,
@@ -1900,158 +1910,306 @@ const ProductsInventoryPage: React.FC = () => {
                 </TabsList>
                 
                 <TabsContent value="all" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {selectionMode && (
+                            <TableHead className="w-12">
+                              <Checkbox
+                                checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
+                                onCheckedChange={handleSelectAll}
+                              />
+                            </TableHead>
+                          )}
+                          <TableHead className="w-20">Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Weight</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.map((item) => (
+                          <TableRow key={item.id} className={selectedItems.includes(item.id) ? "bg-muted/50" : ""}>
+                            {selectionMode && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedItems.includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedItems([...selectedItems, item.id]);
+                                    } else {
+                                      setSelectedItems(selectedItems.filter(id => id !== item.id));
+                                    }
+                                  }}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              {(item.images as string[])?.length > 0 ? (
+                                <img 
+                                  src={(item.images as string[])[0]} 
+                                  alt={item.name}
+                                  className="w-12 h-12 object-cover rounded border"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
+                                  <FileText className="h-5 w-5 text-gray-400" />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium max-w-xs">
+                              <div className="truncate">{item.name}</div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{item.sku || 'Not Set'}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{item.category || 'Uncategorized'}</Badge>
+                            </TableCell>
+                            <TableCell>{item.weight || 'Not Set'}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {(() => {
+                                const salePrice = Number(item.salePrice || 0);
+                                const basePrice = Number(item.basePrice || 0);
+                                const wholesalePrice = Number(item.wholesalePrice || 0);
+                                const costPrice = Number(item.costPrice || 0);
+                                
+                                if (salePrice > 0) {
+                                  return <span className="text-green-600">${salePrice.toFixed(2)}</span>;
+                                } else if (basePrice > 0) {
+                                  return <span className="text-blue-600">${basePrice.toFixed(2)}</span>;
+                                } else if (wholesalePrice > 0) {
+                                  return <span className="text-orange-600">${wholesalePrice.toFixed(2)}</span>;
+                                } else if (costPrice > 0) {
+                                  return <span className="text-gray-600">${costPrice.toFixed(2)}</span>;
+                                } else {
+                                  return <span className="text-gray-400">Not Set</span>;
+                                }
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-bold text-lg ${
+                                Number(item.quantity || 0) > 0 
+                                  ? 'text-green-600' 
+                                  : 'text-red-600'
+                              }`}>
+                                {item.quantity || 0}
+                              </span>
+                              <div className="text-xs text-gray-500">
+                                {item.unit || 'units'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={item.status === 'listed' ? 'default' : 
+                                        item.status === 'draft' ? 'secondary' : 'outline'}
+                              >
+                                {item.status || 'draft'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedItem(item);
+                                    setEditItemModalOpen(true);
+                                  }}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setProductIdToDelete(item.id);
+                                    setDeleteDialogOpen(true);
+                                  }}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </TabsContent>
 
-                {/* Add other category tabs with ItemGrid */}
                 <TabsContent value="flower" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {selectionMode && (
+                            <TableHead className="w-12">
+                              <Checkbox
+                                checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length > 0}
+                                onCheckedChange={(checked) => {
+                                  const categoryItems = filteredProducts.filter(p => p.category?.toLowerCase() === 'flower');
+                                  if (checked) {
+                                    const newSelected = [...selectedItems, ...categoryItems.map(item => item.id).filter(id => !selectedItems.includes(id))];
+                                    setSelectedItems(newSelected);
+                                  } else {
+                                    setSelectedItems(selectedItems.filter(id => !categoryItems.map(item => item.id).includes(id)));
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                          )}
+                          <TableHead className="w-20">Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Weight</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').map((item) => (
+                          <TableRow key={item.id} className={selectedItems.includes(item.id) ? "bg-muted/50" : ""}>
+                            {selectionMode && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedItems.includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedItems([...selectedItems, item.id]);
+                                    } else {
+                                      setSelectedItems(selectedItems.filter(id => id !== item.id));
+                                    }
+                                  }}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              {(item.images as string[])?.length > 0 ? (
+                                <img 
+                                  src={(item.images as string[])[0]} 
+                                  alt={item.name}
+                                  className="w-12 h-12 object-cover rounded border"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
+                                  <FileText className="h-5 w-5 text-gray-400" />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium max-w-xs">
+                              <div className="truncate">{item.name}</div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{item.sku || 'Not Set'}</TableCell>
+                            <TableCell>{item.weight || 'Not Set'}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {(() => {
+                                const salePrice = Number(item.salePrice || 0);
+                                const basePrice = Number(item.basePrice || 0);
+                                const wholesalePrice = Number(item.wholesalePrice || 0);
+                                const costPrice = Number(item.costPrice || 0);
+                                
+                                if (salePrice > 0) {
+                                  return <span className="text-green-600">${salePrice.toFixed(2)}</span>;
+                                } else if (basePrice > 0) {
+                                  return <span className="text-blue-600">${basePrice.toFixed(2)}</span>;
+                                } else if (wholesalePrice > 0) {
+                                  return <span className="text-orange-600">${wholesalePrice.toFixed(2)}</span>;
+                                } else if (costPrice > 0) {
+                                  return <span className="text-gray-600">${costPrice.toFixed(2)}</span>;
+                                } else {
+                                  return <span className="text-gray-400">Not Set</span>;
+                                }
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-bold text-lg ${
+                                Number(item.quantity || 0) > 0 
+                                  ? 'text-green-600' 
+                                  : 'text-red-600'
+                              }`}>
+                                {item.quantity || 0}
+                              </span>
+                              <div className="text-xs text-gray-500">
+                                {item.unit || 'units'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={item.status === 'listed' ? 'default' : 
+                                        item.status === 'draft' ? 'secondary' : 'outline'}
+                              >
+                                {item.status || 'draft'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedItem(item);
+                                    setEditItemModalOpen(true);
+                                  }}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setProductIdToDelete(item.id);
+                                    setDeleteDialogOpen(true);
+                                  }}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </TabsContent>
 
+                {/* Keep remaining tabs as simple placeholders for now */}
                 <TabsContent value="electronics" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'electronics').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="text-center py-8 text-gray-500">
+                    Electronics items will be displayed here
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="concentrates" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="text-center py-8 text-gray-500">
+                    Concentrates items will be displayed here
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="edibles" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="text-center py-8 text-gray-500">
+                    Edibles items will be displayed here
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="vapes" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="text-center py-8 text-gray-500">
+                    Vapes items will be displayed here
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="bulk" className="mt-0">
-                  <ItemGrid 
-                    items={filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').map(product => ({
-                      ...product,
-                      images: product.images || [],
-                      basePrice: product.basePrice || 0,
-                      quantity: product.quantity || 0
-                    }))}
-                    onEdit={(item) => {
-                      setSelectedItem(item);
-                      setEditItemModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      setProductIdToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    showHeader={false}
-                    limit={null}
-                    showViewAll={false}
-                  />
+                  <div className="text-center py-8 text-gray-500">
+                    Bulk items will be displayed here
+                  </div>
                 </TabsContent>
               </Tabs>
             )}
