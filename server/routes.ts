@@ -6667,6 +6667,9 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register price sheet routes
+  app.use("/api/price-sheet", priceSheetRoutes);
+
   const httpServer = createServer(app);
   return httpServer;
 }
