@@ -125,22 +125,47 @@ export class ShopifyProductImportService {
         item.shopifyId === product.id
       );
 
+      // Calculate pricing tiers from Shopify data
+      const basePrice = parseFloat(primaryVariant.price || '0');
+      const compareAtPrice = primaryVariant.compare_at_price ? parseFloat(primaryVariant.compare_at_price) : null;
+      const costPrice = primaryVariant.cost_price ? parseFloat(primaryVariant.cost_price) : basePrice * 0.6; // Estimate 40% margin
+      const wholesalePrice = basePrice * 0.8; // 20% wholesale discount
+      
       const itemData = {
         name: product.title,
         description: this.stripHtml(product.body_html || ''),
         category: this.mapProductType(product.product_type),
+        brand: product.vendor || 'Unknown',
         vendor: product.vendor || 'Unknown',
         sku: primaryVariant.sku || this.generateFallbackSku(product.title),
-        basePrice: primaryVariant.price || '0',
-        salePrice: primaryVariant.compare_at_price || null,
+        
+        // Comprehensive pricing structure
+        costPrice: costPrice.toFixed(2),
+        basePrice: basePrice.toFixed(2),
+        salePrice: compareAtPrice ? compareAtPrice.toFixed(2) : null,
+        wholesalePrice: wholesalePrice.toFixed(2),
+        retailPrice: basePrice.toFixed(2),
+        
         quantity: primaryVariant.inventory_quantity || 0,
         weight: this.formatWeight(primaryVariant.weight, primaryVariant.weight_unit),
         status: this.mapShopifyStatus(product.status),
+        condition: 'new',
+        
+        // Shopify integration fields
         shopifyId: product.id,
+        shopifyVariantId: primaryVariant.id,
+        shopifyInventoryItemId: primaryVariant.inventory_item_id,
         shopifyUrl: `https://${process.env.SHOPIFY_STORE}/admin/products/${product.id}`,
+        
+        // Media and metadata
         imageUrl: primaryImage?.src || null,
+        images: product.images?.map(img => img.src) || [],
         tags: product.tags ? product.tags.split(',').map(tag => tag.trim()) : [],
-        publishedToShopify: product.status === 'active'
+        
+        // Status tracking
+        publishedToShopify: product.status === 'active',
+        isActive: product.status === 'active',
+        lastShopifySync: new Date()
       };
 
       if (existingItem) {
