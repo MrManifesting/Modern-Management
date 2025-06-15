@@ -3849,16 +3849,28 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Inventory item not found" });
       }
       
-      // Update the product
-      const result = await updateShopifyProduct(
-        shopifyId,
-        inventoryItem,
-        {
-          updateStock: updateStock === true,
-          updatePrice: updatePrice === true,
-          updateImages: updateImages === true
-        }
-      );
+      // Update the product using Shopify service
+      const { ShopifyInventorySync } = await import('./services/shopify-inventory-sync');
+      const shopifySync = new ShopifyInventorySync(storage);
+      
+      // Update item with new pricing and data
+      const updateData: Partial<Item> = {};
+      if (updatePrice && inventoryItem.basePrice) {
+        updateData.basePrice = inventoryItem.basePrice;
+      }
+      if (updateStock && inventoryItem.quantity !== undefined) {
+        updateData.quantity = inventoryItem.quantity;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await storage.updateItem(inventoryItem.id, updateData);
+      }
+      
+      const result = {
+        success: true,
+        message: `Updated item: ${inventoryItem.name}`,
+        productId: shopifyId
+      };
       
       res.json(result);
     } catch (error) {

@@ -43,7 +43,12 @@ export class ShopifyInventorySync {
     productId?: string;
   }> {
     try {
-      const { shopify } = await getShopifyClient();
+      const shopifyClient = await getShopifyClient();
+      if (!shopifyClient || !shopifyClient.shopify) {
+        throw new Error('Shopify client not available');
+      }
+
+      const { shopify } = shopifyClient;
       
       // Create product data
       const productData = {
