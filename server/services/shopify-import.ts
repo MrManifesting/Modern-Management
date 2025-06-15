@@ -346,12 +346,17 @@ export function extractProductFromRow(headers: string[], row: string[]): any {
     name: productInfo.title,
     sku: productInfo.sku || `IMPORT-${Date.now()}`,
     basePrice: productInfo.price?.toString() || '0.00',
+    costPrice: productInfo.costPrice?.toString() || '0.00',
+    salePrice: productInfo.compareAtPrice?.toString() || '0.00',
+    wholesalePrice: (productInfo.price * 0.8)?.toString() || '0.00', // 20% discount for wholesale
     description: productInfo.description || '',
     category: productInfo.productType || 'Imported',
     vendor: productInfo.vendor || 'Unknown',
     quantity: productInfo.quantity || 0,
     weight: productInfo.weight || '1 pound',
-    status: productInfo.published ? 'active' : 'inactive'
+    status: productInfo.published ? 'active' : 'inactive',
+    imageUrl: productInfo.imageUrl || '',
+    tags: productInfo.tags || ''
   };
 }
 
@@ -366,12 +371,17 @@ export function extractInventoryFromRow(headers: string[], row: string[]): any {
     name: inventoryInfo.title,
     sku: inventoryInfo.sku || `IMPORT-${Date.now()}`,
     basePrice: inventoryInfo.price?.toString() || '0.00',
+    costPrice: inventoryInfo.costPrice?.toString() || '0.00',
+    salePrice: inventoryInfo.compareAtPrice?.toString() || '0.00',
+    wholesalePrice: (inventoryInfo.price * 0.8)?.toString() || '0.00',
     description: inventoryInfo.description || '',
     category: inventoryInfo.productType || 'Cannabis',
     vendor: inventoryInfo.vendor || 'Unknown',
     quantity: inventoryInfo.quantity || 0,
     weight: '1 pound',
-    status: 'active'
+    status: 'active',
+    imageUrl: inventoryInfo.imageUrl || '',
+    tags: inventoryInfo.tags || ''
   };
 }
 
@@ -752,13 +762,23 @@ export function extractProductInfo(
                      getField('quantity') || '0';
       quantity = parseInt(String(qtyStr).replace(/[^0-9]/g, '')) || 0;
       
-      // Extract price with multiple field options using safe access
+      // Extract price with comprehensive field options using safe access
       let price = 0;
       const priceStr = getField('variant price') || 
                        getField('price') || 
-                       getField('price / united states') || 
-                       getField('cost per item') || '0';
-      price = parseFloat(String(priceStr).replace(/[^0-9.]/g, '')) || 0;
+                       getField('price / united states') ||
+                       getField('variant price / united states') ||
+                       getField('cost per item') || 
+                       getField('variant cost') ||
+                       getField('compare at price') ||
+                       getField('variant compare at price') ||
+                       '0';
+      
+      // Enhanced price parsing to handle currency symbols and formatting
+      const cleanPriceStr = String(priceStr).replace(/[$,\s]/g, '').replace(/[^0-9.]/g, '');
+      price = parseFloat(cleanPriceStr) || 0;
+      
+      console.log(`Price extraction: raw="${priceStr}", cleaned="${cleanPriceStr}", parsed=${price}`);
       
       // Extract weight using safe access
       let weight: number | null = null;
@@ -768,6 +788,24 @@ export function extractProductInfo(
       if (weightStr) {
         weight = parseFloat(String(weightStr).replace(/[^0-9.]/g, '')) || null;
       }
+      
+      // Extract image URL using safe access
+      const imageUrl = getField('image src') || 
+                      getField('image') || 
+                      getField('variant image') || 
+                      getField('image url') || 
+                      getField('product image') || '';
+      
+      console.log(`Image URL extraction: raw="${imageUrl}"`);
+      
+      // Extract additional pricing fields for comprehensive pricing data
+      const compareAtPriceStr = getField('variant compare at price') || 
+                               getField('compare at price') || '';
+      const compareAtPrice = parseFloat(String(compareAtPriceStr).replace(/[$,\s]/g, '').replace(/[^0-9.]/g, '')) || 0;
+      
+      const costPriceStr = getField('variant cost') || 
+                          getField('cost per item') || '';
+      const costPrice = parseFloat(String(costPriceStr).replace(/[$,\s]/g, '').replace(/[^0-9.]/g, '')) || 0;
       
       console.log(`Extracted data for row ${rowIndex}:`, { 
         handle: handle.substring(0, 30), 
@@ -807,7 +845,10 @@ export function extractProductInfo(
         productType: productType.trim(),
         vendor: vendor.trim(),
         published,
-        tags: tags.trim()
+        tags: tags.trim(),
+        imageUrl: imageUrl.trim(),
+        compareAtPrice,
+        costPrice
       };
     } 
     else if (format === 'inventory') {
