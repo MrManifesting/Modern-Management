@@ -61,13 +61,19 @@ export class DirectShopifySync {
       // Process each Shopify product (flattened structure)
       for (const shopifyProduct of shopifyProducts) {
         try {
-          // Skip products without SKU or those marked as not in Shopify
-          if (!shopifyProduct.sku || !shopifyProduct.inShopify) {
-            console.log(`Skipping product without SKU or not in Shopify: ${shopifyProduct.title}`);
+          // Generate SKU from handle if not present
+          let sku = shopifyProduct.sku;
+          if (!sku && shopifyProduct.handle) {
+            sku = shopifyProduct.handle.toUpperCase().replace(/-/g, '');
+          }
+          
+          // Skip products without any identifier or not in Shopify
+          if (!sku || !shopifyProduct.inShopify) {
+            console.log(`Skipping product without SKU/handle or not in Shopify: ${shopifyProduct.title}`);
             continue;
           }
 
-          const existingItem = skuToItem.get(shopifyProduct.sku);
+          const existingItem = skuToItem.get(sku);
           
           if (existingItem) {
             // Update existing item with Shopify data
@@ -86,7 +92,7 @@ export class DirectShopifySync {
             // Create new item from Shopify
             const newItem = {
               name: shopifyProduct.title || 'Imported Product',
-              sku: shopifyProduct.sku,
+              sku: sku,
               basePrice: shopifyProduct.price || 0,
               quantity: shopifyProduct.quantity || 0,
               shopifyId: shopifyProduct.variantId?.toString(),
