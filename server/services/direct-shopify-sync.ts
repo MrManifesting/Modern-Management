@@ -58,51 +58,49 @@ export class DirectShopifySync {
         if (item.sku) skuToItem.set(item.sku, item);
       });
 
-      // Process each Shopify product
+      // Process each Shopify product (flattened structure)
       for (const shopifyProduct of shopifyProducts) {
         try {
-          if (!shopifyProduct.variants || !Array.isArray(shopifyProduct.variants)) {
+          // Skip products without SKU or those marked as not in Shopify
+          if (!shopifyProduct.sku || !shopifyProduct.inShopify) {
+            console.log(`Skipping product without SKU or not in Shopify: ${shopifyProduct.title}`);
             continue;
           }
 
-          for (const variant of shopifyProduct.variants) {
-            if (!variant.sku) continue;
+          const existingItem = skuToItem.get(shopifyProduct.sku);
+          
+          if (existingItem) {
+            // Update existing item with Shopify data
+            const updateData: Partial<Item> = {
+              basePrice: shopifyProduct.price || 0,
+              quantity: shopifyProduct.quantity || 0,
+              shopifyId: shopifyProduct.variantId?.toString(),
+              name: shopifyProduct.title || existingItem.name,
+              weight: shopifyProduct.weight ? `${shopifyProduct.weight} ounce` : existingItem.weight
+            };
 
-            const existingItem = skuToItem.get(variant.sku);
-            
-            if (existingItem) {
-              // Update existing item with Shopify data
-              const updateData: Partial<Item> = {
-                basePrice: parseFloat(variant.price) || 0,
-                quantity: variant.inventory_quantity || 0,
-                shopifyId: variant.id?.toString(),
-                name: shopifyProduct.title || existingItem.name,
-                brand: shopifyProduct.vendor || existingItem.brand
-              };
+            await this.storage.updateItem(existingItem.id, updateData);
+            updated++;
+            console.log(`Updated: ${shopifyProduct.title} - $${shopifyProduct.price} (${shopifyProduct.quantity} in stock)`);
+          } else {
+            // Create new item from Shopify
+            const newItem = {
+              name: shopifyProduct.title || 'Imported Product',
+              sku: shopifyProduct.sku,
+              basePrice: shopifyProduct.price || 0,
+              quantity: shopifyProduct.quantity || 0,
+              shopifyId: shopifyProduct.variantId?.toString(),
+              brand: 'Gold Standard',
+              category: 'Flower',
+              status: 'available',
+              active: true,
+              weight: shopifyProduct.weight ? `${shopifyProduct.weight} ounce` : '1 ounce',
+              description: `Imported from Shopify: ${shopifyProduct.title}`
+            };
 
-              await this.storage.updateItem(existingItem.id, updateData);
-              updated++;
-              console.log(`Updated: ${shopifyProduct.title} - $${variant.price} (${variant.inventory_quantity} in stock)`);
-            } else {
-              // Create new item from Shopify
-              const newItem = {
-                name: shopifyProduct.title || 'Imported Product',
-                sku: variant.sku,
-                basePrice: parseFloat(variant.price) || 0,
-                quantity: variant.inventory_quantity || 0,
-                shopifyId: variant.id?.toString(),
-                brand: shopifyProduct.vendor || 'Gold Standard',
-                category: shopifyProduct.product_type || 'Flower',
-                status: 'available',
-                active: true,
-                weight: '1 ounce',
-                description: `Imported from Shopify: ${shopifyProduct.title}`
-              };
-
-              await this.storage.createItem(newItem);
-              created++;
-              console.log(`Created: ${shopifyProduct.title} - $${variant.price}`);
-            }
+            await this.storage.createItem(newItem);
+            created++;
+            console.log(`Created: ${shopifyProduct.title} - $${shopifyProduct.price}`);
           }
         } catch (error) {
           const errorMsg = `Failed to process ${shopifyProduct.title}: ${error instanceof Error ? error.message : 'Unknown error'}`;
