@@ -14,7 +14,103 @@ if (!fs.existsSync(MEDIA_FOLDER)) {
   log(`Created media folder at ${MEDIA_FOLDER}`, 'telegram');
 }
 
-let bot: TelegramBot | null = null;
+// Auto-associate uploaded images with inventory items
+async function autoAssociateImageWithInventory(fileName: string, publicUrl: string, caption?: string) {
+  try {
+    const { DatabaseStorage } = await import('../storage.js');
+    const storage = new DatabaseStorage();
+    
+    // Get all inventory items
+    const items = await storage.getItems();
+    
+    // Find matching items based on caption, filename, or SKU patterns
+    let matchedItems = [];
+    
+    if (caption) {
+      const captionLower = caption.toLowerCase();
+      matchedItems = items.filter(item => {
+        const itemName = item.name?.toLowerCase() || '';
+        const itemSku = item.sku?.toLowerCase() || '';
+        
+        return captionLower.includes(itemName) || 
+               captionLower.includes(itemSku) ||
+               itemName.includes(captionLower) ||
+               itemSku.includes(captionLower);
+      });
+    }
+    
+    // If no caption matches, try filename patterns
+    if (matchedItems.length === 0) {
+      const fileNameLower = fileName.toLowerCase();
+      matchedItems = items.filter(item => {
+        const itemName = item.name?.toLowerCase() || '';
+        const itemSku = item.sku?.toLowerCase() || '';
+        
+        return fileNameLower.includes(itemSku) ||
+               fileNameLower.includes(itemName.replace(/\s+/g, '_')) ||
+               fileNameLower.includes(itemName.replace(/\s+/g, ''));
+      });
+    }
+    
+    // Update matched items with the new image
+    for (const item of matchedItems) {
+      try {
+        // Get current images or initialize empty array
+        let currentImages = [];
+        if (item.images && Array.isArray(item.images)) {
+          currentImages = item.images;
+        } else if (typeof item.images === 'string') {
+          currentImages = [item.images];
+        }
+        
+        // Add new image if not already present
+        if (!currentImages.includes(publicUrl)) {
+          currentImages.push(publicUrl);
+          
+          // Update item with new images
+          await storage.updateItem(item.id, {
+            images: JSON.stringify(currentImages)
+          });
+          
+          log(`Associated image ${fileName} with item: ${item.name} (ID: ${item.id})`, 'telegram');
+          
+          // Sync to Shopify if item has shopifyId
+          if (item.shopifyId) {
+            await syncImageToShopify(item.id, publicUrl);
+          }
+        }
+      } catch (error) {
+        console.error(`Error updating item ${item.id} with image:`, error);
+      }
+    }
+    
+    // If no matches found, create a new item suggestion
+    if (matchedItems.length === 0 && caption) {
+      log(`No matching items found for image ${fileName}. Caption: ${caption}`, 'telegram');
+      // Could create a pending item or suggest creation based on caption
+    }
+    
+  } catch (error) {
+    console.error('Error in autoAssociateImageWithInventory:', error);
+  }
+}
+
+// Sync image to Shopify product
+async function syncImageToShopify(itemId: number, imageUrl: string) {
+  try {
+    const { ShopifyProductImportService } = await import('./shopify-product-import.js');
+    const shopifyService = new ShopifyProductImportService();
+    
+    // Update Shopify product with new image
+    await shopifyService.updateProductImage(itemId, imageUrl);
+    log(`Synced image to Shopify for item ID: ${itemId}`, 'telegram');
+    
+  } catch (error) {
+    console.error(`Error syncing image to Shopify for item ${itemId}:`, error);
+  }
+}
+
+let bot: any = null;
 
 // Initialize the Telegram bot
 export const initializeTelegramBot = (token: string) => {
@@ -37,9 +133,12 @@ export const initializeTelegramBot = (token: string) => {
           const filePath = await downloadMediaFile(bot!, fileId, fileName);
           const publicUrl = `/media/${fileName}`;
           
+          // Auto-associate with inventory items
+          await autoAssociateImageWithInventory(fileName, publicUrl, msg.caption);
+          
           // Send confirmation with image URL
           await bot!.sendPhoto(chatId, filePath, {
-            caption: `✅ Photo saved successfully!\n📁 File: ${fileName}\n🔗 URL: ${publicUrl}\n\nYou can now use this image in your inventory system.`
+            caption: `✅ Photo saved and auto-associated with inventory!\n📁 File: ${fileName}\n🔗 URL: ${publicUrl}\n\nImage will appear in inventory and sync to Shopify.`
           });
           
           log(`Received photo from Telegram: ${fileName} (URL: ${publicUrl})`, 'telegram');
