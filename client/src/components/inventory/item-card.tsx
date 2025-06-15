@@ -384,13 +384,33 @@ export default function ItemCard({
           <div className="flex justify-between items-start">
             <h3 className="font-medium text-gray-800 flex-1">{item.name}</h3>
             <div className="text-right ml-2">
-              {/* Main Price Display */}
+              {/* Main Price Display - Show most relevant authentic price */}
               <div className="font-semibold text-primary-600">
-                ${Number(item.basePrice || 0).toLocaleString('en-US', { 
-                  minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
-                })}
+                {(() => {
+                  // Priority: salePrice > basePrice > wholesalePrice > costPrice
+                  const salePrice = Number(item.salePrice || 0);
+                  const basePrice = Number(item.basePrice || 0);
+                  const wholesalePrice = Number(item.wholesalePrice || 0);
+                  const costPrice = Number(item.costPrice || 0);
+                  
+                  const displayPrice = salePrice > 0 ? salePrice : 
+                                     basePrice > 0 ? basePrice : 
+                                     wholesalePrice > 0 ? wholesalePrice : 
+                                     costPrice > 0 ? costPrice : 0;
+                  
+                  return `$${displayPrice.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}`;
+                })()}
               </div>
+              
+              {/* Shopify Live Indicator */}
+              {item.shopifyId && (
+                <div className="text-xs text-green-600 font-medium">
+                  Live on Shopify
+                </div>
+              )}
               
               {/* Sale Price Indicator */}
               {item.salePrice && Number(item.salePrice) > 0 && Number(item.salePrice) !== Number(item.basePrice) && (
