@@ -95,10 +95,21 @@ export default function ImageCarousel({ images, alt, className = "" }: ImageCaro
           {images.map((src, index) => (
             <div className="relative flex-[0_0_100%]" key={index}>
               <img 
-                src={src} 
+                src={getImageUrl(src)} 
                 alt={`${alt} (${index + 1} of ${images.length})`} 
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.parentElement?.querySelector('.fallback-placeholder');
+                  if (fallback) {
+                    (fallback as HTMLElement).style.display = 'flex';
+                  }
+                }}
               />
+              <div className="fallback-placeholder hidden absolute inset-0 bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-500 text-sm">Image {index + 1}</span>
+              </div>
               {/* Image counter badge */}
               <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                 {index + 1}/{images.length}

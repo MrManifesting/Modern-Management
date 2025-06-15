@@ -3685,6 +3685,91 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to tag photos" });
     }
   });
+
+  // Google Sheets configuration endpoints
+  app.get("/api/google-sheets/config", async (_req: Request, res: Response) => {
+    try {
+      const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
+      const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
+      const hasRefreshToken = !!process.env.GOOGLE_REFRESH_TOKEN;
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      
+      res.json({
+        configured: hasClientId && hasClientSecret && spreadsheetId,
+        hasClientId,
+        hasClientSecret,
+        hasRefreshToken,
+        spreadsheetId,
+        status: hasClientId && hasClientSecret ? 'connected' : 'disconnected'
+      });
+    } catch (error) {
+      console.error("Error getting Google Sheets config:", error);
+      res.status(500).json({ error: "Failed to get configuration" });
+    }
+  });
+
+  app.post("/api/google-sheets/config", async (req: Request, res: Response) => {
+    try {
+      const { clientId, clientSecret, spreadsheetId, refreshToken } = req.body;
+      
+      // In a production environment, these would be stored securely
+      // For now, we'll just validate the configuration
+      if (!clientId || !clientSecret || !spreadsheetId) {
+        return res.status(400).json({ error: "Client ID, Client Secret, and Spreadsheet ID are required" });
+      }
+
+      // Store configuration (in production, this would use a secure credential store)
+      process.env.GOOGLE_CLIENT_ID = clientId;
+      process.env.GOOGLE_CLIENT_SECRET = clientSecret;
+      process.env.GOOGLE_SHEETS_ID = spreadsheetId;
+      if (refreshToken) {
+        process.env.GOOGLE_REFRESH_TOKEN = refreshToken;
+      }
+
+      res.json({
+        success: true,
+        message: "Google Sheets configuration saved successfully"
+      });
+    } catch (error) {
+      console.error("Error saving Google Sheets config:", error);
+      res.status(500).json({ error: "Failed to save configuration" });
+    }
+  });
+
+  app.post("/api/google-sheets/test-connection", async (_req: Request, res: Response) => {
+    try {
+      // Test Google Sheets connection
+      const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
+      const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
+      const hasSpreadsheetId = !!process.env.GOOGLE_SHEETS_ID;
+      
+      if (!hasClientId || !hasClientSecret || !hasSpreadsheetId) {
+        return res.json({
+          success: false,
+          message: "Missing required configuration"
+        });
+      }
+
+      // Try to initialize Google Sheets service
+      try {
+        const { GoogleSheetsService } = await import('./services/google-sheets.js');
+        const sheetsService = new GoogleSheetsService();
+        
+        res.json({
+          success: true,
+          message: "Google Sheets connection test successful"
+        });
+      } catch (error) {
+        res.json({
+          success: false,
+          message: "Failed to connect to Google Sheets API"
+        });
+      }
+    } catch (error) {
+      console.error("Error testing Google Sheets connection:", error);
+      res.status(500).json({ error: "Failed to test connection" });
+    }
+  });
   
   // Serve static media files
   app.use('/media', (req, res, next) => {

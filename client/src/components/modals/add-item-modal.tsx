@@ -149,7 +149,7 @@ export default function AddItemModal({
   const [shopifySyncStatus, setShopifySyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [shopifySyncMessage, setShopifySyncMessage] = useState<string>('');
   
-  const handleSubmit = (data: ItemForm) => {
+  const handleSubmit = async (data: ItemForm) => {
     // Add the marketplace field if not present
     if (!data.marketplace || !Array.isArray(data.marketplace)) {
       data.marketplace = [];
@@ -203,6 +203,31 @@ export default function AddItemModal({
             } else {
               setShopifySyncStatus('error');
               setShopifySyncMessage('No connected Shopify marketplace found');
+            }
+
+            // Automatic photo tagging for new items
+            try {
+              const tagResponse = await fetch('/api/media/tag-photos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  itemId: newItem.id,
+                  itemName: newItem.name,
+                  itemSku: newItem.sku,
+                  photoCount: 5
+                })
+              });
+              
+              const tagResult = await tagResponse.json();
+              if (tagResult.success && tagResult.taggedCount > 0) {
+                toast({
+                  title: "Photos Tagged",
+                  description: `${tagResult.taggedCount} photos automatically tagged with item details`,
+                  variant: "default"
+                });
+              }
+            } catch (error) {
+              console.warn('Photo tagging failed:', error);
             }
           }
         } catch (error) {
