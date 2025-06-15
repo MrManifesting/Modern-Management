@@ -806,3 +806,6 @@ export async function testShopifyConnection() {
     };
   }
 }
+
+// Export alias for getShopifyClient to match the import in shopify-inventory-sync
+export const getShopifyClient = createShopifyClient;
