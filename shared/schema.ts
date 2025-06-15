@@ -683,3 +683,16 @@ export const insertCredentialSchema = createInsertSchema(credentials).omit({
 });
 
 export type InsertCredentialData = z.infer<typeof insertCredentialSchema>;
+
+// Price sheet insert schema
+export const insertPriceSheetSchema = createInsertSchema(priceSheet).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Order transaction insert schema
+export const insertOrderTransactionSchema = createInsertSchema(orderTransactions).omit({
+  id: true,
+  createdAt: true,
+});
