@@ -29,13 +29,7 @@ import {
   prepareItemForShopify 
 } from "./services/shopify-integration";
 import { loadPaypalDefault, createPaypalOrder, capturePaypalOrder } from "./paypal";
-import { 
-  fetchShopifySalesReport, 
-  fetchShopifyInventoryReport, 
-  fetchShopifyCustomerReport 
-} from "./services/shopify-reports";
-import { testShopifyConnection } from "./services/shopify-auth";
-import { getShopifyProducts } from "./services/shopify-sync";
+// Removed duplicate Shopify service imports - consolidated into shopify-integration.ts
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
@@ -977,7 +971,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
     try {
       console.log("Testing Shopify connection from frontend...");
-      const connectionStatus = await testShopifyConnection();
+      const connectionStatus = await isShopifyConfigured();
       console.log("Shopify connection test result:", connectionStatus);
       res.json(connectionStatus);
     } catch (error) {
