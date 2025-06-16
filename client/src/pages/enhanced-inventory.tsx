@@ -60,8 +60,10 @@ export default function EnhancedInventory() {
     );
   }
 
-  const formatPrice = (price: string) => {
-    const num = parseFloat(price);
+  const formatPrice = (price: string | number) => {
+    if (!price) return 'No Price';
+    const priceStr = String(price).replace(/[$,\s]/g, '');
+    const num = parseFloat(priceStr);
     return isNaN(num) || num === 0 ? 'No Price' : `$${num.toFixed(2)}`;
   };
 
