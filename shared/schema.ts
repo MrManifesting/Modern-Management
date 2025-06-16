@@ -139,8 +139,6 @@ export const orderTransactions = pgTable("order_transactions", {
 ]);
 
 export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
 export type PriceSheet = typeof priceSheet.$inferSelect;
 export type InsertPriceSheet = typeof priceSheet.$inferInsert;
 
@@ -210,6 +208,7 @@ export const items = pgTable("items", {
   quantity: integer("quantity").default(0),
   status: varchar("status").default("active"),
   images: json("images").default([]),
+  imageUrl: varchar("image_url"), // Primary image URL from Google Sheets
   barcode: varchar("barcode"),
   weight: varchar("weight").default("pound"),
   dimensions: varchar("dimensions"),

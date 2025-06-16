@@ -82,9 +82,11 @@ export default function ItemCard({
   // Handle click to view item details
   const handleViewDetails = (e: React.MouseEvent) => {
     // Don't navigate if we're clicking on a button
-    const target = e.target as HTMLElement;
-    if (target && (target.closest('button') || target.closest('.dropdown-menu'))) {
-      return;
+    if (e?.target) {
+      const target = e.target as HTMLElement;
+      if (target && (target.closest('button') || target.closest('.dropdown-menu'))) {
+        return;
+      }
     }
     
     navigate(`/inventory/${item.id}`);
