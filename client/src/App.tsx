@@ -111,6 +111,7 @@ function Router() {
         <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
         <ProtectedRoute path="/google-apps-script-admin" component={() => <GoogleAppsScriptAdminPage />} />
         <ProtectedRoute path="/sheets-mapping-admin" component={() => <SheetsMappingAdmin />} />
+        <ProtectedRoute path="/orders" component={() => <OrdersTracking />} />
         <ProtectedRoute path="/orders-tracking" component={() => <OrdersTracking />} />
         <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />

@@ -126,7 +126,22 @@ export class SimpleSheetsSync {
             if (cleanedPrice !== '0') price = cleanedPrice; // Column Z
           }
           
-          const qty = row[20] && row[20] !== '' ? parseInt(String(row[20]).replace(/[^0-9]/g, '')) || 0 : 0;
+          // Try multiple quantity columns to find actual inventory data
+          let qty = 0;
+          // Column U (index 20) - primary inventory quantity
+          if (row[20] && row[20] !== '' && !isNaN(parseInt(String(row[20])))) {
+            qty = parseInt(String(row[20]).replace(/[^0-9]/g, '')) || 0;
+          }
+          // Column T (index 19) - backup quantity column
+          else if (row[19] && row[19] !== '' && !isNaN(parseInt(String(row[19])))) {
+            qty = parseInt(String(row[19]).replace(/[^0-9]/g, '')) || 0;
+          }
+          // Column V (index 21) - alternative quantity column
+          else if (row[21] && row[21] !== '' && !isNaN(parseInt(String(row[21])))) {
+            qty = parseInt(String(row[21]).replace(/[^0-9]/g, '')) || 0;
+          }
+          
+          console.log(`Quantity extraction for ${row[0]}: raw=${row[20]}, parsed=${qty}`);
           const weight = row[9] && row[9] !== '' ? String(row[9]).trim() : '';
           const sku = row[17] && row[17] !== '' ? String(row[17]).trim() : '';
           
