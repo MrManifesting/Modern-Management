@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Comprehensive Code Cleanup and UI/UX Modernization Complete**
+  - Fixed font readability issues with high-contrast color scheme ensuring proper text visibility
+  - Updated CSS variables to use proper contrast ratios preventing text from matching background colors
+  - Corrected weight inconsistencies with intelligent parsing system handling pounds, ounces, and grams accurately
+  - Implemented weight parsing function that extracts numeric values and units from inconsistent weight strings
+  - Enhanced CSS with green cannabis theme colors replacing blue/purple for brand consistency
+  - Modernized table headers with proper contrast and semantic font weights for better accessibility
+  - Removed duplicate code sections and consolidated rendering logic for improved performance
+  - Fixed mobile responsiveness with proper touch targets and enhanced button styling
+  - Applied clean, consistent styling across all UI components with reduced complexity
+  - System now provides fast, responsive experience with accurate weight data and readable fonts
 - June 16, 2025: **Enhanced Inventory Set as Primary View with Professional Table Format**
   - Made enhanced inventory the primary view at `/inventory` route with comprehensive table and grid toggle
   - Enhanced inventory now displays 250+ database items merged with 317 Google Sheets products with authentic data
