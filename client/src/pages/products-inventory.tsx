@@ -340,16 +340,27 @@ const ProductsInventoryPage: React.FC = () => {
           }
         };
 
+        // Enhanced price display function
+        const formatPriceDisplay = (product: any) => {
+          if (product.displayPrice && product.displayPrice !== "No Price") {
+            return product.displayPrice;
+          }
+          if (product.basePrice && product.basePrice > 0) {
+            return `$${product.basePrice}`;
+          }
+          return "No Price";
+        };
+
         const weightData = parseWeight(item.weight || '1 pound');
 
         return {
           id: item.id,
           name: item.name,
           category: item.category || "Uncategorized",
-          price: item.displayPrice || "No Price",
+          price: formatPriceDisplay(item),
           displayPrice: item.displayPrice || "No Price",
           priceSource: item.priceSource || "none",
-          basePrice: item.basePrice || 0,
+          basePrice: item.displayPrice || item.basePrice || 0,
           retailPrice: item.retailPrice || item.basePrice || 0,
           wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
           sku: item.sku || "NO-SKU",
