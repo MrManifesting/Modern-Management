@@ -75,6 +75,66 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get items with associated media files and proper pricing display
+  app.get("/api/items/with-media", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const fs = await import('fs/promises');
+      
+      // Process each item to include media files and ensure proper pricing
+      const itemsWithMedia = await Promise.all(items.map(async (item) => {
+        // Get associated media files from uploads directory
+        let mediaFiles: string[] = [];
+        try {
+          const uploadsDir = 'uploads';
+          const files = await fs.readdir(uploadsDir);
+          
+          // Match files by SKU, item name, or ID patterns
+          const itemSku = item.sku || '';
+          const itemName = item.name || '';
+          const itemId = item.id.toString();
+          
+          mediaFiles = files.filter(file => {
+            const fileName = file.toLowerCase();
+            return (
+              (itemSku && fileName.includes(itemSku.toLowerCase())) ||
+              (itemName && fileName.includes(itemName.toLowerCase().replace(/\s+/g, '_'))) ||
+              fileName.includes(`item_${itemId}`) ||
+              fileName.includes(`id_${itemId}`)
+            );
+          });
+        } catch (error) {
+          // Uploads directory doesn't exist or can't be read
+          mediaFiles = [];
+        }
+        
+        // Ensure proper pricing data structure for authentic display
+        const basePrice = Number(item.basePrice || item.price || 0);
+        const retailPrice = Number(item.retailPrice || basePrice || 0);
+        const wholesalePrice = Number(item.wholesalePrice || basePrice * 0.7 || 0);
+        
+        return {
+          ...item,
+          mediaFiles,
+          // Ensure consistent pricing structure for frontend display
+          price: basePrice,
+          basePrice,
+          retailPrice,
+          wholesalePrice,
+          // Parse images array if it's a string
+          images: typeof item.images === 'string' 
+            ? JSON.parse(item.images || '[]') 
+            : (item.images || [])
+        };
+      }));
+      
+      res.json(itemsWithMedia);
+    } catch (error) {
+      console.error("Failed to fetch items with media:", error);
+      res.status(500).json({ error: "Failed to fetch items with media" });
+    }
+  });
+
   app.post("/api/items", uploadMemory.array("files", 5), async (req: Request, res: Response) => {
     try {
       const insertItemSchema = z.object({
