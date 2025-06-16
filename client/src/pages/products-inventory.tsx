@@ -3,7 +3,6 @@ import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
 import { WorkingBarcode } from '@/components/inventory/working-barcode';
 import { NumberedLabelsDialog } from '@/components/inventory/numbered-labels-dialog';
-import { InventoryTableRow } from '@/components/inventory/inventory-table-row';
 import { 
   Plus, 
   UploadCloud, 
@@ -34,9 +33,7 @@ import {
   Store,
   PackageOpen,
   Barcode,
-  QrCode,
-  FileText,
-  MoreHorizontal
+  QrCode
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -83,14 +80,6 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Alert,
   AlertTitle,
   AlertDescription,
@@ -105,7 +94,6 @@ import AddItemModal from '@/components/modals/add-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
 import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
-import ItemGrid from '@/components/inventory/item-grid';
 
 // Define the Product interface
 interface Product {
@@ -317,27 +305,22 @@ const ProductsInventoryPage: React.FC = () => {
         id: item.id,
         name: item.name,
         category: item.category || "Uncategorized",
-        // Use authentic Shopify pricing data hierarchy
-        price: Number(item.price || item.basePrice || 0),
-        basePrice: Number(item.basePrice || 0),
-        retailPrice: Number(item.retailPrice || item.basePrice || 0),
-        wholesalePrice: Number(item.wholesalePrice || 0),
-        salePrice: Number(item.salePrice || 0),
-        costPrice: Number(item.costPrice || 0),
+        price: item.basePrice || 0,
+        retailPrice: item.retailPrice || item.basePrice || 0,
+        wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
         sku: item.sku || "NO-SKU",
         barcode: item.barcode || "",
-        quantity: Number(item.quantity || 0),
-        weight: item.weight || item.size || "",
-        // Prioritize Shopify CDN images for authentic product photos
-        images: Array.isArray(item.images) ? item.images : [],
+        quantity: item.quantity || 0,
+        images: item.images || [],
         mediaFiles: item.mediaFiles || [],
         status: item.status || "draft",
+        size: item.size || "",
+        volume: item.volume || "",
         description: item.description || "",
         imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
         marketplace: item.marketplace || [],
         shopifyId: item.shopifyId || null,
-        shopifySyncStatus: item.shopifySyncStatus || "not_synced",
-        unit: item.unit || "units"
+        shopifySyncStatus: item.shopifySyncStatus || "not_synced"
       }));
     },
     refetchOnWindowFocus: true,
@@ -1308,7 +1291,7 @@ const ProductsInventoryPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      <main className="container mx-auto py-6 space-y-6">
+      <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col gap-4 inventory-header">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
             <div>
@@ -1916,366 +1899,924 @@ const ProductsInventoryPage: React.FC = () => {
                 </TabsList>
                 
                 <TabsContent value="all" className="mt-0">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {selectionMode && (
-                            <TableHead className="w-12">
-                              <Checkbox
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          {bulkSelectMode && (
+                            <th className="py-3 px-2 w-10">
+                              <Checkbox 
                                 checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
-                                onCheckedChange={handleSelectAll}
+                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked)}
                               />
-                            </TableHead>
+                            </th>
                           )}
-                          <TableHead className="w-20">Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Weight</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProducts.map((item) => (
-                          <TableRow key={item.id} className={selectedItems.includes(item.id) ? "bg-muted/50" : ""}>
-                            {selectionMode && (
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedItems.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedItems([...selectedItems, item.id]);
-                                    } else {
-                                      setSelectedItems(selectedItems.filter(id => id !== item.id));
-                                    }
-                                  }}
+                          <th className="text-center py-3 px-2 w-16">Image</th>
+                          <th className="text-left py-3 px-4">Product</th>
+                          <th className="text-left py-3 px-4">Category</th>
+                          <th className="text-center py-3 px-4">SKU</th>
+                          <th className="text-center py-3 px-4">Barcode/QR</th>
+                          <th className="text-center py-3 px-4">Weight</th>
+                          <th className="text-right py-3 px-4">Price</th>
+                          <th className="text-center py-3 px-4">Qty</th>
+                          <th className="text-center py-3 px-4">Status</th>
+                          <th className="text-center py-3 px-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.map((product: Product) => (
+                          <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                            {bulkSelectMode && (
+                              <td className="py-3 px-2">
+                                <Checkbox 
+                                  checked={selectedItems.some(item => item.id === product.id)}
+                                  onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
                                 />
-                              </TableCell>
+                              </td>
                             )}
-                            <TableCell>
-                              {(() => {
-                                // Check for uploaded media files first
-                                if (item.mediaFiles && item.mediaFiles.length > 0) {
-                                  const imageUrl = `/uploads/${item.mediaFiles[0]}`;
-                                  return (
-                                    <div className="relative group">
-                                      <img 
-                                        src={imageUrl} 
-                                        alt={item.name}
-                                        className="w-16 h-16 object-cover rounded-lg border-2 border-green-300 cursor-pointer"
-                                      />
-                                      <div className="absolute left-20 top-0 z-50 hidden group-hover:block">
+                            <td className="py-3 px-2 text-center">
+                              <div className="group relative">
+                                <div className="relative w-12 h-12 mx-auto overflow-hidden rounded-md border border-border transition-all duration-200 cursor-pointer hover:shadow-md">
+                                  {(() => {
+                                    // Check for images in multiple sources
+                                    let imageUrl = null;
+                                    
+                                    // 1. Check product.imageUrl (direct field)
+                                    if (product.imageUrl) {
+                                      imageUrl = product.imageUrl;
+                                    }
+                                    // 2. Check product.images array (JSON field)
+                                    else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                                      imageUrl = product.images[0];
+                                    }
+                                    // 3. Check for media files by item ID
+                                    else if (product.id) {
+                                      // Try to construct media URL from common patterns
+                                      const mediaPatterns = [
+                                        `/media/${product.sku}.jpg`,
+                                        `/media/${product.sku}.png`,
+                                        `/media/${product.name.toLowerCase().replace(/\s+/g, '_')}.jpg`,
+                                        `/media/item_${product.id}.jpg`,
+                                        `/media/item_${product.id}.png`
+                                      ];
+                                      imageUrl = mediaPatterns[0]; // Try the first pattern
+                                    }
+                                    
+                                    if (imageUrl) {
+                                      return (
                                         <img 
                                           src={imageUrl} 
-                                          alt={item.name}
-                                          className="w-64 h-64 object-cover rounded-lg shadow-xl border-4 border-green-400"
+                                          alt={product.name}
+                                          className="object-cover w-full h-full"
+                                          onError={(e) => {
+                                            const imgElement = e.target as HTMLImageElement;
+                                            const parentContainer = imgElement.parentElement;
+                                            if (parentContainer) {
+                                              imgElement.style.display = 'none';
+                                              const iconDiv = document.createElement('div');
+                                              iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                              iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                              parentContainer.appendChild(iconDiv);
+                                            }
+                                          }}
                                         />
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                          <ImageIcon className="h-6 w-6 opacity-50" />
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                </div>
+                                
+                                {/* Larger preview on hover */}
+                                {product.imageUrl && (
+                                  <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
+                                    <div className="relative w-48 h-48 overflow-hidden rounded">
+                                      <img 
+                                        src={product.imageUrl} 
+                                        alt={product.name} 
+                                        className="object-contain w-full h-full"
+                                        onError={(e) => {
+                                          const imgElement = e.target as HTMLImageElement;
+                                          const parentContainer = imgElement.parentElement;
+                                          // Hide the image
+                                          imgElement.style.display = 'none';
+                                          // Show icon instead
+                                          if (parentContainer) {
+                                            const iconDiv = document.createElement('div');
+                                            iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                            iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                            parentContainer.appendChild(iconDiv);
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
+                                      {product.name}
+                                    </div>
+                                    {/* Triangle pointer */}
+                                    <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium">{product.name}</div>
+                              <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline">{product.category}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                {product.sku && (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <Barcode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">Barcode</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <QrCode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">QR</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
+                                {product.quantity}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge className={getStatusBadgeClass(product.status)}>
+                                {product.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex justify-center gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      View
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
+                                      <DialogDescription>
+                                        Complete product information and management
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+                                      {/* Left Column - Product Details */}
+                                      <div className="lg:col-span-2 space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                            <p className="text-sm">{product.description || "Description"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                                            <p className="text-sm">{product.category}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-3 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Weight</h4>
+                                            <p className="text-sm">{product.weight || "0g"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Dimensions</h4>
+                                            <p className="text-sm">Not specified</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Brand</h4>
+                                            <p className="text-sm">{product.vendor || "Gold Standard"}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Supplier</h4>
+                                            <p className="text-sm">No supplier</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Created</h4>
+                                            <p className="text-sm">{product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "Jun 13, 2025"}</p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Updated</h4>
+                                            <p className="text-sm">{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString() : "Jun 13, 2025"}</p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <span className="text-sm">Available</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Inventory Status</h4>
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <span className="text-sm">In Stock</span>
+                                            <span className="text-sm font-medium">{product.quantity}</span>
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            SKU: {product.sku || "Not assigned"}
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Images</h4>
+                                          <div className="text-sm text-muted-foreground">
+                                            {product.imageUrl ? "Image available" : "No images available"}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Right Column - Barcode and Category */}
+                                      <div className="space-y-6">
+                                        <div className="space-y-2">
+                                          <WorkingBarcode item={product} />
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Category Color Legend</h4>
+                                          <div className="space-y-2">
+                                            <div className="text-xs font-medium">Main Categories</div>
+                                            <div className="grid grid-cols-1 gap-1 text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                                                <span>Flower</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                                                <span>Concentrates</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-pink-500 rounded"></div>
+                                                <span>Edibles</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                                <span>Vapes</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                                <span>Tinctures</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-cyan-500 rounded"></div>
+                                                <span>Topicals</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                                                <span>Accessories</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-xs font-medium mt-3">Other</div>
+                                            <div className="flex items-center gap-2 text-xs">
+                                              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                                              <span>Bulk</span>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
-                                  );
-                                }
-                                
-                                // Category indicators for products without images
-                                const name = item.name.toLowerCase();
-                                if (name.includes('flower') || name.includes('thca')) {
-                                  return (
-                                    <div className="w-16 h-16 bg-green-200 rounded-lg border-2 border-green-400 flex items-center justify-center">
-                                      <span className="text-2xl">🌿</span>
-                                    </div>
-                                  );
-                                } else if (name.includes('concentrate') || name.includes('wax') || name.includes('shatter')) {
-                                  return (
-                                    <div className="w-16 h-16 bg-amber-200 rounded-lg border-2 border-amber-400 flex items-center justify-center">
-                                      <span className="text-2xl">🍯</span>
-                                    </div>
-                                  );
-                                } else if (name.includes('edible') || name.includes('gummy')) {
-                                  return (
-                                    <div className="w-16 h-16 bg-purple-200 rounded-lg border-2 border-purple-400 flex items-center justify-center">
-                                      <span className="text-2xl">🍬</span>
-                                    </div>
-                                  );
-                                } else {
-                                  return (
-                                    <div className="w-16 h-16 bg-gray-200 rounded-lg border-2 border-gray-400 flex items-center justify-center">
-                                      <ImageIcon className="h-8 w-8 text-gray-600" />
-                                    </div>
-                                  );
-                                }
-                              })()}
-                            </TableCell>
-                            <TableCell className="font-medium max-w-xs">
-                              <div className="truncate">{item.name}</div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{item.sku || 'Not Set'}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{item.category || 'Uncategorized'}</Badge>
-                            </TableCell>
-                            <TableCell>{item.weight || 'Not Set'}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                              {(() => {
-                                const salePrice = Number(item.salePrice || 0);
-                                const basePrice = Number(item.basePrice || 0);
-                                const wholesalePrice = Number(item.wholesalePrice || 0);
-                                const costPrice = Number(item.costPrice || 0);
-                                
-                                if (salePrice > 0) {
-                                  return <span className="text-green-600">${salePrice.toFixed(2)}</span>;
-                                } else if (basePrice > 0) {
-                                  return <span className="text-blue-600">${basePrice.toFixed(2)}</span>;
-                                } else if (wholesalePrice > 0) {
-                                  return <span className="text-orange-600">${wholesalePrice.toFixed(2)}</span>;
-                                } else if (costPrice > 0) {
-                                  return <span className="text-gray-600">${costPrice.toFixed(2)}</span>;
-                                } else {
-                                  return <span className="text-gray-400">Not Set</span>;
-                                }
-                              })()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={`font-bold text-lg ${
-                                Number(item.quantity || 0) > 0 
-                                  ? 'text-green-600' 
-                                  : 'text-red-600'
-                              }`}>
-                                {item.quantity || 0}
-                              </span>
-                              <div className="text-xs text-gray-500">
-                                {item.unit || 'units'}
+                                  </DialogContent>
+                                </Dialog>
+
+                                {/* Action Dropdown Menu */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                      Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleEditClick(product)}
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit Item
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handlePrintBarcodeClick(product.id)}
+                                    >
+                                      <Printer className="mr-2 h-4 w-4" />
+                                      Print Barcode/QR
+                                    </DropdownMenuItem>
+                                    <NumberedLabelsDialog item={product}>
+                                      <DropdownMenuItem className="flex items-center cursor-pointer">
+                                        <Hash className="mr-2 h-4 w-4" />
+                                        Print Numbered Labels
+                                      </DropdownMenuItem>
+                                    </NumberedLabelsDialog>
+                                    {product.weight && (
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleQuickBreakdownClick(product.id)}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Quick Breakdown
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateSKU(product.id)}
+                                    >
+                                      <Tag className="mr-2 h-4 w-4" />
+                                      Generate SKU
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateBarcode(product.id)}
+                                    >
+                                      <Barcode className="mr-2 h-4 w-4" />
+                                      Generate Barcode
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleGenerateQRCode(product.id)}
+                                    >
+                                      <QrCode className="mr-2 h-4 w-4" />
+                                      Generate QR Code
+                                    </DropdownMenuItem>
+                                    
+                                    {product.shopifyId && (
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleViewShopifyClick(product.id)}
+                                      >
+                                        <Store className="mr-2 h-4 w-4" />
+                                        View in Shopify
+                                      </DropdownMenuItem>
+                                    )}
+                                    
+                                    <DropdownMenuItem
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleViewSheetsClick(product.id)}
+                                    >
+                                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                      View in Google Sheets
+                                    </DropdownMenuItem>
+                                    
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer text-destructive"
+                                      onClick={() => handleDeleteClick(product.id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Item
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={item.status === 'listed' ? 'default' : 
-                                        item.status === 'draft' ? 'secondary' : 'outline'}
-                              >
-                                {item.status || 'draft'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedItem(item);
-                                    setEditItemModalOpen(true);
-                                  }}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    setProductIdToDelete(item.id);
-                                    setDeleteDialogOpen(true);
-                                  }}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </tbody>
+                    </table>
                   </div>
                 </TabsContent>
-
-                <TabsContent value="flower" className="mt-0">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {selectionMode && (
-                            <TableHead className="w-12">
-                              <Checkbox
-                                checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length > 0}
-                                onCheckedChange={(checked) => {
-                                  const categoryItems = filteredProducts.filter(p => p.category?.toLowerCase() === 'flower');
-                                  if (checked) {
-                                    const newSelected = [...selectedItems, ...categoryItems.map(item => item.id).filter(id => !selectedItems.includes(id))];
-                                    setSelectedItems(newSelected);
-                                  } else {
-                                    setSelectedItems(selectedItems.filter(id => !categoryItems.map(item => item.id).includes(id)));
-                                  }
-                                }}
+                
+                {/* Electronics Category */}
+                <TabsContent value="electronics" className="mt-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          {bulkSelectMode && (
+                            <th className="py-3 px-2 w-10">
+                              <Checkbox 
+                                checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'electronics').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'electronics').length > 0}
+                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'electronics')}
                               />
-                            </TableHead>
+                            </th>
                           )}
-                          <TableHead className="w-20">Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Weight</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').map((item) => (
-                          <TableRow key={item.id} className={selectedItems.includes(item.id) ? "bg-muted/50" : ""}>
-                            {selectionMode && (
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedItems.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedItems([...selectedItems, item.id]);
-                                    } else {
-                                      setSelectedItems(selectedItems.filter(id => id !== item.id));
+                          <th className="text-left py-3 px-4 w-16">Image</th>
+                          <th className="text-left py-3 px-4">Product</th>
+                          <th className="text-left py-3 px-4">Category</th>
+                          <th className="text-center py-3 px-4">SKU</th>
+                          <th className="text-center py-3 px-4">Size</th>
+                          <th className="text-right py-3 px-4">Price</th>
+                          <th className="text-center py-3 px-4">Qty</th>
+                          <th className="text-center py-3 px-4">Status</th>
+                          <th className="text-center py-3 px-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts
+                          .filter((product: Product) => product.category === "Electronics")
+                          .map((product: Product) => (
+                            <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelect(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-4">
+                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center relative group overflow-hidden">
+                                  {product.imageUrl ? (
+                                    <img 
+                                      src={product.imageUrl} 
+                                      alt={product.name}
+                                      className="object-cover w-full h-full"
+                                      onError={(e) => {
+                                        const imgElement = e.target as HTMLImageElement;
+                                        const parentContainer = imgElement.parentElement;
+                                        imgElement.style.display = 'none';
+                                        if (parentContainer) {
+                                          const iconDiv = document.createElement('div');
+                                          iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                          iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                          parentContainer.appendChild(iconDiv);
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="flex items-center justify-center w-full h-full bg-muted text-muted-foreground">
+                                      <ImageIcon className="h-6 w-6 opacity-50" />
+                                    </div>
+                                  )}
+                                  
+                                  {product.imageUrl && (
+                                    <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
+                                      <div className="relative w-48 h-48 overflow-hidden rounded">
+                                        <img 
+                                          src={product.imageUrl} 
+                                          alt={product.name} 
+                                          className="object-contain w-full h-full"
+                                          onError={(e) => {
+                                            const imgElement = e.target as HTMLImageElement;
+                                            const parentContainer = imgElement.parentElement;
+                                            imgElement.style.display = 'none';
+                                            if (parentContainer) {
+                                              const iconDiv = document.createElement('div');
+                                              iconDiv.className = 'flex items-center justify-center w-full h-full bg-muted text-muted-foreground';
+                                              iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                              parentContainer.appendChild(iconDiv);
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
+                                        {product.name}
+                                      </div>
+                                      <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline">{product.category}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  {product.sku && (
+                                    <>
+                                      <div className="flex items-center gap-1">
+                                        <Barcode className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-xs">Barcode</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <QrCode className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-xs">QR</span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
+                                  {product.quantity}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center gap-2">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        <Eye className="h-3 w-3 mr-1" />
+                                        View
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>{product.name}</DialogTitle>
+                                        <DialogDescription>
+                                          Product details
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="grid grid-cols-2 gap-4 py-4">
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                                          <p>{product.category}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Subcategory</h4>
+                                          <p>{product.subcategory}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">SKU</h4>
+                                          <p className="font-mono">{product.sku}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
+                                          <p>{product.size || "N/A"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Price</h4>
+                                          <p>{formatPrice(product.price)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Retail Price</h4>
+                                          <p>{formatPrice(product.retailPrice)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Wholesale Price</h4>
+                                          <p>{formatPrice(product.wholesalePrice)}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Quantity</h4>
+                                          <p>{product.quantity}</p>
+                                        </div>
+                                        <div className="space-y-1 col-span-2">
+                                          <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                          <p>{product.description || "No description available"}</p>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handlePrintBarcodeClick(product.id)}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Quick Breakdown
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleGenerateSKU(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Tags className="mr-2 h-4 w-4" />
+                                        Generate SKU
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleGenerateQRCode(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <QrCode className="mr-2 h-4 w-4" />
+                                        Generate QR Code
+                                      </DropdownMenuItem>
+                                      
+                                      <DropdownMenuItem
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleGenerateBarcode(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Barcode className="mr-2 h-4 w-4" />
+                                        Generate Barcode
+                                      </DropdownMenuItem>
+                                      
+                                      {product.shopifyId && product.id !== undefined && (
+                                        <DropdownMenuItem
+                                          className="flex items-center cursor-pointer"
+                                          onClick={() => {
+                                            if (product.id !== undefined) {
+                                              handleViewShopifyClick(product.id);
+                                            }
+                                          }}
+                                        >
+                                          <Store className="mr-2 h-4 w-4" />
+                                          View in Shopify
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </TabsContent>
+                
+                {/* Flower Category */}
+                <TabsContent value="flower" className="mt-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          {bulkSelectMode && (
+                            <th className="py-3 px-2 w-10">
+                              <Checkbox 
+                                checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'flower').length > 0}
+                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'flower')}
+                              />
+                            </th>
+                          )}
+                          <th className="text-center py-3 px-2 w-16">Image</th>
+                          <th className="text-left py-3 px-4">Product</th>
+                          <th className="text-left py-3 px-4">Category</th>
+                          <th className="text-center py-3 px-4">SKU</th>
+                          <th className="text-center py-3 px-4">Size</th>
+                          <th className="text-right py-3 px-4">Price</th>
+                          <th className="text-center py-3 px-4">Qty</th>
+                          <th className="text-center py-3 px-4">Status</th>
+                          <th className="text-center py-3 px-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.filter(product => product.category?.toLowerCase() === 'flower').map((product: Product) => (
+                          <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                            {bulkSelectMode && (
+                              <td className="py-3 px-2">
+                                <Checkbox 
+                                  checked={selectedItems.some(item => item.id === product.id)}
+                                  onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                />
+                              </td>
+                            )}
+                            <td className="py-3 px-2 text-center">
+                              <div className="relative group">
+                                {product.image ? (
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-10 h-10 object-cover rounded-md cursor-pointer hover:scale-110 transition-transform"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium">{product.name}</div>
+                              <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline">{product.category}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                {product.sku && (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <Barcode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">Barcode</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <QrCode className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-xs">QR</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
+                                {product.quantity}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge className={getStatusBadgeClass(product.status)}>
+                                {product.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex justify-center gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
+                                  onClick={() => {
+                                    if (product.id !== undefined) {
+                                      handleViewClick(product.id);
                                     }
                                   }}
-                                />
-                              </TableCell>
-                            )}
-                            <TableCell>
-                              {(item.images as string[])?.length > 0 ? (
-                                <img 
-                                  src={(item.images as string[])[0]} 
-                                  alt={item.name}
-                                  className="w-12 h-12 object-cover rounded border"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
-                                  <FileText className="h-5 w-5 text-gray-400" />
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium max-w-xs">
-                              <div className="truncate">{item.name}</div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{item.sku || 'Not Set'}</TableCell>
-                            <TableCell>{item.weight || 'Not Set'}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                              {(() => {
-                                const salePrice = Number(item.salePrice || 0);
-                                const basePrice = Number(item.basePrice || 0);
-                                const wholesalePrice = Number(item.wholesalePrice || 0);
-                                const costPrice = Number(item.costPrice || 0);
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
                                 
-                                if (salePrice > 0) {
-                                  return <span className="text-green-600">${salePrice.toFixed(2)}</span>;
-                                } else if (basePrice > 0) {
-                                  return <span className="text-blue-600">${basePrice.toFixed(2)}</span>;
-                                } else if (wholesalePrice > 0) {
-                                  return <span className="text-orange-600">${wholesalePrice.toFixed(2)}</span>;
-                                } else if (costPrice > 0) {
-                                  return <span className="text-gray-600">${costPrice.toFixed(2)}</span>;
-                                } else {
-                                  return <span className="text-gray-400">Not Set</span>;
-                                }
-                              })()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={`font-bold text-lg ${
-                                Number(item.quantity || 0) > 0 
-                                  ? 'text-green-600' 
-                                  : 'text-red-600'
-                              }`}>
-                                {item.quantity || 0}
-                              </span>
-                              <div className="text-xs text-gray-500">
-                                {item.unit || 'units'}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                      Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleEditClick(product)}
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit Item
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => {
+                                        if (product.id !== undefined) {
+                                          handlePrintBarcodeClick(product.id);
+                                        }
+                                      }}
+                                    >
+                                      <Printer className="mr-2 h-4 w-4" />
+                                      Print Barcode/QR
+                                    </DropdownMenuItem>
+                                    
+                                    <DropdownMenuItem 
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => {
+                                        if (product.id !== undefined) {
+                                          handleQuickBreakdownClick(product.id);
+                                        }
+                                      }}
+                                    >
+                                      <PackageOpen className="mr-2 h-4 w-4" />
+                                      Breakdown Item
+                                    </DropdownMenuItem>
+                                    
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        if (product.id !== undefined) {
+                                          handleDeleteClick(product.id);
+                                        }
+                                      }}
+                                      className="flex items-center cursor-pointer text-red-600"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={item.status === 'listed' ? 'default' : 
-                                        item.status === 'draft' ? 'secondary' : 'outline'}
-                              >
-                                {item.status || 'draft'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedItem(item);
-                                    setEditItemModalOpen(true);
-                                  }}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    setProductIdToDelete(item.id);
-                                    setDeleteDialogOpen(true);
-                                  }}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </tbody>
+                    </table>
                   </div>
                 </TabsContent>
 
-                {/* Keep remaining tabs as simple placeholders for now */}
-                <TabsContent value="electronics" className="mt-0">
-                  <div className="text-center py-8 text-gray-500">
-                    Electronics items will be displayed here
-                  </div>
-                </TabsContent>
-
+                {/* Other cannabis categories with similar structure */}
                 <TabsContent value="concentrates" className="mt-0">
-                  <div className="text-center py-8 text-gray-500">
-                    Concentrates items will be displayed here
+                  <div className="text-center py-8 text-muted-foreground">
+                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length === 0 ? 
+                      "No concentrates found." : 
+                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length} concentrates available`
+                    }
                   </div>
                 </TabsContent>
 
                 <TabsContent value="edibles" className="mt-0">
-                  <div className="text-center py-8 text-gray-500">
-                    Edibles items will be displayed here
+                  <div className="text-center py-8 text-muted-foreground">
+                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length === 0 ? 
+                      "No edibles found." : 
+                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length} edibles available`
+                    }
                   </div>
                 </TabsContent>
 
                 <TabsContent value="vapes" className="mt-0">
-                  <div className="text-center py-8 text-gray-500">
-                    Vapes items will be displayed here
+                  <div className="text-center py-8 text-muted-foreground">
+                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length === 0 ? 
+                      "No vapes found." : 
+                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length} vapes available`
+                    }
                   </div>
                 </TabsContent>
 
                 <TabsContent value="bulk" className="mt-0">
-                  <div className="text-center py-8 text-gray-500">
-                    Bulk items will be displayed here
+                  <div className="text-center py-8 text-muted-foreground">
+                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length === 0 ? 
+                      "No bulk items found." : 
+                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length} bulk items available`
+                    }
                   </div>
                 </TabsContent>
               </Tabs>
             )}
           </CardContent>
         </Card>
-      </main>
-
-    {/* Delete Confirmation Dialog */}
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Item</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this item? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
-                Delete
-              </AlertDialogAction>
+      </div>
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this product from your inventory.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

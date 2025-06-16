@@ -3,7 +3,8 @@ import { IMarketplaceService } from '../marketplace';
 
 import Shopify from 'shopify-api-node';
 import { log } from '../../vite';
-// Shopify auth functionality consolidated into shopify-integration.ts
+import { createShopifyClient } from '../shopify-auth';
+import { getShopifyCredentials } from '../shopify-auth';
 
 // Utility function consolidated into this service
 const updateItemWithShopifyId = (item: Item, shopifyId: string) => {
@@ -62,19 +63,16 @@ export class ShopifyService implements IMarketplaceService {
       try {
         log(`Creating Shopify client from env vars for marketplace integration`, 'marketplace-shopify');
         // Use the shared client creation method
-        // Shopify client functionality consolidated into shopify-integration.ts
-        const shopifyStore = process.env.SHOPIFY_STORE;
-        const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        const shopifyClientResult = await createShopifyClient();
         
-        if (shopifyStore && shopifyAccessToken) {
-          this.client = new Shopify({
-            shopName: shopifyStore,
-            accessToken: shopifyAccessToken,
-            apiVersion: '2023-10'
-          });
+        // The createShopifyClient returns an object with multiple properties
+        // The actual Shopify client is in the 'shopify' property
+        if (shopifyClientResult && shopifyClientResult.shopify) {
+          this.client = shopifyClientResult.shopify;
           return this.client;
         } else {
-          throw new Error('Shopify credentials missing from environment variables');
+          log('Shopify client not found in createShopifyClient result', 'marketplace-shopify-error');
+          throw new Error('Shopify client not found in result');
         }
       } catch (error: any) {
         log(`Error creating Shopify client from env vars: ${error.message}`, 'marketplace-shopify-error');
@@ -348,17 +346,15 @@ export class ShopifyService implements IMarketplaceService {
         } else {
           // Fallback to direct API call using Fetch
           console.log('Using fallback direct fetch API call');
-          // Use environment variables for credentials
-          const shopifyStore = process.env.SHOPIFY_STORE;
-          const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+          const credentials = await getShopifyCredentials();
           
-          if (!shopifyAccessToken || !shopifyStore) {
+          if (!credentials || !credentials.accessToken || !credentials.storeUrl) {
             console.error('Missing credentials for Shopify API call');
             throw new Error('Missing Shopify credentials for direct API call');
           }
           
-          const storeUrl = shopifyStore.replace(/^https?:\/\//, '').replace(/\/$/, '');
-          const accessToken = shopifyAccessToken;
+          const storeUrl = credentials.storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+          const accessToken = credentials.accessToken;
           
           console.log(`[${new Date().toISOString()}] Making direct API call to ${storeUrl}/admin/api/2023-10/products.json`);
           
