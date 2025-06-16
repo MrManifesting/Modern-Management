@@ -4668,6 +4668,48 @@ ${topCustomersCsv}`;
   const { SimpleSheetsSync } = simpleSheetsModule;
   const simpleSheetsSync = new SimpleSheetsSync(storage);
 
+  // Bulk update inventory quantities from Google Sheets
+  app.post("/api/inventory/sync-quantities", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting bulk quantity sync from Google Sheets...');
+      
+      // Get enhanced inventory data with quantities
+      const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
+      
+      let updated = 0;
+      const errors: string[] = [];
+      
+      // Update each item's quantity in the database
+      for (const item of enhancedItems) {
+        if (item.id && item.quantity !== undefined) {
+          try {
+            await storage.updateItem(item.id, { quantity: item.quantity });
+            updated++;
+            console.log(`Updated ${item.name}: quantity set to ${item.quantity}`);
+          } catch (error) {
+            const errorMsg = `Failed to update ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(errorMsg);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Updated quantities for ${updated} items`,
+        updated,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error syncing quantities:', error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to sync quantities from Google Sheets",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Enhanced inventory endpoint with Google Sheets integration - MUST come before /api/items/:id
   app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
     try {
@@ -4679,6 +4721,48 @@ ${topCustomersCsv}`;
       console.error('Error fetching enhanced inventory items:', error);
       res.status(500).json({ 
         error: "Failed to fetch enhanced inventory items",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Bulk update inventory quantities from Google Sheets
+  app.post("/api/inventory/sync-quantities", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting bulk quantity sync from Google Sheets...');
+      
+      // Get enhanced inventory data with quantities
+      const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
+      
+      let updated = 0;
+      const errors: string[] = [];
+      
+      // Update each item's quantity in the database
+      for (const item of enhancedItems) {
+        if (item.id && item.quantity !== undefined) {
+          try {
+            await storage.updateItem(item.id, { quantity: item.quantity });
+            updated++;
+            console.log(`Updated ${item.name}: quantity set to ${item.quantity}`);
+          } catch (error) {
+            const errorMsg = `Failed to update ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(errorMsg);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Updated quantities for ${updated} items`,
+        updated,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error syncing quantities:', error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to sync quantities from Google Sheets",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }

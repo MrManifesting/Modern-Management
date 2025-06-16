@@ -94,6 +94,53 @@ export class GoogleSheetsService {
   }
 
   /**
+   * Get sheets metadata from spreadsheet
+   */
+  async getSheets(spreadsheetId: string): Promise<any[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Google Sheets service not configured');
+    }
+
+    try {
+      const response = await this.sheets!.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties'
+      });
+      
+      return response.data.sheets?.map(sheet => ({
+        title: sheet.properties?.title,
+        sheetId: sheet.properties?.sheetId,
+        index: sheet.properties?.index
+      })) || [];
+    } catch (error) {
+      console.error('Error getting sheets metadata:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get rows from specific sheet and range
+   */
+  async getRows(spreadsheetId: string, sheetName: string, maxRows: number = 1000): Promise<any[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Google Sheets service not configured');
+    }
+
+    try {
+      const range = `${sheetName}!A1:CZ${maxRows}`;
+      const response = await this.sheets!.spreadsheets.values.get({
+        spreadsheetId,
+        range
+      });
+      
+      return response.data.values || [];
+    } catch (error) {
+      console.error(`Error getting rows from ${sheetName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Create or update inventory worksheet with headers
    */
   async setupInventorySheet(config: SheetConfig): Promise<boolean> {
