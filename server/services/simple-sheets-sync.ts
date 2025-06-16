@@ -63,16 +63,22 @@ export class SimpleSheetsSync {
    */
   async getEnhancedInventory(): Promise<any[]> {
     try {
+      console.log('Starting enhanced inventory fetch from Google Sheets...');
       await this.initializeAuth();
+      console.log('Google Sheets auth initialized successfully');
+      
       const sheets = google.sheets({ version: 'v4', auth: this.auth });
+      console.log(`Attempting to access spreadsheet: ${this.spreadsheetId}`);
 
       // Fetch ProductExport data (thumbnails in column AB)
+      console.log('Fetching ProductExport sheet data...');
       const productResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'ProductExport!A2:AB1000',
       });
 
       // Fetch InventoryExport data (quantities in columns P & Q, weight in column D)
+      console.log('Fetching InventoryExport sheet data...');
       const inventoryResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'InventoryExport!A2:Q1000',
@@ -80,6 +86,8 @@ export class SimpleSheetsSync {
 
       const productRows = productResponse.data.values || [];
       const inventoryRows = inventoryResponse.data.values || [];
+      
+      console.log(`Retrieved ${productRows.length} product rows and ${inventoryRows.length} inventory rows`);
 
       // Process ProductExport data
       const productData: Record<string, any> = {};
