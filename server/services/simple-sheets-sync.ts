@@ -7,15 +7,17 @@ import { GoogleAuth } from 'google-auth-library';
 import { google } from 'googleapis';
 import type { DatabaseStorage } from '../storage.js';
 
-interface SheetItem {
-  handle: string;
-  title: string;
-  imageUrl: string;
-  sku: string;
-  price: string;
-  weight: string;
-  available: number;
-  onHand: number;
+interface ProductSheetItem {
+  handle: string; // Column A
+  weight: string; // Column J
+  sku: string; // Column R
+  inventoryQty: number; // Column U
+  price: string; // Column X
+  imageSrc: string; // Column AC
+  strainBannerText: string; // Column AW
+  thcaPercentage: string; // Column AX
+  coasLink: string; // Column BA
+  costPerItem: string; // Column BJ
 }
 
 export class SimpleSheetsSync {
@@ -63,55 +65,38 @@ export class SimpleSheetsSync {
    */
   async getEnhancedInventory(): Promise<any[]> {
     try {
-      console.log('Starting enhanced inventory fetch from Google Sheets...');
+      console.log('Starting enhanced inventory fetch from Google Sheets Products sheet...');
       await this.initializeAuth();
       console.log('Google Sheets auth initialized successfully');
       
       const sheets = google.sheets({ version: 'v4', auth: this.auth });
       console.log(`Attempting to access spreadsheet: ${this.spreadsheetId}`);
 
-      // Fetch ProductExport data (thumbnails in column AB)
-      console.log('Fetching ProductExport sheet data...');
+      // Fetch Products sheet data with all required columns (A to BZ to cover BJ)
+      console.log('Fetching Products sheet data...');
       const productResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'ProductExport!A2:AB1000',
-      });
-
-      // Fetch InventoryExport data (quantities in columns P & Q, weight in column D)
-      console.log('Fetching InventoryExport sheet data...');
-      const inventoryResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: 'InventoryExport!A2:Q1000',
+        range: 'Products!A2:BZ1000',
       });
 
       const productRows = productResponse.data.values || [];
-      const inventoryRows = inventoryResponse.data.values || [];
-      
-      console.log(`Retrieved ${productRows.length} product rows and ${inventoryRows.length} inventory rows`);
+      console.log(`Retrieved ${productRows.length} product rows from Products sheet`);
 
-      // Process ProductExport data
-      const productData: Record<string, any> = {};
+      // Process Products sheet data with correct column mapping
+      const productData: Record<string, ProductSheetItem> = {};
       productRows.forEach(row => {
         if (row[0]) { // Handle in column A
           productData[row[0]] = {
-            handle: row[0],
-            title: row[1] || '',
-            imageUrl: row[27] || '', // Column AB (index 27)
-            sku: row[11] || '', // SKU column
-            price: row[14] || '0', // Price column
-          };
-        }
-      });
-
-      // Process InventoryExport data
-      const inventoryData: Record<string, any> = {};
-      inventoryRows.forEach(row => {
-        if (row[0]) { // Handle in column A
-          inventoryData[row[0]] = {
-            handle: row[0],
-            weight: row[3] || '', // Column D (index 3)
-            available: parseInt(row[15]) || 0, // Column P (index 15)
-            onHand: parseInt(row[16]) || 0, // Column Q (index 16)
+            handle: row[0], // Column A
+            weight: row[9] || '', // Column J (index 9)
+            sku: row[17] || '', // Column R (index 17) 
+            inventoryQty: parseInt(row[20]) || 0, // Column U (index 20)
+            price: row[23] || '0', // Column X (index 23)
+            imageSrc: row[28] || '', // Column AC (index 28)
+            strainBannerText: row[48] || '', // Column AW (index 48)
+            thcaPercentage: row[49] || '', // Column AX (index 49)
+            coasLink: row[52] || '', // Column BA (index 52)
+            costPerItem: row[61] || '0', // Column BJ (index 61)
           };
         }
       });
@@ -119,28 +104,29 @@ export class SimpleSheetsSync {
       // Get database items
       const dbItems = await this.storage.getItems();
 
-      // Merge data and return enhanced items
+      // Merge data and return enhanced items with Products sheet data
       return dbItems.map(item => {
         const handle = item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const productInfo = productData[handle] || {};
-        const inventoryInfo = inventoryData[handle] || {};
 
         return {
           id: item.id,
           name: item.name,
           sku: item.sku || productInfo.sku || '',
           handle: handle,
-          imageUrl: productInfo.imageUrl || item.imageUrl || '',
+          imageUrl: productInfo.imageSrc || item.imageUrl || '',
           basePrice: item.basePrice || productInfo.price || '0',
-          quantity: item.quantity || 0,
-          available: inventoryInfo.available || item.quantity || 0,
-          onHand: inventoryInfo.onHand || item.quantity || 0,
-          weight: inventoryInfo.weight || item.weight || '',
+          costPrice: item.costPrice || productInfo.costPerItem || '0',
+          quantity: item.quantity || productInfo.inventoryQty || 0,
+          weight: productInfo.weight || item.weight || '',
           brand: item.brand || '',
           category: item.category || '',
           status: item.status || 'active',
           description: item.description || '',
           shopifyId: item.shopifyId || null,
+          strainBannerText: productInfo.strainBannerText || '',
+          thcaPercentage: productInfo.thcaPercentage || '',
+          coasLink: productInfo.coasLink || '',
         };
       });
 
