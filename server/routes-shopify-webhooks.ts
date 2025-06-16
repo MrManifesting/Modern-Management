@@ -302,6 +302,21 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
         }
       }
 
+      // Update THCa spreadsheet inventory (Column B deduction)
+      try {
+        const { ThcaInventorySyncService } = await import('./services/thca-inventory-sync.js');
+        const thcaSync = new ThcaInventorySyncService();
+        
+        const thcaResult = await thcaSync.processOrderInventoryUpdate(order);
+        if (thcaResult.success) {
+          log(`THCa inventory updated successfully: ${thcaResult.message}`, 'shopify-webhook');
+        } else {
+          log(`THCa inventory update failed: ${thcaResult.message}`, 'shopify-webhook');
+        }
+      } catch (thcaError) {
+        log(`THCa inventory sync error: ${thcaError}`, 'shopify-webhook');
+      }
+
       // Log order to Google Sheets if configured
       try {
         const { GoogleSheetsService } = await import('./services/google-sheets.js');
