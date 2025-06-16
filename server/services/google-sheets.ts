@@ -61,8 +61,40 @@ export class GoogleSheetsService {
    */
   private async initializeAuth(): Promise<void> {
     try {
-      // Check if credentials are available
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      let clientId = process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      let refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+      // If not in environment, try to get from stored credentials
+      if (!clientId || !clientSecret) {
+        try {
+          const { storage } = await import('../storage');
+          const credential = await storage.getCredentialByService('google_sheets');
+          if (credential && credential.credentialData) {
+            const credData = credential.credentialData as any;
+            clientId = credData.client_id || clientId;
+            clientSecret = credData.client_secret || clientSecret;
+          }
+        } catch (error) {
+          console.log('Could not retrieve stored Google credentials:', error);
+        }
+      }
+
+      // Try to get refresh token from stored credentials
+      if (!refreshToken) {
+        try {
+          const { storage } = await import('../storage');
+          const tokenCredential = await storage.getCredentialByService('google_refresh_token');
+          if (tokenCredential && tokenCredential.credentialData) {
+            const tokenData = tokenCredential.credentialData as any;
+            refreshToken = tokenData.refresh_token;
+          }
+        } catch (error) {
+          console.log('Could not retrieve stored refresh token:', error);
+        }
+      }
+
+      if (!clientId || !clientSecret) {
         console.warn('Google Sheets: Missing credentials - sync disabled');
         return;
       }
@@ -70,9 +102,9 @@ export class GoogleSheetsService {
       this.auth = new GoogleAuth({
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         credentials: {
-          client_id: process.env.GOOGLE_CLIENT_ID,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET,
-          refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
           type: 'authorized_user'
         }
       });
