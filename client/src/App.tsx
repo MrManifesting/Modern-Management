@@ -70,8 +70,8 @@ function Router() {
       </div>}>
       <Switch>
         <ProtectedRoute path="/" component={() => <Dashboard />} />
-        <ProtectedRoute path="/inventory" component={() => <Inventory />} />
-        <ProtectedRoute path="/inventory/enhanced" component={() => <EnhancedInventory />} />
+        <ProtectedRoute path="/inventory" component={() => <EnhancedInventory />} />
+        <ProtectedRoute path="/inventory/legacy" component={() => <Inventory />} />
         <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/:id" component={() => {
           const InventoryDetailPage = React.lazy(() => import('@/pages/inventory-detail'));
