@@ -74,27 +74,46 @@ export default function ItemGrid({
     : items.filter((item: Item) => item.category === selectedCategory);
 
   // Get unique categories from items
-  const uniqueCategories = Array.from(new Set(items.map((item: Item) => item.category)));
-  const categories = ["all", ...uniqueCategories];
+  const uniqueCategories = Array.from(new Set(items.map((item: Item) => item.category).filter(Boolean))) as string[];
+  const categories: string[] = ["all", ...uniqueCategories];
   
-  // Sort items - in stock items first, then newest items, then alphabetically
+  // Sort items - recently added with available quantities first, then other available items, then out of stock
   const sortedItems = [...filteredItems].sort((a, b) => {
-    // First sort by stock status (in stock first)
     const aQuantity = a.quantity ?? 0;
     const bQuantity = b.quantity ?? 0;
-    
-    if (aQuantity > 0 && bQuantity <= 0) return -1;
-    if (aQuantity <= 0 && bQuantity > 0) return 1;
-    
-    // Within each stock group, sort by newest first based on creation date
     const dateA = new Date(a.createdAt || 0);
     const dateB = new Date(b.createdAt || 0);
     
+    // Define "recently added" as items added within the last 7 days
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const aIsRecent = dateA > sevenDaysAgo;
+    const bIsRecent = dateB > sevenDaysAgo;
+    
+    // Priority 1: Recently added items with available quantities (newest first)
+    if (aIsRecent && aQuantity > 0 && !(bIsRecent && bQuantity > 0)) return -1;
+    if (bIsRecent && bQuantity > 0 && !(aIsRecent && aQuantity > 0)) return 1;
+    
+    // Both are recent with available quantities - sort by newest first
+    if (aIsRecent && aQuantity > 0 && bIsRecent && bQuantity > 0) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    
+    // Priority 2: Other items with available quantities (newest first)
+    if (aQuantity > 0 && bQuantity <= 0) return -1;
+    if (bQuantity > 0 && aQuantity <= 0) return 1;
+    
+    // Both have available quantities - sort by newest first
+    if (aQuantity > 0 && bQuantity > 0) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    
+    // Priority 3: Out of stock items (newest first)
     if (dateB.getTime() !== dateA.getTime()) {
       return dateB.getTime() - dateA.getTime();
     }
     
-    // Then sort alphabetically within each group
+    // Final fallback: alphabetical
     return (a.name || '').localeCompare(b.name || '');
   });
 
@@ -143,10 +162,10 @@ export default function ItemGrid({
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
+                      <SelectItem key={category} value={category || ""}>
                         {category === "all" 
                           ? "All Categories" 
-                          : category}
+                          : category || "Unknown"}
                       </SelectItem>
                     ))}
                   </SelectContent>
