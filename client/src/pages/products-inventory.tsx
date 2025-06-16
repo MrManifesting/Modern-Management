@@ -451,6 +451,23 @@ const ProductsInventoryPage: React.FC = () => {
     }).format(price);
   };
 
+  // Enhanced price display for tables
+  const renderPriceCell = (product: Product) => (
+    <div className="flex flex-col items-end">
+      <span className="font-medium">{product.displayPrice || "No Price"}</span>
+      {product.priceSource === 'shopify' && (
+        <Badge variant="outline" className="text-xs mt-1">Shopify</Badge>
+      )}
+    </div>
+  );
+
+  // Enhanced quantity display
+  const renderQuantityCell = (product: Product) => (
+    <Badge variant={product.quantity > 10 ? "default" : product.quantity > 0 ? "secondary" : "destructive"}>
+      {product.quantity || 0}
+    </Badge>
+  );
+
   // Filter products based on search term and category
   const filteredProducts = products
     .filter((product: Product) => {
