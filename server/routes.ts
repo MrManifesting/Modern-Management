@@ -5737,19 +5737,19 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Sync inventory quantities and images from Shopify
+  // Full sync inventory quantities and images from Shopify
   app.post("/api/shopify/sync-inventory", async (req: Request, res: Response) => {
     try {
-      console.log('Starting inventory sync from Shopify...');
+      console.log('Starting full inventory sync from Shopify...');
       
-      const { ShopifyInventorySync } = await import('./services/shopify-inventory-sync');
-      const syncService = new ShopifyInventorySync(storage);
+      const { ShopifyFullSync } = await import('./services/shopify-full-sync');
+      const syncService = new ShopifyFullSync(storage);
       
-      const results = await syncService.syncInventoryFromShopify();
+      const results = await syncService.syncAllInventory();
       
       res.json({
         success: true,
-        message: `Synced ${results.updated} of ${results.synced} items from Shopify`,
+        message: `Synced ${results.updated} of ${results.matched} matched items from ${results.totalShopifyProducts} Shopify products`,
         ...results
       });
       
