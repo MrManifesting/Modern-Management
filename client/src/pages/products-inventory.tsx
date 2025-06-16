@@ -2780,12 +2780,8 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
-                            <td className="py-3 px-4 text-center">
-                              <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
-                                {product.quantity}
-                              </Badge>
-                            </td>
+                            <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
+                            <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge className={getStatusBadgeClass(product.status)}>
                                 {product.status}
