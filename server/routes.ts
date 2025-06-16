@@ -4575,5 +4575,107 @@ ${topCustomersCsv}`;
     }
   });
 
+  // THCa Mapping Service Endpoints
+  const { ThcaMappingService } = await import('./services/thca-mapping-service.js');
+  const thcaMappingService = new ThcaMappingService();
+
+  // Generate comprehensive pivot tables showing THCa sheet to Shopify connections
+  app.post("/api/thca-mapping/generate-pivot-tables", async (_req: Request, res: Response) => {
+    try {
+      console.log('Generating THCa flower sheet pivot tables...');
+      const pivotTables = await thcaMappingService.generatePivotTables();
+      
+      res.json({
+        success: true,
+        message: "Successfully generated pivot tables showing THCa sheet connections",
+        data: pivotTables
+      });
+    } catch (error) {
+      console.error('Error generating pivot tables:', error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to generate pivot tables",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get mapping overview statistics
+  app.get("/api/thca-mapping/overview", async (_req: Request, res: Response) => {
+    try {
+      const overview = await thcaMappingService.getMappingOverview();
+      res.json(overview);
+    } catch (error) {
+      console.error('Error getting mapping overview:', error);
+      res.status(500).json({ error: "Failed to get mapping overview" });
+    }
+  });
+
+  // Get strain-based mapping pivot table
+  app.get("/api/thca-mapping/strain-pivot", async (_req: Request, res: Response) => {
+    try {
+      const strainMapping = await thcaMappingService.getStrainMapping();
+      res.json(strainMapping);
+    } catch (error) {
+      console.error('Error getting strain mapping:', error);
+      res.status(500).json({ error: "Failed to get strain mapping" });
+    }
+  });
+
+  // Get inventory alignment pivot table
+  app.get("/api/thca-mapping/inventory-alignment", async (_req: Request, res: Response) => {
+    try {
+      const alignment = await thcaMappingService.getInventoryAlignment();
+      res.json(alignment);
+    } catch (error) {
+      console.error('Error getting inventory alignment:', error);
+      res.status(500).json({ error: "Failed to get inventory alignment" });
+    }
+  });
+
+  // Get unmapped items that need attention
+  app.get("/api/thca-mapping/unmapped-items", async (_req: Request, res: Response) => {
+    try {
+      const unmapped = await thcaMappingService.getUnmappedItems();
+      res.json(unmapped);
+    } catch (error) {
+      console.error('Error getting unmapped items:', error);
+      res.status(500).json({ error: "Failed to get unmapped items" });
+    }
+  });
+
+  // Get items that need conflict resolution
+  app.get("/api/thca-mapping/conflicts", async (_req: Request, res: Response) => {
+    try {
+      const conflicts = await thcaMappingService.getConflictItems();
+      res.json(conflicts);
+    } catch (error) {
+      console.error('Error getting conflict items:', error);
+      res.status(500).json({ error: "Failed to get conflict items" });
+    }
+  });
+
+  // Sync THCa sheet data
+  app.post("/api/thca-mapping/sync-thca-data", async (_req: Request, res: Response) => {
+    try {
+      await thcaMappingService.syncThcaSheetData();
+      res.json({ success: true, message: "THCa sheet data synced successfully" });
+    } catch (error) {
+      console.error('Error syncing THCa data:', error);
+      res.status(500).json({ error: "Failed to sync THCa data" });
+    }
+  });
+
+  // Sync Shopify product data
+  app.post("/api/thca-mapping/sync-shopify-data", async (_req: Request, res: Response) => {
+    try {
+      await thcaMappingService.syncShopifyProductData();
+      res.json({ success: true, message: "Shopify product data synced successfully" });
+    } catch (error) {
+      console.error('Error syncing Shopify data:', error);
+      res.status(500).json({ error: "Failed to sync Shopify data" });
+    }
+  });
+
   return app;
 }

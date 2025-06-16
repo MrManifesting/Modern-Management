@@ -191,6 +191,155 @@ export const userCredentials = pgTable("user_credentials", {
 export type UserCredentials = typeof userCredentials.$inferSelect;
 export type InsertUserCredentials = typeof userCredentials.$inferInsert;
 
+// THCa Flower Sheet Mapping Table - shows how THCa sheet rows connect to inventory items
+export const thcaFlowerMapping = pgTable("thca_flower_mapping", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").references(() => items.id, { onDelete: 'cascade' }),
+  shopifyId: varchar("shopify_id"),
+  shopifyHandle: varchar("shopify_handle"),
+  
+  // THCa Sheet Data
+  thcaSheetStrain: varchar("thca_sheet_strain"),
+  thcaSheetAmount: varchar("thca_sheet_amount"),
+  thcaSheetPercentage: varchar("thca_sheet_percentage"),
+  thcaSheetTier: varchar("thca_sheet_tier"),
+  thcaSheetBulk: varchar("thca_sheet_bulk"),
+  thcaSheetDistro: varchar("thca_sheet_distro"),
+  thcaSheetMaster: varchar("thca_sheet_master"),
+  thcaSheetCoas: varchar("thca_sheet_coas"),
+  thcaSheetMedia: varchar("thca_sheet_media"),
+  thcaSheetStrainType: varchar("thca_sheet_strain_type"),
+  
+  // Shopify Product Data
+  shopifyTitle: varchar("shopify_title"),
+  shopifySku: varchar("shopify_sku"),
+  shopifyInventoryQuantity: integer("shopify_inventory_quantity"),
+  shopifyPrice: numeric("shopify_price", { precision: 10, scale: 2 }),
+  shopifyStatus: varchar("shopify_status"),
+  shopifyProductType: varchar("shopify_product_type"),
+  shopifyVendor: varchar("shopify_vendor"),
+  shopifyTags: text("shopify_tags"),
+  
+  // Mapping Status
+  mappingStatus: varchar("mapping_status").default("auto_matched"), // 'auto_matched', 'manual_mapped', 'conflict', 'unmapped'
+  matchScore: numeric("match_score", { precision: 3, scale: 2 }), // confidence score 0.00-1.00
+  mappingMethod: varchar("mapping_method"), // 'sku_match', 'name_match', 'manual_assignment'
+  
+  // Sync Status
+  lastSyncedAt: timestamp("last_synced_at"),
+  syncErrors: text("sync_errors"),
+  needsReview: boolean("needs_review").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_thca_mapping_item_id").on(table.itemId),
+  index("idx_thca_mapping_shopify_id").on(table.shopifyId),
+  index("idx_thca_mapping_strain").on(table.thcaSheetStrain),
+  index("idx_thca_mapping_status").on(table.mappingStatus),
+  index("idx_thca_mapping_needs_review").on(table.needsReview),
+]);
+
+// Shopify Product Lookup Table - comprehensive Shopify product data
+export const shopifyProductLookup = pgTable("shopify_product_lookup", {
+  id: serial("id").primaryKey(),
+  shopifyId: varchar("shopify_id").unique().notNull(),
+  handle: varchar("handle").unique().notNull(),
+  
+  // Product Details
+  title: varchar("title").notNull(),
+  bodyHtml: text("body_html"),
+  vendor: varchar("vendor"),
+  productType: varchar("product_type"),
+  status: varchar("status"), // 'active', 'archived', 'draft'
+  tags: text("tags"),
+  
+  // Variant Information (for single variant products)
+  variantId: varchar("variant_id"),
+  variantSku: varchar("variant_sku"),
+  variantPrice: numeric("variant_price", { precision: 10, scale: 2 }),
+  variantCompareAtPrice: numeric("variant_compare_at_price", { precision: 10, scale: 2 }),
+  variantInventoryQuantity: integer("variant_inventory_quantity"),
+  variantWeight: numeric("variant_weight", { precision: 10, scale: 3 }),
+  variantWeightUnit: varchar("variant_weight_unit"),
+  
+  // Images
+  featuredImage: varchar("featured_image"),
+  imageUrls: text("image_urls").array(), // Array of all image URLs
+  
+  // SEO and Meta
+  metaTitle: varchar("meta_title"),
+  metaDescription: text("meta_description"),
+  
+  // Shopify Timestamps
+  shopifyCreatedAt: timestamp("shopify_created_at"),
+  shopifyUpdatedAt: timestamp("shopify_updated_at"),
+  shopifyPublishedAt: timestamp("shopify_published_at"),
+  
+  // Our Sync Data
+  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
+  syncStatus: varchar("sync_status").default("synced"), // 'synced', 'error', 'pending'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_shopify_lookup_handle").on(table.handle),
+  index("idx_shopify_lookup_sku").on(table.variantSku),
+  index("idx_shopify_lookup_status").on(table.status),
+  index("idx_shopify_lookup_product_type").on(table.productType),
+  index("idx_shopify_lookup_sync_status").on(table.syncStatus),
+]);
+
+// THCa Sheet Raw Data Table - stores exact data from Google Sheets
+export const thcaSheetData = pgTable("thca_sheet_data", {
+  id: serial("id").primaryKey(),
+  rowNumber: integer("row_number").notNull(),
+  
+  // Exact column data from THCa Flower sheet
+  strain: varchar("strain"),
+  amount: varchar("amount"),
+  percentage: varchar("percentage"),
+  tier: varchar("tier"),
+  bulk: varchar("bulk"),
+  distro25lbs: varchar("distro_25lbs"),
+  master50lbs: varchar("master_50lbs"),
+  master2100lbs: varchar("master2_100lbs"),
+  coas: varchar("coas"),
+  media: varchar("media"),
+  strainType: varchar("strain_type"),
+  
+  // Additional calculated fields
+  weightParsed: numeric("weight_parsed", { precision: 10, scale: 3 }),
+  weightUnit: varchar("weight_unit"),
+  percentageParsed: numeric("percentage_parsed", { precision: 5, scale: 2 }),
+  
+  // Processing status
+  processed: boolean("processed").default(false),
+  mappedToItemId: integer("mapped_to_item_id").references(() => items.id),
+  mappedToShopifyId: varchar("mapped_to_shopify_id"),
+  
+  // Sync metadata
+  sheetLastModified: timestamp("sheet_last_modified"),
+  lastProcessedAt: timestamp("last_processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_thca_sheet_row").on(table.rowNumber),
+  index("idx_thca_sheet_strain").on(table.strain),
+  index("idx_thca_sheet_processed").on(table.processed),
+  index("idx_thca_sheet_mapped_item").on(table.mappedToItemId),
+]);
+
+export type ThcaFlowerMapping = typeof thcaFlowerMapping.$inferSelect;
+export type InsertThcaFlowerMapping = typeof thcaFlowerMapping.$inferInsert;
+
+export type ShopifyProductLookup = typeof shopifyProductLookup.$inferSelect;
+export type InsertShopifyProductLookup = typeof shopifyProductLookup.$inferInsert;
+
+export type ThcaSheetData = typeof thcaSheetData.$inferSelect;
+export type InsertThcaSheetData = typeof thcaSheetData.$inferInsert;
+
 // Item table for inventory management
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
