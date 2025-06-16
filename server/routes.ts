@@ -5735,17 +5735,26 @@ ${topCustomersCsv}`;
         return res.status(404).json({ error: "Item not found" });
       }
       
-      // If item has Shopify ID, redirect to admin product page
+      // Return JSON with the URL instead of redirecting
+      let shopifyUrl;
+      
       if (item.shopifyId) {
-        const adminUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
-        res.redirect(adminUrl);
-        return;
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      } else {
+        const searchTerm = item.sku || item.name || '';
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
       }
       
-      // For items without Shopify ID, search the live store
-      const searchTerm = item.sku || item.name || '';
-      const storeUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
-      res.redirect(storeUrl);
+      res.json({
+        success: true,
+        url: shopifyUrl,
+        hasShopifyId: !!item.shopifyId,
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku
+        }
+      });
       
     } catch (error) {
       console.error("Error viewing item in Shopify:", error);

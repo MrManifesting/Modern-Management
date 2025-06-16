@@ -53,9 +53,11 @@ export default function ShopifyStorePreview({ item }: ShopifyStorePreviewProps) 
       const data = await response.json();
       
       if (data.success) {
-        setProductInfo(data.productInfo);
+        // Open the Shopify URL directly in a new tab
+        window.open(data.url, '_blank');
+        setIsOpen(false); // Close the dialog
       } else {
-        setError(data.message || "Could not find this product in the Shopify store");
+        setError(data.error || "Could not find this product in the Shopify store");
       }
     } catch (err) {
       console.error("Error fetching Shopify details:", err);
