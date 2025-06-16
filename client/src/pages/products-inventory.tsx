@@ -1958,48 +1958,55 @@ const ProductsInventoryPage: React.FC = () => {
                             )}
                             <TableCell>
                               {(() => {
-                                // Check for Shopify CDN images first (authentic product photos)
-                                if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-                                  const imageUrl = item.images[0];
-                                  return (
-                                    <div className="relative group">
-                                      <img 
-                                        src={imageUrl} 
-                                        alt={item.name}
-                                        className="w-16 h-16 object-cover rounded-lg border-2 border-amber-200 hover:border-amber-400 transition-all duration-200 cursor-pointer shadow-sm"
-                                        onError={(e) => {
-                                          const target = e.currentTarget;
-                                          target.style.display = 'none';
-                                          if (target.nextElementSibling) {
-                                            target.nextElementSibling.style.display = 'flex';
-                                          }
-                                        }}
-                                      />
-                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-200" />
-                                    </div>
-                                  );
-                                }
-                                
-                                // Check for media files from uploads
+                                // Check for uploaded media files first (most reliable)
                                 if (item.mediaFiles && item.mediaFiles.length > 0) {
                                   return (
-                                    <div className="relative group">
-                                      <img 
-                                        src={`/uploads/${item.mediaFiles[0]}`} 
-                                        alt={item.name}
-                                        className="w-16 h-16 object-cover rounded-lg border-2 border-blue-200 hover:border-blue-400 transition-all duration-200 cursor-pointer shadow-sm"
-                                      />
-                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-200" />
-                                    </div>
+                                    <img 
+                                      src={`/uploads/${item.mediaFiles[0]}`} 
+                                      alt={item.name}
+                                      className="w-16 h-16 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                    />
                                   );
                                 }
                                 
-                                // Show placeholder for items without images
-                                return (
-                                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
-                                    <ImageIcon className="h-6 w-6 text-gray-500" />
-                                  </div>
-                                );
+                                // Check imageUrl field (primary Shopify image)
+                                if (item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.trim() !== '') {
+                                  return (
+                                    <img 
+                                      src={item.imageUrl} 
+                                      alt={item.name}
+                                      className="w-16 h-16 object-cover rounded-lg border-2 border-amber-200 hover:border-amber-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                    />
+                                  );
+                                }
+                                
+                                // Show product category icon based on name patterns
+                                const name = item.name.toLowerCase();
+                                if (name.includes('flower') || name.includes('thca')) {
+                                  return (
+                                    <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-lg border-2 border-green-300 flex items-center justify-center">
+                                      <div className="text-green-600 font-bold text-xs">🌿</div>
+                                    </div>
+                                  );
+                                } else if (name.includes('concentrate') || name.includes('wax') || name.includes('shatter')) {
+                                  return (
+                                    <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg border-2 border-amber-300 flex items-center justify-center">
+                                      <div className="text-amber-600 font-bold text-xs">🍯</div>
+                                    </div>
+                                  );
+                                } else if (name.includes('edible') || name.includes('gummy') || name.includes('chocolate')) {
+                                  return (
+                                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg border-2 border-purple-300 flex items-center justify-center">
+                                      <div className="text-purple-600 font-bold text-xs">🍬</div>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                                      <ImageIcon className="h-6 w-6 text-gray-500" />
+                                    </div>
+                                  );
+                                }
                               })()}
                             </TableCell>
                             <TableCell className="font-medium max-w-xs">
