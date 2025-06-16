@@ -197,11 +197,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Attempting to access spreadsheet: ${spreadsheetId}`);
         
         console.log("Getting sheet metadata...");
-        const sheets = await googleSheetsService.getSheetNames(spreadsheetId);
+        const sheets = await googleSheetsService.getSheets(spreadsheetId);
         console.log("Available sheets:", JSON.stringify(sheets, null, 2));
         
         console.log("Fetching Product sheet data...");
-        const sheetData = await googleSheetsService.getSheetData(spreadsheetId, 'Product', 1000);
+        const sheetData = await googleSheetsService.getRows(spreadsheetId, 'Product', 1000);
         console.log(`Retrieved ${sheetData.length} product rows from Products sheet`);
         
         if (sheetData.length > 0) {
@@ -242,13 +242,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Media service not available, continuing without media files');
       }
       
-      // Merge database items with Google Sheets pricing
+      // Get live Shopify pricing data for accurate prices
+      let shopifyProducts: any[] = [];
+      try {
+        console.log("Fetching live Shopify products for pricing data...");
+        const shopifyService = await import('./services/shopify-integration.js');
+        const shopifyClient = await shopifyService.createShopifyClient();
+        if (shopifyClient) {
+          const products = await shopifyClient.product.list({ limit: 250 });
+          shopifyProducts = products.data || [];
+          console.log(`Retrieved ${shopifyProducts.length} Shopify products for pricing`);
+        }
+      } catch (error) {
+        console.log("Could not fetch Shopify pricing data:", error);
+      }
+
+      // Merge database items with live Shopify pricing and Google Sheets data
       const enhancedItems = items.map(item => {
         // Find matching product from Google Sheets
         const sheetsProduct = sheetsProducts.find(p => 
           p.sku === item.sku || 
           p.handle === item.name?.toLowerCase().replace(/\s+/g, '-')
         );
+
+        // Find matching Shopify product for live pricing
+        const shopifyProduct = shopifyProducts.find(p => 
+          p.variants?.some((v: any) => v.sku === item.sku) ||
+          p.handle === item.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '')
+        );
+
+        let displayPrice = "No Price";
+        let priceSource = "";
+        
+        // Priority order: Shopify live price > Google Sheets > Database
+        if (shopifyProduct && shopifyProduct.variants && shopifyProduct.variants.length > 0) {
+          const variant = shopifyProduct.variants.find((v: any) => v.sku === item.sku) || shopifyProduct.variants[0];
+          if (variant && variant.price) {
+            displayPrice = `$${parseFloat(variant.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            priceSource = "shopify";
+          }
+        } else if (sheetsProduct && (sheetsProduct.priceX > 0 || sheetsProduct.priceY > 0)) {
+          const price = sheetsProduct.priceX > 0 ? sheetsProduct.priceX : sheetsProduct.priceY;
+          displayPrice = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          priceSource = "sheets";
+        } else if (item.basePrice && parseFloat(item.basePrice) > 0) {
+          displayPrice = `$${parseFloat(item.basePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          priceSource = "database";
+        }
         
         // Get media files for this item
         const associatedMedia = mediaFiles.filter(file => {
@@ -272,75 +312,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-          allImages = [...allImages, ...item.images.filter(img => img && !allImages.includes(img))];
+          allImages = [...allImages, ...item.images.filter((img: any) => img && !allImages.includes(img))];
           if (!imageUrl) imageUrl = item.images[0];
         }
         
         if (associatedMedia.length > 0) {
           const mediaUrls = associatedMedia.map(media => media.url);
           allImages = [...allImages, ...mediaUrls.filter(url => !allImages.includes(url))];
-          if (!imageUrl) imageUrl = associatedMedia[0].url;
+          if (!imageUrl) imageUrl = mediaUrls[0];
         }
-        
-        // Determine pricing with Google Sheets data taking priority
-        let displayPrice = 'No Price';
-        let priceSource = 'none';
-        
-        if (sheetsProduct && sheetsProduct.priceX > 0) {
-          displayPrice = `$${sheetsProduct.priceX.toFixed(2)}`;
-          priceSource = 'sheets-x';
-        } else if (sheetsProduct && sheetsProduct.priceY > 0) {
-          displayPrice = `$${sheetsProduct.priceY.toFixed(2)}`;
-          priceSource = 'sheets-y';
-        } else if (item.basePrice && parseFloat(item.basePrice) > 0) {
-          displayPrice = `$${parseFloat(item.basePrice).toFixed(2)}`;
-          priceSource = 'database';
-        } else if (item.salePrice && parseFloat(item.salePrice) > 0) {
-          displayPrice = `$${parseFloat(item.salePrice).toFixed(2)}`;
-          priceSource = 'database-sale';
-        }
-        
-        // Create Shopify admin URL if shopifyId exists
-        let shopifyUrl = null;
-        if (item.shopifyId) {
-          shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
-        }
-        
+
         return {
           ...item,
+          displayPrice,
+          priceSource,
+          weight: item.weight || '1 pound',
           imageUrl,
           images: allImages,
           mediaFiles: associatedMedia,
-          displayPrice,
-          priceSource,
-          sheetsData: sheetsProduct || null,
-          shopifyUrl,
-          // Keep original pricing fields
-          costPrice: item.costPrice,
-          basePrice: item.basePrice,
-          salePrice: item.salePrice,
-          wholesalePrice: item.wholesalePrice
+          sheetsData: sheetsProduct
         };
       });
-      
-      // Sort items: Flower category first, then by name
+
+      // Sort enhanced items to prioritize flower items
       const sortedItems = enhancedItems.sort((a, b) => {
-        // Flower items first
-        if (a.category === 'Flower' && b.category !== 'Flower') return -1;
-        if (b.category === 'Flower' && a.category !== 'Flower') return 1;
+        const aIsFlower = a.category?.toLowerCase() === 'flower';
+        const bIsFlower = b.category?.toLowerCase() === 'flower';
         
-        // Then sort by name within categories
-        return (a.name || '').localeCompare(b.name || '');
+        if (aIsFlower && !bIsFlower) return -1;
+        if (!aIsFlower && bIsFlower) return 1;
+        
+        return a.name.localeCompare(b.name);
       });
-      
+
+      console.log(`Enhanced ${sortedItems.length} items with pricing and media data`);
       res.json(sortedItems);
-      
     } catch (error) {
-      console.error("Error fetching enhanced inventory:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch enhanced inventory", 
-        details: error instanceof Error ? error.message : String(error) 
-      });
+      console.error('Error fetching enhanced inventory:', error);
+      res.status(500).json({ error: 'Failed to fetch enhanced inventory' });
     }
   });
 

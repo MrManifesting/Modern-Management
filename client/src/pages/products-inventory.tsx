@@ -311,24 +311,32 @@ const ProductsInventoryPage: React.FC = () => {
       console.log("Fetched items with media:", data.length);
       
       return data.map((item: any) => {
-        // Parse weight to extract value and unit
+        // Parse weight to extract exact standard values - no decimal weights
         const parseWeight = (weightStr: string) => {
-          if (!weightStr) return { value: 0, unit: 'gram', display: '0g' };
+          if (!weightStr) return { value: 1, unit: 'pound', display: '1 pound' };
           
-          const weightLower = weightStr.toLowerCase();
-          if (weightLower.includes('pound') || weightLower.includes('lb')) {
-            const value = parseFloat(weightStr) || 1;
-            return { value, unit: 'pound', display: `${value} ${value === 1 ? 'pound' : 'pounds'}` };
-          } else if (weightLower.includes('ounce') || weightLower.includes('oz')) {
-            const value = parseFloat(weightStr) || 1;
-            return { value, unit: 'ounce', display: `${value} ${value === 1 ? 'ounce' : 'ounces'}` };
-          } else if (weightLower.includes('gram') || weightLower.includes('g')) {
-            const value = parseFloat(weightStr) || 1;
-            return { value, unit: 'gram', display: `${value}g` };
+          const weightLower = weightStr.toLowerCase().trim();
+          
+          // Exact standard weight mappings - no decimals
+          if (weightLower.includes('1 pound') || weightLower === 'pound' || weightLower === '1lb') {
+            return { value: 1, unit: 'pound', display: '1 pound' };
+          } else if (weightLower.includes('half pound') || weightLower.includes('0.5 pound')) {
+            return { value: 0.5, unit: 'pound', display: 'half pound' };
+          } else if (weightLower.includes('quarter pound') || weightLower.includes('0.25 pound')) {
+            return { value: 0.25, unit: 'pound', display: 'quarter pound' };
+          } else if (weightLower.includes('1 ounce') || weightLower === 'ounce' || weightLower === '1oz') {
+            return { value: 1, unit: 'ounce', display: '1 ounce' };
+          } else if (weightLower.includes('half ounce') || weightLower.includes('0.5 ounce')) {
+            return { value: 0.5, unit: 'ounce', display: 'half ounce' };
+          } else if (weightLower.includes('quarter ounce') || weightLower.includes('0.25 ounce')) {
+            return { value: 0.25, unit: 'ounce', display: 'quarter ounce' };
+          } else if (weightLower.includes('3.5') && weightLower.includes('g')) {
+            return { value: 3.5, unit: 'gram', display: '3.5g' };
+          } else if (weightLower.includes('1') && weightLower.includes('g')) {
+            return { value: 1, unit: 'gram', display: '1g' };
           } else {
-            // Default for numeric values
-            const value = parseFloat(weightStr) || 1;
-            return { value, unit: 'pound', display: `${value} ${value === 1 ? 'pound' : 'pounds'}` };
+            // Default to 1 pound for any unrecognized weight
+            return { value: 1, unit: 'pound', display: '1 pound' };
           }
         };
 
