@@ -4733,5 +4733,82 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Google OAuth token exchange endpoint
+  app.post("/api/google-oauth/exchange-token", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ error: "Authorization code is required" });
+      }
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ error: "Google OAuth credentials not configured" });
+      }
+
+      // Exchange authorization code for tokens
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
+          grant_type: 'authorization_code'
+        })
+      });
+
+      const tokenData = await tokenResponse.json();
+      
+      if (tokenData.error) {
+        return res.status(400).json({ 
+          success: false, 
+          error: tokenData.error,
+          message: tokenData.error_description || "Failed to exchange authorization code"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Successfully generated refresh token",
+        refresh_token: tokenData.refresh_token,
+        access_token: tokenData.access_token,
+        expires_in: tokenData.expires_in
+      });
+
+    } catch (error) {
+      console.error('Error exchanging OAuth code:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to exchange authorization code",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get Google OAuth URL with actual client ID
+  app.get("/api/google-oauth/auth-url", async (_req: Request, res: Response) => {
+    try {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      
+      if (!clientId) {
+        return res.status(500).json({ error: "Google Client ID not configured" });
+      }
+
+      const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent('urn:ietf:wg:oauth:2.0:oob')}&scope=${encodeURIComponent('https://www.googleapis.com/auth/spreadsheets')}&response_type=code&access_type=offline&prompt=consent`;
+      
+      res.json({ authUrl, clientId });
+    } catch (error) {
+      console.error('Error generating OAuth URL:', error);
+      res.status(500).json({ error: "Failed to generate OAuth URL" });
+    }
+  });
+
   return app;
 }
