@@ -98,7 +98,7 @@ const upload = multer({
   },
 });
 
-export function registerRoutes(app: Express): Server {
+export async function registerRoutes(app: Express): Promise<Server> {
   // Setup simple authentication with Google OAuth and username/password
   setupAuth(app);
 
@@ -4498,9 +4498,10 @@ ${topCustomersCsv}`;
   // Shopify Product Import Service
   const shopifyImportService = new ShopifyProductImportService(storage);
 
-  // Import Sheets Inventory Sync Service
-  const { SheetsInventorySync } = require('./services/sheets-inventory-sync');
-  const sheetsInventorySync = new SheetsInventorySync(storage);
+  // Import Simple Sheets Sync Service
+  const simpleSheetsModule = await import('./services/simple-sheets-sync.js');
+  const { SimpleSheetsSync } = simpleSheetsModule;
+  const simpleSheetsSync = new SimpleSheetsSync(storage);
 
   // Enhanced inventory endpoint with Google Sheets integration
   app.get("/api/items/enhanced", async (req: Request, res: Response) => {
