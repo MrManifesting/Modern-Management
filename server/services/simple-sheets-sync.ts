@@ -72,18 +72,32 @@ export class SimpleSheetsSync {
       const sheets = google.sheets({ version: 'v4', auth: this.auth });
       console.log(`Attempting to access spreadsheet: ${this.spreadsheetId}`);
 
-      // Fetch Products sheet data with all required columns (A to BZ to cover BJ)
-      console.log('Fetching Products sheet data...');
+      // First, get sheet metadata to understand the structure
+      console.log('Getting sheet metadata...');
+      const sheetInfo = await sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId,
+        fields: 'sheets.properties'
+      });
+      
+      console.log('Available sheets:', sheetInfo.data.sheets?.map(s => s.properties?.title));
+      
+      // Fetch Product sheet data - using the correct sheet name
+      console.log('Fetching Product sheet data...');
       const productResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Products!A2:BZ1000',
+        range: 'Product!A1:Z1000',
       });
 
       const productRows = productResponse.data.values || [];
       console.log(`Retrieved ${productRows.length} product rows from Products sheet`);
 
-      // Process Products sheet data with correct column mapping
+      // Process Product sheet data with correct column mapping
       const productData: Record<string, ProductSheetItem> = {};
+      console.log('Processing product rows - first few rows:');
+      productRows.slice(0, 3).forEach((row, index) => {
+        console.log(`Row ${index}: Handle=${row[0]}, Weight=${row[9]}, SKU=${row[17]}, Qty=${row[20]}, Price=${row[23]}, Image=${row[28]}`);
+      });
+      
       productRows.forEach(row => {
         if (row[0]) { // Handle in column A
           productData[row[0]] = {
@@ -100,6 +114,8 @@ export class SimpleSheetsSync {
           };
         }
       });
+      
+      console.log(`Processed ${Object.keys(productData).length} products from sheet`);
 
       // Get database items
       const dbItems = await this.storage.getItems();
