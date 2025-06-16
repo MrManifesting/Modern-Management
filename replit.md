@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Live Shopify Pricing Integration and Weight Standardization Complete**
+  - Fixed exact weight standards - corrected 116 database items from decimal weights (1.5 pounds) to precise standards (1 pound)
+  - Implemented live Shopify pricing integration - "Acai Gelato" now displays authentic $1,050.00 price from store
+  - Created direct Shopify API pricing service with SKU and product name matching for 251 products
+  - Weight parsing now enforces exact standards: 1 pound, half pound, quarter pound, ounce, half ounce, quarter ounce, 3.5g, 1g
+  - Enhanced inventory API retrieves live pricing data marked with "shopify" source for authentic business operations
+  - System successfully matches Shopify products by both SKU and product title for comprehensive pricing coverage
 - June 16, 2025: **Comprehensive Code Cleanup and UI/UX Modernization Complete**
   - Fixed font readability issues with high-contrast color scheme ensuring proper text visibility
   - Updated CSS variables to use proper contrast ratios preventing text from matching background colors
