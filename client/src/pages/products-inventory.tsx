@@ -479,30 +479,47 @@ const ProductsInventoryPage: React.FC = () => {
       
       return matchesSearch && matchesCategory;
     })
-    // Sort flower items first, then by in-stock status, then by newest first
+    // Sort items - recently added with available quantities first, then other available items, then out of stock
     .sort((a: Product, b: Product) => {
-      // First prioritize flower items at the top
-      const aIsFlower = a.category?.toLowerCase().includes('flower') || 
-                       a.category?.toLowerCase().includes('thca') ||
-                       a.name.toLowerCase().includes('flower') ||
-                       a.name.toLowerCase().includes('thca');
-      const bIsFlower = b.category?.toLowerCase().includes('flower') || 
-                       b.category?.toLowerCase().includes('thca') ||
-                       b.name.toLowerCase().includes('flower') ||
-                       b.name.toLowerCase().includes('thca');
+      const aQuantity = a.quantity ?? 0;
+      const bQuantity = b.quantity ?? 0;
+      const aId = a.id || 0;
+      const bId = b.id || 0;
       
-      if (aIsFlower && !bIsFlower) return -1;
-      if (!aIsFlower && bIsFlower) return 1;
+      // Define "recently added" as items with higher IDs (more recently created)
+      const totalItems = products.length;
+      const recentThreshold = Math.max(1, Math.floor(totalItems * 0.2)); // Top 20% of items by ID
+      const maxId = Math.max(...products.map(item => item.id || 0));
+      const recentIdThreshold = maxId - recentThreshold;
       
-      // Within same category, prioritize in-stock items
-      const aInStock = a.quantity && a.quantity > 0;
-      const bInStock = b.quantity && b.quantity > 0;
+      const aIsRecent = aId > recentIdThreshold;
+      const bIsRecent = bId > recentIdThreshold;
       
-      if (aInStock && !bInStock) return -1;
-      if (!aInStock && bInStock) return 1;
+      // Priority 1: Recently added items with available quantities (newest first)
+      if (aIsRecent && aQuantity > 0 && !(bIsRecent && bQuantity > 0)) return -1;
+      if (bIsRecent && bQuantity > 0 && !(aIsRecent && aQuantity > 0)) return 1;
       
-      // Then sort by newest items (highest ID) first
-      return (b.id || 0) - (a.id || 0);
+      // Both are recent with available quantities - sort by newest first (higher ID)
+      if (aIsRecent && aQuantity > 0 && bIsRecent && bQuantity > 0) {
+        return bId - aId;
+      }
+      
+      // Priority 2: Other items with available quantities (newest first)
+      if (aQuantity > 0 && bQuantity <= 0) return -1;
+      if (bQuantity > 0 && aQuantity <= 0) return 1;
+      
+      // Both have available quantities - sort by newest first (higher ID)
+      if (aQuantity > 0 && bQuantity > 0) {
+        return bId - aId;
+      }
+      
+      // Priority 3: Out of stock items (newest first)
+      if (bId !== aId) {
+        return bId - aId;
+      }
+      
+      // Final fallback: alphabetical
+      return (a.name || '').localeCompare(b.name || '');
     });
 
   // Get status badge color

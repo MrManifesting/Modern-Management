@@ -125,16 +125,16 @@ export default function EnhancedInventory() {
           <h1 className="text-3xl font-bold text-gold-600">Enhanced Inventory</h1>
           <div className="flex gap-4 mt-2">
             <p className="text-gray-600">
-              Total Items: <span className="font-semibold">{items.length}</span>
+              Total Items: <span className="font-semibold">{sortedItems.length}</span>
             </p>
             <p className="text-green-600">
-              In Stock: <span className="font-semibold">{items.filter(item => item.quantity > 0).length}</span>
+              In Stock: <span className="font-semibold">{sortedItems.filter(item => item.quantity > 0).length}</span>
             </p>
             <p className="text-yellow-600">
-              Low Stock: <span className="font-semibold">{items.filter(item => item.quantity > 0 && item.quantity <= 10).length}</span>
+              Low Stock: <span className="font-semibold">{sortedItems.filter(item => item.quantity > 0 && item.quantity <= 10).length}</span>
             </p>
             <p className="text-red-600">
-              Out of Stock: <span className="font-semibold">{items.filter(item => item.quantity === 0).length}</span>
+              Out of Stock: <span className="font-semibold">{sortedItems.filter(item => item.quantity === 0).length}</span>
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function EnhancedInventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <TableRow key={item.id} className="hover:bg-gray-50">
                   <TableCell>
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
@@ -294,7 +294,7 @@ export default function EnhancedInventory() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {items.map((item) => (
+          {sortedItems.map((item) => (
             <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-square relative bg-gray-100">
                 {item.imageUrl ? (
