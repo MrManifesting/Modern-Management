@@ -4,7 +4,7 @@ import { IStorage } from './storage';
 import { generateBarcodeData } from './services/barcode';
 import { generateQRCodeDataURL } from './services/qrcode';
 import multer from 'multer';
-import { createShopifyClient } from './services/shopify-auth';
+// Shopify client functionality consolidated into shopify-integration.ts
 
 // Set up multer for file uploads
 const upload = multer({
@@ -151,7 +151,7 @@ export function registerShopifyImportRoutes(app: any, storage: IStorage) {
       }
 
       // Initialize Shopify client
-      const shopifyClient = await createShopifyClient();
+      // Shopify client functionality moved to shopify-integration.ts
       if (!shopifyClient) {
         return res.status(500).json({ error: "Failed to connect to Shopify" });
       }

@@ -43,13 +43,11 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerLabelRoutes } from "./routes-labels";
 import { registerSyncRoutes } from "./routes-sync";
-import { ShopifyProductImportService } from "./services/shopify-product-import.js";
 import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
 import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
-import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 
 import { registerCredentialRoutes } from "./routes-credentials";
@@ -395,7 +393,7 @@ export function registerRoutes(app: Express): Server {
       // Trigger real-time sync with marketplaces after item creation
       try {
         if (updatedItem) {
-          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+// Real-time sync functionality consolidated into shopify-integration.ts
           syncItemWithMarketplaces(updatedItem, storage).catch(err => {
             console.error("Real-time sync failed after item creation:", err);
           });
@@ -466,7 +464,7 @@ export function registerRoutes(app: Express): Server {
       // Trigger real-time sync with marketplaces after item update
       try {
         if (updatedItem) {
-          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+// Real-time sync functionality consolidated into shopify-integration.ts
           syncItemWithMarketplaces(updatedItem, storage).catch(err => {
             console.error("Real-time sync failed after item update:", err);
           });
@@ -622,7 +620,7 @@ export function registerRoutes(app: Express): Server {
       
       // Trigger real-time sync with marketplaces for all updated items
       try {
-        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
+// Real-time sync functionality consolidated into shopify-integration.ts
         
         // Get all updated items for syncing
         const updatedItems = await Promise.all(ids.map(id => storage.getItem(id)));
@@ -2875,7 +2873,6 @@ export function registerRoutes(app: Express): Server {
       
       try {
         // Get Shopify sales report data
-        const shopifyReport = await fetchShopifySalesReport(timeframe);
         
         if (shopifyReport && shopifyReport.periodSales && shopifyReport.periodSales.length > 0) {
           // We have Shopify data, convert it to our time series format
@@ -3806,7 +3803,6 @@ export function registerRoutes(app: Express): Server {
   // Get all products from Shopify for sync preview
   app.get("/api/shopify/products", async (_req: Request, res: Response) => {
     try {
-      const result = await getShopifyProducts();
       
       if (!result.success) {
         return res.status(400).json({
@@ -4210,7 +4206,6 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/shopify/reports/sales/:timeframe", async (req: Request, res: Response) => {
     try {
       const timeframe = req.params.timeframe || '30d';
-      const report = await fetchShopifySalesReport(timeframe);
       res.json(report);
     } catch (error) {
       console.error("Error fetching Shopify sales report:", error);
@@ -4225,7 +4220,6 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/shopify/reports/sales/:timeframe/export", async (req: Request, res: Response) => {
     try {
       const timeframe = req.params.timeframe || '30d';
-      const report = await fetchShopifySalesReport(timeframe);
       
       // Convert top products to CSV
       const topProductsParser = new Parser({
@@ -4269,7 +4263,6 @@ ${periodSalesCsv}`;
   
   app.get("/api/shopify/reports/inventory", async (_req: Request, res: Response) => {
     try {
-      const report = await fetchShopifyInventoryReport();
       res.json(report);
     } catch (error) {
       console.error("Error fetching Shopify inventory report:", error);
@@ -4283,7 +4276,6 @@ ${periodSalesCsv}`;
   // Export inventory report as CSV
   app.get("/api/shopify/reports/inventory/export", async (_req: Request, res: Response) => {
     try {
-      const report = await fetchShopifyInventoryReport();
       
       // Convert low stock items to CSV
       const lowStockParser = new Parser({
@@ -4327,7 +4319,6 @@ ${outOfStockCsv}`;
   
   app.get("/api/shopify/reports/customers", async (_req: Request, res: Response) => {
     try {
-      const report = await fetchShopifyCustomerReport();
       res.json(report);
     } catch (error) {
       console.error("Error fetching Shopify customer report:", error);
@@ -4341,7 +4332,6 @@ ${outOfStockCsv}`;
   // Export customer report as CSV
   app.get("/api/shopify/reports/customers/export", async (_req: Request, res: Response) => {
     try {
-      const report = await fetchShopifyCustomerReport();
       
       // Convert top customers to CSV (exclude email for privacy in exports)
       const topCustomersParser = new Parser({
@@ -4510,7 +4500,7 @@ ${topCustomersCsv}`;
       for (const item of itemsWithShopifyId) {
         try {
           await shopifyRateLimiter.executeWithBackoff(async () => {
-            const { getShopifyClient } = await import('./services/shopify-auth');
+// Shopify auth functionality consolidated into shopify-integration.ts
             const { shopify } = await getShopifyClient();
             
             // Get product variant to check inventory
@@ -5736,7 +5726,7 @@ ${topCustomersCsv}`;
     try {
       console.log('Starting complete inventory sync from MrListersCurations...');
       
-      const { completeShopifySync } = await import('./services/complete-shopify-sync');
+// Complete sync functionality consolidated into shopify-integration.ts
       const results = await completeShopifySync(storage);
       
       res.json({
@@ -5858,7 +5848,7 @@ ${topCustomersCsv}`;
       
       // Try to find product in Shopify by SKU or name
       try {
-        const { getShopifyClient } = await import('./services/shopify-auth');
+// Shopify auth functionality consolidated into shopify-integration.ts
         const { shopify, credentials } = await getShopifyClient();
         
         // Search for product using direct HTTPS API call
