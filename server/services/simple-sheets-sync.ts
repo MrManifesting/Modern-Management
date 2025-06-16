@@ -102,17 +102,23 @@ export class SimpleSheetsSync {
         if (row[0] && row[0] !== 'Handle' && row[0].trim()) { // Skip header and empty rows
           const handle = row[0].trim();
           
+          // Map columns correctly based on actual sheet structure
+          const price = row[23] && row[23] !== '' ? row[23] : '0';
+          const qty = row[20] && row[20] !== '' ? parseInt(row[20]) : 0;
+          const weight = row[9] && row[9] !== '' ? row[9] : '';
+          const sku = row[17] && row[17] !== '' ? row[17] : '';
+          
           productData[handle] = {
             handle: handle, // Column A
-            weight: row[9] || '', // Column J
-            sku: row[17] || '', // Column R 
-            inventoryQty: parseInt(row[20]) || 0, // Column U
-            price: row[23] || '0', // Column X
-            imageSrc: (row.length > 28 ? row[28] : '') || '', // Column AC if available
-            strainBannerText: (row.length > 48 ? row[48] : '') || '', // Column AW if available
-            thcaPercentage: (row.length > 49 ? row[49] : '') || '', // Column AX if available
-            coasLink: (row.length > 52 ? row[52] : '') || '', // Column BA if available
-            costPerItem: (row.length > 61 ? row[61] : '') || '0', // Column BJ if available
+            weight: weight, // Column J
+            sku: sku, // Column R 
+            inventoryQty: qty, // Column U
+            price: price, // Column X
+            imageSrc: (row.length > 28 ? row[28] : '') || '', // Column AC - Image Source
+            strainBannerText: (row.length > 48 ? row[48] : '') || '', // Column AW - Strain Banner
+            thcaPercentage: (row.length > 49 ? row[49] : '') || '', // Column AX - THCa %
+            coasLink: (row.length > 52 ? row[52] : '') || '', // Column BA - COAs Link
+            costPerItem: (row.length > 61 ? row[61] : '') || '0', // Column BJ - Cost Per Item
           };
         }
       });
