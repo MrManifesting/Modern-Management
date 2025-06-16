@@ -292,12 +292,12 @@ const ProductsInventoryPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   
-  // Fetch items from API with media files
+  // Fetch enhanced inventory with pricing from Google Sheets
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
-    queryKey: ['/api/items/with-media'],
+    queryKey: ['/api/inventory/enhanced'],
     queryFn: async () => {
       console.log("Fetching items with media from API...");
-      const res = await apiRequest('GET', '/api/items/with-media');
+      const res = await apiRequest('GET', '/api/inventory/enhanced');
       const data = await res.json();
       console.log("Fetched items with media:", data.length);
       
@@ -305,7 +305,10 @@ const ProductsInventoryPage: React.FC = () => {
         id: item.id,
         name: item.name,
         category: item.category || "Uncategorized",
-        price: item.basePrice || 0,
+        price: item.displayPrice || "No Price",
+        displayPrice: item.displayPrice || "No Price",
+        priceSource: item.priceSource || "none",
+        basePrice: item.basePrice || 0,
         retailPrice: item.retailPrice || item.basePrice || 0,
         wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
         sku: item.sku || "NO-SKU",
@@ -316,11 +319,14 @@ const ProductsInventoryPage: React.FC = () => {
         status: item.status || "draft",
         size: item.size || "",
         volume: item.volume || "",
+        weight: item.weight || "",
         description: item.description || "",
         imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
         marketplace: item.marketplace || [],
         shopifyId: item.shopifyId || null,
-        shopifySyncStatus: item.shopifySyncStatus || "not_synced"
+        shopifyUrl: item.shopifyUrl || null,
+        shopifySyncStatus: item.shopifySyncStatus || "not_synced",
+        sheetsData: item.sheetsData || null
       }));
     },
     refetchOnWindowFocus: true,
@@ -333,7 +339,7 @@ const ProductsInventoryPage: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/items/with-media'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory/enhanced'] });
       toast({
         title: "Item deleted",
         description: "The item has been successfully removed from your inventory."
@@ -540,17 +546,28 @@ const ProductsInventoryPage: React.FC = () => {
   // Handle viewing in Shopify
   const handleViewShopifyClick = (id: number | undefined) => {
     if (!id) return; // Skip if id is undefined
-    // Navigate to Shopify view page or open Shopify preview
-    const itemToView = products.find((item: Product) => item.id === id);
-    if (itemToView && itemToView.shopifyId) {
-      window.open(`/api/items/${id}/shopify-store-view`, '_blank');
-    } else {
-      toast({
-        title: "Not available",
-        description: "This item is not yet available in Shopify.",
-        variant: "destructive"
+    
+    // Call the API to get the Shopify URL
+    fetch(`/api/items/${id}/shopify-store-view`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.url) {
+          window.open(data.url, '_blank');
+        } else {
+          toast({
+            title: "Error",
+            description: "Unable to open Shopify view for this item.",
+            variant: "destructive"
+          });
+        }
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to open Shopify view. Please try again.",
+          variant: "destructive"
+        });
       });
-    }
   };
 
   // Handle viewing in Google Sheets

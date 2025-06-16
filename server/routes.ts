@@ -175,13 +175,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get items with media files
+  // Enhanced inventory endpoint with Google Sheets pricing
+  app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
+    try {
+      console.log("Fetching enhanced inventory items with Google Sheets data...");
+      
+      // Get database items
+      const items = await storage.getItems();
+      console.log(`Found ${items.length} items in database`);
+      
+      // Get Google Sheets data
+      let sheetsProducts: any[] = [];
+      try {
+        console.log("Starting enhanced inventory fetch from Google Sheets Products sheet...");
+        const { GoogleSheetsService } = await import('./services/google-sheets.js');
+        const googleSheetsService = new GoogleSheetsService();
+        console.log("Google Sheets auth initialized successfully");
+        
+        // Access the specific spreadsheet
+        const spreadsheetId = '1SW_o292VqhW0_RAIBIEb3J_9srmZGg2uyo1Kob3CU-s';
+        console.log(`Attempting to access spreadsheet: ${spreadsheetId}`);
+        
+        console.log("Getting sheet metadata...");
+        const sheets = await googleSheetsService.getSheetNames(spreadsheetId);
+        console.log("Available sheets:", JSON.stringify(sheets, null, 2));
+        
+        console.log("Fetching Product sheet data...");
+        const sheetData = await googleSheetsService.getSheetData(spreadsheetId, 'Product', 1000);
+        console.log(`Retrieved ${sheetData.length} product rows from Products sheet`);
+        
+        if (sheetData.length > 0) {
+          console.log("Processing product rows - checking row lengths and pricing data:");
+          const headers = sheetData[0];
+          console.log(`Row 0: Handle=${headers[0]}, Weight=${headers[1]}, SKU=${headers[2]}, Qty=${headers[3]}, Price-X=${headers[4]}, Price-Y=${headers[5]}, Price-Z=${headers[6]}, Cost-BJ=${headers[7]}`);
+          
+          // Process each row
+          for (let i = 1; i < Math.min(5, sheetData.length); i++) {
+            const row = sheetData[i];
+            console.log(`Row ${i}: Handle=${row[0]}, Weight=${row[1]}, SKU=${row[2]}, Qty=${row[3]}, Price-X=${row[4]}, Price-Y=${row[5]}, Price-Z=${row[6]}, Cost-BJ=${row[7]}`);
+          }
+          
+          // Map sheet data to products
+          sheetsProducts = sheetData.slice(1).map((row: any[]) => ({
+            handle: row[0] || '',
+            weight: row[1] || '',
+            sku: row[2] || '',
+            quantity: parseInt(row[3]) || 0,
+            priceX: parseFloat(row[4]) || 0,
+            priceY: parseFloat(row[5]) || 0,
+            priceZ: row[6] || '',
+            costBJ: parseFloat(row[7]) || 0
+          })).filter(product => product.handle && product.sku);
+          
+          console.log(`Processed ${sheetsProducts.length} products from sheet`);
+        }
+      } catch (error) {
+        console.warn("Could not fetch Google Sheets data:", error);
+      }
+      
+      // Get media files
+      let mediaFiles: any[] = [];
+      try {
+        const telegramService = await import('./services/telegram.js');
+        mediaFiles = telegramService.getMediaFiles('all', 1000, 0);
+      } catch (error) {
+        console.log('Media service not available, continuing without media files');
+      }
+      
+      // Merge database items with Google Sheets pricing
+      const enhancedItems = items.map(item => {
+        // Find matching product from Google Sheets
+        const sheetsProduct = sheetsProducts.find(p => 
+          p.sku === item.sku || 
+          p.handle === item.name?.toLowerCase().replace(/\s+/g, '-')
+        );
+        
+        // Get media files for this item
+        const associatedMedia = mediaFiles.filter(file => {
+          const fileName = file.name.toLowerCase();
+          const itemName = item.name?.toLowerCase() || '';
+          const itemSku = item.sku?.toLowerCase() || '';
+          
+          return fileName.includes(itemSku) ||
+                 fileName.includes(itemName.replace(/\s+/g, '_')) ||
+                 fileName.includes(`item_${item.id}`) ||
+                 fileName.includes(itemName.replace(/\s+/g, ''));
+        });
+        
+        // Enhanced image URL handling
+        let imageUrl = null;
+        let allImages: string[] = [];
+        
+        if (item.imageUrl && (item.imageUrl.includes('shopify.com') || item.imageUrl.includes('cdn.shopify.com'))) {
+          imageUrl = item.imageUrl;
+          allImages.push(item.imageUrl);
+        }
+        
+        if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+          allImages = [...allImages, ...item.images.filter(img => img && !allImages.includes(img))];
+          if (!imageUrl) imageUrl = item.images[0];
+        }
+        
+        if (associatedMedia.length > 0) {
+          const mediaUrls = associatedMedia.map(media => media.url);
+          allImages = [...allImages, ...mediaUrls.filter(url => !allImages.includes(url))];
+          if (!imageUrl) imageUrl = associatedMedia[0].url;
+        }
+        
+        // Determine pricing with Google Sheets data taking priority
+        let displayPrice = 'No Price';
+        let priceSource = 'none';
+        
+        if (sheetsProduct && sheetsProduct.priceX > 0) {
+          displayPrice = `$${sheetsProduct.priceX.toFixed(2)}`;
+          priceSource = 'sheets-x';
+        } else if (sheetsProduct && sheetsProduct.priceY > 0) {
+          displayPrice = `$${sheetsProduct.priceY.toFixed(2)}`;
+          priceSource = 'sheets-y';
+        } else if (item.basePrice && parseFloat(item.basePrice) > 0) {
+          displayPrice = `$${parseFloat(item.basePrice).toFixed(2)}`;
+          priceSource = 'database';
+        } else if (item.salePrice && parseFloat(item.salePrice) > 0) {
+          displayPrice = `$${parseFloat(item.salePrice).toFixed(2)}`;
+          priceSource = 'database-sale';
+        }
+        
+        // Create Shopify admin URL if shopifyId exists
+        let shopifyUrl = null;
+        if (item.shopifyId) {
+          shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+        }
+        
+        return {
+          ...item,
+          imageUrl,
+          images: allImages,
+          mediaFiles: associatedMedia,
+          displayPrice,
+          priceSource,
+          sheetsData: sheetsProduct || null,
+          shopifyUrl,
+          // Keep original pricing fields
+          costPrice: item.costPrice,
+          basePrice: item.basePrice,
+          salePrice: item.salePrice,
+          wholesalePrice: item.wholesalePrice
+        };
+      });
+      
+      // Sort items: Flower category first, then by name
+      const sortedItems = enhancedItems.sort((a, b) => {
+        // Flower items first
+        if (a.category === 'Flower' && b.category !== 'Flower') return -1;
+        if (b.category === 'Flower' && a.category !== 'Flower') return 1;
+        
+        // Then sort by name within categories
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      
+      res.json(sortedItems);
+      
+    } catch (error) {
+      console.error("Error fetching enhanced inventory:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch enhanced inventory", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Get items with media files (legacy endpoint)
   app.get("/api/items/with-media", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
       
       // Import the media functions
-      let mediaFiles = [];
+      let mediaFiles: any[] = [];
       try {
         const telegramService = await import('./services/telegram.js');
         mediaFiles = telegramService.getMediaFiles('all', 1000, 0);
@@ -232,13 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...item,
           imageUrl,
           images: allImages,
-          mediaFiles: associatedMedia,
-          // Ensure pricing fields are properly formatted
-          costPrice: typeof item.costPrice === 'string' ? item.costPrice : item.costPrice?.toString(),
-          basePrice: typeof item.basePrice === 'string' ? item.basePrice : item.basePrice?.toString(),
-          salePrice: typeof item.salePrice === 'string' ? item.salePrice : item.salePrice?.toString(),
-          wholesalePrice: typeof item.wholesalePrice === 'string' ? item.wholesalePrice : item.wholesalePrice?.toString(),
-          retailPrice: typeof item.retailPrice === 'string' ? item.retailPrice : item.retailPrice?.toString()
+          mediaFiles: associatedMedia
         };
       });
       
