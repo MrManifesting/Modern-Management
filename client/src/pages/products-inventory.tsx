@@ -100,8 +100,11 @@ interface Product {
   id?: number;
   name: string;
   category: string;
-  subcategory: string;
-  price: number;
+  subcategory?: string;
+  price: number | string;
+  displayPrice?: string;
+  priceSource?: string;
+  basePrice?: number;
   retailPrice: number;
   wholesalePrice: number;
   sku: string;
@@ -110,12 +113,16 @@ interface Product {
   status?: string;
   size?: string;
   volume?: string;
-  weight?: number;
+  weight?: string;
   description?: string;
   imageUrl?: string;
+  images?: string[];
+  mediaFiles?: string[];
   marketplace?: any[];
   shopifyId?: string | null;
+  shopifyUrl?: string | null;
   shopifySyncStatus?: string;
+  sheetsData?: any;
 }
 
 // Products are now loaded from real API data - no mock data used
@@ -407,9 +414,22 @@ const ProductsInventoryPage: React.FC = () => {
       
       return matchesSearch && matchesCategory;
     })
-    // Sort in-stock items first, then by newest first (recent items first based on ID)
+    // Sort flower items first, then by in-stock status, then by newest first
     .sort((a: Product, b: Product) => {
-      // First prioritize in-stock items
+      // First prioritize flower items at the top
+      const aIsFlower = a.category?.toLowerCase().includes('flower') || 
+                       a.category?.toLowerCase().includes('thca') ||
+                       a.name.toLowerCase().includes('flower') ||
+                       a.name.toLowerCase().includes('thca');
+      const bIsFlower = b.category?.toLowerCase().includes('flower') || 
+                       b.category?.toLowerCase().includes('thca') ||
+                       b.name.toLowerCase().includes('flower') ||
+                       b.name.toLowerCase().includes('thca');
+      
+      if (aIsFlower && !bIsFlower) return -1;
+      if (!aIsFlower && bIsFlower) return 1;
+      
+      // Within same category, prioritize in-stock items
       const aInStock = a.quantity && a.quantity > 0;
       const bInStock = b.quantity && b.quantity > 0;
       
