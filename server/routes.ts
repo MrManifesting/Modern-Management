@@ -4493,6 +4493,46 @@ ${topCustomersCsv}`;
   const { SimpleSheetsSync } = simpleSheetsModule;
   const simpleSheetsSync = new SimpleSheetsSync(storage);
 
+  // Orders endpoint for tracking page
+  app.get("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const sales = await storage.getSales();
+      const orders = sales.map(sale => ({
+        id: sale.id,
+        orderId: sale.orderId || `ORDER-${sale.id}`,
+        customerEmail: sale.customerEmail || 'N/A',
+        totalAmount: sale.totalAmount || '0.00',
+        status: sale.status || 'completed',
+        createdAt: sale.createdAt,
+        items: [{
+          name: sale.itemName || 'Unknown Item',
+          quantity: sale.quantity || 1,
+          price: sale.price || '0.00'
+        }]
+      }));
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+  });
+
+  // Enhanced inventory endpoint with Google Sheets integration - MUST come before /api/items/:id
+  app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
+    try {
+      console.log('Fetching enhanced inventory items with Google Sheets data...');
+      const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
+      
+      res.json(enhancedItems);
+    } catch (error) {
+      console.error('Error fetching enhanced inventory items:', error);
+      res.status(500).json({ 
+        error: "Failed to fetch enhanced inventory items",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Bulk update inventory quantities from Google Sheets
   app.post("/api/inventory/sync-quantities", async (req: Request, res: Response) => {
     try {
@@ -4535,32 +4575,13 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Orders endpoint for tracking page
-  app.get("/api/orders", async (req: Request, res: Response) => {
-    try {
-      const sales = await storage.getSales();
-      const orders = sales.map(sale => ({
-        id: sale.id,
-        orderId: sale.orderId || `ORDER-${sale.id}`,
-        customerEmail: sale.customerEmail || 'N/A',
-        totalAmount: sale.totalAmount || '0.00',
-        status: sale.status || 'completed',
-        createdAt: sale.createdAt,
-        items: [{
-          name: sale.itemName || 'Unknown Item',
-          quantity: sale.quantity || 1,
-          price: sale.price || '0.00'
-        }]
-      }));
-      res.json(orders);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+  // Start the server
+  const server = app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
   });
 
-  // Enhanced inventory endpoint with Google Sheets integration - MUST come before /api/items/:id
-  app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
+  return server;
+}
     try {
       console.log('Fetching enhanced inventory items with Google Sheets data...');
       const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
