@@ -10,21 +10,17 @@ import { IStorage } from "./storage";
 import { eq } from "drizzle-orm";
 
 /**
- * Unified function to remove duplicates by different criteria
+ * Unified duplicate removal helper function
  */
 async function removeDuplicatesByKey(storage: IStorage, type: 'sku' | 'strain-price') {
   const items = await storage.getItems();
   const duplicateMap = new Map<string, Item[]>();
   
-  // Group items by the specified key
   items.forEach((item: Item) => {
     let key: string;
-    
-    if (type === 'sku') {
-      if (!item.sku) return;
+    if (type === 'sku' && item.sku) {
       key = item.sku;
-    } else if (type === 'strain-price') {
-      if (!item.condition || !item.basePrice) return;
+    } else if (type === 'strain-price' && item.condition && item.basePrice) {
       key = `${item.condition.trim().toLowerCase()}_${item.basePrice}`;
     } else {
       return;
@@ -35,31 +31,20 @@ async function removeDuplicatesByKey(storage: IStorage, type: 'sku' | 'strain-pr
     duplicateMap.set(key, existingItems);
   });
   
-  // Find and process duplicates
   const duplicates: any[] = [];
-  
   duplicateMap.forEach((itemsWithKey, key) => {
     if (itemsWithKey.length > 1) {
       itemsWithKey.sort((a, b) => a.id - b.id);
       const keepId = itemsWithKey[0].id;
       const deleteIds = itemsWithKey.slice(1).map(item => item.id);
       
-      if (type === 'sku') {
-        duplicates.push({ sku: key, keepId, deleteIds });
-      } else {
-        duplicates.push({ 
-          strain: itemsWithKey[0].condition, 
-          price: itemsWithKey[0].basePrice, 
-          keepId, 
-          deleteIds, 
-          count: itemsWithKey.length 
-        });
-      }
+      duplicates.push(type === 'sku' 
+        ? { sku: key, keepId, deleteIds }
+        : { strain: itemsWithKey[0].condition, price: itemsWithKey[0].basePrice, keepId, deleteIds, count: itemsWithKey.length });
     }
   });
   
   const totalDeleted = duplicates.reduce((sum, d) => sum + d.deleteIds.length, 0);
-  
   if (totalDeleted === 0) {
     return {
       success: true,
@@ -67,7 +52,6 @@ async function removeDuplicatesByKey(storage: IStorage, type: 'sku' | 'strain-pr
     };
   }
   
-  // Delete duplicates
   const idsToDelete = duplicates.flatMap(d => d.deleteIds);
   for (const id of idsToDelete) {
     await storage.deleteItem(id);
@@ -86,9 +70,7 @@ async function removeDuplicatesByKey(storage: IStorage, type: 'sku' | 'strain-pr
  */
 export function registerCleanupRoutes(app: Express, storage: IStorage) {
   
-  /**
-   * Remove duplicate items based on strain and price (unified with SKU-based removal)
-   */
+  // Unified duplicate removal endpoints
   app.post("/api/cleanup/duplicates-by-strain-price", async (req: Request, res: Response) => {
     try {
       const result = await removeDuplicatesByKey(storage, 'strain-price');
@@ -103,9 +85,6 @@ export function registerCleanupRoutes(app: Express, storage: IStorage) {
     }
   });
   
-  /**
-   * Remove duplicate items based on SKU (unified with strain-price removal)
-   */
   app.post("/api/cleanup/duplicates", async (req: Request, res: Response) => {
     try {
       const result = await removeDuplicatesByKey(storage, 'sku');
