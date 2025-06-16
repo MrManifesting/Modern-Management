@@ -5737,22 +5737,22 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Full sync inventory quantities and images from Shopify
+  // Complete sync all inventory with real Shopify data
   app.post("/api/shopify/sync-inventory", async (req: Request, res: Response) => {
     try {
-      console.log('Starting full inventory sync from Shopify...');
+      console.log('Starting complete inventory sync from MrListersCurations...');
       
-      const { syncInventoryFromShopify } = await import('./services/direct-shopify-sync');
-      const results = await syncInventoryFromShopify(storage);
+      const { completeShopifySync } = await import('./services/complete-shopify-sync');
+      const results = await completeShopifySync(storage);
       
       res.json({
         success: true,
-        message: `Synced ${results.updated} of ${results.matched} matched items from ${results.totalProducts} Shopify products`,
+        message: `Complete sync: ${results.updated} items updated, ${results.withQuantity} with quantities, ${results.withImages} with images from ${results.totalShopifyProducts} Shopify products`,
         ...results
       });
       
     } catch (error) {
-      console.error('Error during Shopify inventory sync:', error);
+      console.error('Error during complete Shopify sync:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to sync inventory from Shopify',
