@@ -4498,6 +4498,47 @@ ${topCustomersCsv}`;
   // Shopify Product Import Service
   const shopifyImportService = new ShopifyProductImportService(storage);
 
+  // Import Sheets Inventory Sync Service
+  const { SheetsInventorySync } = require('./services/sheets-inventory-sync');
+  const sheetsInventorySync = new SheetsInventorySync(storage);
+
+  // Enhanced inventory endpoint with Google Sheets integration
+  app.get("/api/items/enhanced", async (req: Request, res: Response) => {
+    try {
+      console.log('Fetching enhanced inventory items with Google Sheets data...');
+      const enhancedItems = await sheetsInventorySync.getEnhancedInventoryItems();
+      
+      res.json(enhancedItems);
+    } catch (error) {
+      console.error('Error fetching enhanced inventory items:', error);
+      res.status(500).json({ 
+        error: "Failed to fetch enhanced inventory items",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Sync inventory with Google Sheets
+  app.post("/api/sheets/sync-inventory", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting Google Sheets inventory sync...');
+      const results = await sheetsInventorySync.syncInventoryWithSheets();
+      
+      res.json({
+        success: true,
+        message: `Synced ${results.updated} items from Google Sheets`,
+        ...results
+      });
+    } catch (error) {
+      console.error('Error syncing with Google Sheets:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to sync with Google Sheets",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Shopify Product Import Routes
   app.post("/api/shopify/import-all-products", async (req: Request, res: Response) => {
     try {
