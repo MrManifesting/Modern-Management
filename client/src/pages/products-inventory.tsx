@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { BulkActionBar } from '@/components/inventory/bulk-action-bar';
 import { WorkingBarcode } from '@/components/inventory/working-barcode';
 import { NumberedLabelsDialog } from '@/components/inventory/numbered-labels-dialog';
+import { InventoryTableRow } from '@/components/inventory/inventory-table-row';
 import { 
   Plus, 
   UploadCloud, 
@@ -316,22 +317,27 @@ const ProductsInventoryPage: React.FC = () => {
         id: item.id,
         name: item.name,
         category: item.category || "Uncategorized",
-        price: item.basePrice || 0,
-        retailPrice: item.retailPrice || item.basePrice || 0,
-        wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
+        // Use authentic Shopify pricing data hierarchy
+        price: Number(item.price || item.basePrice || 0),
+        basePrice: Number(item.basePrice || 0),
+        retailPrice: Number(item.retailPrice || item.basePrice || 0),
+        wholesalePrice: Number(item.wholesalePrice || 0),
+        salePrice: Number(item.salePrice || 0),
+        costPrice: Number(item.costPrice || 0),
         sku: item.sku || "NO-SKU",
         barcode: item.barcode || "",
-        quantity: item.quantity || 0,
-        images: item.images || [],
+        quantity: Number(item.quantity || 0),
+        weight: item.weight || item.size || "",
+        // Prioritize Shopify CDN images for authentic product photos
+        images: Array.isArray(item.images) ? item.images : [],
         mediaFiles: item.mediaFiles || [],
         status: item.status || "draft",
-        size: item.size || "",
-        volume: item.volume || "",
         description: item.description || "",
         imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
         marketplace: item.marketplace || [],
         shopifyId: item.shopifyId || null,
-        shopifySyncStatus: item.shopifySyncStatus || "not_synced"
+        shopifySyncStatus: item.shopifySyncStatus || "not_synced",
+        unit: item.unit || "units"
       }));
     },
     refetchOnWindowFocus: true,
