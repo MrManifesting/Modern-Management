@@ -243,16 +243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get live Shopify pricing data for accurate prices
-      let shopifyProducts: any[] = [];
+      let shopifyPricing = {};
       try {
-        console.log("Fetching live Shopify products for pricing data...");
-        const shopifyService = await import('./services/shopify-integration.js');
-        const shopifyClient = await shopifyService.createShopifyClient();
-        if (shopifyClient) {
-          const products = await shopifyClient.product.list({ limit: 250 });
-          shopifyProducts = products.data || [];
-          console.log(`Retrieved ${shopifyProducts.length} Shopify products for pricing`);
-        }
+        console.log("Fetching live Shopify pricing data...");
+        const { getShopifyPricing } = await import('./shopify-pricing.js');
+        shopifyPricing = await getShopifyPricing();
+        console.log(`Retrieved pricing data for ${Object.keys(shopifyPricing).length} SKUs from Shopify`);
       } catch (error) {
         console.log("Could not fetch Shopify pricing data:", error);
       }
