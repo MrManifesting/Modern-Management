@@ -253,34 +253,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch Shopify pricing data:", error);
       }
 
-      // Merge database items with live Shopify pricing and Google Sheets data
+      // Enhanced items with Shopify pricing and corrected weights
       const enhancedItems = items.map(item => {
-        // Find matching product from Google Sheets
-        const sheetsProduct = sheetsProducts.find(p => 
-          p.sku === item.sku || 
-          p.handle === item.name?.toLowerCase().replace(/\s+/g, '-')
-        );
-
-        // Find matching Shopify product for live pricing
-        const shopifyProduct = shopifyProducts.find(p => 
-          p.variants?.some((v: any) => v.sku === item.sku) ||
-          p.handle === item.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '')
-        );
+        // Fix weight to exact standards - no decimals like 1.5 pounds
+        let correctedWeight = item.weight || '1 pound';
+        
+        // Convert "1.5 pounds" to "1 pound" - no decimal weights allowed
+        if (correctedWeight.includes('1.5') || correctedWeight.includes('1.8') || correctedWeight.includes('0.5')) {
+          if (correctedWeight.toLowerCase().includes('pound')) {
+            if (correctedWeight.includes('0.5')) {
+              correctedWeight = 'half pound';
+            } else {
+              correctedWeight = '1 pound'; // Default 1.5 or 1.8 to 1 pound
+            }
+          }
+        }
 
         let displayPrice = "No Price";
         let priceSource = "";
         
-        // Priority order: Shopify live price > Google Sheets > Database
-        if (shopifyProduct && shopifyProduct.variants && shopifyProduct.variants.length > 0) {
-          const variant = shopifyProduct.variants.find((v: any) => v.sku === item.sku) || shopifyProduct.variants[0];
-          if (variant && variant.price) {
-            displayPrice = `$${parseFloat(variant.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            priceSource = "shopify";
-          }
-        } else if (sheetsProduct && (sheetsProduct.priceX > 0 || sheetsProduct.priceY > 0)) {
-          const price = sheetsProduct.priceX > 0 ? sheetsProduct.priceX : sheetsProduct.priceY;
-          displayPrice = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-          priceSource = "sheets";
+        // Priority order: Shopify live pricing > Database
+        const shopifyData = shopifyPricing[item.sku || ''];
+        if (shopifyData && shopifyData.price) {
+          displayPrice = `$${shopifyData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          priceSource = "shopify";
         } else if (item.basePrice && parseFloat(item.basePrice) > 0) {
           displayPrice = `$${parseFloat(item.basePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           priceSource = "database";
@@ -322,11 +318,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...item,
           displayPrice,
           priceSource,
-          weight: item.weight || '1 pound',
+          weight: correctedWeight,
           imageUrl,
           images: allImages,
-          mediaFiles: associatedMedia,
-          sheetsData: sheetsProduct
+          mediaFiles: associatedMedia
         };
       });
 
