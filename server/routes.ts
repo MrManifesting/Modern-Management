@@ -4742,11 +4742,23 @@ ${topCustomersCsv}`;
         return res.status(400).json({ error: "Authorization code is required" });
       }
 
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      let clientId = process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Try to get from stored credentials if not in env
+      if (!clientId || !clientSecret) {
+        const credential = await storage.getCredentialByService('google_sheets');
+        if (credential && credential.credentialData) {
+          const credData = credential.credentialData as any;
+          if (credData.client_id) {
+            clientId = credData.client_id;
+            clientSecret = credData.client_secret;
+          }
+        }
+      }
       
       if (!clientId || !clientSecret) {
-        return res.status(500).json({ error: "Google OAuth credentials not configured" });
+        return res.status(500).json({ error: "Google OAuth credentials not configured in environment or storage" });
       }
 
       // Exchange authorization code for tokens
@@ -4795,10 +4807,27 @@ ${topCustomersCsv}`;
   // Get Google OAuth URL with actual client ID
   app.get("/api/google-oauth/auth-url", async (_req: Request, res: Response) => {
     try {
-      const clientId = process.env.GOOGLE_CLIENT_ID;
+      let clientId = process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Try to get from stored credentials if not in env
+      if (!clientId || !clientSecret) {
+        try {
+          const credential = await storage.getCredentialByService('google_sheets');
+          if (credential && credential.credentialData) {
+            const credData = credential.credentialData as any;
+            if (credData.client_id) {
+              clientId = credData.client_id;
+              clientSecret = credData.client_secret;
+            }
+          }
+        } catch (error) {
+          console.log('Could not retrieve stored Google credentials:', error);
+        }
+      }
       
       if (!clientId) {
-        return res.status(500).json({ error: "Google Client ID not configured" });
+        return res.status(500).json({ error: "Google Client ID not configured in environment or credentials" });
       }
 
       const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent('urn:ietf:wg:oauth:2.0:oob')}&scope=${encodeURIComponent('https://www.googleapis.com/auth/spreadsheets')}&response_type=code&access_type=offline&prompt=consent`;
@@ -4807,6 +4836,48 @@ ${topCustomersCsv}`;
     } catch (error) {
       console.error('Error generating OAuth URL:', error);
       res.status(500).json({ error: "Failed to generate OAuth URL" });
+    }
+  });
+
+  // Auto-generate refresh token using stored credentials
+  app.post("/api/google-oauth/auto-generate-token", async (_req: Request, res: Response) => {
+    try {
+      let clientId = process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Try to get from stored credentials if not in env
+      if (!clientId || !clientSecret) {
+        const credential = await storage.getCredentialByService('google_sheets');
+        if (credential && credential.credentialData) {
+          const credData = credential.credentialData as any;
+          if (credData.client_id) {
+            clientId = credData.client_id;
+            clientSecret = credData.client_secret;
+          }
+        }
+      }
+      
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ 
+          error: "Google OAuth credentials not found in environment or storage",
+          requiresManualSetup: true 
+        });
+      }
+
+      // Generate authorization URL for user
+      const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent('urn:ietf:wg:oauth:2.0:oob')}&scope=${encodeURIComponent('https://www.googleapis.com/auth/spreadsheets')}&response_type=code&access_type=offline&prompt=consent`;
+      
+      res.json({
+        success: true,
+        message: "Use the authorization URL to get your code, then exchange it for a refresh token",
+        authUrl,
+        clientId: clientId.substring(0, 20) + "...", // Partial for security
+        nextStep: "Visit the URL, get authorization code, then use /api/google-oauth/exchange-token"
+      });
+
+    } catch (error) {
+      console.error('Error auto-generating token:', error);
+      res.status(500).json({ error: "Failed to auto-generate token" });
     }
   });
 
