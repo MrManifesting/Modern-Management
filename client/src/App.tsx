@@ -48,6 +48,7 @@ import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
+import ThcaPivotTablesPage from "@/pages/thca-pivot-tables";
 import OrdersTracking from "@/pages/orders-tracking";
 import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
@@ -111,6 +112,7 @@ function Router() {
         <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
         <ProtectedRoute path="/google-apps-script-admin" component={() => <GoogleAppsScriptAdminPage />} />
         <ProtectedRoute path="/sheets-mapping-admin" component={() => <SheetsMappingAdmin />} />
+        <ProtectedRoute path="/thca-pivot-tables" component={() => <ThcaPivotTablesPage />} />
         <ProtectedRoute path="/orders" component={() => <OrdersTracking />} />
         <ProtectedRoute path="/orders-tracking" component={() => <OrdersTracking />} />
         <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
