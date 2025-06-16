@@ -4882,7 +4882,7 @@ ${topCustomersCsv}`;
         });
       }
 
-      // Generate authorization URL for user
+      // Generate authorization URL for manual code entry (works with any domain)
       const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent('urn:ietf:wg:oauth:2.0:oob')}&scope=${encodeURIComponent('https://www.googleapis.com/auth/spreadsheets')}&response_type=code&access_type=offline&prompt=consent`;
       
       res.json({
