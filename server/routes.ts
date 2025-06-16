@@ -178,6 +178,50 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Shopify test connection endpoint
+  app.get("/api/shopify/test-connection", async (_req: Request, res: Response) => {
+    try {
+      console.log("Testing Shopify connection from frontend...");
+      const connectionStatus = await isShopifyConfigured();
+      console.log("Shopify connection test result:", connectionStatus);
+      res.json(connectionStatus);
+    } catch (error) {
+      console.error("Failed to test Shopify connection:", error);
+      res.status(500).json({ 
+        connected: false,
+        store: "",
+        message: `Connection error: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
+    }
+  });
+
+  // Synchronize inventory from Shopify to local database
+  app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
+    try {
+      const isConfigured = await isShopifyConfigured();
+      if (!isConfigured) {
+        return res.status(400).json({
+          success: false,
+          message: "Shopify integration is not properly configured. Please check your API credentials."
+        });
+      }
+      
+      const result = await syncProductsFromShopify();
+      
+      res.json({
+        success: true,
+        products: result,
+        message: `Successfully synced ${result.length} products from Shopify.`
+      });
+    } catch (error) {
+      console.error("Failed to sync inventory from Shopify:", error);
+      res.status(500).json({
+        success: false,
+        message: `Sync failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
+    }
+  });
+
   // Register all route modules
   // Shopify import functionality consolidated into shopify-integration.ts
   registerCSVImportRoutes(app, storage);
