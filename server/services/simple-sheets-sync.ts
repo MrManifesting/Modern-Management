@@ -103,31 +103,47 @@ export class SimpleSheetsSync {
           const handle = row[0].trim();
           
           // Map columns correctly based on actual sheet structure
-          // Try multiple price columns to find the actual price data
+          // Try multiple price columns to find the actual price data and clean the values
           let price = '0';
-          if (row[23] && row[23] !== '' && !isNaN(parseFloat(row[23]))) {
-            price = row[23]; // Column X
-          } else if (row[24] && row[24] !== '' && !isNaN(parseFloat(row[24]))) {
-            price = row[24]; // Column Y
-          } else if (row[25] && row[25] !== '' && !isNaN(parseFloat(row[25]))) {
-            price = row[25]; // Column Z
+          const cleanPrice = (priceStr: string) => {
+            if (!priceStr || priceStr === '') return '0';
+            // Remove currency symbols, commas, and extra spaces
+            const cleaned = String(priceStr).replace(/[$,\s]/g, '').replace(/[^0-9.]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? '0' : parsed.toString();
+          };
+          
+          if (row[23] && row[23] !== '') {
+            const cleanedPrice = cleanPrice(row[23]);
+            if (cleanedPrice !== '0') price = cleanedPrice; // Column X
+          } 
+          if (price === '0' && row[24] && row[24] !== '') {
+            const cleanedPrice = cleanPrice(row[24]);
+            if (cleanedPrice !== '0') price = cleanedPrice; // Column Y
+          }
+          if (price === '0' && row[25] && row[25] !== '') {
+            const cleanedPrice = cleanPrice(row[25]);
+            if (cleanedPrice !== '0') price = cleanedPrice; // Column Z
           }
           
-          const qty = row[20] && row[20] !== '' ? parseInt(row[20]) : 0;
-          const weight = row[9] && row[9] !== '' ? row[9] : '';
-          const sku = row[17] && row[17] !== '' ? row[17] : '';
+          const qty = row[20] && row[20] !== '' ? parseInt(String(row[20]).replace(/[^0-9]/g, '')) || 0 : 0;
+          const weight = row[9] && row[9] !== '' ? String(row[9]).trim() : '';
+          const sku = row[17] && row[17] !== '' ? String(row[17]).trim() : '';
+          
+          // Clean cost price the same way as regular price
+          const costPrice = (row.length > 61 && row[61]) ? cleanPrice(row[61]) : '0';
           
           productData[handle] = {
             handle: handle, // Column A
             weight: weight, // Column J
             sku: sku, // Column R 
             inventoryQty: qty, // Column U
-            price: price, // Column X
+            price: price, // Columns X, Y, or Z (whichever has data)
             imageSrc: (row.length > 28 ? row[28] : '') || '', // Column AC - Image Source
             strainBannerText: (row.length > 48 ? row[48] : '') || '', // Column AW - Strain Banner
             thcaPercentage: (row.length > 49 ? row[49] : '') || '', // Column AX - THCa %
             coasLink: (row.length > 52 ? row[52] : '') || '', // Column BA - COAs Link
-            costPerItem: (row.length > 61 ? row[61] : '') || '0', // Column BJ - Cost Per Item
+            costPerItem: costPrice, // Column BJ - Cost Per Item (cleaned)
           };
         }
       });
