@@ -53,6 +53,7 @@ import ThcaInventoryManagerPage from "@/pages/thca-inventory-manager";
 import OrdersTracking from "@/pages/orders-tracking";
 import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
 import GoogleOAuthSetupPage from "@/pages/google-oauth-setup";
+import QuickOAuthSetupPage from "@/pages/quick-oauth-setup";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
 import EnhancedInventory from "@/pages/enhanced-inventory";
 import NotFound from "@/pages/not-found";
@@ -120,6 +121,7 @@ function Router() {
         <ProtectedRoute path="/orders-tracking" component={() => <OrdersTracking />} />
         <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
         <ProtectedRoute path="/google-oauth-setup" component={() => <GoogleOAuthSetupPage />} />
+        <ProtectedRoute path="/quick-oauth" component={() => <QuickOAuthSetupPage />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
