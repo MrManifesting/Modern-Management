@@ -5737,6 +5737,32 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Sync inventory quantities and images from Shopify
+  app.post("/api/shopify/sync-inventory", async (req: Request, res: Response) => {
+    try {
+      console.log('Starting inventory sync from Shopify...');
+      
+      const { ShopifyInventorySync } = await import('./services/shopify-inventory-sync');
+      const syncService = new ShopifyInventorySync(storage);
+      
+      const results = await syncService.syncInventoryFromShopify();
+      
+      res.json({
+        success: true,
+        message: `Synced ${results.updated} of ${results.synced} items from Shopify`,
+        ...results
+      });
+      
+    } catch (error) {
+      console.error('Error during Shopify inventory sync:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to sync inventory from Shopify',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Sync inventory to Google Sheets with real data
   app.post("/api/shopify/sheets/sync-inventory", async (req: Request, res: Response) => {
     try {
