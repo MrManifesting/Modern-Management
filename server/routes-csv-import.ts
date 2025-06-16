@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import { IStorage } from './storage';
 import multer from 'multer';
 import { isShopifyConfigured } from './services/shopify';
-import { getShopifyCredentials } from './services/shopify-auth';
+// Shopify auth functionality consolidated into shopify-integration.ts
 import { generateBarcodeData } from './services/barcode';
 import { generateQRCodeDataURL } from './services/qrcode';
 import { ShopifyService } from './services/marketplaces/shopify';
