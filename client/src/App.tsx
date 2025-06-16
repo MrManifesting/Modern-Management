@@ -51,6 +51,7 @@ import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import OrdersTracking from "@/pages/orders-tracking";
 import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
+import EnhancedInventory from "@/pages/enhanced-inventory";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -70,6 +71,7 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={() => <Dashboard />} />
         <ProtectedRoute path="/inventory" component={() => <Inventory />} />
+        <ProtectedRoute path="/inventory/enhanced" component={() => <EnhancedInventory />} />
         <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/:id" component={() => {
           const InventoryDetailPage = React.lazy(() => import('@/pages/inventory-detail'));

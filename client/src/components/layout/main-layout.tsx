@@ -22,6 +22,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Dashboard";
       case "/inventory":
         return "Inventory";
+      case "/inventory/enhanced":
+        return "Enhanced Inventory";
       case "/marketplace":
         return "Marketplace";
       case "/marketplace-management":
