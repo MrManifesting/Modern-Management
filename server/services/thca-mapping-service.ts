@@ -323,33 +323,38 @@ export class ThcaMappingService {
    * Get mapping overview statistics
    */
   async getMappingOverview() {
-    const [mappingStats] = await db.execute(sql`
-      SELECT 
-        COUNT(*) as total_thca_rows,
-        COUNT(CASE WHEN mapping_status = 'auto_matched' THEN 1 END) as auto_matched,
-        COUNT(CASE WHEN mapping_status = 'manual_mapped' THEN 1 END) as manual_mapped,
-        COUNT(CASE WHEN mapping_status = 'conflict' THEN 1 END) as conflicts,
-        COUNT(CASE WHEN mapping_status = 'unmapped' THEN 1 END) as unmapped,
-        COUNT(CASE WHEN needs_review = true THEN 1 END) as needs_review,
-        AVG(match_score) as avg_match_score
-      FROM thca_flower_mapping
-    `);
+    try {
+      const mappingStats = await db.select({
+        totalThcaRows: sql<number>`COUNT(*)`,
+        autoMatched: sql<number>`COUNT(CASE WHEN mapping_status = 'auto_matched' THEN 1 END)`,
+        manualMapped: sql<number>`COUNT(CASE WHEN mapping_status = 'manual_mapped' THEN 1 END)`,
+        conflicts: sql<number>`COUNT(CASE WHEN mapping_status = 'conflict' THEN 1 END)`,
+        unmapped: sql<number>`COUNT(CASE WHEN mapping_status = 'unmapped' THEN 1 END)`,
+        needsReview: sql<number>`COUNT(CASE WHEN needs_review = true THEN 1 END)`,
+        avgMatchScore: sql<number>`AVG(match_score)`
+      }).from(thcaFlowerMapping);
 
-    const [shopifyStats] = await db.execute(sql`
-      SELECT COUNT(*) as total_shopify_products
-      FROM shopify_product_lookup
-    `);
+      const shopifyStats = await db.select({
+        totalShopifyProducts: sql<number>`COUNT(*)`
+      }).from(shopifyProductLookup);
 
-    const [inventoryStats] = await db.execute(sql`
-      SELECT COUNT(*) as total_inventory_items
-      FROM items
-    `);
+      const inventoryStats = await db.select({
+        totalInventoryItems: sql<number>`COUNT(*)`
+      }).from(items);
 
-    return {
-      thcaSheet: mappingStats,
-      shopify: shopifyStats,
-      inventory: inventoryStats
-    };
+      return {
+        thcaSheet: mappingStats[0] || {},
+        shopify: shopifyStats[0] || {},
+        inventory: inventoryStats[0] || {}
+      };
+    } catch (error) {
+      console.error('Error getting mapping overview:', error);
+      return {
+        thcaSheet: { totalThcaRows: 0, autoMatched: 0, manualMapped: 0, conflicts: 0, unmapped: 0, needsReview: 0, avgMatchScore: 0 },
+        shopify: { totalShopifyProducts: 0 },
+        inventory: { totalInventoryItems: 0 }
+      };
+    }
   }
 
   /**
@@ -362,8 +367,6 @@ export class ThcaMappingService {
         COUNT(*) as thca_entries,
         COUNT(CASE WHEN tfm.shopify_id IS NOT NULL THEN 1 END) as shopify_matches,
         COUNT(CASE WHEN tfm.item_id IS NOT NULL THEN 1 END) as inventory_matches,
-        STRING_AGG(DISTINCT tfm.shopify_title, ', ') as shopify_products,
-        STRING_AGG(DISTINCT spl.variant_sku, ', ') as shopify_skus,
         AVG(tfm.match_score) as avg_match_score
       FROM thca_flower_mapping tfm
       LEFT JOIN shopify_product_lookup spl ON tfm.shopify_id = spl.shopify_id
@@ -371,7 +374,7 @@ export class ThcaMappingService {
       ORDER BY thca_entries DESC
     `);
 
-    return strainMappings;
+    return strainMappings.rows || [];
   }
 
   /**
@@ -398,55 +401,57 @@ export class ThcaMappingService {
       ORDER BY tfm.match_score DESC
     `);
 
-    return alignment;
+    return alignment.rows || [];
   }
 
   /**
    * Get unmapped items that need attention
    */
   async getUnmappedItems() {
-    const unmapped = {
-      thcaRows: await db.execute(sql`
-        SELECT 
-          tsd.strain,
-          tsd.amount,
-          tsd.percentage,
-          tsd.tier,
-          tsd.row_number
-        FROM thca_sheet_data tsd
-        LEFT JOIN thca_flower_mapping tfm ON tsd.id = tfm.id
-        WHERE tfm.id IS NULL
-        ORDER BY tsd.row_number
-      `),
-      
-      shopifyProducts: await db.execute(sql`
-        SELECT 
-          spl.title,
-          spl.variant_sku,
-          spl.variant_inventory_quantity,
-          spl.product_type,
-          spl.status
-        FROM shopify_product_lookup spl
-        LEFT JOIN thca_flower_mapping tfm ON spl.shopify_id = tfm.shopify_id
-        WHERE tfm.id IS NULL AND spl.product_type ILIKE '%flower%'
-        ORDER BY spl.title
-      `),
-      
-      inventoryItems: await db.execute(sql`
-        SELECT 
-          i.name,
-          i.sku,
-          i.quantity,
-          i.category,
-          i.status
-        FROM items i
-        LEFT JOIN thca_flower_mapping tfm ON i.id = tfm.item_id
-        WHERE tfm.id IS NULL AND i.category ILIKE '%flower%'
-        ORDER BY i.name
-      `)
-    };
+    const thcaRows = await db.execute(sql`
+      SELECT 
+        tsd.strain,
+        tsd.amount,
+        tsd.percentage,
+        tsd.tier,
+        tsd.row_number
+      FROM thca_sheet_data tsd
+      LEFT JOIN thca_flower_mapping tfm ON tsd.id = tfm.id
+      WHERE tfm.id IS NULL
+      ORDER BY tsd.row_number
+    `);
+    
+    const shopifyProducts = await db.execute(sql`
+      SELECT 
+        spl.title,
+        spl.variant_sku,
+        spl.variant_inventory_quantity,
+        spl.product_type,
+        spl.status
+      FROM shopify_product_lookup spl
+      LEFT JOIN thca_flower_mapping tfm ON spl.shopify_id = tfm.shopify_id
+      WHERE tfm.id IS NULL AND spl.product_type ILIKE '%flower%'
+      ORDER BY spl.title
+    `);
+    
+    const inventoryItems = await db.execute(sql`
+      SELECT 
+        i.name,
+        i.sku,
+        i.quantity,
+        i.category,
+        i.status
+      FROM items i
+      LEFT JOIN thca_flower_mapping tfm ON i.id = tfm.item_id
+      WHERE tfm.id IS NULL AND i.category ILIKE '%flower%'
+      ORDER BY i.name
+    `);
 
-    return unmapped;
+    return {
+      thcaRows: thcaRows.rows || [],
+      shopifyProducts: shopifyProducts.rows || [],
+      inventoryItems: inventoryItems.rows || []
+    };
   }
 
   /**
@@ -465,7 +470,7 @@ export class ThcaMappingService {
       ORDER BY tfm.match_score ASC
     `);
 
-    return conflicts;
+    return conflicts.rows || [];
   }
 
   // Helper methods
