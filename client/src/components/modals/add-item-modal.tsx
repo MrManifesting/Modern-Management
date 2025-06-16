@@ -33,7 +33,14 @@ export default function AddItemModal({
       // Add all form fields to formData
       Object.entries(data).forEach(([key, value]) => {
         // Handle arrays and objects by stringifying them
-        if (Array.isArray(value) || typeof value === "object") {
+        if (key === "files") {
+          // Add each file separately
+          if (data.files) {
+            data.files.forEach((file: File) => {
+              formData.append("files", file);
+            });
+          }
+        } else if (Array.isArray(value) || typeof value === "object") {
           formData.append(key, JSON.stringify(value));
         } else {
           formData.append(key, String(value));
@@ -51,7 +58,28 @@ export default function AddItemModal({
     onSuccess: async (newItem: Item, variables: InsertItem) => {
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
       
-      // Auto-tag uploaded photos functionality removed due to schema changes
+      // Auto-tag uploaded photos with item name for new items
+      if (!isEditing && newItem && variables.files && variables.files.length > 0) {
+        try {
+          await fetch('/api/media/tag-photos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemId: newItem.id,
+              itemName: newItem.name,
+              itemSku: newItem.sku,
+              photoCount: variables.files.length
+            })
+          });
+          
+          toast({
+            title: "Photos Tagged",
+            description: `${variables.files.length} photo${variables.files.length > 1 ? 's' : ''} automatically tagged with item name`,
+          });
+        } catch (error) {
+          console.warn('Failed to tag photos:', error);
+        }
+      }
       
       // Auto-print labels for new items only
       if (!isEditing && newItem && variables.quantity && variables.quantity > 0) {
@@ -121,8 +149,16 @@ export default function AddItemModal({
   const [shopifySyncStatus, setShopifySyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [shopifySyncMessage, setShopifySyncMessage] = useState<string>('');
   
-  const handleSubmit = async (data: InsertItem) => {
-    // Removed marketplace field handling due to schema changes
+  const handleSubmit = async (data: ItemForm) => {
+    // Add the marketplace field if not present
+    if (!data.marketplace || !Array.isArray(data.marketplace)) {
+      data.marketplace = [];
+    }
+    
+    // Add shopify to marketplace list if not already there
+    if (!data.marketplace.includes('shopify')) {
+      data.marketplace.push('shopify');
+    }
     
     setShopifySyncStatus('syncing');
     createMutation.mutate(data, {

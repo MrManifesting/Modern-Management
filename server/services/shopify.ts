@@ -1,6 +1,10 @@
 import { Item, ItemType, BreakdownStatus } from "@shared/schema";
 import { generateSKU } from './sku-generator';
-// Shopify auth functionality consolidated into shopify-integration.ts
+import { 
+  getShopifyStoreName as getShopifyStoreNameAuth, 
+  getShopifyCredentials as getShopifyCredentialsAuth, 
+  testShopifyConnection as testShopifyAuth 
+} from './shopify-auth';
 
 // Safety functions consolidated into main shopify service
 const logShopifyOperation = (operation: string, details: any) => {
@@ -140,15 +144,7 @@ export function getPushStatus(): { pushEnabled: boolean, message: string } {
  */
 export async function testConnection(): Promise<{ connected: boolean, store: string, message: string }> {
   // Use the improved test connection function from shopify-auth
-  // Test connection using environment variables
-  const shopifyStore = process.env.SHOPIFY_STORE;
-  const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-  
-  if (!shopifyStore || !shopifyAccessToken) {
-    return { success: false, message: 'Shopify credentials not configured' };
-  }
-  
-  return { success: true, message: 'Shopify connection configured' };
+  return testShopifyAuth();
 }
 
 /**

@@ -82,8 +82,6 @@ export default function ItemCard({
   // Handle click to view item details
   const handleViewDetails = (e: React.MouseEvent) => {
     // Don't navigate if we're clicking on a button
-    if (!e || !e.target) return;
-    
     const target = e.target as HTMLElement;
     if (target && (target.closest('button') || target.closest('.dropdown-menu'))) {
       return;
@@ -328,7 +326,6 @@ export default function ItemCard({
                       {item.status === 'listed' && (
                         <DropdownMenuItem
                           onClick={(e) => {
-                            if (!e) return;
                             e.preventDefault();
                             e.stopPropagation();
                             document.getElementById(`shopify-preview-${item.id}`)?.click();
@@ -343,7 +340,6 @@ export default function ItemCard({
                       {item.shopifyId && item.status !== 'listed' && (
                         <DropdownMenuItem
                           onClick={(e) => {
-                            if (!e) return;
                             e.preventDefault();
                             e.stopPropagation();
                             // Use the ShopifyStorePreview for drafts too
@@ -385,95 +381,58 @@ export default function ItemCard({
         </div>
 
         <CardContent className="p-4">
-          {/* Enhanced Header with Price and Stock */}
-          <div className="mb-3">
-            <h3 className="font-medium text-gray-800 mb-2 line-clamp-2">{item.name}</h3>
-            
-            {/* Price and Stock Row */}
-            <div className="flex justify-between items-center">
-              {/* Price Display - Large and Prominent */}
-              <div className="text-lg font-bold text-primary-600">
-                {(() => {
-                  // Priority: salePrice > basePrice > wholesalePrice > costPrice
-                  const salePrice = Number(item.salePrice || 0);
-                  const basePrice = Number(item.basePrice || 0);
-                  const wholesalePrice = Number(item.wholesalePrice || 0);
-                  const costPrice = Number(item.costPrice || 0);
-                  
-                  // Show the highest available price with clear labeling
-                  if (salePrice > 0) {
-                    return `$${salePrice.toFixed(2)}`;
-                  } else if (basePrice > 0) {
-                    return `$${basePrice.toFixed(2)}`;
-                  } else if (wholesalePrice > 0) {
-                    return `$${wholesalePrice.toFixed(2)} (Wholesale)`;
-                  } else if (costPrice > 0) {
-                    return `$${costPrice.toFixed(2)} (Cost)`;
-                  } else {
-                    return 'Price Not Set';
-                  }
-                })()}
+          <div className="flex justify-between items-start">
+            <h3 className="font-medium text-gray-800 flex-1">{item.name}</h3>
+            <div className="text-right ml-2">
+              {/* Main Price Display */}
+              <div className="font-semibold text-primary-600">
+                ${typeof item.basePrice === 'string' ? parseFloat(item.basePrice || '0').toFixed(2) : 
+                  typeof item.salePrice === 'string' ? parseFloat(item.salePrice || '0').toFixed(2) : '0.00'}
               </div>
               
-              {/* Stock Display - Large and Color-Coded */}
-              <div className="text-right">
-                <div className={`text-lg font-bold ${
-                  Number(item.quantity || 0) > 0 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`}>
-                  {Number(item.quantity || 0)} {item.unit || 'units'}
+              {/* Sale Price Indicator */}
+              {item.salePrice && item.basePrice && parseFloat(item.salePrice || '0') < parseFloat(item.basePrice || '0') && (
+                <div className="text-xs text-red-600 line-through">
+                  ${parseFloat(item.basePrice || '0').toFixed(2)}
                 </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  {Number(item.quantity || 0) > 0 ? 'In Stock' : 'Out of Stock'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Item Details */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">SKU:</span>
-              <span className="font-mono text-gray-800">{item.sku || 'Not Set'}</span>
-            </div>
-            
-            {item.weight && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Weight:</span>
-                <span className="text-gray-800">{item.weight}</span>
-              </div>
-            )}
-            
-            {item.category && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Category:</span>
-                <span className="text-gray-800 capitalize">{item.category}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Row - Date and Actions */}
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500">{formattedDate}</span>
+              )}
               
-              {/* Quick Action Buttons */}
-              <div className="flex space-x-1">
-                {item.barcode && (
-                  <div className="text-xs text-green-600 flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                    Barcode
-                  </div>
-                )}
-                {item.qrCode && (
-                  <div className="text-xs text-blue-600 flex items-center">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
-                    QR Code
-                  </div>
-                )}
-              </div>
+              {/* Wholesale Price */}
+              {item.wholesalePrice && (
+                <div className="text-xs text-gray-500">
+                  Wholesale: ${parseFloat(item.wholesalePrice || '0').toFixed(2)}
+                </div>
+              )}
             </div>
+          </div>
+          
+          <p className="mt-1 text-sm text-gray-600 line-clamp-1">
+            {item.category}
+            {(item.tags as string[]).length > 0 && `, ${(item.tags as string[])[0]}`}
+          </p>
+          
+          {/* Cost and Margin Info */}
+          {item.costPrice && (
+            <div className="mt-2 text-xs text-gray-500 flex justify-between">
+              <span>Cost: ${parseFloat(item.costPrice || '0').toFixed(2)}</span>
+              {item.basePrice && (
+                <span className="text-green-600">
+                  Margin: {((parseFloat(item.basePrice || '0') - parseFloat(item.costPrice || '0')) / parseFloat(item.basePrice || '1') * 100).toFixed(0)}%
+                </span>
+              )}
+            </div>
+          )}
+          
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-xs text-gray-500">Added {formattedDate}</span>
+            {/* Stock Level Indicator */}
+            <span className={`text-xs px-2 py-1 rounded ${
+              (item.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
+              (item.quantity || 0) > 0 ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              Stock: {item.quantity || 0}
+            </span>
           </div>
         </CardContent>
       </Card>

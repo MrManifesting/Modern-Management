@@ -125,39 +125,6 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 16, 2025: **Enhanced Inventory Display with Hover Enlargement and Category-Based Thumbnails Complete**
-  - Implemented comprehensive thumbnail system with hover enlargement functionality displaying 264x264 pixel enlarged images
-  - Created category-based visual indicators with smooth animations: 🌿 green for THCA flower, 🍯 amber for concentrates, 🍬 purple for edibles
-  - Fixed broken placeholder image URLs by replacing with intelligent product categorization based on authentic inventory names
-  - Added hover enlargement with professional styling, product descriptions, and fade-in/fade-out transitions
-  - Enhanced visual presentation for 644 inventory items ensuring all thumbnails display properly without broken links
-  - Implemented responsive hover positioning with color-coded borders matching product categories
-  - System now provides reliable visual representation using authentic product data rather than failed placeholder URLs
-- June 16, 2025: **Complete Inventory Table View with Authentic Shopify Data Successfully Implemented**
-  - Fixed table display issues showing proper thumbnails, quantities, and authentic pricing from MrListersCurations store
-  - Successfully synchronized 255 items with real Shopify pricing data ($750, $25, $6, $20, etc.) matching live store exactly
-  - Table properly displays authentic inventory quantities (5 items in stock) reflecting actual Shopify inventory levels
-  - Implemented comprehensive Shopify sync services pulling real data from 326 products in MrListersCurations store
-  - Created direct API integration with proper authentication showing authentic pricing without any mock or placeholder data
-  - Table view now prominently displays quantities, pricing, and thumbnails as requested with color-coded pricing tiers
-  - All displayed data comes directly from live Shopify store ensuring accuracy and real-time inventory representation
-- June 15, 2025: **Comprehensive Inventory Synchronization System Deployed and Operational**
-  - Built complete inventory sync system with real-time pricing and quantity updates from MrListersCurations Shopify store
-  - Fixed ShopifyInventorySync service to work with actual Shopify client API structure (product.list method)
-  - Successfully imported 250+ authentic THCA flower products with accurate names, pricing, and inventory quantities
-  - Created comprehensive sync dashboard with full product import and quick price/quantity update options
-  - Added navigation to Inventory Sync page accessible from Marketplaces section in sidebar
-  - System now provides accurate, live inventory data directly from Shopify store without any mock or placeholder data
-  - All pricing and quantities are authentic and match what's available online in the live store
-- June 15, 2025: **Complete Code Cleanup and Redundancy Elimination**
-  - Systematically removed all duplicate and redundant code throughout the entire codebase
-  - Consolidated 4 separate CSV parsing functions into 1 optimized parser in shopify-import.ts
-  - Created unified duplicate removal helper function for both SKU and strain-price cleanup operations
-  - Eliminated duplicate affiliate transaction functions and redundant storage methods
-  - Fixed TypeScript errors in add-item-modal component by removing references to non-existent properties
-  - Removed obsolete CSV parser from routes-csv-import.ts and consolidated all parsing logic
-  - Unified cleanup routes to use shared logic, reducing code complexity by 50+ lines
-  - Codebase now clean, consolidated, and free of redundant functions while maintaining full functionality
 - June 15, 2025: **Automatic Photo Tagging and Enhanced Thumbnail Display System Complete**
   - Implemented automatic photo tagging when adding new inventory items - uploaded photos are automatically tagged with item names, SKUs, and IDs
   - Created enhanced thumbnail display system for all inventory items with proper fallback handling for missing images

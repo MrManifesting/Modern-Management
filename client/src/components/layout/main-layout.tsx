@@ -42,8 +42,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Affiliate Program";
       case "/sync-dashboard":
         return "Sync Dashboard";
-      case "/inventory-sync":
-        return "Inventory Sync";
       case "/credentials":
         return "Credential Management";
       default:
