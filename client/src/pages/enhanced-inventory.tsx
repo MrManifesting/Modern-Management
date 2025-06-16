@@ -75,6 +75,49 @@ export default function EnhancedInventory() {
     return `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
   };
 
+  // Sort items - recently added with available quantities first, then other available items, then out of stock
+  const sortedItems = [...items].sort((a, b) => {
+    const aQuantity = a.quantity ?? 0;
+    const bQuantity = b.quantity ?? 0;
+    const dateA = new Date(a.id || 0); // Using ID as proxy for creation order since we don't have createdAt
+    const dateB = new Date(b.id || 0);
+    
+    // Define "recently added" as items with higher IDs (more recently created)
+    const totalItems = items.length;
+    const recentThreshold = Math.max(1, Math.floor(totalItems * 0.2)); // Top 20% of items by ID
+    const maxId = Math.max(...items.map(item => item.id));
+    const recentIdThreshold = maxId - recentThreshold;
+    
+    const aIsRecent = a.id > recentIdThreshold;
+    const bIsRecent = b.id > recentIdThreshold;
+    
+    // Priority 1: Recently added items with available quantities (newest first)
+    if (aIsRecent && aQuantity > 0 && !(bIsRecent && bQuantity > 0)) return -1;
+    if (bIsRecent && bQuantity > 0 && !(aIsRecent && aQuantity > 0)) return 1;
+    
+    // Both are recent with available quantities - sort by newest first (higher ID)
+    if (aIsRecent && aQuantity > 0 && bIsRecent && bQuantity > 0) {
+      return b.id - a.id;
+    }
+    
+    // Priority 2: Other items with available quantities (newest first)
+    if (aQuantity > 0 && bQuantity <= 0) return -1;
+    if (bQuantity > 0 && aQuantity <= 0) return 1;
+    
+    // Both have available quantities - sort by newest first (higher ID)
+    if (aQuantity > 0 && bQuantity > 0) {
+      return b.id - a.id;
+    }
+    
+    // Priority 3: Out of stock items (newest first)
+    if (b.id !== a.id) {
+      return b.id - a.id;
+    }
+    
+    // Final fallback: alphabetical
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
