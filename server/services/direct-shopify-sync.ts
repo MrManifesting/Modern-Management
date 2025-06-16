@@ -86,13 +86,12 @@ export async function syncInventoryFromShopify(storage: IStorage): Promise<{
           const updates: any = {};
           let hasUpdates = false;
 
-          // Update quantity
+          // Update quantity - always sync real Shopify quantities
           if (variant && typeof variant.inventory_quantity === 'number') {
             const shopifyQty = variant.inventory_quantity;
-            if (item.quantity !== shopifyQty) {
-              updates.quantity = shopifyQty;
-              hasUpdates = true;
-            }
+            // Update quantity regardless of current value to ensure sync with live store
+            updates.quantity = shopifyQty;
+            hasUpdates = true;
           }
 
           // Update price
@@ -182,8 +181,13 @@ async function fetchAllShopifyProducts(): Promise<any[]> {
         sinceId = products[products.length - 1].id;
         console.log(`Fetched ${products.length} products, total: ${allProducts.length}`);
         
+        // Continue until we have all products
+        if (products.length < 250) {
+          hasMore = false;
+        }
+        
         // Rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     } catch (error) {
       console.error('Error fetching products:', error);
