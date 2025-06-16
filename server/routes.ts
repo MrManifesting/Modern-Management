@@ -4677,5 +4677,61 @@ ${topCustomersCsv}`;
     }
   });
 
+  // THCa Inventory Sync Endpoints
+  const { ThcaInventorySyncService } = await import('./services/thca-inventory-sync.js');
+  const thcaInventorySync = new ThcaInventorySyncService();
+
+  // Get THCa inventory status
+  app.get("/api/thca-inventory/status", async (_req: Request, res: Response) => {
+    try {
+      const status = await thcaInventorySync.getThcaInventoryStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting THCa inventory status:', error);
+      res.status(500).json({ error: "Failed to get THCa inventory status" });
+    }
+  });
+
+  // Process single order for THCa inventory update
+  app.post("/api/thca-inventory/process-order", async (req: Request, res: Response) => {
+    try {
+      const order = req.body;
+      const result = await thcaInventorySync.processOrderInventoryUpdate(order);
+      res.json(result);
+    } catch (error) {
+      console.error('Error processing THCa order:', error);
+      res.status(500).json({ error: "Failed to process THCa order" });
+    }
+  });
+
+  // Process batch orders for THCa inventory update
+  app.post("/api/thca-inventory/process-batch", async (req: Request, res: Response) => {
+    try {
+      const orders = req.body.orders || [];
+      const result = await thcaInventorySync.processBatchOrders(orders);
+      res.json(result);
+    } catch (error) {
+      console.error('Error processing THCa batch orders:', error);
+      res.status(500).json({ error: "Failed to process THCa batch orders" });
+    }
+  });
+
+  // Manually adjust THCa inventory
+  app.post("/api/thca-inventory/adjust", async (req: Request, res: Response) => {
+    try {
+      const { keyId, newAmount } = req.body;
+      
+      if (!keyId || newAmount === undefined) {
+        return res.status(400).json({ error: "keyId and newAmount are required" });
+      }
+
+      await thcaInventorySync.adjustThcaInventory(keyId, newAmount);
+      res.json({ success: true, message: `Updated THCa inventory for ${keyId} to ${newAmount}` });
+    } catch (error) {
+      console.error('Error adjusting THCa inventory:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to adjust THCa inventory" });
+    }
+  });
+
   return app;
 }
