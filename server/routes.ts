@@ -4786,12 +4786,30 @@ ${topCustomersCsv}`;
         });
       }
 
+      // Store the refresh token in credentials for future use
+      if (tokenData.refresh_token) {
+        try {
+          await storage.saveCredential({
+            service: 'google_refresh_token',
+            name: 'Google Sheets Refresh Token',
+            credentialData: { 
+              refresh_token: tokenData.refresh_token,
+              created_at: new Date().toISOString()
+            },
+            isActive: true
+          });
+        } catch (error) {
+          console.error('Error saving refresh token:', error);
+        }
+      }
+
       res.json({
         success: true,
-        message: "Successfully generated refresh token",
+        message: "Successfully generated refresh token and saved to credentials",
         refresh_token: tokenData.refresh_token,
         access_token: tokenData.access_token,
-        expires_in: tokenData.expires_in
+        expires_in: tokenData.expires_in,
+        thca_system_ready: true
       });
 
     } catch (error) {

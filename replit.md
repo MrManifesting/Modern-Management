@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Complete THCa Inventory Deduction System Deployed**
+  - Built automatic THCa inventory deduction from column B using KEY-ID matching from column G
+  - Created streamlined OAuth setup at /thca-setup using stored Google Client ID and Client Secret
+  - Integrated with Shopify order webhooks for real-time inventory processing
+  - System processes THCa spreadsheet structure: Strain (A), Amount (B), THCa% (C), KEY-ID (G)
+  - Automatic refresh token storage in credentials system for seamless authentication
+  - Demo data confirms proper parsing: Acai Gelato (25 units), Blue Dream (15 units), etc.
+  - Complete order flow ready: Shopify order → find by KEY-ID → deduct from column B → update spreadsheet
 - June 16, 2025: **Inventory Cleanup - Removed Items Without Pricing**
   - Successfully removed 802 inventory items that had no pricing information (no basePrice, salePrice, wholesalePrice, or meaningful costPrice)
   - Cleaned inventory from 1,040 items down to 238 items with verified pricing data
