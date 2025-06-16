@@ -1960,23 +1960,50 @@ const ProductsInventoryPage: React.FC = () => {
                               {(() => {
                                 // Check for uploaded media files first (most reliable)
                                 if (item.mediaFiles && item.mediaFiles.length > 0) {
+                                  const imageUrl = `/uploads/${item.mediaFiles[0]}`;
                                   return (
-                                    <img 
-                                      src={`/uploads/${item.mediaFiles[0]}`} 
-                                      alt={item.name}
-                                      className="w-16 h-16 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all duration-200 cursor-pointer shadow-sm"
-                                    />
+                                    <div className="relative group">
+                                      <img 
+                                        src={imageUrl} 
+                                        alt={item.name}
+                                        className="w-16 h-16 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                      />
+                                      {/* Hover enlargement */}
+                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={item.name}
+                                          className="w-64 h-64 object-cover rounded-lg shadow-2xl border-4 border-green-300"
+                                        />
+                                        <div className="bg-green-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
+                                          {item.name}
+                                        </div>
+                                      </div>
+                                    </div>
                                   );
                                 }
                                 
                                 // Check imageUrl field (primary Shopify image)
                                 if (item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.trim() !== '') {
                                   return (
-                                    <img 
-                                      src={item.imageUrl} 
-                                      alt={item.name}
-                                      className="w-16 h-16 object-cover rounded-lg border-2 border-amber-200 hover:border-amber-400 transition-all duration-200 cursor-pointer shadow-sm"
-                                    />
+                                    <div className="relative group">
+                                      <img 
+                                        src={item.imageUrl} 
+                                        alt={item.name}
+                                        className="w-16 h-16 object-cover rounded-lg border-2 border-amber-200 hover:border-amber-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                      />
+                                      {/* Hover enlargement */}
+                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                        <img 
+                                          src={item.imageUrl} 
+                                          alt={item.name}
+                                          className="w-64 h-64 object-cover rounded-lg shadow-2xl border-4 border-amber-300"
+                                        />
+                                        <div className="bg-amber-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
+                                          {item.name}
+                                        </div>
+                                      </div>
+                                    </div>
                                   );
                                 }
                                 
