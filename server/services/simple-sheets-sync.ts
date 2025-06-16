@@ -31,16 +31,26 @@ export class SimpleSheetsSync {
     if (this.auth) return;
 
     try {
-      this.auth = new GoogleAuth({
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-        credentials: {
+      // Parse the full credentials JSON if available, otherwise use individual env vars
+      const credsJson = process.env.GOOGLE_SHEETS_CREDENTIALS;
+      let credentials;
+      
+      if (credsJson) {
+        credentials = JSON.parse(credsJson);
+      } else {
+        credentials = {
           type: 'service_account',
           project_id: process.env.GOOGLE_PROJECT_ID,
           private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
           private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
           client_id: process.env.GOOGLE_CLIENT_ID,
-        }
+        };
+      }
+
+      this.auth = new GoogleAuth({
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+        credentials
       });
     } catch (error) {
       console.error('Google Sheets auth initialization failed:', error);
