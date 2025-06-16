@@ -196,7 +196,7 @@ export class SimpleSheetsSync {
       return { updated, errors };
     } catch (error) {
       console.error('Error syncing quantities from Google Sheets:', error);
-      return { updated: 0, errors: [error.message] };
+      return { updated: 0, errors: [String(error)] };
     }
   }
 }
