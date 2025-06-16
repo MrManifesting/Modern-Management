@@ -93,9 +93,9 @@ export class SimpleSheetsSync {
 
       // Process Product sheet data with correct column mapping
       const productData: Record<string, ProductSheetItem> = {};
-      console.log('Processing product rows - checking row lengths and content:');
-      productRows.slice(0, 3).forEach((row, index) => {
-        console.log(`Row ${index}: Length=${row.length}, Handle=${row[0]}, Weight=${row[9]}, SKU=${row[17]}, Qty=${row[20]}, Price=${row[23]}`);
+      console.log('Processing product rows - checking row lengths and pricing data:');
+      productRows.slice(0, 5).forEach((row, index) => {
+        console.log(`Row ${index}: Handle=${row[0]}, Weight=${row[9]}, SKU=${row[17]}, Qty=${row[20]}, Price-X=${row[23]}, Price-Y=${row[24]}, Price-Z=${row[25]}, Cost-BJ=${row[61]}`);
       });
       
       productRows.forEach((row, index) => {
@@ -103,7 +103,16 @@ export class SimpleSheetsSync {
           const handle = row[0].trim();
           
           // Map columns correctly based on actual sheet structure
-          const price = row[23] && row[23] !== '' ? row[23] : '0';
+          // Try multiple price columns to find the actual price data
+          let price = '0';
+          if (row[23] && row[23] !== '' && !isNaN(parseFloat(row[23]))) {
+            price = row[23]; // Column X
+          } else if (row[24] && row[24] !== '' && !isNaN(parseFloat(row[24]))) {
+            price = row[24]; // Column Y
+          } else if (row[25] && row[25] !== '' && !isNaN(parseFloat(row[25]))) {
+            price = row[25]; // Column Z
+          }
+          
           const qty = row[20] && row[20] !== '' ? parseInt(row[20]) : 0;
           const weight = row[9] && row[9] !== '' ? row[9] : '';
           const sku = row[17] && row[17] !== '' ? row[17] : '';

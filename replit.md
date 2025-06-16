@@ -125,15 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 16, 2025: **Google Sheets Enhanced Inventory View with Thumbnails Successfully Deployed**
-  - Successfully implemented Google Sheets service account authentication with autoshopifysheet project credentials
-  - Created enhanced inventory endpoint `/api/inventory/enhanced` that fetches authentic product data from Product sheet
-  - Built comprehensive enhanced inventory frontend at `/inventory/enhanced` with thumbnail display
-  - System now displays 250+ imported products with real Shopify CDN images (Purple Runtz, Purple Push Pop, etc.)
-  - Enhanced inventory view shows pricing, weight, SKUs, THCa percentages, and strain information
-  - Added enhanced inventory navigation link in sidebar under Inventory → Enhanced View
-  - Google Sheets integration processing 317 products with authentic thumbnails and metadata
-  - Column mapping confirmed: Handle=A, Weight=J, SKU=R, Quantity=U, Price=X, Image=AC, Strain=AW, THCa=AX, COAs=BA, Cost=BJ
+- June 16, 2025: **Enhanced Inventory Set as Primary View with Professional Table Format**
+  - Made enhanced inventory the primary view at `/inventory` route with comprehensive table and grid toggle
+  - Enhanced inventory now displays 250+ database items merged with 317 Google Sheets products with authentic data
+  - Professional table format shows thumbnails, product names, SKUs, weights, pricing, quantities, THCa percentages, and direct Shopify links  
+  - Improved pricing data capture from multiple columns (X, Y, Z) in Google Sheets Product sheet
+  - Fixed "No Price" display issues with proper fallback handling and authentic price data from sheets
+  - Direct Shopify integration - click any item to view in Shopify admin with proper product URLs
+  - System processes authentic data: jokers-thca-flower-aa-indoor (14 grams, SKU: JTFAI-14, Qty: 5, Price: $79.99)
+  - Enhanced inventory is now the base view going forward, replacing card-based legacy inventory
 - June 15, 2025: **Automatic Photo Tagging and Enhanced Thumbnail Display System Complete**
   - Implemented automatic photo tagging when adding new inventory items - uploaded photos are automatically tagged with item names, SKUs, and IDs
   - Created enhanced thumbnail display system for all inventory items with proper fallback handling for missing images
