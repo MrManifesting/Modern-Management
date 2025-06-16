@@ -184,27 +184,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getItems();
       console.log(`Found ${items.length} items in database`);
       
-      // Get Google Sheets data
+      // Get Google Sheets data using SimpleSheetsSync (working authentication)
       let sheetsProducts: any[] = [];
       try {
-        console.log("Starting enhanced inventory fetch from Google Sheets Products sheet...");
-        const { GoogleSheetsService } = await import('./services/google-sheets.js');
-        const googleSheetsService = new GoogleSheetsService();
-        console.log("Google Sheets auth initialized successfully");
+        console.log("Using SimpleSheetsSync for Google Sheets data (working auth)...");
+        const enhancedItemsWithSheets = await simpleSheetsSync.getEnhancedInventory();
         
-        // Access the specific spreadsheet
-        const spreadsheetId = '1SW_o292VqhW0_RAIBIEb3J_9srmZGg2uyo1Kob3CU-s';
-        console.log(`Attempting to access spreadsheet: ${spreadsheetId}`);
-        
-        console.log("Getting sheet metadata...");
-        const sheets = await googleSheetsService.getSheets(spreadsheetId);
-        console.log("Available sheets:", JSON.stringify(sheets, null, 2));
-        
-        console.log("Fetching Product sheet data...");
-        const sheetData = await googleSheetsService.getRows(spreadsheetId, 'Product', 1000);
-        console.log(`Retrieved ${sheetData.length} product rows from Products sheet`);
-        
-        if (sheetData.length > 0) {
+        if (enhancedItemsWithSheets.length > 0) {
           console.log("Processing product rows - checking row lengths and pricing data:");
           const headers = sheetData[0];
           console.log(`Row 0: Handle=${headers[0]}, Weight=${headers[1]}, SKU=${headers[2]}, Qty=${headers[3]}, Price-X=${headers[4]}, Price-Y=${headers[5]}, Price-Z=${headers[6]}, Cost-BJ=${headers[7]}`);
@@ -4707,6 +4693,30 @@ ${topCustomersCsv}`;
         error: "Failed to sync quantities from Google Sheets",
         message: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Orders endpoint for tracking page
+  app.get("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const sales = await storage.getSales();
+      const orders = sales.map(sale => ({
+        id: sale.id,
+        orderId: sale.orderId || `ORDER-${sale.id}`,
+        customerEmail: sale.customerEmail || 'N/A',
+        totalAmount: sale.totalAmount || '0.00',
+        status: sale.status || 'completed',
+        createdAt: sale.createdAt,
+        items: [{
+          name: sale.itemName || 'Unknown Item',
+          quantity: sale.quantity || 1,
+          price: sale.price || '0.00'
+        }]
+      }));
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
     }
   });
 
