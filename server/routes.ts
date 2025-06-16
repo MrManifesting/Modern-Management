@@ -273,7 +273,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let priceSource = "";
         
         // Priority order: Shopify live pricing > Database
-        const shopifyData = shopifyPricing[item.sku || ''];
+        let shopifyData = shopifyPricing[item.sku || ''];
+        
+        // If no SKU match, try matching by product name
+        if (!shopifyData && item.name) {
+          shopifyData = shopifyPricing[item.name];
+        }
+        
         if (shopifyData && shopifyData.price) {
           displayPrice = `$${shopifyData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           priceSource = "shopify";

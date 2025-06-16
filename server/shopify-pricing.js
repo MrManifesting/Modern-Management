@@ -30,19 +30,27 @@ export async function getShopifyPricing() {
     
     console.log(`Retrieved ${products.length} products with live pricing from Shopify`);
     
-    // Map products with pricing data
+    // Map products with pricing data by SKU and title
     const pricingData = {};
     products.forEach(product => {
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach(variant => {
+          const productData = {
+            price: parseFloat(variant.price),
+            title: product.title,
+            handle: product.handle,
+            shopifyId: product.id,
+            variantId: variant.id
+          };
+          
+          // Index by SKU if available
           if (variant.sku && variant.price) {
-            pricingData[variant.sku] = {
-              price: parseFloat(variant.price),
-              title: product.title,
-              handle: product.handle,
-              shopifyId: product.id,
-              variantId: variant.id
-            };
+            pricingData[variant.sku] = productData;
+          }
+          
+          // Also index by product title for items without SKUs
+          if (variant.price) {
+            pricingData[product.title] = productData;
           }
         });
       }
