@@ -1951,17 +1951,50 @@ const ProductsInventoryPage: React.FC = () => {
                               </TableCell>
                             )}
                             <TableCell>
-                              {(item.images as string[])?.length > 0 ? (
-                                <img 
-                                  src={(item.images as string[])[0]} 
-                                  alt={item.name}
-                                  className="w-12 h-12 object-cover rounded border"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
-                                  <FileText className="h-5 w-5 text-gray-400" />
-                                </div>
-                              )}
+                              {(() => {
+                                // Check for Shopify CDN images first (authentic product photos)
+                                if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+                                  const imageUrl = item.images[0];
+                                  return (
+                                    <div className="relative group">
+                                      <img 
+                                        src={imageUrl} 
+                                        alt={item.name}
+                                        className="w-16 h-16 object-cover rounded-lg border-2 border-amber-200 hover:border-amber-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                        onError={(e) => {
+                                          const target = e.currentTarget;
+                                          target.style.display = 'none';
+                                          if (target.nextElementSibling) {
+                                            target.nextElementSibling.style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-200" />
+                                    </div>
+                                  );
+                                }
+                                
+                                // Check for media files from uploads
+                                if (item.mediaFiles && item.mediaFiles.length > 0) {
+                                  return (
+                                    <div className="relative group">
+                                      <img 
+                                        src={`/uploads/${item.mediaFiles[0]}`} 
+                                        alt={item.name}
+                                        className="w-16 h-16 object-cover rounded-lg border-2 border-blue-200 hover:border-blue-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-200" />
+                                    </div>
+                                  );
+                                }
+                                
+                                // Show placeholder for items without images
+                                return (
+                                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                                    <ImageIcon className="h-6 w-6 text-gray-500" />
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="font-medium max-w-xs">
                               <div className="truncate">{item.name}</div>
