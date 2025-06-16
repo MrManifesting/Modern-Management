@@ -242,32 +242,89 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
       const order = JSON.parse(rawBody);
       log(`Order created webhook received: ${order.name} (ID: ${order.id})`, 'shopify-webhook');
 
+      const inventoryUpdates = [];
+      const processedItems = [];
+
       // Process order line items and update inventory
       for (const lineItem of order.line_items || []) {
         if (lineItem.sku) {
-          const item = await storage.getItemBySKU(lineItem.sku);
+          const items = await storage.getItems();
+          const item = items.find(i => i.sku === lineItem.sku);
           
-          if (item) {
-            const newQuantity = Math.max(0, item.quantity - lineItem.quantity);
+          if (item && item.id !== undefined) {
+            const currentQuantity = item.quantity || 0;
+            const newQuantity = Math.max(0, currentQuantity - lineItem.quantity);
             
             await storage.updateItem(item.id, {
-              ...item,
               quantity: newQuantity
             });
 
             // Log inventory action
             await storage.logInventoryAction({
               itemId: item.id,
-              action: 'fulfillment',
-              quantity: lineItem.quantity,
-              previousQuantity: item.quantity,
+              action: 'sale',
+              quantity: -lineItem.quantity,
+              previousQuantity: currentQuantity,
+              newQuantity,
               reason: `Shopify order ${order.name}`,
-              performedBy: 'shopify'
+              notes: `Line item: ${lineItem.name}`,
+              metadata: {
+                shopifyOrderId: order.id,
+                shopifyOrderNumber: order.name,
+                lineItemId: lineItem.id
+              }
             });
 
-            log(`Reduced inventory for ${item.name}: ${item.quantity} -> ${newQuantity}`, 'shopify-webhook');
+            // Track for Google Sheets update
+            inventoryUpdates.push({
+              sku: lineItem.sku,
+              name: item.name,
+              quantityOrdered: lineItem.quantity,
+              remainingStock: newQuantity,
+              previousStock: currentQuantity,
+              orderNumber: order.name,
+              timestamp: order.created_at
+            });
+
+            processedItems.push({
+              productId: lineItem.product_id?.toString() || '',
+              variantId: lineItem.variant_id?.toString() || '',
+              sku: lineItem.sku,
+              name: lineItem.name,
+              quantity: lineItem.quantity,
+              price: lineItem.price
+            });
+
+            log(`Reduced inventory for ${item.name}: ${currentQuantity} -> ${newQuantity}`, 'shopify-webhook');
+          } else {
+            log(`Item not found for SKU: ${lineItem.sku}`, 'shopify-webhook');
           }
         }
+      }
+
+      // Log order to Google Sheets if configured
+      try {
+        const { GoogleSheetsService } = await import('./services/google-sheets.js');
+        const googleSheets = new GoogleSheetsService();
+        
+        if (await googleSheets.isConfigured()) {
+          const orderForSheets = {
+            id: order.id.toString(),
+            orderNumber: order.name,
+            lineItems: processedItems,
+            customerName: `${order.customer?.first_name || order.billing_address?.first_name || ''} ${order.customer?.last_name || order.billing_address?.last_name || ''}`.trim(),
+            customerEmail: order.customer?.email || order.email || '',
+            totalPrice: order.total_price,
+            createdAt: order.created_at,
+            fulfillmentStatus: order.fulfillment_status || 'unfulfilled'
+          };
+
+          await googleSheets.logOrderToSheet(orderForSheets, inventoryUpdates);
+          await googleSheets.updateInventoryInSheet(inventoryUpdates);
+          log(`Order ${order.name} logged to Google Sheets`, 'shopify-webhook');
+        }
+      } catch (error) {
+        log(`Error updating Google Sheets: ${error}`, 'shopify-webhook');
       }
 
       // Create sale record
@@ -288,7 +345,16 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
         })) || []
       });
 
-      res.json({ success: true, message: 'Order processed successfully' });
+      res.json({ 
+        success: true, 
+        message: `Order ${order.name} processed successfully`,
+        itemsUpdated: inventoryUpdates.length,
+        inventoryUpdates: inventoryUpdates.map(update => ({
+          sku: update.sku,
+          newStock: update.remainingStock,
+          ordered: update.quantityOrdered
+        }))
+      });
     } catch (error) {
       log(`Error processing order create webhook: ${error}`, 'shopify-webhook');
       res.status(500).json({ error: 'Internal server error' });

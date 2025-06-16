@@ -125,7 +125,7 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 16, 2025: **Live Shopify Pricing Integration and Frontend Display Fixed**
+- June 16, 2025: **Complete Order Processing and Google Sheets Integration Fixed**
   - Fixed exact weight standards - corrected 116 database items from decimal weights (1.5 pounds) to precise standards (1 pound)
   - Implemented live Shopify pricing integration - "Acai Gelato" now displays authentic $1,050.00 price from store
   - Created direct Shopify API pricing service with SKU and product name matching for 251 products
@@ -133,6 +133,9 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Enhanced inventory API retrieves live pricing data marked with "shopify" source for authentic business operations
   - Fixed frontend flower table to display live Shopify pricing with "Shopify" badges instead of base prices
   - Removed irrelevant electronics category table - system now focuses on cannabis categories only
+  - **Fixed Shopify order webhook to automatically reduce inventory quantities when orders are placed**
+  - **Enhanced order processing to log all orders to Google Sheets with customer details and inventory updates**
+  - **Configured complete order flow: Shopify order → reduce inventory → log to Google Sheets → create sale record**
   - System successfully matches Shopify products by both SKU and product title for comprehensive pricing coverage
 - June 16, 2025: **Comprehensive Code Cleanup and UI/UX Modernization Complete**
   - Fixed font readability issues with high-contrast color scheme ensuring proper text visibility
