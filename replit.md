@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Google Sheets Inventory Sync with Thumbnails and Quantities Implementation**
+  - Configured Google Sheets service account authentication with proper credentials (autoshopifysheet project)
+  - Implemented enhanced inventory endpoint `/api/inventory/enhanced` to fetch thumbnails from column AB (ProductExport) 
+  - Added quantity sync from columns P & Q (InventoryExport sheet) for available/on-hand stock tracking
+  - Enhanced database schema with `image_url` column for Google Sheets thumbnail storage
+  - Created SimpleSheetsSync service to merge ProductExport and InventoryExport data with local inventory
+  - Fixed routing conflicts between enhanced inventory endpoint and general item routes
+  - System ready to display real product images and accurate quantities once service account is shared with spreadsheet
 - June 15, 2025: **Automatic Photo Tagging and Enhanced Thumbnail Display System Complete**
   - Implemented automatic photo tagging when adding new inventory items - uploaded photos are automatically tagged with item names, SKUs, and IDs
   - Created enhanced thumbnail display system for all inventory items with proper fallback handling for missing images
