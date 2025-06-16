@@ -80,9 +80,20 @@ export default function EnhancedInventory() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gold-600">Enhanced Inventory</h1>
-          <p className="text-gray-600 mt-1">
-            Showing {items.length} products with authentic Google Sheets data
-          </p>
+          <div className="flex gap-4 mt-2">
+            <p className="text-gray-600">
+              Total Items: <span className="font-semibold">{items.length}</span>
+            </p>
+            <p className="text-green-600">
+              In Stock: <span className="font-semibold">{items.filter(item => item.quantity > 0).length}</span>
+            </p>
+            <p className="text-yellow-600">
+              Low Stock: <span className="font-semibold">{items.filter(item => item.quantity > 0 && item.quantity <= 10).length}</span>
+            </p>
+            <p className="text-red-600">
+              Out of Stock: <span className="font-semibold">{items.filter(item => item.quantity === 0).length}</span>
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="flex rounded-lg border">
@@ -122,7 +133,7 @@ export default function EnhancedInventory() {
                 <TableHead>Weight</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Cost</TableHead>
-                <TableHead>Qty</TableHead>
+                <TableHead>Available Stock</TableHead>
                 <TableHead>THCa %</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -182,15 +193,21 @@ export default function EnhancedInventory() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {item.quantity > 0 ? (
-                      <Badge className="bg-green-100 text-green-800">
-                        {item.quantity}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-gray-100 text-gray-500">
-                        0
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {item.quantity > 10 ? (
+                        <Badge className="bg-green-100 text-green-800 font-semibold">
+                          {item.quantity} units
+                        </Badge>
+                      ) : item.quantity > 0 ? (
+                        <Badge className="bg-yellow-100 text-yellow-800 font-semibold">
+                          {item.quantity} units (Low Stock)
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="bg-red-100 text-red-800 font-semibold">
+                          Out of Stock
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {item.thcaPercentage ? (
