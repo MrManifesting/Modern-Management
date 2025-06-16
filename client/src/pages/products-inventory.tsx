@@ -1958,7 +1958,7 @@ const ProductsInventoryPage: React.FC = () => {
                             )}
                             <TableCell>
                               {(() => {
-                                // Check for uploaded media files first (most reliable)
+                                // Check for uploaded media files first
                                 if (item.mediaFiles && item.mediaFiles.length > 0) {
                                   const imageUrl = `/uploads/${item.mediaFiles[0]}`;
                                   return (
@@ -1966,94 +1966,43 @@ const ProductsInventoryPage: React.FC = () => {
                                       <img 
                                         src={imageUrl} 
                                         alt={item.name}
-                                        className="w-16 h-16 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all duration-200 cursor-pointer shadow-sm"
+                                        className="w-16 h-16 object-cover rounded-lg border-2 border-green-300 cursor-pointer"
                                       />
-                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                      <div className="absolute left-20 top-0 z-50 hidden group-hover:block">
                                         <img 
                                           src={imageUrl} 
                                           alt={item.name}
-                                          className="w-64 h-64 object-cover rounded-lg shadow-2xl border-4 border-green-300"
+                                          className="w-64 h-64 object-cover rounded-lg shadow-xl border-4 border-green-400"
                                         />
-                                        <div className="bg-green-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
-                                          {item.name}
-                                        </div>
                                       </div>
                                     </div>
                                   );
                                 }
                                 
-                                // Show product category indicators - most items are THCA flower products
+                                // Category indicators for products without images
                                 const name = item.name.toLowerCase();
                                 if (name.includes('flower') || name.includes('thca')) {
                                   return (
-                                    <div className="relative group">
-                                      <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-lg border-2 border-green-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md transition-all duration-200">
-                                        <div className="text-2xl">🌿</div>
-                                      </div>
-                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                        <div className="w-64 h-64 bg-gradient-to-br from-green-100 to-green-300 rounded-lg shadow-2xl border-4 border-green-400 flex flex-col items-center justify-center">
-                                          <div className="text-8xl mb-4">🌿</div>
-                                          <div className="text-green-800 font-bold text-lg text-center px-4">THCA Flower</div>
-                                          <div className="text-green-700 text-sm text-center px-2 mt-2">Premium Cannabis Flower</div>
-                                        </div>
-                                        <div className="bg-green-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
-                                          {item.name}
-                                        </div>
-                                      </div>
+                                    <div className="w-16 h-16 bg-green-200 rounded-lg border-2 border-green-400 flex items-center justify-center">
+                                      <span className="text-2xl">🌿</span>
                                     </div>
                                   );
-                                } else if (name.includes('concentrate') || name.includes('wax') || name.includes('shatter') || name.includes('rosin')) {
+                                } else if (name.includes('concentrate') || name.includes('wax') || name.includes('shatter')) {
                                   return (
-                                    <div className="relative group">
-                                      <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg border-2 border-amber-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md transition-all duration-200">
-                                        <div className="text-2xl">🍯</div>
-                                      </div>
-                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                        <div className="w-64 h-64 bg-gradient-to-br from-amber-100 to-amber-300 rounded-lg shadow-2xl border-4 border-amber-400 flex flex-col items-center justify-center">
-                                          <div className="text-8xl mb-4">🍯</div>
-                                          <div className="text-amber-800 font-bold text-lg text-center px-4">Concentrate</div>
-                                          <div className="text-amber-700 text-sm text-center px-2 mt-2">Cannabis Extract</div>
-                                        </div>
-                                        <div className="bg-amber-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
-                                          {item.name}
-                                        </div>
-                                      </div>
+                                    <div className="w-16 h-16 bg-amber-200 rounded-lg border-2 border-amber-400 flex items-center justify-center">
+                                      <span className="text-2xl">🍯</span>
                                     </div>
                                   );
-                                } else if (name.includes('edible') || name.includes('gummy') || name.includes('chocolate')) {
+                                } else if (name.includes('edible') || name.includes('gummy')) {
                                   return (
-                                    <div className="relative group">
-                                      <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg border-2 border-purple-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md transition-all duration-200">
-                                        <div className="text-2xl">🍬</div>
-                                      </div>
-                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                        <div className="w-64 h-64 bg-gradient-to-br from-purple-100 to-purple-300 rounded-lg shadow-2xl border-4 border-purple-400 flex flex-col items-center justify-center">
-                                          <div className="text-8xl mb-4">🍬</div>
-                                          <div className="text-purple-800 font-bold text-lg text-center px-4">Edible</div>
-                                          <div className="text-purple-700 text-sm text-center px-2 mt-2">Cannabis Edible</div>
-                                        </div>
-                                        <div className="bg-purple-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
-                                          {item.name}
-                                        </div>
-                                      </div>
+                                    <div className="w-16 h-16 bg-purple-200 rounded-lg border-2 border-purple-400 flex items-center justify-center">
+                                      <span className="text-2xl">🍬</span>
                                     </div>
                                   );
                                 } else {
                                   return (
-                                    <div className="relative group">
-                                      <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md transition-all duration-200">
-                                        <ImageIcon className="h-8 w-8 text-gray-500" />
-                                      </div>
-                                      <div className="absolute left-20 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                        <div className="w-64 h-64 bg-gradient-to-br from-gray-100 to-gray-300 rounded-lg shadow-2xl border-4 border-gray-400 flex flex-col items-center justify-center">
-                                          <ImageIcon className="h-20 w-20 text-gray-600 mb-4" />
-                                          <div className="text-gray-800 font-bold text-lg text-center px-4">Product</div>
-                                          <div className="text-gray-700 text-sm text-center px-2 mt-2">No Image Available</div>
-                                        </div>
-                                        <div className="bg-gray-600 text-white px-2 py-1 rounded-b-lg text-sm font-medium truncate max-w-64">
-                                          {item.name}
-                                        </div>
-                                      </div>
+                                    <div className="w-16 h-16 bg-gray-200 rounded-lg border-2 border-gray-400 flex items-center justify-center">
+                                      <ImageIcon className="h-8 w-8 text-gray-600" />
                                     </div>
                                   );
                                 }
