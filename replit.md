@@ -125,6 +125,11 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Inventory Cleanup - Removed Items Without Pricing**
+  - Successfully removed 802 inventory items that had no pricing information (no basePrice, salePrice, wholesalePrice, or meaningful costPrice)
+  - Cleaned inventory from 1,040 items down to 238 items with verified pricing data
+  - Added bulk delete operations route registration to main routes file for future bulk operations
+  - All remaining inventory items now have proper pricing information ensuring data integrity
 - June 16, 2025: **Complete Shopify Integration Deployment Successful**
   - Fixed exact weight standards - corrected 116 database items from decimal weights (1.5 pounds) to precise standards (1 pound)
   - Implemented live Shopify pricing integration - "Acai Gelato" now displays authentic $1,050.00 price from store

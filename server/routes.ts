@@ -6905,6 +6905,26 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register additional routes
+  registerBulkOperationRoutes(app, storage);
+  registerShopifyImportRoutes(app, storage);
+  registerCSVImportRoutes(app, storage);
+  registerCleanupRoutes(app, storage);
+  registerShopifyCredentialsRoutes(app, storage);
+  registerMarketplaceRoutes(app, storage);
+  registerAffiliateRoutes(app, storage);
+  registerPayPalRoutes(app, storage);
+  registerAIRoutes(app, storage);
+  registerGoogleSheetsRoutes(app, storage);
+  registerLabelRoutes(app, storage);
+  registerSyncRoutes(app, storage);
+  registerShopifyWebhookRoutes(app, storage);
+  registerBreakdownRoutes(app, storage);
+  registerBarcodeRoutes(app, storage);
+  registerTelegramRoutes(app, storage);
+  registerAutoBreakdownRoutes(app, storage);
+  registerCredentialRoutes(app, storage);
+
   // Register price sheet routes
   app.use("/api/price-sheet", priceSheetRoutes);
 
