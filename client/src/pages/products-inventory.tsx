@@ -2492,10 +2492,17 @@ const ProductsInventoryPage: React.FC = () => {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
-                              <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex flex-col items-end">
+                                  <span className="font-medium">{product.displayPrice || "No Price"}</span>
+                                  {product.priceSource === 'shopify' && (
+                                    <Badge variant="outline" className="text-xs mt-1">Shopify</Badge>
+                                  )}
+                                </div>
+                              </td>
                               <td className="py-3 px-4 text-center">
-                                <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
-                                  {product.quantity}
+                                <Badge variant={product.quantity > 10 ? "default" : product.quantity > 0 ? "secondary" : "destructive"}>
+                                  {product.quantity || 0}
                                 </Badge>
                               </td>
                               <td className="py-3 px-4 text-center">
