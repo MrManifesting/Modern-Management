@@ -114,6 +114,8 @@ interface Product {
   size?: string;
   volume?: string;
   weight?: string;
+  weightUnit?: string;
+  weightValue?: number;
   description?: string;
   imageUrl?: string;
   images?: string[];
@@ -308,33 +310,60 @@ const ProductsInventoryPage: React.FC = () => {
       const data = await res.json();
       console.log("Fetched items with media:", data.length);
       
-      return data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category || "Uncategorized",
-        price: item.displayPrice || "No Price",
-        displayPrice: item.displayPrice || "No Price",
-        priceSource: item.priceSource || "none",
-        basePrice: item.basePrice || 0,
-        retailPrice: item.retailPrice || item.basePrice || 0,
-        wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
-        sku: item.sku || "NO-SKU",
-        barcode: item.barcode || "",
-        quantity: item.quantity || 0,
-        images: item.images || [],
-        mediaFiles: item.mediaFiles || [],
-        status: item.status || "draft",
-        size: item.size || "",
-        volume: item.volume || "",
-        weight: item.weight || "",
-        description: item.description || "",
-        imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
-        marketplace: item.marketplace || [],
-        shopifyId: item.shopifyId || null,
-        shopifyUrl: item.shopifyUrl || null,
-        shopifySyncStatus: item.shopifySyncStatus || "not_synced",
-        sheetsData: item.sheetsData || null
-      }));
+      return data.map((item: any) => {
+        // Parse weight to extract value and unit
+        const parseWeight = (weightStr: string) => {
+          if (!weightStr) return { value: 0, unit: 'gram', display: '0g' };
+          
+          const weightLower = weightStr.toLowerCase();
+          if (weightLower.includes('pound') || weightLower.includes('lb')) {
+            const value = parseFloat(weightStr) || 1;
+            return { value, unit: 'pound', display: `${value} ${value === 1 ? 'pound' : 'pounds'}` };
+          } else if (weightLower.includes('ounce') || weightLower.includes('oz')) {
+            const value = parseFloat(weightStr) || 1;
+            return { value, unit: 'ounce', display: `${value} ${value === 1 ? 'ounce' : 'ounces'}` };
+          } else if (weightLower.includes('gram') || weightLower.includes('g')) {
+            const value = parseFloat(weightStr) || 1;
+            return { value, unit: 'gram', display: `${value}g` };
+          } else {
+            // Default for numeric values
+            const value = parseFloat(weightStr) || 1;
+            return { value, unit: 'pound', display: `${value} ${value === 1 ? 'pound' : 'pounds'}` };
+          }
+        };
+
+        const weightData = parseWeight(item.weight || '1 pound');
+
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category || "Uncategorized",
+          price: item.displayPrice || "No Price",
+          displayPrice: item.displayPrice || "No Price",
+          priceSource: item.priceSource || "none",
+          basePrice: item.basePrice || 0,
+          retailPrice: item.retailPrice || item.basePrice || 0,
+          wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
+          sku: item.sku || "NO-SKU",
+          barcode: item.barcode || "",
+          quantity: item.quantity || 0,
+          images: item.images || [],
+          mediaFiles: item.mediaFiles || [],
+          status: item.status || "draft",
+          size: item.size || "",
+          volume: item.volume || "",
+          weight: weightData.display,
+          weightValue: weightData.value,
+          weightUnit: weightData.unit,
+          description: item.description || "",
+          imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
+          marketplace: item.marketplace || [],
+          shopifyId: item.shopifyId || null,
+          shopifyUrl: item.shopifyUrl || null,
+          shopifySyncStatus: item.shopifySyncStatus || "not_synced",
+          sheetsData: item.sheetsData || null
+        };
+      });
     },
     refetchOnWindowFocus: true,
   });
@@ -2344,7 +2373,7 @@ const ProductsInventoryPage: React.FC = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="border-b border-border">
+                        <tr className="border-b border-border bg-muted/30">
                           {bulkSelectMode && (
                             <th className="py-3 px-2 w-10">
                               <Checkbox 
@@ -2353,15 +2382,15 @@ const ProductsInventoryPage: React.FC = () => {
                               />
                             </th>
                           )}
-                          <th className="text-left py-3 px-4 w-16">Image</th>
-                          <th className="text-left py-3 px-4">Product</th>
-                          <th className="text-left py-3 px-4">Category</th>
-                          <th className="text-center py-3 px-4">SKU</th>
-                          <th className="text-center py-3 px-4">Size</th>
-                          <th className="text-right py-3 px-4">Price</th>
-                          <th className="text-center py-3 px-4">Qty</th>
-                          <th className="text-center py-3 px-4">Status</th>
-                          <th className="text-center py-3 px-4">Actions</th>
+                          <th className="text-left py-3 px-4 w-20 font-semibold text-foreground">Image</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Product</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Category</th>
+                          <th className="text-center py-3 px-4 font-semibold text-foreground">SKU</th>
+                          <th className="text-center py-3 px-4 font-semibold text-foreground">Weight</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">Price</th>
+                          <th className="text-center py-3 px-4 font-semibold text-foreground">Qty</th>
+                          <th className="text-center py-3 px-4 font-semibold text-foreground">Status</th>
+                          <th className="text-center py-3 px-4 font-semibold text-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
