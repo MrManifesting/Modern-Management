@@ -4503,11 +4503,11 @@ ${topCustomersCsv}`;
   const { SimpleSheetsSync } = simpleSheetsModule;
   const simpleSheetsSync = new SimpleSheetsSync(storage);
 
-  // Enhanced inventory endpoint with Google Sheets integration
-  app.get("/api/items/enhanced", async (req: Request, res: Response) => {
+  // Enhanced inventory endpoint with Google Sheets integration - MUST come before /api/items/:id
+  app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
     try {
       console.log('Fetching enhanced inventory items with Google Sheets data...');
-      const enhancedItems = await sheetsInventorySync.getEnhancedInventoryItems();
+      const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
       
       res.json(enhancedItems);
     } catch (error) {
