@@ -538,11 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Always generate SKU for new items, regardless of whether one was provided
       // This ensures all items have a consistent SKU format
-      // Use quantity-specific SKU generator if quantity > 1
-      if (itemData.quantity && itemData.quantity > 1) {
-        itemData.sku = generateSKU(itemData, { quantity: itemData.quantity });
-      } else {
-      }
+      itemData.sku = generateSKU(itemData);
       
       // Generate barcode data
       itemData.barcode = generateBarcodeData(itemData.sku);
