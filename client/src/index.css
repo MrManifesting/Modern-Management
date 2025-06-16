@@ -119,26 +119,26 @@
 }
 
 :root {
-  /* Light mode - Blue and Purple theme */
+  /* Light mode - High contrast for readability */
   --background: 0 0% 100%;
-  --foreground: 0 0% 0%;
-  --muted: 220 20% 90%;
-  --muted-foreground: 0 0% 30%;
+  --foreground: 0 0% 3.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 0%;
-  --card: 0 0% 98%;
-  --card-foreground: 0 0% 0%;
-  --border: 220 20% 80%;
-  --input: 220 20% 85%;
-  --primary: 220 80% 50%;      /* Blue */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 260 70% 50%;    /* Purple */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 230 90% 60%;       /* Bright Blue */
-  --accent-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 3.9%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --primary: 142 76% 36%;      /* Green for cannabis theme */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 220 80% 50%;         /* Blue */
+  --ring: 142 76% 36%;
   --radius: 0.5rem;
   
   /* Blue/Purple theme colors */
@@ -161,26 +161,26 @@
 }
 
 .dark {
-  /* Dark mode - Blue and Purple theme */
-  --background: 0 0% 5%;        /* Pure black */
-  --foreground: 0 0% 98%;
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 70%;
-  --popover: 0 0% 8%;
-  --popover-foreground: 0 0% 98%;
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 98%;
-  --border: 220 40% 25%;
-  --input: 0 0% 15%;
-  --primary: 220 90% 50%;       /* Blue */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 260 70% 50%;     /* Purple */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 230 90% 60%;        /* Bright Blue */
-  --accent-foreground: 0 0% 100%;
+  /* Dark mode - High contrast for readability */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --primary: 142 76% 36%;       /* Green for cannabis theme */
+  --primary-foreground: 210 40% 98%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --ring: 220 90% 50%;          /* Blue */
+  --destructive-foreground: 210 40% 98%;
+  --ring: 142 72% 29%;
   
   /* Blue/Purple theme colors - Same as in light mode for consistency */
   --blue: 220 90% 50%;          /* Vibrant blue */
