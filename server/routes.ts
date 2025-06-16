@@ -143,7 +143,7 @@ export function registerRoutes(app: Express): Server {
   // Register additional route modules
   app.use("/api/csv-direct", csvDirectRoutes);
   app.use("/api/price-sheet", priceSheetRoutes);
-  app.use("/api/connection-status", connectionStatusRoutes);
+  registerConnectionStatusRoutes(app, storage);
 
   // Create and return HTTP server
   return createServer(app);

@@ -1,9 +1,11 @@
-import { Express } from 'express';
+import { Express, Router } from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+
+const router = Router();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
