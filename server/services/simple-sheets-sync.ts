@@ -81,11 +81,11 @@ export class SimpleSheetsSync {
       
       console.log('Available sheets:', sheetInfo.data.sheets?.map(s => s.properties?.title));
       
-      // Fetch Product sheet data - using the correct sheet name
+      // Fetch Product sheet data with extended range to include all required columns
       console.log('Fetching Product sheet data...');
       const productResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Product!A1:Z1000',
+        range: 'Product!A1:CZ1000', // Extended range to cover column BJ (index 61)
       });
 
       const productRows = productResponse.data.values || [];
@@ -93,24 +93,26 @@ export class SimpleSheetsSync {
 
       // Process Product sheet data with correct column mapping
       const productData: Record<string, ProductSheetItem> = {};
-      console.log('Processing product rows - first few rows:');
+      console.log('Processing product rows - checking row lengths and content:');
       productRows.slice(0, 3).forEach((row, index) => {
-        console.log(`Row ${index}: Handle=${row[0]}, Weight=${row[9]}, SKU=${row[17]}, Qty=${row[20]}, Price=${row[23]}, Image=${row[28]}`);
+        console.log(`Row ${index}: Length=${row.length}, Handle=${row[0]}, Weight=${row[9]}, SKU=${row[17]}, Qty=${row[20]}, Price=${row[23]}`);
       });
       
-      productRows.forEach(row => {
-        if (row[0]) { // Handle in column A
-          productData[row[0]] = {
-            handle: row[0], // Column A
-            weight: row[9] || '', // Column J (index 9)
-            sku: row[17] || '', // Column R (index 17) 
-            inventoryQty: parseInt(row[20]) || 0, // Column U (index 20)
-            price: row[23] || '0', // Column X (index 23)
-            imageSrc: row[28] || '', // Column AC (index 28)
-            strainBannerText: row[48] || '', // Column AW (index 48)
-            thcaPercentage: row[49] || '', // Column AX (index 49)
-            coasLink: row[52] || '', // Column BA (index 52)
-            costPerItem: row[61] || '0', // Column BJ (index 61)
+      productRows.forEach((row, index) => {
+        if (row[0] && row[0] !== 'Handle' && row[0].trim()) { // Skip header and empty rows
+          const handle = row[0].trim();
+          
+          productData[handle] = {
+            handle: handle, // Column A
+            weight: row[9] || '', // Column J
+            sku: row[17] || '', // Column R 
+            inventoryQty: parseInt(row[20]) || 0, // Column U
+            price: row[23] || '0', // Column X
+            imageSrc: (row.length > 28 ? row[28] : '') || '', // Column AC if available
+            strainBannerText: (row.length > 48 ? row[48] : '') || '', // Column AW if available
+            thcaPercentage: (row.length > 49 ? row[49] : '') || '', // Column AX if available
+            coasLink: (row.length > 52 ? row[52] : '') || '', // Column BA if available
+            costPerItem: (row.length > 61 ? row[61] : '') || '0', // Column BJ if available
           };
         }
       });
@@ -119,6 +121,31 @@ export class SimpleSheetsSync {
 
       // Get database items
       const dbItems = await this.storage.getItems();
+      console.log(`Found ${dbItems.length} items in database`);
+
+      // If no database items, create enhanced items directly from Google Sheets data
+      if (dbItems.length === 0) {
+        console.log('No database items found, creating items from Google Sheets data');
+        return Object.values(productData).slice(0, 50).map((productInfo, index) => ({
+          id: index + 1,
+          name: productInfo.handle.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          sku: productInfo.sku || '',
+          handle: productInfo.handle,
+          imageUrl: productInfo.imageSrc || '',
+          basePrice: productInfo.price || '0',
+          costPrice: productInfo.costPerItem || '0',
+          quantity: productInfo.inventoryQty || 0,
+          weight: productInfo.weight || '',
+          brand: 'Gold Standard',
+          category: 'Flower',
+          status: 'active',
+          description: `${productInfo.strainBannerText} - ${productInfo.thcaPercentage} THCa`,
+          shopifyId: null,
+          strainBannerText: productInfo.strainBannerText || '',
+          thcaPercentage: productInfo.thcaPercentage || '',
+          coasLink: productInfo.coasLink || '',
+        }));
+      }
 
       // Merge data and return enhanced items with Products sheet data
       return dbItems.map(item => {
