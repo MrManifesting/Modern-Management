@@ -1,5 +1,4 @@
 // Direct Shopify pricing fetch service
-import fetch from 'node-fetch';
 
 export async function getShopifyPricing() {
   const SHOPIFY_STORE = process.env.SHOPIFY_STORE || 'mrlisterscurations.myshopify.com';
