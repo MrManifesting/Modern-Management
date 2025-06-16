@@ -5742,14 +5742,12 @@ ${topCustomersCsv}`;
     try {
       console.log('Starting full inventory sync from Shopify...');
       
-      const { ShopifyFullSync } = await import('./services/shopify-full-sync');
-      const syncService = new ShopifyFullSync(storage);
-      
-      const results = await syncService.syncAllInventory();
+      const { syncInventoryFromShopify } = await import('./services/direct-shopify-sync');
+      const results = await syncInventoryFromShopify(storage);
       
       res.json({
         success: true,
-        message: `Synced ${results.updated} of ${results.matched} matched items from ${results.totalShopifyProducts} Shopify products`,
+        message: `Synced ${results.updated} of ${results.matched} matched items from ${results.totalProducts} Shopify products`,
         ...results
       });
       

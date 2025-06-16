@@ -1,211 +1,203 @@
 /**
- * Direct Shopify Sync Service
- * Bypasses broken client structure and uses working API endpoints
+ * Direct Shopify Sync - Pull real quantities and images
  */
 
 import { IStorage } from '../storage';
-import { Item } from '@shared/schema';
 
-interface DirectSyncResult {
-  success: boolean;
-  message: string;
+export async function syncInventoryFromShopify(storage: IStorage): Promise<{
+  totalProducts: number;
+  matched: number;
   updated: number;
-  created: number;
   errors: string[];
-}
+}> {
+  const results = {
+    totalProducts: 0,
+    matched: 0,
+    updated: 0,
+    errors: [] as string[]
+  };
 
-export class DirectShopifySync {
-  constructor(private storage: IStorage) {}
+  try {
+    // Get all inventory items
+    const items = await storage.getItems();
+    console.log(`Starting sync for ${items.length} inventory items`);
 
-  /**
-   * Direct bulk import from Shopify using working endpoints
-   */
-  async bulkImportFromShopify(): Promise<DirectSyncResult> {
-    try {
-      console.log('Starting direct bulk import from Shopify...');
-      
-      // Use the working /api/shopify/products endpoint internally
-      const response = await fetch('http://localhost:5000/api/shopify/products');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch products: ${response.status}`);
-      }
+    // Fetch all Shopify products
+    const shopifyProducts = await fetchAllShopifyProducts();
+    results.totalProducts = shopifyProducts.length;
+    console.log(`Fetched ${shopifyProducts.length} products from Shopify`);
 
-      const shopifyProducts = await response.json();
-      console.log(`Fetched ${shopifyProducts.length} products from Shopify`);
+    // Create lookup maps
+    const productsByTitle = new Map<string, any>();
+    const productsBySku = new Map<string, any>();
 
-      if (!Array.isArray(shopifyProducts) || shopifyProducts.length === 0) {
-        return {
-          success: false,
-          message: 'No products found in Shopify store',
-          updated: 0,
-          created: 0,
-          errors: ['No products available for import']
-        };
-      }
+    shopifyProducts.forEach(product => {
+      // Index by normalized title
+      const normalizedTitle = normalizeTitle(product.title);
+      productsByTitle.set(normalizedTitle, product);
 
-      // Get current inventory items
-      const inventoryItems = await this.storage.getItems();
-      console.log(`Found ${inventoryItems.length} items in current inventory`);
-
-      let updated = 0;
-      let created = 0;
-      const errors: string[] = [];
-
-      // Create lookup map for existing items by SKU
-      const skuToItem = new Map<string, Item>();
-      inventoryItems.forEach(item => {
-        if (item.sku) skuToItem.set(item.sku, item);
-      });
-
-      // Process each Shopify product (flattened structure)
-      for (const shopifyProduct of shopifyProducts) {
-        try {
-          // Generate SKU from handle if not present
-          let sku = shopifyProduct.sku;
-          if (!sku && shopifyProduct.handle) {
-            sku = shopifyProduct.handle.toUpperCase().replace(/-/g, '');
+      // Index by SKU
+      if (product.variants) {
+        product.variants.forEach((variant: any) => {
+          if (variant.sku) {
+            productsBySku.set(variant.sku, { product, variant });
           }
-          
-          // Skip products without any identifier or not in Shopify
-          if (!sku || !shopifyProduct.inShopify) {
-            console.log(`Skipping product without SKU/handle or not in Shopify: ${shopifyProduct.title}`);
-            continue;
-          }
-
-          const existingItem = skuToItem.get(sku);
-          
-          if (existingItem) {
-            // Update existing item with Shopify data
-            const updateData: Partial<Item> = {
-              basePrice: shopifyProduct.price || 0,
-              quantity: shopifyProduct.quantity || 0,
-              shopifyId: shopifyProduct.variantId?.toString(),
-              name: shopifyProduct.title || existingItem.name,
-              weight: shopifyProduct.weight ? `${shopifyProduct.weight} ounce` : existingItem.weight
-            };
-
-            await this.storage.updateItem(existingItem.id, updateData);
-            updated++;
-            console.log(`Updated: ${shopifyProduct.title} - $${shopifyProduct.price} (${shopifyProduct.quantity} in stock)`);
-          } else {
-            // Create new item from Shopify
-            const newItem = {
-              name: shopifyProduct.title || 'Imported Product',
-              sku: sku,
-              basePrice: shopifyProduct.price || 0,
-              quantity: shopifyProduct.quantity || 0,
-              shopifyId: shopifyProduct.variantId?.toString(),
-              brand: 'Gold Standard',
-              category: 'Flower',
-              status: 'available',
-              active: true,
-              weight: shopifyProduct.weight ? `${shopifyProduct.weight} ounce` : '1 ounce',
-              description: `Imported from Shopify: ${shopifyProduct.title}`
-            };
-
-            await this.storage.createItem(newItem);
-            created++;
-            console.log(`Created: ${shopifyProduct.title} - $${shopifyProduct.price}`);
-          }
-        } catch (error) {
-          const errorMsg = `Failed to process ${shopifyProduct.title}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          console.error(errorMsg);
-          errors.push(errorMsg);
-        }
+        });
       }
+    });
 
-      const message = `Direct import completed: ${updated} items updated, ${created} items created`;
-      console.log(message);
+    console.log(`Created lookup maps: ${productsByTitle.size} titles, ${productsBySku.size} SKUs`);
 
-      return {
-        success: true,
-        message,
-        updated,
-        created,
-        errors
-      };
+    // Sync each item
+    for (const item of items) {
+      try {
+        let shopifyMatch: { product: any; variant?: any } | null = null;
 
-    } catch (error) {
-      console.error('Direct import failed:', error);
-      return {
-        success: false,
-        message: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        updated: 0,
-        created: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
-    }
-  }
-
-  /**
-   * Direct pricing update from Shopify
-   */
-  async bulkUpdatePricing(): Promise<DirectSyncResult> {
-    try {
-      console.log('Starting direct pricing update from Shopify...');
-      
-      const response = await fetch('http://localhost:5000/api/shopify/products');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch products: ${response.status}`);
-      }
-
-      const shopifyProducts = await response.json();
-      const inventoryItems = await this.storage.getItems();
-
-      let updated = 0;
-      const errors: string[] = [];
-
-      // Create SKU lookup
-      const skuToItem = new Map<string, Item>();
-      inventoryItems.forEach(item => {
-        if (item.sku) skuToItem.set(item.sku, item);
-      });
-
-      for (const shopifyProduct of shopifyProducts) {
-        if (!shopifyProduct.variants || !Array.isArray(shopifyProduct.variants)) {
-          continue;
+        // Try matching by SKU first
+        if (item.sku && productsBySku.has(item.sku)) {
+          shopifyMatch = productsBySku.get(item.sku)!;
         }
 
-        for (const variant of shopifyProduct.variants) {
-          if (!variant.sku) continue;
-
-          const existingItem = skuToItem.get(variant.sku);
-          if (existingItem) {
-            const shopifyPrice = parseFloat(variant.price) || 0;
-            const shopifyQuantity = variant.inventory_quantity || 0;
-
-            // Only update if price or quantity changed
-            if (existingItem.basePrice !== shopifyPrice || existingItem.quantity !== shopifyQuantity) {
-              await this.storage.updateItem(existingItem.id, {
-                basePrice: shopifyPrice,
-                quantity: shopifyQuantity
-              });
-              updated++;
-              console.log(`Updated pricing: ${existingItem.name} - $${shopifyPrice} (${shopifyQuantity} in stock)`);
+        // Try matching by title
+        if (!shopifyMatch && item.name) {
+          const normalizedName = normalizeTitle(item.name);
+          const product = productsByTitle.get(normalizedName);
+          if (product && product.variants && product.variants.length > 0) {
+            shopifyMatch = { product, variant: product.variants[0] };
+          }
+          
+          // Try partial matches for similar products
+          if (!shopifyMatch) {
+            for (const [title, product] of productsByTitle) {
+              if (title.includes(normalizedName.split(' ')[0]) || normalizedName.includes(title.split(' ')[0])) {
+                if (product && product.variants && product.variants.length > 0) {
+                  shopifyMatch = { product, variant: product.variants[0] };
+                  break;
+                }
+              }
             }
           }
         }
+
+        if (shopifyMatch) {
+          results.matched++;
+          const { product, variant } = shopifyMatch;
+          
+          const updates: any = {};
+          let hasUpdates = false;
+
+          // Update quantity
+          if (variant && typeof variant.inventory_quantity === 'number') {
+            const shopifyQty = variant.inventory_quantity;
+            if (item.quantity !== shopifyQty) {
+              updates.quantity = shopifyQty;
+              hasUpdates = true;
+            }
+          }
+
+          // Update price
+          if (variant && variant.price) {
+            const shopifyPrice = parseFloat(variant.price);
+            const currentPrice = typeof item.basePrice === 'string' ? parseFloat(item.basePrice) : (item.basePrice || 0);
+            if (Math.abs(currentPrice - shopifyPrice) > 0.01) {
+              updates.basePrice = shopifyPrice.toString();
+              hasUpdates = true;
+            }
+          }
+
+          // Update images
+          if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            const imageUrls = product.images.map((img: any) => img.src).filter(Boolean);
+            if (imageUrls.length > 0) {
+              updates.images = imageUrls;
+              hasUpdates = true;
+            }
+          }
+
+          // Store Shopify ID
+          if (variant && variant.id && !item.shopifyId) {
+            updates.shopifyId = variant.id.toString();
+            hasUpdates = true;
+          }
+
+          if (hasUpdates) {
+            await storage.updateItem(item.id, updates);
+            results.updated++;
+            console.log(`Updated ${item.name}: qty=${updates.quantity || 'unchanged'}, images=${updates.images?.length || 0}, price=$${updates.basePrice || 'unchanged'}`);
+          }
+        }
+      } catch (error) {
+        const msg = `Failed to sync ${item.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        results.errors.push(msg);
+        console.error(msg);
+      }
+    }
+
+    console.log(`Sync complete: ${results.matched} matched, ${results.updated} updated`);
+    return results;
+
+  } catch (error) {
+    const msg = `Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    results.errors.push(msg);
+    console.error(msg);
+    return results;
+  }
+}
+
+async function fetchAllShopifyProducts(): Promise<any[]> {
+  const shopifyStore = process.env.SHOPIFY_STORE;
+  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+  
+  if (!shopifyStore || !accessToken) {
+    throw new Error('Shopify credentials not configured');
+  }
+
+  const allProducts: any[] = [];
+  let hasMore = true;
+  let sinceId = 0;
+
+  while (hasMore) {
+    try {
+      const url = `https://${shopifyStore}/admin/api/2023-10/products.json?limit=250&since_id=${sinceId}&fields=id,title,handle,variants,images`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`Shopify API error: ${response.status} ${response.statusText}`);
+        break;
       }
 
-      return {
-        success: true,
-        message: `Pricing update completed: ${updated} items updated`,
-        updated,
-        created: 0,
-        errors
-      };
-
+      const data = await response.json();
+      const products = data.products || [];
+      
+      if (products.length === 0) {
+        hasMore = false;
+      } else {
+        allProducts.push(...products);
+        sinceId = products[products.length - 1].id;
+        console.log(`Fetched ${products.length} products, total: ${allProducts.length}`);
+        
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     } catch (error) {
-      console.error('Pricing update failed:', error);
-      return {
-        success: false,
-        message: `Pricing update failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        updated: 0,
-        created: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
+      console.error('Error fetching products:', error);
+      hasMore = false;
     }
   }
+
+  return allProducts;
+}
+
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
