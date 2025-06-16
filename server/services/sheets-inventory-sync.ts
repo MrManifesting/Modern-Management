@@ -259,17 +259,17 @@ export class SheetsInventorySync {
               updateData.weight = sheetItem.weight;
             }
 
-            // Update vendor and category
+            // Update brand and category
             if (sheetItem.vendor && sheetItem.vendor.trim()) {
-              updateData.vendor = sheetItem.vendor;
+              updateData.brand = sheetItem.vendor;
             }
             if (sheetItem.category && sheetItem.category.trim()) {
               updateData.category = sheetItem.category;
             }
 
-            // Update tags
+            // Update tags (JSON format)
             if (sheetItem.tags && sheetItem.tags.trim()) {
-              updateData.tags = sheetItem.tags;
+              updateData.tags = JSON.stringify(sheetItem.tags.split(',').map((tag: string) => tag.trim()));
             }
 
             // Only update if we have meaningful changes
@@ -316,9 +316,9 @@ export class SheetsInventorySync {
         available: item.quantity || 0,
         onHand: item.quantity || 0,
         weight: item.weight || '',
-        vendor: item.vendor || '',
+        vendor: item.brand || '',
         category: item.category || '',
-        tags: item.tags || '',
+        tags: typeof item.tags === 'string' ? item.tags : JSON.stringify(item.tags || []),
         status: item.status || 'active'
       }));
 

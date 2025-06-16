@@ -190,7 +190,6 @@ export const userCredentials = pgTable("user_credentials", {
 
 export type UserCredentials = typeof userCredentials.$inferSelect;
 export type InsertUserCredentials = typeof userCredentials.$inferInsert;
-export type InsertUser = typeof users.$inferInsert;
 
 // Item table for inventory management
 export const items = pgTable("items", {
