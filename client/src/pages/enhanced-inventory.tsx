@@ -10,6 +10,8 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
+import EditItemModal from '@/components/modals/edit-item-modal';
+import ViewItemModal from '@/components/modals/view-item-modal';
 import { Item } from '@shared/schema';
 
 interface EnhancedItem {
@@ -345,10 +347,15 @@ export default function EnhancedInventory() {
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditItem(item.id)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Item
-                          </DropdownMenuItem>
+                          <EditItemModal 
+                            item={item}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Item
+                              </DropdownMenuItem>
+                            }
+                          />
                           <DropdownMenuItem asChild>
                             <a
                               href={getShopifyUrl(item)}
@@ -471,15 +478,19 @@ export default function EnhancedInventory() {
                       View
                     </Button>
                     
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleEditItem(item.id)}
-                      className="flex-1"
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
+                    <EditItemModal 
+                      item={item}
+                      trigger={
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                      }
+                    />
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { type Item } from "@shared/schema";
 
 interface EditItemModalProps {
-  item: Item;
+  item: any; // Accept any item type to handle both Item and EnhancedItem
   trigger?: React.ReactNode;
 }
 
