@@ -1380,14 +1380,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate current inventory summary for Google Sheets display
+  // Generate current inventory summary for Google Sheets display - ONLY ITEMS WITH PRICING
   app.get('/api/inventory/current-summary', async (req, res) => {
     try {
       const items = await storage.getItems();
       
-      // Sort by newest first and filter for items with stock
+      // Sort by newest first and filter for items with stock AND pricing
       const sortedItems = items
-        .filter(item => item.quantity && parseInt(item.quantity.toString()) > 0)
+        .filter(item => {
+          const hasStock = item.quantity && parseInt(item.quantity.toString()) > 0;
+          const hasPrice = item.basePrice && parseFloat(item.basePrice) > 0;
+          return hasStock && hasPrice;
+        })
         .sort((a, b) => {
           if (a.createdAt && b.createdAt) {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -1414,11 +1418,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
         summary: summaryData,
         totalItems: items.length,
         inStockItems: sortedItems.length,
+        pricedItems: items.filter(item => item.basePrice && parseFloat(item.basePrice) > 0).length,
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error generating inventory summary:', error);
       res.status(500).json({ error: 'Failed to generate inventory summary' });
+    }
+  });
+
+  // Order tracking endpoint - automatically reduces inventory when orders are placed
+  app.post('/api/orders/process', async (req, res) => {
+    try {
+      const { items: orderItems, customerEmail, orderId, totalAmount } = req.body;
+      
+      if (!orderItems || !Array.isArray(orderItems)) {
+        return res.status(400).json({ error: 'Order items are required' });
+      }
+
+      const processedItems = [];
+      const errors = [];
+      
+      // Process each item in the order
+      for (const orderItem of orderItems) {
+        try {
+          const { sku, quantity: orderedQty, name, price } = orderItem;
+          
+          if (!sku && !name) {
+            errors.push(`Order item missing both SKU and name`);
+            continue;
+          }
+
+          // Find inventory item by SKU or name
+          const items = await storage.getItems();
+          let inventoryItem = items.find(item => item.sku === sku);
+          
+          if (!inventoryItem && name) {
+            inventoryItem = items.find(item => 
+              item.name.toLowerCase().includes(name.toLowerCase()) ||
+              name.toLowerCase().includes(item.name.toLowerCase())
+            );
+          }
+
+          if (!inventoryItem) {
+            errors.push(`Inventory item not found for SKU: ${sku || 'N/A'}, Name: ${name || 'N/A'}`);
+            continue;
+          }
+
+          const currentQty = parseInt(inventoryItem.quantity?.toString() || '0');
+          const orderQty = parseInt(orderedQty?.toString() || '1');
+
+          if (currentQty < orderQty) {
+            errors.push(`Insufficient stock for ${inventoryItem.name}. Available: ${currentQty}, Ordered: ${orderQty}`);
+            continue;
+          }
+
+          // Reduce inventory quantity
+          const newQty = currentQty - orderQty;
+          const updatedItem = await storage.updateItem(inventoryItem.id, {
+            quantity: newQty.toString()
+          });
+
+          // Log inventory action
+          await storage.createInventoryAction({
+            itemId: inventoryItem.id,
+            actionType: 'order_fulfillment',
+            quantityChange: -orderQty,
+            previousQuantity: currentQty,
+            newQuantity: newQty,
+            notes: `Order ${orderId || 'UNKNOWN'} - Customer: ${customerEmail || 'N/A'}`,
+            employeeId: null
+          });
+
+          processedItems.push({
+            itemId: inventoryItem.id,
+            name: inventoryItem.name,
+            sku: inventoryItem.sku,
+            orderedQuantity: orderQty,
+            previousQuantity: currentQty,
+            newQuantity: newQty,
+            price: price || inventoryItem.basePrice
+          });
+
+        } catch (itemError) {
+          console.error(`Error processing order item:`, itemError);
+          errors.push(`Error processing item ${orderItem.sku || orderItem.name}: ${itemError.message}`);
+        }
+      }
+
+      // Create sale record
+      try {
+        await storage.createSale({
+          orderId: orderId || `ORDER-${Date.now()}`,
+          customerEmail: customerEmail || 'N/A',
+          totalAmount: totalAmount || '0.00',
+          status: 'completed',
+          itemName: processedItems.map(item => item.name).join(', '),
+          quantity: processedItems.reduce((sum, item) => sum + item.orderedQuantity, 0),
+          price: totalAmount || '0.00'
+        });
+      } catch (saleError) {
+        console.error('Error creating sale record:', saleError);
+        errors.push(`Failed to create sale record: ${saleError.message}`);
+      }
+
+      res.json({
+        success: true,
+        processedItems,
+        errors,
+        message: `Processed ${processedItems.length} items${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+      });
+
+    } catch (error) {
+      console.error('Error processing order:', error);
+      res.status(500).json({ error: 'Failed to process order' });
+    }
+  });
+
+  // Generate Google Sheets order tracking spreadsheet
+  app.get('/api/orders/tracking-sheet', async (req, res) => {
+    try {
+      const items = await storage.getItems();
+      const sales = await storage.getSales();
+      
+      // Filter for items with pricing only
+      const pricedItems = items.filter(item => 
+        item.basePrice && parseFloat(item.basePrice) > 0
+      ).sort((a, b) => {
+        // Sort by newest first
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        return b.id - a.id;
+      });
+
+      // Create CSV headers
+      const headers = [
+        'SKU',
+        'Product Name',
+        'Category',
+        'Weight',
+        'Current Price',
+        'Available Quantity',
+        'Reserved Quantity',
+        'Total Orders',
+        'Last Order Date',
+        'Status',
+        'Brand'
+      ];
+
+      // Generate CSV data
+      const csvData = [headers];
+      
+      for (const item of pricedItems) {
+        // Calculate order statistics for this item
+        const itemOrders = sales.filter(sale => 
+          sale.itemName?.toLowerCase().includes(item.name.toLowerCase()) ||
+          (item.sku && sale.itemName?.includes(item.sku))
+        );
+        
+        const totalOrders = itemOrders.length;
+        const lastOrderDate = itemOrders.length > 0 
+          ? itemOrders.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0].createdAt
+          : null;
+
+        csvData.push([
+          item.sku || 'N/A',
+          item.name,
+          item.category || 'General',
+          item.weight || 'N/A',
+          `$${parseFloat(item.basePrice).toFixed(2)}`,
+          item.quantity || 0,
+          0, // Reserved quantity (placeholder for future orders)
+          totalOrders,
+          lastOrderDate ? new Date(lastOrderDate).toLocaleDateString() : 'Never',
+          item.status || 'draft',
+          item.brand || 'Gold Standard'
+        ]);
+      }
+
+      // Convert to CSV format
+      const csvContent = csvData.map(row => 
+        row.map(cell => {
+          const cellStr = String(cell || '');
+          // Escape quotes and wrap in quotes if contains comma, quote, or newline
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }
+          return cellStr;
+        }).join(',')
+      ).join('\n');
+
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="inventory-order-tracking.csv"');
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Add UTF-8 BOM for proper Excel compatibility
+      res.send('\uFEFF' + csvContent);
+
+    } catch (error) {
+      console.error('Error generating order tracking sheet:', error);
+      res.status(500).json({ error: 'Failed to generate order tracking sheet' });
     }
   });
 
