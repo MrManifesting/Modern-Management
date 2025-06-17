@@ -191,7 +191,7 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="inventory-pro-theme">
+    <ThemeProvider defaultTheme="light" storageKey="inventory-pro-theme">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>

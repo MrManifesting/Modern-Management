@@ -13,7 +13,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const [sidebarExpanded, setSidebarExpanded] = useState(!isMobile);
-  const [isGoldTheme, setIsGoldTheme] = useState(true); // Default to gold theme
 
   // Get page title based on current location
   const getPageTitle = () => {
@@ -56,11 +55,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setSidebarExpanded(!sidebarExpanded);
   };
 
-  // Toggle between gold theme and regular theme
-  const toggleTheme = () => {
-    setIsGoldTheme(!isGoldTheme);
-  };
-
   // Listen for sidebar close event coming from sidebar component
   useEffect(() => {
     const handleCloseSidebar = () => {
@@ -82,7 +76,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, [location, isMobile]);
 
   return (
-    <div className={`flex h-screen overflow-hidden ${isGoldTheme ? 'gold-theme' : ''}`}>
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Overlay when sidebar is expanded on mobile */}
       {isMobile && sidebarExpanded && (
         <div 
@@ -97,15 +91,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <TopBar 
           toggleSidebar={toggleSidebar} 
           pageTitle={getPageTitle()} 
-          isGoldTheme={isGoldTheme}
-          toggleTheme={toggleTheme}
         />
 
-        <main className={`flex-1 overflow-y-auto p-4 md:p-6 ${
-          isGoldTheme 
-            ? 'bg-black/90 text-gray-100' 
-            : 'bg-gray-50 dark:bg-gray-800 dark:text-white'
-        }`}>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background text-foreground">
           {children}
           <VoiceCommandButton />
         </main>
