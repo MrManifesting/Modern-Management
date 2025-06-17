@@ -213,7 +213,7 @@ export default function ItemFormComponent({
                 <FormLabel>Category</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value}
+                  value={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -331,7 +331,7 @@ export default function ItemFormComponent({
                 <FormLabel>Flower Quality</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value}
+                  value={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
