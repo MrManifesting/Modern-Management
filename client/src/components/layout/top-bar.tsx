@@ -18,15 +18,11 @@ import {
 type TopBarProps = {
   toggleSidebar: () => void;
   pageTitle: string;
-  isCustomTheme?: boolean;
-  toggleTheme?: () => void;
 };
 
 export default function TopBar({ 
   toggleSidebar, 
-  pageTitle,
-  isCustomTheme = true,
-  toggleTheme = () => {}
+  pageTitle
 }: TopBarProps) {
   const [location, navigate] = useLocation();
   const [showAddItemModal, setShowAddItemModal] = useState(false);
@@ -90,11 +86,7 @@ export default function TopBar({
 
   return (
     <>
-      <header className={`flex h-16 items-center justify-between border-b px-3 sm:px-4 md:px-6 sticky top-0 z-30 ${
-        isCustomTheme 
-          ? 'bg-white border-blue-300/30 text-blue-600 dark:bg-gray-900 dark:border-blue-700/30 dark:text-blue-400' 
-          : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
-      }`}>
+      <header className="flex h-16 items-center justify-between border-b px-3 sm:px-4 md:px-6 sticky top-0 z-30 bg-background border-border text-foreground">
         <div className="flex items-center gap-1">
           {/* Mobile: More visible menu button */}
           <Button
