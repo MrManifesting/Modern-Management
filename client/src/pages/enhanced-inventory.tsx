@@ -343,10 +343,15 @@ export default function EnhancedInventory() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleViewItem(item.id)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
+                          <ViewItemModal 
+                            item={item}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            }
+                          />
                           <EditItemModal 
                             item={item}
                             trigger={
@@ -468,15 +473,19 @@ export default function EnhancedInventory() {
                   )}
 
                   <div className="flex gap-1 pt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleViewItem(item.id)}
-                      className="flex-1"
-                    >
-                      <Eye className="w-3 h-3 mr-1" />
-                      View
-                    </Button>
+                    <ViewItemModal 
+                      item={item}
+                      trigger={
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                      }
+                    />
                     
                     <EditItemModal 
                       item={item}
