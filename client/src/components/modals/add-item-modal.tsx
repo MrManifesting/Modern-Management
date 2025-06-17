@@ -202,7 +202,10 @@ export default function AddItemModal({
     }
     
     setShopifySyncStatus('syncing');
-    createMutation.mutate(data, {
+    createMutation.mutate({
+      ...data,
+      quantity: parseInt(data.quantity) || 0
+    }, {
       onSuccess: async (newItem) => {
         // After item is created/updated, attempt to sync with Shopify
         try {
