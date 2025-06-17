@@ -32,34 +32,67 @@ interface QuickBreakdownProps {
   onClose: () => void;
 }
 
-// Standard cannabis weight options in grams
+// Standard cannabis weight options in grams (454g per pound conversion)
 const WEIGHT_OPTIONS = [
   { label: "1 gram", value: 1 },
   { label: "3.5g (eighth)", value: 3.5 },
   { label: "7g (quarter)", value: 7 },
   { label: "14g (half ounce)", value: 14 },
   { label: "28g (ounce)", value: 28 },
-  { label: "56g (quarter pound)", value: 56 },
-  { label: "112g (half pound)", value: 112 },
-  { label: "224g (half pound)", value: 224 },
-  { label: "448g (pound)", value: 448 },
+  { label: "56g (2 ounces)", value: 56 },
+  { label: "112g (4 ounces)", value: 112 },
+  { label: "227g (half pound)", value: 227 },
+  { label: "454g (pound)", value: 454 },
   { label: "Custom", value: 0 }, // Custom weight option
 ];
 
+// Weight conversion utilities
+const GRAMS_PER_POUND = 454;
+const GRAMS_PER_OUNCE = 28.35;
+
+const convertWeightToGrams = (weight: string | number): number => {
+  if (typeof weight === 'number') return weight;
+  
+  const weightStr = weight.toString().toLowerCase();
+  
+  // Extract numeric value
+  const numericMatch = weightStr.match(/([0-9.]+)/);
+  if (!numericMatch) return 0;
+  
+  const numericValue = parseFloat(numericMatch[1]);
+  
+  // Convert based on unit
+  if (weightStr.includes('pound') || weightStr.includes('lb')) {
+    return numericValue * GRAMS_PER_POUND;
+  } else if (weightStr.includes('ounce') || weightStr.includes('oz')) {
+    return numericValue * GRAMS_PER_OUNCE;
+  } else if (weightStr.includes('gram') || weightStr.includes('g')) {
+    return numericValue;
+  }
+  
+  // Default to grams if no unit specified
+  return numericValue;
+};
+
 const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }) => {
   const safePrice = isNaN(item.price) ? 0 : item.price;
-  const safeWeight = item.weight && !isNaN(item.weight) ? item.weight : 1;
-  const defaultUnitPrice = safeWeight > 0 ? safePrice / safeWeight : safePrice;
+  
+  // Convert item weight to grams for accurate calculations
+  const itemWeightInGrams = convertWeightToGrams(item.weight || 1);
+  const totalItemWeightInGrams = itemWeightInGrams * item.quantity;
+  
+  // Calculate price per gram for breakdown pricing
+  const pricePerGram = totalItemWeightInGrams > 0 ? safePrice / totalItemWeightInGrams : 0;
   
   const [options, setOptions] = useState<BreakdownOption[]>([
-    { weight: 1, quantity: 1, price: isNaN(defaultUnitPrice) ? 0 : defaultUnitPrice },
+    { weight: 1, quantity: 1, price: pricePerGram },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const addOption = () => {
-    setOptions([...options, { weight: 1, quantity: 1, price: isNaN(defaultUnitPrice) ? 0 : defaultUnitPrice }]);
+    setOptions([...options, { weight: 1, quantity: 1, price: pricePerGram }]);
   };
 
   const removeOption = (index: number) => {
@@ -85,7 +118,7 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
   };
 
   const totalWeight = options.reduce((sum, option) => sum + (option.weight * option.quantity), 0);
-  const isValid = totalWeight <= (item.weight || 0) * item.quantity;
+  const isValid = totalWeight <= totalItemWeightInGrams;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,11 +173,9 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
           <Badge variant="secondary" className="text-xs">
             SKU: {item.sku}
           </Badge>
-          {item.weight && (
-            <Badge variant="secondary" className="text-xs">
-              Weight: {item.weight}g
-            </Badge>
-          )}
+          <Badge variant="secondary" className="text-xs">
+            Weight: {itemWeightInGrams}g per unit
+          </Badge>
           <Badge variant="outline" className="text-xs">
             Qty: {item.quantity}
           </Badge>
@@ -239,12 +270,12 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
         </div>
         <div>
           <p className="text-sm">Original item weight:</p>
-          <p className="font-medium">{(item.weight || 0) * item.quantity}g</p>
+          <p className="font-medium">{totalItemWeightInGrams.toFixed(1)}g</p>
         </div>
         <div>
           <p className="text-sm">Remaining:</p>
           <p className={`font-medium ${isValid ? 'text-green-600' : 'text-red-600'}`}>
-            {((item.weight || 0) * item.quantity - totalWeight).toFixed(1)}g
+            {(totalItemWeightInGrams - totalWeight).toFixed(1)}g
           </p>
         </div>
       </div>
