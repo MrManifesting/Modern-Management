@@ -51,11 +51,7 @@ export default function TopBar({
   }, []);
   
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        navigate('/auth');
-      }
-    });
+    logoutMutation.mutate();
   };
 
   // Get page description based on current location

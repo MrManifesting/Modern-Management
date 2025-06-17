@@ -226,7 +226,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       {/* Close button for mobile */}
       {expanded && (
         <button 
-          className="lg:hidden absolute top-4 right-4 z-50 text-primary rounded-full p-1 hover:bg-primary/10"
+          className="lg:hidden absolute top-4 right-4 z-50 text-muted-foreground hover:text-foreground rounded-full p-1 hover:bg-muted"
           onClick={() => {
             const closeEvent = new CustomEvent('closeSidebar');
             window.dispatchEvent(closeEvent);
@@ -237,9 +237,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
       )}
 
       {/* Logo and Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-primary/30 px-4">
+      <div className="flex h-16 items-center justify-center border-b border-border px-4">
         <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
-          <div className="flex items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 text-white">
+          <div className="flex items-center justify-center rounded-md bg-primary p-1.5 text-primary-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6"
@@ -256,7 +256,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold primary-gradient-text">Inventory Pro</span>
+            <span className="text-lg font-semibold text-foreground">Inventory Pro</span>
           )}
         </div>
       </div>
@@ -272,8 +272,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
                 location === item.path || (item.subItems && item.subItems.some(subItem => location === subItem.path))
                   ? "bg-primary/20 text-primary border-l-2 border-primary"
                   : item.highlight 
-                    ? "text-white bg-gradient-to-r from-primary/20 to-transparent border-l-2 border-primary/80 font-medium"
-                    : "text-gray-300 hover:bg-black/50 hover:text-primary hover:border-l-2 hover:border-primary/50"
+                    ? "text-foreground bg-primary/10 border-l-2 border-primary/80 font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground hover:border-l-2 hover:border-primary/50"
               )}
             >
               {item.icon}
