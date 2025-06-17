@@ -135,11 +135,19 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
     try {
       setIsSubmitting(true);
       
+      // Transform options to targets format expected by backend
+      const targets = options.map((option, index) => ({
+        name: `${item.name} - ${option.weight}g`,
+        weight: option.weight,
+        weightUnit: 'g',
+        quantity: option.quantity,
+        price: option.price,
+        parentItemId: item.id
+      }));
+
       // Call API to create breakdown
       await apiRequest('POST', `/api/items/${item.id}/quick-breakdown`, { 
-        options,
-        parentSku: item.sku,
-        remainingQuantity: item.quantity - 1 // Assuming we're breaking down 1 unit
+        targets
       });
       
       // Invalidate queries to refresh the data
