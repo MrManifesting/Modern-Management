@@ -75,9 +75,7 @@ export default function ItemFormComponent({
 }: ItemFormProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>(
-    (defaultValues.images as string[]) || []
-  );
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const form = useForm<ItemForm>({
