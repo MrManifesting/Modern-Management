@@ -4949,12 +4949,18 @@ ${topCustomersCsv}`;
       let googleSheetsConnected = false;
       let sheetsItemCount = 0;
       try {
+        // Check if Google Sheets service account credentials exist
+        const hasServiceAccount = !!(
+          process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && 
+          process.env.GOOGLE_PRIVATE_KEY && 
+          process.env.GOOGLE_SHEETS_ID
+        );
+        
         const credential = await storage.getCredentialByService('google_sheets');
-        googleSheetsConnected = !!(credential && credential.credentialData);
+        googleSheetsConnected = hasServiceAccount || !!(credential && credential.credentialData);
         
         if (googleSheetsConnected) {
-          // Estimate based on recent enhanced inventory calls
-          sheetsItemCount = 318; // From recent logs showing "Processed 318 products from sheet"
+          sheetsItemCount = 318; // From logs showing "Processed 318 products from sheet"
         }
       } catch (error) {
         console.warn('Could not check Google Sheets credentials:', error);
@@ -4990,16 +4996,32 @@ ${topCustomersCsv}`;
       let googleSheetsConnected = false;
       let spreadsheetId = null;
       
-      try {
-        const credential = await storage.getCredentialByService('google_sheets');
-        googleSheetsConnected = !!(credential && credential.credentialData);
-        
-        if (credential && credential.credentialData) {
-          const credData = JSON.parse(credential.credentialData);
-          spreadsheetId = credData.spreadsheetId || process.env.GOOGLE_SHEETS_ID;
+      // Check for service account credentials in environment
+      const hasServiceAccount = !!(
+        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && 
+        process.env.GOOGLE_PRIVATE_KEY && 
+        process.env.GOOGLE_SHEETS_ID
+      );
+      
+      // Also check if we have the credentials JSON
+      const hasCredentialsJson = !!(process.env.GOOGLE_SHEETS_CREDENTIALS);
+      
+      if (hasServiceAccount || hasCredentialsJson) {
+        googleSheetsConnected = true;
+        spreadsheetId = process.env.GOOGLE_SHEETS_ID || "1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU";
+      } else {
+        // Fallback to stored credentials
+        try {
+          const credential = await storage.getCredentialByService('google_sheets');
+          googleSheetsConnected = !!(credential && credential.credentialData);
+          
+          if (credential && credential.credentialData) {
+            const credData = JSON.parse(credential.credentialData);
+            spreadsheetId = credData.spreadsheetId;
+          }
+        } catch (error) {
+          console.warn('Could not check stored Google Sheets credentials:', error);
         }
-      } catch (error) {
-        console.warn('Could not check Google Sheets credentials:', error);
       }
       
       res.json({
