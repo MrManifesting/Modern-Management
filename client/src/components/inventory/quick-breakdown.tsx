@@ -23,6 +23,7 @@ interface BreakdownOption {
   weight: number;
   quantity: number;
   price: number;
+  isCustomWeight?: boolean;
 }
 
 interface QuickBreakdownProps {
@@ -30,6 +31,20 @@ interface QuickBreakdownProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+// Standard cannabis weight options in grams
+const WEIGHT_OPTIONS = [
+  { label: "1 gram", value: 1 },
+  { label: "3.5g (eighth)", value: 3.5 },
+  { label: "7g (quarter)", value: 7 },
+  { label: "14g (half ounce)", value: 14 },
+  { label: "28g (ounce)", value: 28 },
+  { label: "56g (quarter pound)", value: 56 },
+  { label: "112g (half pound)", value: 112 },
+  { label: "224g (half pound)", value: 224 },
+  { label: "448g (pound)", value: 448 },
+  { label: "Custom", value: 0 }, // Custom weight option
+];
 
 const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }) => {
   const safePrice = isNaN(item.price) ? 0 : item.price;
@@ -51,10 +66,21 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
     setOptions(options.filter((_, i) => i !== index));
   };
 
-  const updateOption = (index: number, field: keyof BreakdownOption, value: number) => {
+  const updateOption = (index: number, field: keyof BreakdownOption, value: number | boolean) => {
     const newOptions = [...options];
-    const safeValue = isNaN(value) ? 0 : value;
-    newOptions[index][field] = safeValue;
+    if (field === 'isCustomWeight') {
+      newOptions[index][field] = value as boolean;
+    } else {
+      const safeValue = isNaN(value as number) ? 0 : (value as number);
+      newOptions[index][field] = safeValue;
+    }
+    setOptions(newOptions);
+  };
+
+  const updateWeightFromDropdown = (index: number, weightValue: number) => {
+    const newOptions = [...options];
+    newOptions[index].weight = weightValue;
+    newOptions[index].isCustomWeight = weightValue === 0;
     setOptions(newOptions);
   };
 
@@ -127,21 +153,40 @@ const QuickBreakdown: React.FC<QuickBreakdownProps> = ({ item, isOpen, onClose }
 
       <div className="space-y-4">
         {options.map((option, index) => (
-          <div key={index} className="grid grid-cols-12 gap-2 items-center border p-2 rounded-md">
-            <div className="col-span-3">
-              <Label htmlFor={`weight-${index}`} className="text-xs">Weight (g)</Label>
-              <Input
-                id={`weight-${index}`}
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={isNaN(option.weight) ? '' : option.weight.toString()}
-                onChange={(e) => updateOption(index, 'weight', parseFloat(e.target.value) || 0)}
-                className="h-8"
-              />
+          <div key={index} className="grid grid-cols-12 gap-2 items-start border p-3 rounded-md">
+            <div className="col-span-4">
+              <Label className="text-xs">Weight</Label>
+              <div className="space-y-1">
+                <Select
+                  value={option.isCustomWeight ? "0" : option.weight.toString()}
+                  onValueChange={(value) => updateWeightFromDropdown(index, parseFloat(value))}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Select weight" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WEIGHT_OPTIONS.map((weightOption) => (
+                      <SelectItem key={weightOption.value} value={weightOption.value.toString()}>
+                        {weightOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {option.isCustomWeight && (
+                  <Input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="Enter custom weight (g)"
+                    value={option.weight === 0 ? '' : option.weight.toString()}
+                    onChange={(e) => updateOption(index, 'weight', parseFloat(e.target.value) || 0)}
+                    className="h-8 text-xs"
+                  />
+                )}
+              </div>
             </div>
             
-            <div className="col-span-3">
+            <div className="col-span-2">
               <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label>
               <Input
                 id={`quantity-${index}`}
