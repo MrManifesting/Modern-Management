@@ -2576,25 +2576,25 @@ export class DatabaseStorage implements IStorage {
   async updateMarketplace(id: number, marketplace: Partial<InsertMarketplace>): Promise<Marketplace | undefined> {
     const now = new Date();
     const [updatedMarketplace] = await db
-      .update(marketplaces)
+      .update(stores)
       .set({ ...marketplace, updatedAt: now })
-      .where(eq(marketplaces.id, id))
+      .where(eq(stores.id, id))
       .returning();
     
     return updatedMarketplace;
   }
   
   async deleteMarketplace(id: number): Promise<boolean> {
-    const result = await db.delete(marketplaces).where(eq(marketplaces.id, id));
+    const result = await db.delete(stores).where(eq(stores.id, id));
     return result.rowCount > 0;
   }
   
   async connectMarketplace(id: number): Promise<Marketplace | undefined> {
     const now = new Date();
     const [updatedMarketplace] = await db
-      .update(marketplaces)
+      .update(stores)
       .set({ isConnected: true, updatedAt: now })
-      .where(eq(marketplaces.id, id))
+      .where(eq(stores.id, id))
       .returning();
     
     return updatedMarketplace;
@@ -2603,12 +2603,12 @@ export class DatabaseStorage implements IStorage {
   async updateMarketplaceLastSync(id: number, date: Date): Promise<boolean> {
     const now = new Date();
     const result = await db
-      .update(marketplaces)
+      .update(stores)
       .set({ 
         lastSyncDate: date, 
         updatedAt: now 
       })
-      .where(eq(marketplaces.id, id));
+      .where(eq(stores.id, id));
     
     return result.rowCount > 0;
   }
@@ -2616,12 +2616,12 @@ export class DatabaseStorage implements IStorage {
   async updateMarketplaceLastPush(id: number, date: Date): Promise<boolean> {
     const now = new Date();
     const result = await db
-      .update(marketplaces)
+      .update(stores)
       .set({ 
         lastPushDate: date, 
         updatedAt: now 
       })
-      .where(eq(marketplaces.id, id));
+      .where(eq(stores.id, id));
     
     return result.rowCount > 0;
   }
