@@ -36,11 +36,9 @@ const sampleNotifications = [
   }
 ];
 
-interface NotificationsDropdownProps {
-  isCustomTheme?: boolean;
-}
+interface NotificationsDropdownProps {}
 
-export default function NotificationsDropdown({ isCustomTheme = false }: NotificationsDropdownProps) {
+export default function NotificationsDropdown(): React.JSX.Element {
   const [notifications, setNotifications] = useState(sampleNotifications);
   const [open, setOpen] = useState(false);
   
@@ -78,28 +76,15 @@ export default function NotificationsDropdown({ isCustomTheme = false }: Notific
     let bgColor = '';
     let borderColor = '';
     
-    if (isCustomTheme) {
-      if (type === 'alert') {
-        bgColor = read ? 'bg-red-900/20' : 'bg-red-900/30';
-        borderColor = 'border-l-red-600';
-      } else if (type === 'success') {
-        bgColor = read ? 'bg-green-900/20' : 'bg-green-900/30';
-        borderColor = 'border-l-green-600';
-      } else {
-        bgColor = read ? 'bg-blue-500/10' : 'bg-blue-500/20';
-        borderColor = 'border-l-blue-500';
-      }
+    if (type === 'alert') {
+      bgColor = read ? 'bg-red-50 dark:bg-red-950/20' : 'bg-red-100 dark:bg-red-950/30';
+      borderColor = 'border-l-red-500';
+    } else if (type === 'success') {
+      bgColor = read ? 'bg-green-50 dark:bg-green-950/20' : 'bg-green-100 dark:bg-green-950/30';
+      borderColor = 'border-l-green-500';
     } else {
-      if (type === 'alert') {
-        bgColor = read ? 'bg-red-50 dark:bg-red-950/20' : 'bg-red-100 dark:bg-red-950/30';
-        borderColor = 'border-l-red-500';
-      } else if (type === 'success') {
-        bgColor = read ? 'bg-green-50 dark:bg-green-950/20' : 'bg-green-100 dark:bg-green-950/30';
-        borderColor = 'border-l-green-500';
-      } else {
-        bgColor = read ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-blue-100 dark:bg-blue-950/30';
-        borderColor = 'border-l-blue-500';
-      }
+      bgColor = read ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-blue-100 dark:bg-blue-950/30';
+      borderColor = 'border-l-blue-500';
     }
     
     return { bgColor, borderColor };
