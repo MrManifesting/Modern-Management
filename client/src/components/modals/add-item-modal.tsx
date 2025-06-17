@@ -120,46 +120,63 @@ export default function AddItemModal({
   // Prepare default values for the form
   const getDefaultValues = () => {
     if (isEditing && editItem) {
+      // Convert database item to form format
       return {
-        ...editItem,
-        // Ensure these fields are properly converted from JSON if stored as strings
+        name: editItem.name || "",
+        description: editItem.description || "",
+        sku: editItem.sku || "",
+        brand: editItem.brand || "Gold Standard",
+        costPrice: editItem.costPrice?.toString() || "0",
+        basePrice: editItem.basePrice?.toString() || "0",
+        salePrice: editItem.salePrice?.toString() || "",
+        wholesalePrice: editItem.wholesalePrice?.toString() || "",
+        category: editItem.category || "Bulk Flower",
+        quantity: editItem.quantity || 1,
+        status: editItem.status || "draft",
+        weight: editItem.weight || "",
+        barcode: editItem.barcode || "",
+        qrCode: editItem.qrCode || "",
+        dimensions: editItem.dimensions || "",
+        condition: editItem.condition || "New",
         tags: Array.isArray(editItem.tags) ? editItem.tags : [],
-        marketplace: Array.isArray(editItem.marketplace) ? editItem.marketplace : [],
-        aiTags: Array.isArray(editItem.aiTags) ? editItem.aiTags : [],
+        thcaPercentage: editItem.thcaPercentage?.toString() || "",
+        strainType: editItem.strainType || "",
+        itemType: editItem.itemType || "standard",
+        visibility: editItem.visibility || "visible"
       };
     } else if (initialName) {
       // For voice commands with item name
       return {
         name: initialName,
         description: "",
-        basePrice: 0,
+        basePrice: "0",
+        costPrice: "0",
         category: "Bulk Flower",
         brand: "Gold Standard",
         condition: "New",
         sku: "",
-        itemType: "regular",
+        itemType: "standard",
         quantity: 1,
         status: "draft",
         tags: [],
-        marketplace: [],
-        aiTags: []
+        visibility: "visible"
       };
     } else {
       // Default values for new items
       return {
         name: "",
         description: "",
-        basePrice: 0,
+        basePrice: "0",
+        costPrice: "0",
         category: "Bulk Flower",
         brand: "Gold Standard",
         condition: "New",
         sku: "",
-        itemType: "regular",
+        itemType: "standard",
         quantity: 1,
         status: "draft",
         tags: [],
-        marketplace: [],
-        aiTags: []
+        visibility: "visible"
       };
     }
     return undefined;
