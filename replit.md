@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Complete Cannabis Breakdown System Fixed and Fully Operational**
+  - Resolved critical parent item quantity reduction issue in breakdown functionality
+  - Fixed weight field preservation during database operations preventing proper calculations
+  - Implemented simplified breakdown logic that always reduces parent quantity by 1
+  - Verified breakdown creates child items correctly while reducing parent to 0 as requested
+  - Test confirmed: 1 pound item broken into 2 half-pounds properly updates parent quantity from 1 to 0
+  - Added comprehensive debugging logs for breakdown operations and quantity calculations
+  - System now handles cannabis weight standards accurately with proper unit conversions
 - June 17, 2025: **Fixed Marketplace Connection Test Failures**
   - Corrected marketplace type ID mapping for proper service initialization
   - Fixed Shopify marketplace connection (ID 1) with environment variable fallbacks
