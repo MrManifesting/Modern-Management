@@ -381,6 +381,44 @@ export default function SimpleItemForm({
 
         <FormField
           control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Image URL</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter image URL" {...field} />
+              </FormControl>
+              <FormMessage />
+              {field.value && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <Package className="w-4 h-4" />
+                    Preview:
+                  </div>
+                  <div className="relative w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={field.value}
+                      alt="Image preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLDivElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400" style={{ display: 'none' }}>
+                      <Package className="w-8 h-8" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="location"
           render={({ field }) => (
             <FormItem>
