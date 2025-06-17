@@ -85,9 +85,13 @@ export default function EnhancedInventory() {
 
   const handleViewSheets = async (item: EnhancedItem) => {
     try {
-      const response = await apiRequest(`/api/items/${item.id}/sheets-view`);
-      if (response.url) {
-        window.open(response.url, '_blank');
+      const response = await fetch(`/api/items/${item.id}/sheets-view`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.open(data.url, '_blank');
       } else {
         window.open(getSheetsUrl(item), '_blank');
       }

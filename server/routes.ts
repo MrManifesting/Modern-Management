@@ -1288,6 +1288,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Export items as Shopify-compatible CSV
+  app.get('/api/items/export/shopify-csv', async (req, res) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Shopify CSV format with proper escaping
+      const csvData = [];
+      
+      // Add header row
+      csvData.push([
+        'Handle', 'Title', 'Body (HTML)', 'Vendor', 'Product Category', 'Type',
+        'Tags', 'Published', 'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value',
+        'Option3 Name', 'Option3 Value', 'Variant SKU', 'Variant Grams', 'Variant Inventory Tracker',
+        'Variant Inventory Qty', 'Variant Inventory Policy', 'Variant Fulfillment Service',
+        'Variant Price', 'Variant Compare At Price', 'Variant Requires Shipping',
+        'Variant Taxable', 'Variant Barcode', 'Image Src', 'Image Position',
+        'Image Alt Text', 'Gift Card', 'SEO Title', 'SEO Description',
+        'Google Shopping / Google Product Category', 'Google Shopping / Gender',
+        'Google Shopping / Age Group', 'Google Shopping / MPN',
+        'Google Shopping / AdWords Grouping', 'Google Shopping / AdWords Labels',
+        'Google Shopping / Condition', 'Google Shopping / Custom Product',
+        'Google Shopping / Custom Label 0', 'Google Shopping / Custom Label 1',
+        'Google Shopping / Custom Label 2', 'Google Shopping / Custom Label 3',
+        'Google Shopping / Custom Label 4', 'Variant Image', 'Variant Weight Unit',
+        'Variant Tax Code', 'Cost per item', 'Price / International',
+        'Compare At Price / International', 'Status'
+      ]);
+
+      // Add data rows
+      items.forEach(item => {
+        const basePrice = item.basePrice ? parseFloat(item.basePrice) : 0;
+        const handle = (item.sku?.toLowerCase() || item.name?.toLowerCase() || 'item')
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        csvData.push([
+          handle,
+          item.name || '',
+          item.description || '',
+          item.brand || 'Gold Standard',
+          'Health & Beauty > Personal Care',
+          item.category || 'Bulk Flower',
+          'cannabis, hemp, flower',
+          'TRUE',
+          'Weight',
+          item.weight || '1 pound',
+          '', '', '', '',
+          item.sku || '',
+          '0',
+          'shopify',
+          (item.quantity || 0).toString(),
+          'deny',
+          'manual',
+          basePrice.toFixed(2),
+          '',
+          'TRUE',
+          'TRUE',
+          item.barcode || '',
+          item.imageUrl || '',
+          '1',
+          item.name || '',
+          'FALSE',
+          item.name || '',
+          item.description || '',
+          '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+          'g',
+          '',
+          item.costPrice || '',
+          '', '',
+          'active'
+        ]);
+      });
+
+      // Convert to RFC 4180 compliant CSV
+      const csvContent = csvData.map(row => 
+        row.map(field => {
+          const value = String(field || '');
+          // Escape quotes and wrap in quotes
+          return `"${value.replace(/"/g, '""')}"`;
+        }).join(',')
+      ).join('\r\n');
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="shopify_inventory_import.csv"');
+      res.send('\uFEFF' + csvContent); // UTF-8 BOM for Excel compatibility
+    } catch (error) {
+      console.error('Error exporting Shopify CSV:', error);
+      res.status(500).json({ error: 'Failed to export Shopify CSV' });
+    }
+  });
+
+  // Generate dynamic price sheet for bulk flower
+  app.get('/api/generate-price-sheet', async (req, res) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for flower products only
+      const flowerItems = items.filter(item => 
+        item.category?.toLowerCase().includes('flower') ||
+        item.category?.toLowerCase().includes('bulk') ||
+        item.name?.toLowerCase().includes('flower')
+      ).filter(item => 
+        item.basePrice && parseFloat(item.basePrice) > 0 && 
+        item.quantity && parseInt(item.quantity.toString()) > 0
+      );
+
+      // Sort by price and group by weight categories
+      const weightCategories = {
+        '1 pound': [],
+        'half pound': [],
+        'quarter pound': [],
+        'ounce': [],
+        'other': []
+      };
+
+      flowerItems.forEach(item => {
+        const weight = item.weight?.toLowerCase() || '';
+        if (weight.includes('1 pound') || weight.includes('pound') && !weight.includes('half') && !weight.includes('quarter')) {
+          weightCategories['1 pound'].push(item);
+        } else if (weight.includes('half pound')) {
+          weightCategories['half pound'].push(item);
+        } else if (weight.includes('quarter pound')) {
+          weightCategories['quarter pound'].push(item);
+        } else if (weight.includes('ounce') || weight.includes('oz')) {
+          weightCategories['ounce'].push(item);
+        } else {
+          weightCategories['other'].push(item);
+        }
+      });
+
+      // Generate HTML price sheet
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      let priceSheetHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gold Standard CBD - Bulk Flower Price Sheet</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+        .category { margin-bottom: 30px; }
+        .category h2 { background: #f0f0f0; padding: 10px; margin: 0; border-left: 4px solid #gold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f8f8f8; font-weight: bold; }
+        .price { font-weight: bold; color: #2c5b2d; }
+        .sku { font-family: monospace; font-size: 0.9em; color: #666; }
+        .quantity { text-align: center; }
+        .low-stock { color: #d32f2f; font-weight: bold; }
+        .footer { margin-top: 40px; text-align: center; font-size: 0.9em; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gold Standard CBD - Bulk Flower Price Sheet</h1>
+        <p>Updated: ${currentDate}</p>
+        <p>Contact: bulk@goldcbd.com or 541-295-8811</p>
+    </div>
+`;
+
+      // Add sections for each weight category
+      Object.entries(weightCategories).forEach(([category, categoryItems]) => {
+        if (categoryItems.length > 0) {
+          // Sort by price
+          categoryItems.sort((a, b) => parseFloat(a.basePrice || '0') - parseFloat(b.basePrice || '0'));
+          
+          priceSheetHTML += `
+    <div class="category">
+        <h2>${category.charAt(0).toUpperCase() + category.slice(1)} Products (${categoryItems.length} items)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>SKU</th>
+                    <th>Weight</th>
+                    <th>Price</th>
+                    <th>Available Qty</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+`;
+          
+          categoryItems.forEach(item => {
+            const price = parseFloat(item.basePrice || '0');
+            const quantity = parseInt(item.quantity?.toString() || '0');
+            const quantityClass = quantity < 5 ? 'low-stock' : '';
+            
+            priceSheetHTML += `
+                <tr>
+                    <td><strong>${item.name}</strong></td>
+                    <td class="sku">${item.sku || 'N/A'}</td>
+                    <td>${item.weight || 'N/A'}</td>
+                    <td class="price">$${price.toFixed(2)}</td>
+                    <td class="quantity ${quantityClass}">${quantity}</td>
+                    <td>${item.description || 'Premium quality flower'}</td>
+                </tr>
+`;
+          });
+          
+          priceSheetHTML += `
+            </tbody>
+        </table>
+    </div>
+`;
+        }
+      });
+
+      priceSheetHTML += `
+    <div class="footer">
+        <p><strong>Terms:</strong> Prices subject to change without notice. Minimum order quantities may apply.</p>
+        <p><strong>Payment:</strong> Net 30 for approved accounts. COD available.</p>
+        <p><strong>Shipping:</strong> Free shipping on orders over $500. Express shipping available.</p>
+        <p>This price sheet was automatically generated from live inventory data.</p>
+    </div>
+</body>
+</html>
+`;
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="bulk_flower_price_sheet.html"');
+      res.send(priceSheetHTML);
+    } catch (error) {
+      console.error('Error generating price sheet:', error);
+      res.status(500).json({ error: 'Failed to generate price sheet' });
+    }
+  });
+
   // GET version of CSV Export Route for direct links
   app.get("/api/export-csv", async (req: Request, res: Response) => {
     try {
@@ -5071,6 +5306,28 @@ ${topCustomersCsv}`;
     } catch (error) {
       console.error('Error configuring Google Sheets:', error);
       res.status(500).json({ error: "Failed to configure Google Sheets" });
+    }
+  });
+
+  // Get Google Sheets view URL for item
+  app.get('/api/items/:id/sheets-view', async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const items = await storage.getItems();
+      const item = items.find(i => i.id === itemId);
+
+      if (!item) {
+        return res.status(404).json({ error: 'Item not found' });
+      }
+
+      const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
+      const searchTerm = item.sku || item.name;
+      const url = `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
+
+      res.json({ url });
+    } catch (error) {
+      console.error('Error getting Google Sheets view URL:', error);
+      res.status(500).json({ error: 'Failed to get Google Sheets view URL' });
     }
   });
 
