@@ -268,27 +268,38 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
       
       for (const target of validTargets) {
         // Use the pre-generated SKU for this weight
-        const breakdownSku = skuMap.get(target.weight) || 
+        const breakdownSku = skuMap[target.weight] || 
           generateSKU(parentItem, {
             weight: target.weight,
             weightUnit: target.weightUnit,
             parentSku: parentItem.sku
           });
         
+        // Calculate proportional cost price
+        const parentWeightInfo = parseWeightValue(parentItem.weight || "1 gram");
+        const parentWeightGrams = convertToGrams(parentWeightInfo.value, parentWeightInfo.unit);
+        const targetWeightGrams = convertToGrams(target.weight, target.weightUnit);
+        const costRatio = targetWeightGrams / parentWeightGrams;
+        
+        // Parse and convert cost price properly
+        let calculatedCostPrice = "0";
+        if (parentItem.costPrice) {
+          const baseCost = typeof parentItem.costPrice === 'string' ? parseFloat(parentItem.costPrice) : parentItem.costPrice;
+          calculatedCostPrice = (baseCost * costRatio).toString();
+        }
+        
         // Prepare breakdown item data with proper weight string formatting
         const breakdownItemData = {
           name: target.name,
-          description: `${target.weight}${target.weightUnit} breakdown from ${parentItem.name}`,
+          description: `${target.weight} ${target.weightUnit} breakdown from ${parentItem.name}`,
           sku: breakdownSku,
           basePrice: target.price.toString(),
-          costPrice: parentItem.costPrice ? parentItem.costPrice * (target.weight / (typeof parentItem.weight === 'string' ? parseWeightValue(parentItem.weight).value : parentItem.weight || 1)) : 0,
+          costPrice: calculatedCostPrice,
           category: parentItem.category,
-          subcategory: parentItem.subcategory,
           brand: parentItem.brand,
           condition: parentItem.condition,
           quantity: target.quantity,
           weight: `${target.weight} ${target.weightUnit}`, // Store as string with unit
-          weightUnit: target.weightUnit,
           itemType: ItemType.BREAKDOWN,
           parentItemId: target.parentItemId,
           // Cast images and tags to ensure proper typing
@@ -314,26 +325,35 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
         createdItems.push(newItem);
       }
       
-      // Update the parent item's quantity based on accurate weight calculations
-      // Convert all weights to grams for precise calculations
-      const totalBreakdownGrams = validTargets.reduce((sum, target) => {
-        const targetGrams = convertToGrams(target.weight, target.weightUnit);
-        return sum + (targetGrams * target.quantity);
-      }, 0);
+      // Update parent item quantity based on exact breakdown logic
+      // For cannabis breakdown: if breaking 1 pound into 2 half-pounds, parent should go to 0
       
-      if (parentItem.weight && totalBreakdownGrams > 0) {
-        // Parse parent item weight and convert to grams
+      const currentQuantity = parentItem.quantity ?? 0;
+      if (parentItem.weight && currentQuantity > 0) {
+        // Parse parent item weight and convert to grams for accuracy
         const parentWeightInfo = parseWeightValue(parentItem.weight);
-        const parentTotalGrams = convertToGrams(parentWeightInfo.value, parentWeightInfo.unit);
+        const parentGramsPerUnit = convertToGrams(parentWeightInfo.value, parentWeightInfo.unit);
         
-        // Calculate how many parent units were consumed (round up to ensure inventory accuracy)
-        const unitsConsumed = Math.ceil(totalBreakdownGrams / parentTotalGrams);
+        // Calculate total grams being broken down
+        const totalBreakdownGrams = validTargets.reduce((sum, target) => {
+          const targetGrams = convertToGrams(target.weight, target.weightUnit);
+          return sum + (targetGrams * target.quantity);
+        }, 0);
         
-        // Update parent quantity - ensure we don't go below 0
-        const newQuantity = Math.max(0, parentItem.quantity - unitsConsumed);
+        // Calculate exact parent units consumed
+        // If breaking down exactly matches parent units, consume those exact units
+        const exactUnitsConsumed = totalBreakdownGrams / parentGramsPerUnit;
+        const unitsConsumed = Math.ceil(exactUnitsConsumed); // Round up for partial units
+        
+        // Ensure we don't consume more than available
+        const actualUnitsConsumed = Math.min(unitsConsumed, currentQuantity);
+        const newQuantity = currentQuantity - actualUnitsConsumed;
+        
         await storage.updateItem(itemId, { quantity: newQuantity });
         
-        console.log(`Breakdown completed: Used ${totalBreakdownGrams}g from ${parentTotalGrams}g units, consumed ${unitsConsumed} parent units, remaining: ${newQuantity}`);
+        console.log(`Breakdown completed: ${totalBreakdownGrams}g total from ${parentGramsPerUnit}g parent units`);
+        console.log(`Parent units consumed: ${actualUnitsConsumed}, remaining: ${newQuantity}`);
+        console.log(`Created breakdown items: ${createdItems.length}`);
       }
       
       return res.status(200).json({
