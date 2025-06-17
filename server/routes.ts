@@ -1099,9 +1099,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: results,
         readyCount: readyItems.length,
         totalCount: results.length,
-        pushEnabled: pushStatus.pushEnabled,
+        pushEnabled: (pushStatus as any).pushEnabled,
         safetyStatus: overallSafetyStatus,
-        message: pushStatus.pushEnabled 
+        message: (pushStatus as any).pushEnabled 
           ? `${readyItems.length} of ${results.length} items are ready to sync with Shopify.` 
           : `${readyItems.length} of ${results.length} items prepared for Shopify. Push to Shopify is currently disabled.`
       });
@@ -1129,15 +1129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           error: "Unable to generate codes", 
           message: "Item is missing required fields to generate a Shopify-compatible SKU",
-          errors: pushInfo.errors
+          errors: (pushInfo as any).errors
         });
       }
       
       // Generate barcode from SKU
+      let barcodeDataURL = null;
       
       // Generate QR code for Certificate of Analysis if available
       let coaQrDataURL = null;
-      const attributes = item.attributes || {};
+      const attributes = (item as any).attributes || {};
       
       if (typeof attributes === 'object' && 'coa' in attributes) {
         const coaUrl = (attributes as any).coa;
@@ -1148,11 +1149,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customUrl: coaUrl 
           });
         }
-      } else if (item.externalUrl) {
+      } else if ((item as any).externalUrl) {
         coaQrDataURL = await generateQRCodeDataURL({
           id: item.id, 
           name: item.name, 
-          customUrl: item.externalUrl 
+          customUrl: (item as any).externalUrl 
         });
       }
       

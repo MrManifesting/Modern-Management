@@ -41,6 +41,15 @@ const simpleFormSchema = z.object({
   tier: z.string().optional(),
   strainType: z.string().optional(),
   imageUrl: z.string().optional(),
+  barcode: z.string().optional(),
+  qrCode: z.string().optional(),
+  dimensions: z.string().optional(),
+  condition: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  thcaPercentage: z.string().optional(),
+  itemType: z.string().optional(),
+  visibility: z.string().optional(),
+  marketplace: z.array(z.any()).default([]),
 });
 
 type SimpleFormData = z.infer<typeof simpleFormSchema>;
