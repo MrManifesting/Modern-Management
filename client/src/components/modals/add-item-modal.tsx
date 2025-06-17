@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { InsertItem, Item } from "@shared/schema";
-import ItemFormComponent from "@/components/inventory/item-form";
+import SimpleItemForm from "@/components/inventory/simple-item-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
@@ -33,14 +33,7 @@ export default function AddItemModal({
       // Add all form fields to formData
       Object.entries(data).forEach(([key, value]) => {
         // Handle arrays and objects by stringifying them
-        if (key === "files") {
-          // Add each file separately
-          if (data.files) {
-            data.files.forEach((file: File) => {
-              formData.append("files", file);
-            });
-          }
-        } else if (Array.isArray(value) || typeof value === "object") {
+        if (Array.isArray(value) || typeof value === "object") {
           formData.append(key, JSON.stringify(value));
         } else {
           formData.append(key, String(value));
@@ -322,7 +315,7 @@ export default function AddItemModal({
         )}
         
         <div className="mt-4">
-          <ItemFormComponent
+          <SimpleItemForm
             defaultValues={getDefaultValues()}
             onSubmit={handleSubmit}
             isLoading={createMutation.isPending || shopifySyncStatus === 'syncing'}
