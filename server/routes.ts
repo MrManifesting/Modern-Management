@@ -169,8 +169,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Item Routes
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {
-      const items = await storage.getItems();
-      res.json(items);
+      const allItems = await storage.getItems();
+      
+      // Filter items with valid pricing only (business requirement)
+      const itemsWithPricing = allItems.filter(item => {
+        const basePrice = parseFloat(item.basePrice || '0');
+        const salePrice = parseFloat(item.salePrice || '0');
+        const wholesalePrice = parseFloat(item.wholesalePrice || '0');
+        return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
+      });
+      
+      // Sort by newest items first: newest createdAt dates first, then by highest ID numbers
+      const sortedItems = itemsWithPricing.sort((a, b) => {
+        // First, try to sort by createdAt if both have it
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        
+        // If one has createdAt and the other doesn't, prioritize the one with createdAt
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        
+        // If neither has createdAt, sort by ID (newest/highest first)
+        return b.id - a.id;
+      });
+      
+      res.json(sortedItems);
     } catch (error) {
       console.error("Error fetching items:", error);
       res.status(500).json({ error: "Failed to fetch items", details: error instanceof Error ? error.message : String(error) });
@@ -5896,6 +5920,57 @@ ${topCustomersCsv}`;
     } catch (error) {
       console.error('Failed to perform manual sync:', error);
       res.status(500).json({ error: 'Manual sync failed' });
+    }
+  });
+
+  // Current inventory summary endpoint for real-time stock status display
+  app.get("/api/inventory/current-summary", async (_req: Request, res: Response) => {
+    try {
+      const allItems = await storage.getItems();
+      
+      // Filter items with valid pricing only
+      const itemsWithPricing = allItems.filter(item => {
+        const basePrice = parseFloat(item.basePrice || '0');
+        const salePrice = parseFloat(item.salePrice || '0');
+        const wholesalePrice = parseFloat(item.wholesalePrice || '0');
+        return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
+      });
+      
+      // Sort newest first for summary display
+      const sortedItems = itemsWithPricing.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        return b.id - a.id;
+      });
+      
+      // Calculate summary statistics
+      const totalItems = itemsWithPricing.length;
+      const inStockItems = itemsWithPricing.filter(item => (item.quantity || 0) > 0).length;
+      const totalValue = itemsWithPricing.reduce((sum, item) => {
+        const price = parseFloat(item.basePrice || '0');
+        const qty = item.quantity || 0;
+        return sum + (price * qty);
+      }, 0);
+      
+      // Get newest 10 items for display
+      const newestItems = sortedItems.slice(0, 10);
+      
+      res.json({
+        summary: {
+          totalItems,
+          inStockItems,
+          totalValue: totalValue.toFixed(2),
+          syncStatus: inventorySyncScheduler.getStatus()
+        },
+        newestItems,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to get current inventory summary:', error);
+      res.status(500).json({ error: 'Failed to get inventory summary' });
     }
   });
 
