@@ -1821,6 +1821,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Google Sheets view endpoint for individual items
+  app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      
+      if (isNaN(itemId)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid item ID" 
+        });
+      }
+
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Item not found" 
+        });
+      }
+
+      // Use the configured spreadsheet ID from environment or default
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID || "15GHzyL_C2YqEMS68l7Vy3q6MA0SP9aDrhcZ4GS7HRA0";
+      
+      // Create search URL for the item in Google Sheets
+      const searchTerm = item.sku || item.name;
+      const sheetsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0&search=${encodeURIComponent(searchTerm)}`;
+      
+      res.json({
+        success: true,
+        url: sheetsUrl,
+        message: `Opening Google Sheets with search for: ${searchTerm}`
+      });
+    } catch (error) {
+      console.error("Error generating Google Sheets view URL:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate Google Sheets view URL" 
+      });
+    }
+  });
+
+  // Shopify store view endpoint for individual items  
+  app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      
+      if (isNaN(itemId)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid item ID" 
+        });
+      }
+
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Item not found" 
+        });
+      }
+
+      let shopifyUrl;
+      if (item.shopifyId) {
+        // Direct link to admin product page
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      } else {
+        // Search for the product
+        const searchTerm = item.sku || item.name;
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      res.json({
+        success: true,
+        url: shopifyUrl,
+        message: item.shopifyId ? 
+          `Opening Shopify admin for product ${item.shopifyId}` : 
+          `Searching Shopify for: ${item.sku || item.name}`
+      });
+    } catch (error) {
+      console.error("Error generating Shopify view URL:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate Shopify view URL" 
+      });
+    }
+  });
+
   // Add specific endpoints for bulk barcode and QR code generation
   app.post("/api/items/generate-barcodes-bulk", async (req: Request, res: Response) => {
     try {

@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ExternalLink, Package, DollarSign, Weight, Grid, List } from 'lucide-react';
+import { ExternalLink, Package, DollarSign, Weight, Grid, List, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface EnhancedItem {
   id: number;
@@ -28,9 +30,34 @@ interface EnhancedItem {
 
 export default function EnhancedInventory() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const { toast } = useToast();
   const { data: items = [], isLoading, error } = useQuery<EnhancedItem[]>({
     queryKey: ['/api/inventory/enhanced'],
   });
+
+  // Handle viewing in Google Sheets
+  const handleViewSheetsClick = (itemId: number) => {
+    apiRequest('GET', `/api/items/${itemId}/sheets-view`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.url) {
+          window.open(data.url, '_blank');
+        } else {
+          toast({
+            title: "Error",
+            description: data.message || "Unable to open Google Sheets view.",
+            variant: "destructive"
+          });
+        }
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to open Google Sheets view. Please try again.",
+          variant: "destructive"
+        });
+      });
+  };
 
   if (isLoading) {
     return (
@@ -273,6 +300,14 @@ export default function EnhancedInventory() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewSheetsClick(item.id)}
+                        title="View in Google Sheets"
+                      >
+                        <FileSpreadsheet className="w-3 h-3" />
+                      </Button>
                       {item.coasLink && (
                         <Button size="sm" variant="outline" asChild>
                           <a 
@@ -376,6 +411,16 @@ export default function EnhancedInventory() {
                         <ExternalLink className="w-3 h-3 mr-1" />
                         Shopify
                       </a>
+                    </Button>
+                    
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleViewSheetsClick(item.id)}
+                      className="flex-1"
+                    >
+                      <FileSpreadsheet className="w-3 h-3 mr-1" />
+                      Sheets
                     </Button>
                     
                     {item.coasLink && (
