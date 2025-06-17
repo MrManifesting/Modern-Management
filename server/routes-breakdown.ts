@@ -336,8 +336,23 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
           status: parentItem.status, // Inherit status from parent
         };
         
+        // Debug the breakdown item data before creation
+        console.log("Creating breakdown item with data:", JSON.stringify({
+          name: breakdownItemData.name,
+          parentItemId: breakdownItemData.parentItemId,
+          weight: breakdownItemData.weight,
+          quantity: breakdownItemData.quantity
+        }, null, 2));
+        
         // Create the breakdown item
         const newItem = await storage.createItem(breakdownItemData);
+        
+        console.log("Created breakdown item:", JSON.stringify({
+          id: newItem.id,
+          name: newItem.name,
+          parentItemId: newItem.parentItemId,
+          weight: newItem.weight
+        }, null, 2));
         
         // Generate barcode and QR code for the item
         newItem.barcode = generateBarcodeData(breakdownSku);
