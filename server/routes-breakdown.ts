@@ -343,17 +343,25 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
         // Calculate exact parent units consumed
         // If breaking down exactly matches parent units, consume those exact units
         const exactUnitsConsumed = totalBreakdownGrams / parentGramsPerUnit;
-        const unitsConsumed = Math.ceil(exactUnitsConsumed); // Round up for partial units
+        const unitsConsumed = Math.round(exactUnitsConsumed); // Use Math.round for exact matches
         
         // Ensure we don't consume more than available
         const actualUnitsConsumed = Math.min(unitsConsumed, currentQuantity);
-        const newQuantity = currentQuantity - actualUnitsConsumed;
+        const newQuantity = Math.max(0, currentQuantity - actualUnitsConsumed);
         
+        console.log(`Breakdown calculation details:`);
+        console.log(`- Parent weight: ${parentItem.weight} (${parentGramsPerUnit}g per unit)`);
+        console.log(`- Current parent quantity: ${currentQuantity}`);
+        console.log(`- Total breakdown grams: ${totalBreakdownGrams}g`);
+        console.log(`- Exact units consumed: ${exactUnitsConsumed}`);
+        console.log(`- Rounded units consumed: ${unitsConsumed}`);
+        console.log(`- Actual units consumed: ${actualUnitsConsumed}`);
+        console.log(`- New parent quantity: ${newQuantity}`);
+        
+        // Only update quantity, preserve all other fields including weight
         await storage.updateItem(itemId, { quantity: newQuantity });
         
-        console.log(`Breakdown completed: ${totalBreakdownGrams}g total from ${parentGramsPerUnit}g parent units`);
-        console.log(`Parent units consumed: ${actualUnitsConsumed}, remaining: ${newQuantity}`);
-        console.log(`Created breakdown items: ${createdItems.length}`);
+        console.log(`Breakdown completed successfully - parent quantity updated from ${currentQuantity} to ${newQuantity}`);
       }
       
       return res.status(200).json({
