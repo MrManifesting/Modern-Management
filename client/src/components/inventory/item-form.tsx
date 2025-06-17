@@ -88,12 +88,8 @@ export default function ItemFormComponent({
     if (defaultValues) {
       form.reset(defaultValues);
       
-      // Update images if editing
-      if (defaultValues.images && Array.isArray(defaultValues.images)) {
-        setImageUrls(defaultValues.images as string[]);
-      } else {
-        setImageUrls([]);
-      }
+      // Clear image URLs for fresh state
+      setImageUrls([]);
     }
   }, [defaultValues, form]);
 
