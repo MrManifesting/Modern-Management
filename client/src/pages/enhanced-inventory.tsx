@@ -596,9 +596,9 @@ export default function EnhancedInventory() {
                 <div>
                   <h4 className="font-medium mb-2">Pricing & Inventory</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Base Price:</strong> {formatPrice(viewingItem.basePrice)}</div>
-                    <div><strong>Cost Price:</strong> {formatPrice(viewingItem.costPrice)}</div>
-                    <div><strong>Sale Price:</strong> {formatPrice(viewingItem.salePrice)}</div>
+                    <div><strong>Base Price:</strong> {formatPrice(viewingItem.basePrice || 0)}</div>
+                    <div><strong>Cost Price:</strong> {formatPrice(viewingItem.costPrice || 0)}</div>
+                    <div><strong>Sale Price:</strong> {formatPrice(viewingItem.salePrice || 0)}</div>
                     <div><strong>Quantity:</strong> {viewingItem.quantity || 0} units</div>
                   </div>
                 </div>

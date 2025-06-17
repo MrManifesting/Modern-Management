@@ -6,6 +6,7 @@
 // Main product categories
 export const MAIN_CATEGORIES = [
   'Flower',
+  'Bulk Flower',
   'Concentrates',
   'Edibles',
   'Vapes',
