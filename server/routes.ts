@@ -592,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!item) continue;
           
           const updateData: any = {};
-          let basePrice = item.basePrice || 0;
+          let basePrice = parseFloat(item.basePrice as string) || 0;
           
           if (type === 'increase') {
             updateData.basePrice = basePrice + value;
@@ -1042,11 +1042,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: item.quantity,
           basePrice: item.basePrice
         },
-        shopifyProduct: pushInfo.shopifyProduct,
+        shopifyProduct: (pushInfo as any).shopifyProduct,
         canPush: pushInfo.canPush,
-        errors: pushInfo.errors,
-        safetyStatus: pushInfo.safetyStatus,
-        shopifyProductUrl: pushInfo.shopifyProductUrl
+        errors: (pushInfo as any).errors,
+        safetyStatus: (pushInfo as any).safetyStatus,
+        shopifyProductUrl: (pushInfo as any).shopifyProductUrl
       });
     } catch (error) {
       console.error("Failed to prepare item for Shopify:", error);
@@ -1071,14 +1071,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Collect safety status from the first item to provide overall status
-      let overallSafetyStatus = null;
+      let overallSafetyStatus: any = null;
       
       const results = await Promise.all(selectedItems.map(async (item) => {
         const pushInfo = await getItemPushInfo(item);
         
         // Store safety status for the overall response
         if (!overallSafetyStatus) {
-          overallSafetyStatus = pushInfo.safetyStatus;
+          overallSafetyStatus = (pushInfo as any).safetyStatus;
         }
         
         return {
@@ -1087,7 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sku: item.sku,
           category: item.category,
           canPush: pushInfo.canPush,
-          errors: pushInfo.errors
+          errors: (pushInfo as any).errors
         };
       }));
       

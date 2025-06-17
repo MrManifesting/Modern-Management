@@ -8,6 +8,33 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
 import { createPrintLabels } from "@/components/inventory/auto-print-labels";
 
+// Define ItemForm type for form handling
+type ItemForm = {
+  name: string;
+  description: string;
+  brand: string;
+  sku: string;
+  costPrice: string;
+  basePrice: string;
+  salePrice: string;
+  wholesalePrice: string;
+  category: string;
+  weight: string;
+  quantity: string;
+  status: string;
+  imageUrl: string;
+  barcode: string;
+  qrCode: string;
+  dimensions: string;
+  condition: string;
+  tags: string[];
+  thcaPercentage: string;
+  strainType: string;
+  itemType: string;
+  visibility: string;
+  marketplace: any[];
+};
+
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
