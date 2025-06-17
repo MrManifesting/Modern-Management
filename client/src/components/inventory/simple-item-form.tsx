@@ -35,7 +35,7 @@ const simpleFormSchema = z.object({
   salePrice: z.string().optional(),
   wholesalePrice: z.string().optional(),
   category: z.string().default("Bulk Flower"),
-  quantity: z.coerce.number().min(0).default(1),
+  quantity: z.string().default("1"),
   weight: z.string().optional(),
 
   tier: z.string().optional(),
@@ -86,7 +86,7 @@ export default function SimpleItemForm({
       salePrice: defaultValues?.salePrice || "",
       wholesalePrice: defaultValues?.wholesalePrice || "",
       category: defaultValues?.category || "Bulk Flower",
-      quantity: defaultValues?.quantity || 1,
+      quantity: String(defaultValues?.quantity || 1),
       weight: defaultValues?.weight || "1 pound",
       tier: defaultValues?.tier || "Top Shelf",
       strainType: defaultValues?.strainType || "",
@@ -425,19 +425,7 @@ export default function SimpleItemForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Storage Location</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter storage location" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
 
         <div className="flex justify-end space-x-4">
           <Button type="submit" disabled={isLoading}>

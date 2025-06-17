@@ -342,7 +342,7 @@ export default function AddItemModal({
               salePrice: data.salePrice || '',
               wholesalePrice: data.wholesalePrice || '',
               weight: data.weight || '',
-              quantity: String(data.quantity || 1),
+              quantity: data.quantity || "1",
               strainType: data.strainType || '',
               imageUrl: data.imageUrl || '',
               barcode: data.barcode || '',
