@@ -99,7 +99,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -140,7 +140,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -161,7 +161,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -210,7 +210,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -259,7 +259,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -280,7 +280,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
@@ -309,7 +309,7 @@ export class MarketplaceService {
       if (!this.service) {
         return { 
           success: false, 
-          message: `Service for ${this.marketplace.name} (${this.marketplace.type}) is not initialized` 
+          message: `Service for ${this.marketplace.name} (${this.marketplace.marketplaceTypeId}) is not initialized` 
         };
       }
       
