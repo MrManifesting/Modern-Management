@@ -294,7 +294,15 @@ export function registerMarketplaceRoutes(app: Express, storage: IStorage) {
       });
     } catch (error) {
       console.error(`Error connecting to marketplace ${req.params.id}:`, error);
-      res.status(500).json({ error: "Failed to connect to marketplace" });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      res.status(500).json({ 
+        error: "Failed to connect to marketplace",
+        details: error.message 
+      });
     }
   });
 
