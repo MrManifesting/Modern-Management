@@ -555,7 +555,7 @@ export default function ItemFormComponent({
           <FormItem className="flex flex-row items-start space-x-3 space-y-0 sm:col-span-2 border rounded-md p-4 bg-background">
             <FormControl>
               <Checkbox 
-                checked={(form.getValues("attributes") as any)?.allowDragDropBreakdown || false}
+                checked={form.getValues("visibility") === "visible"}
                 onCheckedChange={(checked) => {
                   // Store in visibility field
                   form.setValue("visibility", checked ? "visible" : "hidden");
