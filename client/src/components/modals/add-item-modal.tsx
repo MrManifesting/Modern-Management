@@ -204,7 +204,7 @@ export default function AddItemModal({
     setShopifySyncStatus('syncing');
     createMutation.mutate({
       ...data,
-      quantity: parseInt(data.quantity) || 0
+      quantity: typeof data.quantity === 'string' ? parseInt(data.quantity) || 0 : data.quantity || 0
     }, {
       onSuccess: async (newItem) => {
         // After item is created/updated, attempt to sync with Shopify
@@ -342,6 +342,7 @@ export default function AddItemModal({
               salePrice: data.salePrice || '',
               wholesalePrice: data.wholesalePrice || '',
               weight: data.weight || '',
+              quantity: String(data.quantity || 1),
               strainType: data.strainType || '',
               imageUrl: data.imageUrl || '',
               barcode: data.barcode || '',

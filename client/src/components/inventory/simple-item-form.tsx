@@ -88,7 +88,6 @@ export default function SimpleItemForm({
       category: defaultValues?.category || "Bulk Flower",
       quantity: defaultValues?.quantity || 1,
       weight: defaultValues?.weight || "1 pound",
-      location: defaultValues?.location || "",
       tier: defaultValues?.tier || "Top Shelf",
       strainType: defaultValues?.strainType || "",
       imageUrl: defaultValues?.imageUrl || "",
