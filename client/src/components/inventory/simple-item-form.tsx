@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Package } from "lucide-react";
 import { 
   Form, 
   FormField, 
@@ -81,6 +82,7 @@ export default function SimpleItemForm({
       location: defaultValues?.location || "",
       tier: defaultValues?.tier || "Top Shelf",
       strainType: defaultValues?.strainType || "",
+      imageUrl: defaultValues?.imageUrl || "",
     }
   });
 
@@ -259,6 +261,42 @@ export default function SimpleItemForm({
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Image URL</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="https://example.com/image.jpg" 
+                    {...field}
+                  />
+                </FormControl>
+                {field.value && (
+                  <div className="mt-2">
+                    <div className="w-16 h-16 border rounded-lg overflow-hidden bg-gray-50">
+                      <img
+                        src={field.value}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="hidden w-full h-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}

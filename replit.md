@@ -125,7 +125,7 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 17, 2025: **Complete Inventory Viewing and Editing System Deployed**
+- June 17, 2025: **Complete Inventory Viewing and Editing System with Image URLs and Media Integration Deployed**
   - Fixed inventory listing viewing functionality enabling users to view any listing live on Shopify or directly on Google Sheets
   - Added proper edit and view action buttons to enhanced inventory table and grid views with dropdown menus
   - Implemented view modal displaying complete item details including uploaded images that were previously missing  
@@ -135,6 +135,10 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Enhanced both table and grid views with consistent action menus for view, edit, Shopify admin, and Google Sheets access
   - Google Sheets integration opens with automatic item search by SKU or name for direct inventory verification
   - Shopify integration provides direct admin product page access for live store management
+  - Added comprehensive image URL functionality with preview thumbnails in forms and Telegram media integration
+  - Created media endpoint `/api/media/item-images/:itemId` to retrieve images from multiple sources (direct URLs, Telegram, Shopify)
+  - Image preview component shows thumbnail when URL is entered with fallback icon for broken images
+  - System now supports complete image workflow: add URL → preview thumbnail → save to inventory → display in views
 - June 17, 2025: **Enhanced Google Sheets Integration with New OAuth Credentials**
   - Configured new Google OAuth credentials (client ID: 574411309352-9a4sc5164uobfqjasv2jrt1t027utok8) for improved authentication
   - Added comprehensive Google OAuth authentication service with proper token management
