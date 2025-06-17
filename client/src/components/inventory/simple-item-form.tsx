@@ -34,11 +34,12 @@ const simpleFormSchema = z.object({
   salePrice: z.string().optional(),
   wholesalePrice: z.string().optional(),
   category: z.string().default("Bulk Flower"),
-  quantity: z.number().min(0).default(1),
+  quantity: z.coerce.number().min(0).default(1),
   weight: z.string().optional(),
   location: z.string().optional(),
   tier: z.string().optional(),
   strainType: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 type SimpleFormData = z.infer<typeof simpleFormSchema>;
