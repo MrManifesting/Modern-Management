@@ -4821,6 +4821,105 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Get media URLs for inventory items from Telegram and other sources
+  app.get("/api/media/item-images/:itemId", async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      
+      // Get item details
+      const item = await storage.getItemById(parseInt(itemId));
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Check for existing imageUrl field
+      const images = [];
+      if (item.imageUrl) {
+        images.push({
+          url: item.imageUrl,
+          source: 'direct',
+          type: 'primary'
+        });
+      }
+
+      // Search for media files by SKU, name, or ID patterns
+      const mediaFiles = await storage.getMediaFiles();
+      const itemMedia = mediaFiles.filter(media => {
+        const filename = media.filename.toLowerCase();
+        const itemName = item.name.toLowerCase();
+        const itemSku = item.sku?.toLowerCase() || '';
+        
+        return filename.includes(itemName) ||
+               (itemSku && filename.includes(itemSku)) ||
+               filename.includes(item.id.toString());
+      });
+
+      // Add Telegram media URLs
+      for (const media of itemMedia) {
+        if (media.telegramFileId) {
+          images.push({
+            url: `/api/media/telegram/${media.telegramFileId}`,
+            source: 'telegram',
+            type: 'media',
+            filename: media.filename
+          });
+        }
+      }
+
+      // Check for Shopify images if item has shopifyId
+      if (item.shopifyId) {
+        try {
+          // Add Shopify CDN images if available
+          const shopifyImages = await getShopifyProductImages(item.shopifyId);
+          for (const img of shopifyImages) {
+            images.push({
+              url: img.src,
+              source: 'shopify',
+              type: 'product',
+              alt: img.alt || item.name
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to fetch Shopify images:', error);
+        }
+      }
+
+      res.json({
+        itemId: item.id,
+        itemName: item.name,
+        images: images,
+        primaryImage: images.find(img => img.type === 'primary') || images[0] || null
+      });
+    } catch (error) {
+      console.error('Error fetching item images:', error);
+      res.status(500).json({ error: "Failed to fetch item images" });
+    }
+  });
+
+  // Update item with new image URL from Telegram or other sources
+  app.post("/api/media/item-images/:itemId", async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      const { imageUrl, source } = req.body;
+      
+      if (!imageUrl) {
+        return res.status(400).json({ error: "imageUrl is required" });
+      }
+
+      // Update item with new image URL
+      await storage.updateItem(parseInt(itemId), { imageUrl });
+      
+      res.json({
+        success: true,
+        message: `Updated item ${itemId} with image from ${source || 'unknown source'}`,
+        imageUrl
+      });
+    } catch (error) {
+      console.error('Error updating item image:', error);
+      res.status(500).json({ error: "Failed to update item image" });
+    }
+  });
+
   // Google OAuth token exchange endpoint
   app.post("/api/google-oauth/exchange-token", async (req: Request, res: Response) => {
     try {
