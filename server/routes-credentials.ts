@@ -41,6 +41,42 @@ function decrypt(encryptedText: string): string {
 export function registerCredentialRoutes(app: Express, storage: IStorage) {
   
   /**
+   * Get credentials status for all services
+   */
+  app.get("/api/credentials/status", async (_req: Request, res: Response) => {
+    try {
+      const credentials = await storage.getCredentials();
+      
+      // Check status for each service
+      const status: Record<string, { isValid: boolean; lastUsed?: string }> = {};
+      
+      for (const cred of credentials) {
+        status[cred.service] = {
+          isValid: cred.isActive || false,
+          lastUsed: cred.lastUsed?.toISOString()
+        };
+      }
+      
+      // Check environment variables for Shopify if no stored credentials
+      if (!status.shopify) {
+        const hasShopifyEnv = !!(process.env.SHOPIFY_STORE && process.env.SHOPIFY_ACCESS_TOKEN);
+        status.shopify = {
+          isValid: hasShopifyEnv,
+          lastUsed: undefined
+        };
+      }
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting credentials status:", error);
+      res.status(500).json({
+        error: "Failed to get credentials status",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
    * Get all saved credentials (without sensitive data)
    */
   app.get("/api/credentials", async (_req: Request, res: Response) => {

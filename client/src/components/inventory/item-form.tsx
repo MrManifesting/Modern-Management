@@ -129,11 +129,8 @@ export default function ItemFormComponent({
   };
 
   const handleSubmit = (data: ItemForm) => {
-    // Include the files with the form data
-    onSubmit({
-      ...data,
-      files,
-    });
+    // Submit the form data (files are handled separately)
+    onSubmit(data);
   };
 
   // Bulk upload functionality
@@ -338,7 +335,7 @@ export default function ItemFormComponent({
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select condition" />
+                      <SelectValue placeholder="Select quality" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
