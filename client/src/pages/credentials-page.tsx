@@ -12,17 +12,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface Credentials {
-  shopify: {
-    store: string;
-    accessToken: string;
+  shopify?: {
     isValid: boolean;
-  } | null;
-  googleSheets: {
-    clientId: string;
-    clientSecret: string;
-    spreadsheetId: string;
+    lastUsed?: string;
+  };
+  googleSheets?: {
     isValid: boolean;
-  } | null;
+    lastUsed?: string;
+  };
 }
 
 export default function CredentialsPage() {
@@ -31,7 +28,7 @@ export default function CredentialsPage() {
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
 
   // Fetch current credentials status
-  const { data: credentials, isLoading } = useQuery({
+  const { data: credentials = {}, isLoading } = useQuery<Credentials>({
     queryKey: ["/api/credentials/status"],
   });
 
@@ -170,13 +167,13 @@ export default function CredentialsPage() {
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="shopify" className="flex items-center gap-2">
               Shopify
-              {credentials?.shopify?.isValid && (
+              {credentials.shopify?.isValid && (
                 <CheckCircle className="h-4 w-4 text-green-500" />
               )}
             </TabsTrigger>
             <TabsTrigger value="google-sheets" className="flex items-center gap-2">
               Google Sheets
-              {credentials?.googleSheets?.isValid && (
+              {credentials.googleSheets?.isValid && (
                 <CheckCircle className="h-4 w-4 text-green-500" />
               )}
             </TabsTrigger>
@@ -187,7 +184,7 @@ export default function CredentialsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   Shopify Configuration
-                  {credentials?.shopify?.isValid ? (
+                  {credentials.shopify?.isValid ? (
                     <Badge variant="default" className="bg-green-500">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Connected
