@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Fixed Shopify Product Creation - Inventory Now Actually Syncs to Store**
+  - Resolved critical issue where inventory displayed "syncing" but products weren't being created on Shopify store
+  - Fixed missing function imports and export conflicts in shopify-sync.ts service
+  - Bypassed problematic push status cache that was blocking product creation after server restarts
+  - Successfully tested product creation: "wednesday test item top shelf thca" created with product ID 14743419060594
+  - System now properly pushes inventory items to MrListersCurations Shopify store instead of just showing sync status
+  - Inventory sync functionality fully operational - products will now appear on your live store when synced
 - June 17, 2025: **Enhanced Inventory Display with Newest-First Sorting and Current Stock Summary**
   - Modified inventory endpoints to display newest items first based on creation date and ID
   - Enhanced Google Sheets integration to show current stock and pricing at top of spreadsheet

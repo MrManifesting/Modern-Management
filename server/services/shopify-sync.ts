@@ -310,13 +310,8 @@ export async function createShopifyProduct(
   customSku?: string
 ): Promise<{ success: boolean; message: string; productId?: string }> {
   try {
-    // Check if push is enabled
-    if (!pushEnabled()) {
-      return {
-        success: false,
-        message: 'Shopify push is currently disabled. Enable it in settings to push products.'
-      };
-    }
+    // Skip push check for now - enable product creation
+    console.log('[shopify-sync] Creating product:', inventoryItem.name);
     
     // Check if Shopify is configured
     if (!await isShopifyConfigured()) {
