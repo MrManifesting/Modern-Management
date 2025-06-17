@@ -808,6 +808,8 @@ export const itemFormSchema = z.object({
   visibility: z.string().default("visible"),
 });
 
+export type ItemForm = z.infer<typeof itemFormSchema>;
+
 // Secure credentials storage table
 export const credentials = pgTable("credentials", {
   id: serial("id").primaryKey(),

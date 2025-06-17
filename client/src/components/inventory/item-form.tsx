@@ -60,16 +60,14 @@ export default function ItemFormComponent({
   defaultValues = {
     name: "",
     description: "",
-    basePrice: 0,
-    category: "Flower",
+    basePrice: "0",
+    costPrice: "0",
+    category: "Bulk Flower",
     condition: "New",
     status: "draft",
-    images: [],
     tags: [],
-    marketplace: [],
     weight: "1 pound", // 1 pound default
     brand: "Gold Standard",
-    attributes: {}, // Will store flowerQuality, flowerCategory, and other custom attributes
   },
   onSubmit,
   isLoading = false,
