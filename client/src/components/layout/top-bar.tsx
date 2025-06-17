@@ -93,11 +93,7 @@ export default function TopBar({
             onClick={toggleSidebar}
             variant="outline"
             size="sm"
-            className={`lg:hidden ${
-              isCustomTheme 
-                ? 'text-blue-500 border-blue-500/30 hover:bg-blue-500/10' 
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-            }`}
+            className="lg:hidden"
             aria-label="Toggle sidebar"
           >
             <Menu className="h-4 w-4 mr-1" />
@@ -107,53 +103,28 @@ export default function TopBar({
           {/* Desktop: Standard menu button */}
           <button
             onClick={toggleSidebar}
-            className={`rounded-md p-2 hidden lg:block ${
-              isCustomTheme 
-                ? 'text-blue-500 hover:bg-blue-500/10' 
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-            }`}
+            className="rounded-md p-2 hidden lg:block text-muted-foreground hover:text-foreground hover:bg-muted"
             aria-label="Toggle sidebar"
           >
             <Menu className="h-6 w-6" />
           </button>
           
           <div className="ml-2 sm:ml-4">
-            <h1 className={`text-lg sm:text-xl font-semibold truncate max-w-[150px] sm:max-w-none ${
-              isCustomTheme 
-                ? 'blue-gradient-text' 
-                : 'text-gray-800 dark:text-gray-100'
-            }`}>
+            <h1 className="text-lg sm:text-xl font-semibold truncate max-w-[150px] sm:max-w-none text-foreground">
               {pageTitle}
             </h1>
-            <p className={`text-xs sm:text-sm hidden sm:block ${
-              isCustomTheme 
-                ? 'text-gray-300' 
-                : 'text-gray-600 dark:text-gray-400'
-            }`}>
+            <p className="text-xs sm:text-sm hidden sm:block text-muted-foreground">
               {getPageDescription()}
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className={`rounded-full p-2 hidden sm:flex ${
-              isCustomTheme 
-                ? 'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
-            aria-label="Toggle custom theme"
-          >
-            <Sparkles className="h-5 w-5" />
-          </button>
-          
           {/* Dark mode toggle */}
-          {!isCustomTheme && <ThemeToggle />}
+          <ThemeToggle />
           
           {/* Notifications */}
-          <NotificationsDropdown isCustomTheme={isCustomTheme} />
+          <NotificationsDropdown />
 
           {/* Search - not shown on very small screens */}
           <div className="relative hidden sm:block">
@@ -162,14 +133,10 @@ export default function TopBar({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 sm:pr-4 text-sm focus:outline-none ${
-                isCustomTheme 
-                  ? 'bg-white border border-blue-500/50 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500 dark:bg-gray-800 dark:text-white'
-                  : 'border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white'
-              }`}
+              className="w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 sm:pr-4 text-sm bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
             <div className="absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 pointer-events-none">
-              <Search className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isCustomTheme ? 'text-blue-500/70' : 'text-gray-400'}`} />
+              <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             </div>
           </div>
           
@@ -177,11 +144,7 @@ export default function TopBar({
           <Button
             variant="ghost"
             size="icon"
-            className={`sm:hidden p-1.5 ${
-              isCustomTheme 
-                ? 'text-blue-500 hover:bg-blue-500/10' 
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-            }`}
+            className="sm:hidden p-1.5"
             onClick={() => alert('Mobile search coming soon')}
           >
             <Search className="h-4 w-4" />
@@ -192,11 +155,7 @@ export default function TopBar({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className={`flex items-center gap-2 ${
-                  isCustomTheme
-                    ? 'text-blue-500 hover:bg-blue-500/10'
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}
+                className="flex items-center gap-2"
               >
                 <User className="h-4 w-4" />
                 <span className="hidden md:inline-block">
@@ -204,11 +163,7 @@ export default function TopBar({
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={
-              isCustomTheme 
-                ? 'bg-white border border-blue-500/50 text-blue-700 dark:bg-gray-800 dark:text-blue-400' 
-                : ''
-            }>
+            <DropdownMenuContent align="end">
               {user ? (
                 <>
                   <div className="px-3 py-2 text-sm">
@@ -218,7 +173,7 @@ export default function TopBar({
                         : user.username}
                     </div>
                     <div className="text-xs opacity-75">{user.email}</div>
-                    <div className="text-xs mt-1 capitalize bg-blue-500/20 rounded-full px-2 py-0.5 inline-block">
+                    <div className="text-xs mt-1 capitalize bg-primary/20 rounded-full px-2 py-0.5 inline-block">
                       {user.role}
                     </div>
                   </div>
@@ -245,11 +200,7 @@ export default function TopBar({
           {/* Add Item button */}
           <Button
             onClick={() => setShowAddItemModal(true)}
-            className={`flex items-center ${
-              isCustomTheme
-                ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                : ''
-            }`}
+            className="flex items-center"
           >
             <PlusCircle className="mr-1 h-4 w-4" />
             <span className={`${isMobile ? 'hidden' : 'inline'}`}>Add Item</span>
