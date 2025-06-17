@@ -46,6 +46,7 @@ import { registerAffiliateRoutes } from "./routes-affiliate";
 import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
+import { registerGoogleOAuthRoutes } from "./routes-google-oauth";
 import { registerLabelRoutes } from "./routes-labels";
 import { registerSyncRoutes } from "./routes-sync";
 import { ShopifyProductImportService } from "./services/shopify-product-import.js";
