@@ -1380,13 +1380,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate current inventory summary for Google Sheets display
+  app.get('/api/inventory/current-summary', async (req, res) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Sort by newest first and filter for items with stock
+      const sortedItems = items
+        .filter(item => item.quantity && parseInt(item.quantity.toString()) > 0)
+        .sort((a, b) => {
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          }
+          if (a.createdAt && !b.createdAt) return -1;
+          if (!a.createdAt && b.createdAt) return 1;
+          return b.id - a.id;
+        });
+      
+      // Create summary data for spreadsheet display
+      const summaryData = sortedItems.slice(0, 50).map(item => ({
+        sku: item.sku || 'N/A',
+        name: item.name,
+        category: item.category || 'General',
+        weight: item.weight || 'N/A',
+        basePrice: item.basePrice ? `$${parseFloat(item.basePrice).toFixed(2)}` : 'No Price',
+        quantity: item.quantity || 0,
+        brand: item.brand || 'Gold Standard',
+        status: item.status || 'draft',
+        lastUpdated: item.updatedAt || item.createdAt || new Date()
+      }));
+      
+      res.json({
+        summary: summaryData,
+        totalItems: items.length,
+        inStockItems: sortedItems.length,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error generating inventory summary:', error);
+      res.status(500).json({ error: 'Failed to generate inventory summary' });
+    }
+  });
+
   // Generate dynamic price sheet for bulk flower
   app.get('/api/generate-price-sheet', async (req, res) => {
     try {
       const items = await storage.getItems();
       
+      // Sort by newest first
+      const sortedItems = items.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        return b.id - a.id;
+      });
+      
       // Filter for flower products only
-      const flowerItems = items.filter(item => 
+      const flowerItems = sortedItems.filter(item => 
         item.category?.toLowerCase().includes('flower') ||
         item.category?.toLowerCase().includes('bulk') ||
         item.name?.toLowerCase().includes('flower')
@@ -4846,7 +4898,20 @@ ${topCustomersCsv}`;
       console.log('Fetching enhanced inventory items with Google Sheets data...');
       const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
       
-      res.json(enhancedItems);
+      // Sort by newest first (createdAt desc, then by ID desc for items without createdAt)
+      const sortedItems = enhancedItems.sort((a, b) => {
+        // First priority: items with createdAt dates
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        // Second priority: items with createdAt vs without
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        // Third priority: sort by ID descending (newer IDs first)
+        return b.id - a.id;
+      });
+      
+      res.json(sortedItems);
     } catch (error) {
       console.error('Error fetching enhanced inventory items:', error);
       res.status(500).json({ 
@@ -5309,7 +5374,7 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Get Google Sheets view URL for item
+  // Get Google Sheets view URL for item with enhanced inventory display
   app.get('/api/items/:id/sheets-view', async (req, res) => {
     try {
       const itemId = parseInt(req.params.id);
@@ -5317,14 +5382,24 @@ ${topCustomersCsv}`;
       const item = items.find(i => i.id === itemId);
 
       if (!item) {
-        return res.status(404).json({ error: 'Item not found' });
+        return res.status(404).json({ 
+          success: false,
+          message: 'Item not found' 
+        });
       }
 
+      // Create enhanced URL that opens to current inventory view
       const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
       const searchTerm = item.sku || item.name;
+      
+      // Open to the main inventory sheet with search
       const url = `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
 
-      res.json({ url });
+      res.json({ 
+        success: true,
+        url: url,
+        message: `Opening Google Sheets with search for: ${searchTerm}`
+      });
     } catch (error) {
       console.error('Error getting Google Sheets view URL:', error);
       res.status(500).json({ error: 'Failed to get Google Sheets view URL' });
