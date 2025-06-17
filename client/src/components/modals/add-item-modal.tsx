@@ -332,7 +332,28 @@ export default function AddItemModal({
         <div className="mt-4">
           <SimpleItemForm
             defaultValues={getDefaultValues()}
-            onSubmit={handleSubmit}
+            onSubmit={(data) => handleSubmit({
+              ...data,
+              description: data.description || '',
+              brand: data.brand || '',
+              sku: data.sku || '',
+              costPrice: data.costPrice || '',
+              basePrice: data.basePrice || '',
+              salePrice: data.salePrice || '',
+              wholesalePrice: data.wholesalePrice || '',
+              weight: data.weight || '',
+              strainType: data.strainType || '',
+              imageUrl: data.imageUrl || '',
+              barcode: data.barcode || '',
+              qrCode: data.qrCode || '',
+              dimensions: data.dimensions || '',
+              condition: data.condition || '',
+              tags: data.tags || [],
+              thcaPercentage: data.thcaPercentage || '',
+              itemType: data.itemType || '',
+              visibility: data.visibility || '',
+              marketplace: data.marketplace || []
+            })}
             isLoading={createMutation.isPending || shopifySyncStatus === 'syncing'}
             isEditing={isEditing}
           />
