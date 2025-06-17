@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Enhanced Google Sheets Integration with New OAuth Credentials**
+  - Configured new Google OAuth credentials (client ID: 574411309352-9a4sc5164uobfqjasv2jrt1t027utok8) for improved authentication
+  - Added comprehensive Google OAuth authentication service with proper token management
+  - Created complete Google Sheets viewing functionality in enhanced inventory interface
+  - Both Shopify and Google Sheets view buttons now functional - Google Sheets opens with automatic item search
+  - Built dedicated OAuth setup page at `/google-oauth-setup` for credential configuration
+  - Enhanced backend endpoints support both direct Shopify admin links and Google Sheets search functionality
+  - System now provides seamless access to view any inventory item live on Shopify or directly in Google Sheets
 - June 17, 2025: **Complete Cannabis Breakdown System Fixed and Fully Operational**
   - Resolved critical parent item quantity reduction issue in breakdown functionality
   - Fixed weight field preservation during database operations preventing proper calculations

@@ -4990,6 +4990,9 @@ ${topCustomersCsv}`;
   // Register breakdown routes
   registerBreakdownRoutes(app, storage);
   registerAutoBreakdownRoutes(app, storage);
+  
+  // Register Google OAuth routes
+  registerGoogleOAuthRoutes(app);
 
   return app;
 }

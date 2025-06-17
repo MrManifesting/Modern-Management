@@ -1,238 +1,378 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy, ExternalLink, Key, Loader2 } from 'lucide-react';
+import { ExternalLink, CheckCircle, AlertCircle, Key, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+
+interface GoogleStatus {
+  authenticated: boolean;
+  isExpired?: boolean;
+  hasRefreshToken?: boolean;
+  scopes?: string[];
+  message: string;
+}
+
+interface AuthUrlResponse {
+  success: boolean;
+  authUrl: string;
+  message: string;
+}
 
 export default function GoogleOAuthSetupPage() {
-  const { toast } = useToast();
   const [authCode, setAuthCode] = useState('');
-  const [refreshToken, setRefreshToken] = useState('');
+  const { toast } = useToast();
 
-  // Get the actual auth URL from backend
-  const { data: authData, isLoading } = useQuery({
-    queryKey: ['/api/google-oauth/auth-url'],
+  // Check current Google OAuth status
+  const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<GoogleStatus>({
+    queryKey: ['/api/google/status'],
   });
 
-  const authUrl = authData?.authUrl || '';
+  // Get authorization URL
+  const { data: authInfo, refetch: getAuthUrl } = useQuery<AuthUrlResponse>({
+    queryKey: ['/api/google/auth'],
+    enabled: false
+  });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "URL copied to clipboard",
-    });
+  // Exchange authorization code for tokens
+  const exchangeCode = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await apiRequest('POST', '/api/google/callback', { code });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Authentication Successful",
+        description: data.message,
+      });
+      setAuthCode('');
+      queryClient.invalidateQueries({ queryKey: ['/api/google/status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Authentication Failed",
+        description: error.message || "Failed to complete OAuth authentication",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Refresh access token
+  const refreshToken = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/google/refresh');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Token Refreshed",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/google/status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Refresh Failed",
+        description: error.message || "Failed to refresh access token",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Test Google Sheets access
+  const testSheets = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', '/api/google/test-sheets');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Sheets Test Successful",
+        description: `Connected to: ${data.spreadsheet?.title}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sheets Test Failed",
+        description: error.message || "Failed to access Google Sheets",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Revoke tokens
+  const revokeTokens = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/google/revoke');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Tokens Revoked",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/google/status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Revoke Failed",
+        description: error.message || "Failed to revoke tokens",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGetAuthUrl = () => {
+    getAuthUrl();
   };
 
-  const exchangeCodeForToken = async () => {
-    if (!authCode) {
+  const handleExchangeCode = () => {
+    if (!authCode.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter the authorization code",
+        title: "Code Required",
+        description: "Please enter the authorization code from Google",
         variant: "destructive",
       });
       return;
     }
-
-    try {
-      const response = await fetch('/api/google-oauth/exchange-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: authCode })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setRefreshToken(result.refresh_token);
-        toast({
-          title: "Success",
-          description: "Refresh token generated successfully!",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to exchange code",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to exchange authorization code",
-        variant: "destructive",
-      });
-    }
+    exchangeCode.mutate(authCode.trim());
   };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Google Sheets OAuth Setup</h1>
-          <p className="text-muted-foreground">
-            Get your Google Sheets refresh token for THCa inventory automation
-          </p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Google OAuth Setup</h1>
+        <p className="text-gray-600">
+          Configure Google OAuth authentication for enhanced Google Sheets integration
+        </p>
+      </div>
 
-        <div className="grid gap-6">
-          {/* Step 1: Authorization */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                Authorize Application
-              </CardTitle>
-              <CardDescription>
-                Click the link below to authorize the application to access your Google Sheets
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-mono break-all">{authUrl}</p>
+      <div className="grid gap-6">
+        {/* Current Status Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Authentication Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {statusLoading ? (
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Checking authentication status...</span>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => window.open(authUrl, '_blank')}
-                  className="flex items-center gap-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open Authorization URL
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => copyToClipboard(authUrl)}
-                  className="flex items-center gap-2"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy URL
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Step 2: Enter Authorization Code */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                Enter Authorization Code
-              </CardTitle>
-              <CardDescription>
-                After authorizing, Google will provide an authorization code. Enter it below.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="authCode">Authorization Code</Label>
-                <Input
-                  id="authCode"
-                  value={authCode}
-                  onChange={(e) => setAuthCode(e.target.value)}
-                  placeholder="Enter the authorization code from Google"
-                  className="font-mono"
-                />
-              </div>
-              <Button
-                onClick={exchangeCodeForToken}
-                disabled={!authCode}
-                className="flex items-center gap-2"
-              >
-                <Key className="h-4 w-4" />
-                Generate Refresh Token
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Step 3: Your Refresh Token */}
-          {refreshToken && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
-                  Your Refresh Token
-                </CardTitle>
-                <CardDescription>
-                  Copy this refresh token to your environment variables as GOOGLE_REFRESH_TOKEN
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-green-50 rounded-lg border">
-                  <p className="text-sm font-mono break-all text-green-800">{refreshToken}</p>
+            ) : status ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  {status.authenticated ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="font-medium">
+                    {status.authenticated ? 'Authenticated' : 'Not Authenticated'}
+                  </span>
+                  {status.isExpired && (
+                    <Badge variant="destructive">Token Expired</Badge>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                
+                <p className="text-sm text-gray-600">{status.message}</p>
+                
+                {status.authenticated && (
+                  <div className="space-y-2">
+                    {status.hasRefreshToken && (
+                      <Badge variant="secondary">Has Refresh Token</Badge>
+                    )}
+                    {status.scopes && status.scopes.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-1">Granted Scopes:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {status.scopes.map((scope, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {scope.replace('https://www.googleapis.com/auth/', '')}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
                   <Button
-                    onClick={() => copyToClipboard(refreshToken)}
-                    className="flex items-center gap-2"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchStatus()}
+                    disabled={statusLoading}
                   >
-                    <Copy className="h-4 w-4" />
-                    Copy Refresh Token
+                    <RefreshCw className={`h-4 w-4 mr-1 ${statusLoading ? 'animate-spin' : ''}`} />
+                    Refresh Status
                   </Button>
-                </div>
-                <Alert>
-                  <AlertDescription>
-                    <strong>Important:</strong> Save this refresh token as the <code>GOOGLE_REFRESH_TOKEN</code> environment variable. 
-                    Once you add this token, the THCa inventory system will automatically deduct quantities from column B 
-                    when orders are placed, using the KEY-ID in column G for matching.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          )}
+                  
+                  {status.authenticated && status.isExpired && status.hasRefreshToken && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refreshToken.mutate()}
+                      disabled={refreshToken.isPending}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${refreshToken.isPending ? 'animate-spin' : ''}`} />
+                      Refresh Token
+                    </Button>
+                  )}
 
-          {/* Alternative Method */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Alternative: Google OAuth 2.0 Playground</CardTitle>
-              <CardDescription>
-                Use Google's official OAuth playground for a guided setup
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                  {status.authenticated && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testSheets.mutate()}
+                      disabled={testSheets.isPending}
+                    >
+                      Test Sheets Access
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
               <Alert>
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Steps for OAuth Playground:</strong>
-                  <ol className="list-decimal list-inside mt-2 space-y-1">
-                    <li>Go to <a href="https://developers.google.com/oauthplayground" target="_blank" className="text-blue-600 underline">Google OAuth 2.0 Playground</a></li>
-                    <li>Click the gear icon (Settings) and check "Use your own OAuth credentials"</li>
-                    <li>Enter your Google Client ID and Client Secret</li>
-                    <li>In Step 1, select "Google Sheets API v4" and authorize</li>
-                    <li>In Step 2, click "Exchange authorization code for tokens"</li>
-                    <li>Copy the refresh_token from the response</li>
-                  </ol>
+                  Unable to check authentication status. Please try refreshing the page.
                 </AlertDescription>
               </Alert>
-              <Button
-                onClick={() => window.open('https://developers.google.com/oauthplayground', '_blank')}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open OAuth Playground
-              </Button>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Instructions */}
+        {/* OAuth Setup Card */}
+        {(!status?.authenticated || status?.isExpired) && (
           <Card>
             <CardHeader>
-              <CardTitle>What happens next?</CardTitle>
+              <CardTitle>Setup Google OAuth</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Follow these steps to authenticate with Google:
+                </p>
+                <ol className="list-decimal list-inside text-sm space-y-1 ml-4">
+                  <li>Click "Get Authorization URL" to generate the authentication link</li>
+                  <li>Visit the URL and grant permissions to your application</li>
+                  <li>Copy the authorization code from Google</li>
+                  <li>Paste the code below and click "Complete Authentication"</li>
+                </ol>
+              </div>
+
+              <div className="space-y-4">
+                <Button
+                  onClick={handleGetAuthUrl}
+                  disabled={getAuthUrl.isLoading}
+                  className="w-full"
+                >
+                  {getAuthUrl.isLoading ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
+                  Get Authorization URL
+                </Button>
+
+                {authInfo?.authUrl && (
+                  <Alert>
+                    <ExternalLink className="h-4 w-4" />
+                    <AlertDescription className="space-y-2">
+                      <p>Click the link below to authorize your application:</p>
+                      <a
+                        href={authInfo.authUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline break-all"
+                      >
+                        {authInfo.authUrl}
+                      </a>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-2">
+                  <label htmlFor="authCode" className="text-sm font-medium">
+                    Authorization Code from Google:
+                  </label>
+                  <Input
+                    id="authCode"
+                    type="text"
+                    placeholder="Paste the authorization code here..."
+                    value={authCode}
+                    onChange={(e) => setAuthCode(e.target.value)}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleExchangeCode}
+                  disabled={!authCode.trim() || exchangeCode.isPending}
+                  className="w-full"
+                >
+                  {exchangeCode.isPending ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Complete Authentication
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Management Actions */}
+        {status?.authenticated && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Authentication</CardTitle>
             </CardHeader>
             <CardContent>
-              <Alert>
-                <AlertDescription>
-                  Once you have the refresh token, add it to your environment variables as <code>GOOGLE_REFRESH_TOKEN</code>. 
-                  This will enable automatic THCa inventory deduction from column B when orders are placed, 
-                  using the KEY-ID in column G for matching.
-                </AlertDescription>
-              </Alert>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Manage your Google OAuth authentication and test connectivity.
+                </p>
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => testSheets.mutate()}
+                    disabled={testSheets.isPending}
+                  >
+                    {testSheets.isPending ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Test Google Sheets
+                  </Button>
+                  
+                  <Button
+                    variant="destructive"
+                    onClick={() => revokeTokens.mutate()}
+                    disabled={revokeTokens.isPending}
+                  >
+                    {revokeTokens.isPending ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Revoke Access
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
     </div>
   );
