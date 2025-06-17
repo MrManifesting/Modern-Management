@@ -26,9 +26,9 @@ import { type Item } from "@shared/schema";
 // Simple form schema matching available fields
 const simpleFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  description: z.string().default(""),
   sku: z.string().optional(),
-  brand: z.string().optional(),
+  brand: z.string().default("Gold Standard"),
   status: z.string().default("draft"),
   costPrice: z.string().optional(),
   basePrice: z.string().optional(),
@@ -37,7 +37,7 @@ const simpleFormSchema = z.object({
   category: z.string().default("Bulk Flower"),
   quantity: z.coerce.number().min(0).default(1),
   weight: z.string().optional(),
-  location: z.string().optional(),
+
   tier: z.string().optional(),
   strainType: z.string().optional(),
   imageUrl: z.string().optional(),
