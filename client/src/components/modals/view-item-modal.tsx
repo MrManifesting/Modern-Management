@@ -35,7 +35,7 @@ export default function ViewItemModal({ item, trigger }: ViewItemModalProps) {
     enabled: open && !!item.id,
   });
 
-  const images: ItemImage[] = imageData?.images || [];
+  const images: any[] = (imageData as any)?.images || [];
 
   const formatPrice = (price: string | number | null) => {
     if (!price || price === '0' || price === 0) return 'No Price';
