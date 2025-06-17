@@ -375,6 +375,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         itemData.basePrice = String(itemData.basePrice);
       }
       
+      // Enforce business requirement: Only items with valid pricing are accepted
+      const basePrice = parseFloat(itemData.basePrice || '0');
+      if (basePrice <= 0) {
+        return res.status(400).json({ 
+          error: "Invalid pricing", 
+          message: "Items must have a valid base price greater than 0. Only items with proper pricing are accepted for inventory management." 
+        });
+      }
+      
       console.log("Prepared item data:", JSON.stringify(itemData, null, 2));
       
       // Parse the data through Zod schema
@@ -5848,6 +5857,47 @@ ${topCustomersCsv}`;
   
   // Register Google OAuth routes
   registerGoogleOAuthRoutes(app);
+
+  // Inventory Sync API endpoints
+  app.get("/api/inventory-sync/status", (_req: Request, res: Response) => {
+    try {
+      const status = inventorySyncScheduler.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Failed to get inventory sync status:', error);
+      res.status(500).json({ error: 'Failed to get sync status' });
+    }
+  });
+
+  app.post("/api/inventory-sync/start", (_req: Request, res: Response) => {
+    try {
+      inventorySyncScheduler.startScheduler();
+      res.json({ success: true, message: 'Inventory sync scheduler started' });
+    } catch (error) {
+      console.error('Failed to start inventory sync:', error);
+      res.status(500).json({ error: 'Failed to start sync scheduler' });
+    }
+  });
+
+  app.post("/api/inventory-sync/stop", (_req: Request, res: Response) => {
+    try {
+      inventorySyncScheduler.stopScheduler();
+      res.json({ success: true, message: 'Inventory sync scheduler stopped' });
+    } catch (error) {
+      console.error('Failed to stop inventory sync:', error);
+      res.status(500).json({ error: 'Failed to stop sync scheduler' });
+    }
+  });
+
+  app.post("/api/inventory-sync/manual", async (_req: Request, res: Response) => {
+    try {
+      await inventorySyncScheduler.manualSync();
+      res.json({ success: true, message: 'Manual inventory sync completed' });
+    } catch (error) {
+      console.error('Failed to perform manual sync:', error);
+      res.status(500).json({ error: 'Manual sync failed' });
+    }
+  });
 
   return app;
 }

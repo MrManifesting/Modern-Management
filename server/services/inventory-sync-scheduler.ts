@@ -55,7 +55,15 @@ class InventorySyncScheduler {
       
       // Get all Shopify products with current inventory
       const shopifyProductsResponse: any = await getShopifyProducts();
-      const shopifyProducts = Array.isArray(shopifyProductsResponse) ? shopifyProductsResponse : shopifyProductsResponse?.products || [];
+      let shopifyProducts: any[] = [];
+      
+      if (Array.isArray(shopifyProductsResponse)) {
+        shopifyProducts = shopifyProductsResponse;
+      } else if (shopifyProductsResponse && shopifyProductsResponse.products) {
+        shopifyProducts = shopifyProductsResponse.products;
+      } else if (shopifyProductsResponse && shopifyProductsResponse.data) {
+        shopifyProducts = shopifyProductsResponse.data;
+      }
       
       if (!shopifyProducts || shopifyProducts.length === 0) {
         log('No Shopify products found during sync', 'inventory-sync');
