@@ -48,6 +48,7 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerGoogleOAuthRoutes } from "./routes-google-oauth";
 import { registerLabelRoutes } from "./routes-labels";
+import { inventorySyncScheduler } from "./services/inventory-sync-scheduler";
 import { registerSyncRoutes } from "./routes-sync";
 import { ShopifyProductImportService } from "./services/shopify-product-import.js";
 import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
