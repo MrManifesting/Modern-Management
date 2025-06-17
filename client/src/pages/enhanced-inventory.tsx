@@ -3,10 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ExternalLink, Package, DollarSign, Weight, Grid, List, FileSpreadsheet } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ExternalLink, Package, DollarSign, Weight, Grid, List, FileSpreadsheet, Eye, Edit, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import AddItemModal from '@/components/modals/add-item-modal';
+import { Item } from '@shared/schema';
 
 interface EnhancedItem {
   id: number;
@@ -30,6 +34,10 @@ interface EnhancedItem {
 
 export default function EnhancedInventory() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [viewingItem, setViewingItem] = useState<Item | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const { toast } = useToast();
   const { data: items = [], isLoading, error } = useQuery<EnhancedItem[]>({
     queryKey: ['/api/inventory/enhanced'],
@@ -57,6 +65,38 @@ export default function EnhancedInventory() {
           variant: "destructive"
         });
       });
+  };
+
+  // Handle edit item
+  const handleEditItem = async (itemId: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/items/${itemId}`);
+      const item = await response.json();
+      setEditingItem(item);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load item details for editing.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle view item details
+  const handleViewItem = async (itemId: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/items/${itemId}`);
+      const item = await response.json();
+      setViewingItem(item);
+      setIsViewModalOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load item details.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {
@@ -88,10 +128,14 @@ export default function EnhancedInventory() {
   }
 
   const formatPrice = (price: string | number) => {
-    if (!price) return 'No Price';
+    if (!price || price === '0' || price === 0) return 'No Price';
+    
+    // Handle string prices that might have currency symbols
     const priceStr = String(price).replace(/[$,\s]/g, '');
     const num = parseFloat(priceStr);
-    return isNaN(num) || num === 0 ? 'No Price' : `$${num.toFixed(2)}`;
+    
+    if (isNaN(num) || num === 0) return 'No Price';
+    return `$${num.toFixed(2)}`;
   };
 
   const getShopifyUrl = (item: EnhancedItem) => {
@@ -290,36 +334,51 @@ export default function EnhancedInventory() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="outline" asChild>
-                        <a
-                          href={getShopifyUrl(item)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="View on Shopify"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleViewSheetsClick(item.id)}
-                        title="View in Google Sheets"
-                      >
-                        <FileSpreadsheet className="w-3 h-3" />
-                      </Button>
-                      {item.coasLink && (
-                        <Button size="sm" variant="outline" asChild>
-                          <a 
-                            href={item.coasLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            title="View COAs"
-                          >
-                            <Package className="w-3 h-3" />
-                          </a>
-                        </Button>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <MoreHorizontal className="w-3 h-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewItem(item.id)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditItem(item.id)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Item
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <a
+                              href={getShopifyUrl(item)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              View on Shopify
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewSheetsClick(item.id)}>
+                            <FileSpreadsheet className="w-4 h-4 mr-2" />
+                            View in Google Sheets
+                          </DropdownMenuItem>
+                          {item.coasLink && (
+                            <DropdownMenuItem asChild>
+                              <a 
+                                href={item.coasLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center"
+                              >
+                                <Package className="w-4 h-4 mr-2" />
+                                View COAs
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -401,36 +460,64 @@ export default function EnhancedInventory() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline" asChild className="flex-1">
-                      <a
-                        href={getShopifyUrl(item)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        Shopify
-                      </a>
+                  <div className="flex gap-1 pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleViewItem(item.id)}
+                      className="flex-1"
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      View
                     </Button>
                     
                     <Button 
                       size="sm" 
                       variant="outline"
-                      onClick={() => handleViewSheetsClick(item.id)}
+                      onClick={() => handleEditItem(item.id)}
                       className="flex-1"
                     >
-                      <FileSpreadsheet className="w-3 h-3 mr-1" />
-                      Sheets
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
                     </Button>
-                    
-                    {item.coasLink && (
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={item.coasLink} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          COAs
-                        </a>
-                      </Button>
-                    )}
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <MoreHorizontal className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={getShopifyUrl(item)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            View on Shopify
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewSheetsClick(item.id)}>
+                          <FileSpreadsheet className="w-4 h-4 mr-2" />
+                          View in Google Sheets
+                        </DropdownMenuItem>
+                        {item.coasLink && (
+                          <DropdownMenuItem asChild>
+                            <a 
+                              href={item.coasLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center"
+                            >
+                              <Package className="w-4 h-4 mr-2" />
+                              View COAs
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -448,6 +535,107 @@ export default function EnhancedInventory() {
           </p>
         </div>
       )}
+
+      {/* Edit Item Modal */}
+      <AddItemModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingItem(null);
+        }}
+        editItem={editingItem}
+      />
+
+      {/* View Item Details Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Item Details</DialogTitle>
+            <DialogDescription>
+              View complete information for this inventory item
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingItem && (
+            <div className="space-y-6">
+              {/* Item Images */}
+              {viewingItem.images && Array.isArray(viewingItem.images) && viewingItem.images.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Images</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {viewingItem.images.map((image: string, index: number) => (
+                      <div key={index} className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={image}
+                          alt={`${viewingItem.name} image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Item Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-2">Basic Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Name:</strong> {viewingItem.name}</div>
+                    <div><strong>SKU:</strong> {viewingItem.sku || 'Not assigned'}</div>
+                    <div><strong>Category:</strong> {viewingItem.category || 'N/A'}</div>
+                    <div><strong>Brand:</strong> {viewingItem.brand || 'N/A'}</div>
+                    <div><strong>Weight:</strong> {viewingItem.weight || 'N/A'}</div>
+                    <div><strong>Status:</strong> {viewingItem.status || 'N/A'}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium mb-2">Pricing & Inventory</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Base Price:</strong> {formatPrice(viewingItem.basePrice)}</div>
+                    <div><strong>Cost Price:</strong> {formatPrice(viewingItem.costPrice)}</div>
+                    <div><strong>Sale Price:</strong> {formatPrice(viewingItem.salePrice)}</div>
+                    <div><strong>Quantity:</strong> {viewingItem.quantity || 0} units</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewingItem.description && (
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-sm text-gray-600">{viewingItem.description}</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleEditItem(viewingItem.id);
+                  }}
+                  className="flex-1"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Item
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
