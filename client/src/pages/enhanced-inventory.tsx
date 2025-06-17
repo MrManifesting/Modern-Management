@@ -72,9 +72,10 @@ export default function EnhancedInventory() {
 
   const handleViewShopify = async (item: EnhancedItem) => {
     try {
-      const response = await apiRequest(`/api/items/${item.id}/shopify-store-view`);
-      if (response.url) {
-        window.open(response.url, '_blank');
+      const response = await fetch(`/api/items/${item.id}/shopify-store-view`);
+      const data = await response.json();
+      if (data.url) {
+        window.open(data.url, '_blank');
       } else {
         window.open(getShopifyUrl(item), '_blank');
       }
