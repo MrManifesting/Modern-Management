@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 16, 2025: **Enhanced Quick Breakdown with Weight Dropdown Selector**
+  - Added standard cannabis weight dropdown selector to quick breakdown component
+  - Included common weights: 1g, 3.5g (eighth), 7g (quarter), 14g (half ounce), 28g (ounce), 56g (quarter pound), 112g (half pound), 224g (half pound), 448g (pound)
+  - Added custom weight option for non-standard amounts
+  - Improved UI layout with better spacing and organization
+  - Enhanced user experience with standardized weight selection while maintaining flexibility
 - June 16, 2025: **Complete THCa Inventory Deduction System Deployed**
   - Built automatic THCa inventory deduction from column B using KEY-ID matching from column G
   - Created streamlined OAuth setup at /thca-setup using stored Google Client ID and Client Secret
