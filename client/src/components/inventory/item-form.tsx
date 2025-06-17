@@ -85,6 +85,20 @@ export default function ItemFormComponent({
     defaultValues,
   });
 
+  // Reset form when defaultValues change (for edit mode)
+  useEffect(() => {
+    if (defaultValues) {
+      form.reset(defaultValues);
+      
+      // Update images if editing
+      if (defaultValues.images && Array.isArray(defaultValues.images)) {
+        setImageUrls(defaultValues.images as string[]);
+      } else {
+        setImageUrls([]);
+      }
+    }
+  }, [defaultValues, form]);
+
   // Handle file preview URLs cleanup
   useEffect(() => {
     return () => {

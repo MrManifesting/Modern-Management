@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Complete Inventory Viewing and Editing System Deployed**
+  - Fixed inventory listing viewing functionality enabling users to view any listing live on Shopify or directly on Google Sheets
+  - Added proper edit and view action buttons to enhanced inventory table and grid views with dropdown menus
+  - Implemented view modal displaying complete item details including uploaded images that were previously missing  
+  - Fixed edit functionality to open pre-filled forms instead of blank add item menus
+  - Corrected price formatting issues displaying actual input prices instead of 0.00
+  - Updated default form values: category defaults to "Bulk Flower", brand to "Gold Standard", status to "draft"
+  - Enhanced both table and grid views with consistent action menus for view, edit, Shopify admin, and Google Sheets access
+  - Google Sheets integration opens with automatic item search by SKU or name for direct inventory verification
+  - Shopify integration provides direct admin product page access for live store management
 - June 17, 2025: **Enhanced Google Sheets Integration with New OAuth Credentials**
   - Configured new Google OAuth credentials (client ID: 574411309352-9a4sc5164uobfqjasv2jrt1t027utok8) for improved authentication
   - Added comprehensive Google OAuth authentication service with proper token management

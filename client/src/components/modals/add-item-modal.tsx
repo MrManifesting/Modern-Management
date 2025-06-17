@@ -133,11 +133,30 @@ export default function AddItemModal({
         name: initialName,
         description: "",
         basePrice: 0,
-        category: "Electronics",
+        category: "Bulk Flower",
+        brand: "Gold Standard",
         condition: "New",
         sku: "",
         itemType: "regular",
         quantity: 1,
+        status: "draft",
+        tags: [],
+        marketplace: [],
+        aiTags: []
+      };
+    } else {
+      // Default values for new items
+      return {
+        name: "",
+        description: "",
+        basePrice: 0,
+        category: "Bulk Flower",
+        brand: "Gold Standard",
+        condition: "New",
+        sku: "",
+        itemType: "regular",
+        quantity: 1,
+        status: "draft",
         tags: [],
         marketplace: [],
         aiTags: []
