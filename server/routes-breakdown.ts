@@ -340,28 +340,36 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
           return sum + (targetGrams * target.quantity);
         }, 0);
         
-        // Calculate exact parent units consumed
-        // If breaking down exactly matches parent units, consume those exact units
+        // Calculate exact parent units consumed - for exact weight matches, should be 1:1
+        // Example: 1 pound parent, breaking into 2x 0.5 pound = 454g total / 454g per unit = 1 unit consumed
         const exactUnitsConsumed = totalBreakdownGrams / parentGramsPerUnit;
-        const unitsConsumed = Math.round(exactUnitsConsumed); // Use Math.round for exact matches
+        
+        // For exact weight breakdowns (like 1 pound -> 2 half pounds), this should equal 1
+        const unitsConsumed = Math.max(1, Math.round(exactUnitsConsumed));
         
         // Ensure we don't consume more than available
         const actualUnitsConsumed = Math.min(unitsConsumed, currentQuantity);
         const newQuantity = Math.max(0, currentQuantity - actualUnitsConsumed);
         
         console.log(`Breakdown calculation details:`);
-        console.log(`- Parent weight: ${parentItem.weight} (${parentGramsPerUnit}g per unit)`);
+        console.log(`- Parent: ${parentItem.name} (${parentItem.weight})`);
+        console.log(`- Parent weight per unit: ${parentGramsPerUnit}g`);
         console.log(`- Current parent quantity: ${currentQuantity}`);
-        console.log(`- Total breakdown grams: ${totalBreakdownGrams}g`);
-        console.log(`- Exact units consumed: ${exactUnitsConsumed}`);
-        console.log(`- Rounded units consumed: ${unitsConsumed}`);
-        console.log(`- Actual units consumed: ${actualUnitsConsumed}`);
+        console.log(`- Total breakdown weight: ${totalBreakdownGrams}g`);
+        console.log(`- Exact units consumed calculation: ${totalBreakdownGrams}g ÷ ${parentGramsPerUnit}g = ${exactUnitsConsumed}`);
+        console.log(`- Final units consumed: ${actualUnitsConsumed}`);
         console.log(`- New parent quantity: ${newQuantity}`);
         
-        // Only update quantity, preserve all other fields including weight
-        await storage.updateItem(itemId, { quantity: newQuantity });
+        // Update only the quantity field
+        const updateResult = await storage.updateItem(itemId, { quantity: newQuantity });
         
-        console.log(`Breakdown completed successfully - parent quantity updated from ${currentQuantity} to ${newQuantity}`);
+        if (updateResult) {
+          console.log(`✓ Parent quantity successfully updated from ${currentQuantity} to ${newQuantity}`);
+        } else {
+          console.error(`✗ Failed to update parent quantity for item ${itemId}`);
+        }
+      } else {
+        console.log(`Skipping parent quantity update - weight: ${parentItem.weight}, quantity: ${currentQuantity}`);
       }
       
       return res.status(200).json({
