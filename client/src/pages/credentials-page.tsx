@@ -31,7 +31,7 @@ export default function CredentialsPage() {
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
 
   // Fetch current credentials status
-  const { data: credentials, isLoading } = useQuery<Credentials>({
+  const { data: credentials, isLoading } = useQuery({
     queryKey: ["/api/credentials/status"],
   });
 
