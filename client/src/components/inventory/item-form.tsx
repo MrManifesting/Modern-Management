@@ -33,7 +33,32 @@ import {
   PRODUCT_TYPE_OPTIONS,
   getSubcategoriesForCategory
 } from "./category-data";
-import { itemFormSchema, ItemForm, Item } from "@shared/schema";
+import { itemFormSchema, type Item } from "@shared/schema";
+
+// Define ItemForm type locally to avoid schema conflicts
+type ItemForm = {
+  name: string;
+  description?: string;
+  sku?: string;
+  brand?: string;
+  status?: string;
+  costPrice?: string;
+  basePrice?: string;
+  salePrice?: string;
+  wholesalePrice?: string;
+  category: string;
+  tags?: string[];
+  quantity: number;
+  barcode?: string;
+  weight?: string;
+  dimensions?: string;
+  condition?: string;
+  location?: string;
+  tier?: string;
+  strainType?: string;
+  itemType?: string;
+  visibility?: string;
+};
 import { useDropzone } from "react-dropzone";
 import { Zap, Image as ImageIcon, X, Upload, PlusCircle, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -356,14 +381,10 @@ export default function ItemFormComponent({
               <FormLabel>Flower Quality</FormLabel>
               <Select 
                 onValueChange={(value) => {
-                  // Store flower quality in attributes
-                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                  form.setValue("attributes", {
-                    ...currentAttributes,
-                    flowerQuality: value
-                  } as any);
+                  // Store flower quality in tier field
+                  form.setValue("tier", value);
                 }}
-                defaultValue={(form.getValues("attributes") as any)?.flowerQuality || ""}
+                defaultValue={form.getValues("tier") || ""}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -382,27 +403,22 @@ export default function ItemFormComponent({
             </FormItem>
             
             <FormItem>
-              <FormLabel>Flower Category</FormLabel>
+              <FormLabel>Strain Type</FormLabel>
               <Select 
                 onValueChange={(value) => {
-                  // Store flower category in attributes
-                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                  form.setValue("attributes", {
-                    ...currentAttributes,
-                    flowerCategory: value
-                  } as any);
+                  form.setValue("strainType", value);
                 }}
-                defaultValue={(form.getValues("attributes") as any)?.flowerCategory || ""}
+                defaultValue={form.getValues("strainType") || ""}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select strain type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {FLOWER_STRAIN_TYPES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  {FLOWER_STRAIN_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -416,14 +432,9 @@ export default function ItemFormComponent({
               <FormLabel>Bulk Categorization</FormLabel>
               <Select 
                 onValueChange={(value) => {
-                  // Store bulk category in attributes
-                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                  form.setValue("attributes", {
-                    ...currentAttributes,
-                    bulkCategory: value
-                  } as any);
+                  form.setValue("condition", value);
                 }}
-                defaultValue={(form.getValues("attributes") as any)?.bulkCategory || ""}
+                defaultValue={form.getValues("condition") || ""}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -503,14 +514,9 @@ export default function ItemFormComponent({
             <FormLabel>Type</FormLabel>
             <Select 
               onValueChange={(value) => {
-                // Store product type in attributes
-                const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                form.setValue("attributes", {
-                  ...currentAttributes,
-                  productType: value
-                } as any);
+                form.setValue("itemType", value);
               }}
-              defaultValue={(form.getValues("attributes") as any)?.productType || ""}
+              defaultValue={form.getValues("itemType") || ""}
             >
               <FormControl>
                 <SelectTrigger>
@@ -551,12 +557,8 @@ export default function ItemFormComponent({
               <Checkbox 
                 checked={(form.getValues("attributes") as any)?.allowDragDropBreakdown || false}
                 onCheckedChange={(checked) => {
-                  // Store in attributes object
-                  const currentAttributes = form.getValues("attributes") as Record<string, any> || {};
-                  form.setValue("attributes", {
-                    ...currentAttributes,
-                    allowDragDropBreakdown: checked
-                  } as any);
+                  // Store in visibility field
+                  form.setValue("visibility", checked ? "visible" : "hidden");
                 }}
               />
             </FormControl>
