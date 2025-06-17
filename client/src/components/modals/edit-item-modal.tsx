@@ -28,9 +28,12 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
     setIsLoading(true);
     
     try {
-      await apiRequest(`/api/items/${item.id}`, {
+      await fetch(`/api/items/${item.id}`, {
         method: "PATCH",
-        body: data
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
 
       // Invalidate items cache to refresh the data

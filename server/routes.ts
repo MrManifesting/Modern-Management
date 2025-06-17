@@ -4923,8 +4923,17 @@ ${topCustomersCsv}`;
   // Sync dashboard status endpoint
   app.get("/api/sync/status", async (_req: Request, res: Response) => {
     try {
-      // Check Shopify connection
-      const shopifyConnected = !!(process.env.SHOPIFY_STORE && process.env.SHOPIFY_ADMIN_TOKEN);
+      // Check Shopify connection by testing actual API connectivity
+      let shopifyConnected = false;
+      try {
+        if (process.env.SHOPIFY_STORE && process.env.SHOPIFY_ADMIN_TOKEN) {
+          const testResult = await testShopifyConnection();
+          shopifyConnected = testResult.connected;
+        }
+      } catch (error) {
+        console.warn('Shopify connection test failed:', error);
+        shopifyConnected = false;
+      }
       
       // Check Google Sheets connection
       let googleSheetsConnected = false;
