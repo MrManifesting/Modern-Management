@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Fixed Marketplace Connection Test Failures**
+  - Corrected marketplace type ID mapping for proper service initialization
+  - Fixed Shopify marketplace connection (ID 1) with environment variable fallbacks
+  - Added proper stub services for unimplemented marketplaces (eBay, Amazon, Etsy)
+  - Replaced "TEST FAILED" errors with clear "not yet implemented" messages
+  - Shopify now shows successful connection status to mrlisterscurations.myshopify.com
 - June 16, 2025: **Enhanced Quick Breakdown with Weight Dropdown Selector**
   - Added standard cannabis weight dropdown selector to quick breakdown component
   - Included common weights: 1g, 3.5g (eighth), 7g (quarter), 14g (half ounce), 28g (ounce), 56g (quarter pound), 112g (half pound), 224g (half pound), 448g (pound)
