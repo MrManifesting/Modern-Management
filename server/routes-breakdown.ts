@@ -93,6 +93,33 @@ const dragDropBreakdownSchema = z.object({
  * Register breakdown routes
  */
 export function registerBreakdownRoutes(app: Express, storage: IStorage) {
+  
+  /**
+   * Get items with their breakdown children
+   */
+  app.get("/api/items/:id/with-children", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const parentItem = await storage.getItem(itemId);
+      
+      if (!parentItem) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Get all items with this parent ID
+      const allItems = await storage.getItems();
+      const childItems = allItems.filter(item => item.parentItemId === itemId);
+      
+      return res.json({
+        parent: parentItem,
+        children: childItems,
+        totalChildren: childItems.length
+      });
+    } catch (error) {
+      console.error("Error fetching item with children:", error);
+      res.status(500).json({ error: "Failed to fetch item with children" });
+    }
+  });
   /**
    * Create a bulk item breakdown using drag and drop
    */
@@ -301,7 +328,7 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
           quantity: target.quantity,
           weight: `${target.weight} ${target.weightUnit}`, // Store as string with unit
           itemType: ItemType.BREAKDOWN,
-          parentItemId: target.parentItemId,
+          parentItemId: parentItem.id, // Set correct parent ID
           // Cast images and tags to ensure proper typing
           images: (parentItem.images || []) as any,
           tags: (parentItem.tags || []) as any,
