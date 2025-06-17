@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Complete Automatic Shopify Inventory Sync System with Newest-First Display Deployed**
+  - Implemented comprehensive automatic inventory sync scheduler that runs every minute to update quantities from Shopify store
+  - Enhanced inventory API endpoints to display newest items first based on creation dates and ID numbers for better business workflow
+  - Added pricing validation requirement: only items with valid pricing (basePrice, salePrice, or wholesalePrice > 0) are accepted and displayed
+  - Fixed add item function with proper pricing validation preventing items without valid pricing from being added to inventory
+  - Created inventory sync control API endpoints: /api/inventory-sync/status, /api/inventory-sync/start, /api/inventory-sync/stop, /api/inventory-sync/manual
+  - Added current inventory summary endpoint (/api/inventory/current-summary) providing real-time stock status with sync information
+  - Automatic sync system matches Shopify products to local items by SKU and product title, updating quantities when differences detected
+  - Comprehensive logging system tracks all sync operations with detailed update information for inventory management
+  - Business requirement enforced: system now excludes items without proper pricing from all inventory operations and displays
+  - Inventory sync scheduler starts automatically on server startup and provides status monitoring for business operations
 - June 17, 2025: **Fixed Shopify Product Creation - Inventory Now Actually Syncs to Store**
   - Resolved critical issue where inventory displayed "syncing" but products weren't being created on Shopify store
   - Fixed missing function imports and export conflicts in shopify-sync.ts service
