@@ -105,25 +105,14 @@ export class MarketplaceService {
       
       const result = await this.service.testConnection();
       
-      // Log the test result
-      await MarketplaceLogger.logOperation(
-        this.marketplace,
-        'Test Connection',
-        `Testing connection to ${this.marketplace.name}`,
-        result.success ? 'success' : 'error',
-        result.success ? undefined : result.message
-      );
+      // Log the test result (temporarily disabled due to SQL syntax error)
+      // TODO: Fix MarketplaceLogger SQL syntax issue
+      console.log(`[marketplace-test] ${this.marketplace.name}: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.message}`);
       
       return result;
     } catch (error: any) {
-      // Log the error
-      await MarketplaceLogger.logOperation(
-        this.marketplace,
-        'Test Connection',
-        `Testing connection to ${this.marketplace.name}`,
-        'error',
-        error.message
-      );
+      // Log the error (temporarily disabled due to SQL syntax error)
+      console.log(`[marketplace-test] ${this.marketplace.name}: ERROR - ${error.message}`);
       
       return { 
         success: false, 
