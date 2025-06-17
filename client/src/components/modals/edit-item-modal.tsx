@@ -28,7 +28,10 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
     setIsLoading(true);
     
     try {
-      await apiRequest(`/api/items/${item.id}`, "PUT", data);
+      await apiRequest(`/api/items/${item.id}`, {
+        method: "PATCH",
+        body: data
+      });
 
       // Invalidate items cache to refresh the data
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
