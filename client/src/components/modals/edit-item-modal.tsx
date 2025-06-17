@@ -24,25 +24,46 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (data: any) => {
+  // Convert enhanced item to proper form data with all existing values
+  const getFormDefaults = () => {
+    return {
+      name: item.name || "",
+      description: item.description || "",
+      category: item.category || "Bulk Flower",
+      brand: item.brand || "Gold Standard", 
+      weight: item.weight || "",
+      sku: item.sku || "",
+      basePrice: item.basePrice || "",
+      costPrice: item.costPrice || "",
+      salePrice: item.salePrice || "",
+      wholesalePrice: item.wholesalePrice || "",
+      quantity: item.quantity || 0,
+      status: item.status || "draft",
+      vendor: item.vendor || "Gold Standard",
+      quality: item.quality || "Top Shelf",
+      imageUrl: item.imageUrl || "",
+      shopifyId: item.shopifyId || null,
+    };
+  };
+
+  const handleSubmit = async (formData: any) => {
     setIsLoading(true);
     
     try {
-      await fetch(`/api/items/${item.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest('PATCH', `/api/items/${item.id}`, formData);
+      
+      if (!response.ok) {
+        throw new Error('Failed to update item');
+      }
 
-      // Invalidate items cache to refresh the data
+      // Invalidate all relevant caches
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
       queryClient.invalidateQueries({ queryKey: ["/api/items/with-media"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory/enhanced"] });
       
       toast({
-        title: "Success",
-        description: "Item updated successfully",
+        title: "Item Updated",
+        description: `${formData.name} has been updated successfully`,
       });
       
       setOpen(false);
@@ -77,7 +98,7 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
         </DialogHeader>
         
         <SimpleItemForm
-          defaultValues={item}
+          defaultValues={getFormDefaults()}
           onSubmit={handleSubmit}
           isLoading={isLoading}
           isEditing={true}
