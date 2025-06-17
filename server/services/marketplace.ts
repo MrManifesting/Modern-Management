@@ -29,21 +29,61 @@ export class MarketplaceService {
       // Create the appropriate service based on marketplace name or marketplaceTypeId
       const marketplaceName = marketplace.name.toLowerCase();
       
-      // Handle Shopify marketplace (marketplaceTypeId 4 or name contains 'shopify')
-      if (marketplace.marketplaceTypeId === 4 || marketplaceName.includes('shopify')) {
+      // Handle Shopify marketplace (marketplaceTypeId 1 or name contains 'shopify')
+      if (marketplace.marketplaceTypeId === 1 || marketplaceName.includes('shopify')) {
         const credentials = marketplace.credentials as Record<string, string>;
         this.service = new ShopifyService(
-          credentials.shopName || credentials.storeUrl || marketplace.storeUrl || 'simplifiedcurations.myshopify.com', 
-          credentials.apiKey || credentials.accessToken || marketplace.apiKey || '', 
-          credentials.apiSecret || marketplace.apiSecret || ''
+          credentials.shopName || credentials.storeUrl || marketplace.storeUrl || 'mrlisterscurations.myshopify.com', 
+          credentials.apiKey || credentials.accessToken || marketplace.apiKey || process.env.SHOPIFY_ACCESS_TOKEN || '', 
+          credentials.apiSecret || marketplace.apiSecret || process.env.SHOPIFY_SECRET || ''
         );
       }
-      // Add other marketplace implementations here based on marketplaceTypeId
-      // eBay: marketplaceTypeId 1
-      // Etsy: marketplaceTypeId 2
+      // eBay: marketplaceTypeId 2
+      else if (marketplace.marketplaceTypeId === 2 || marketplaceName.includes('ebay')) {
+        // eBay service not yet implemented - return a stub service
+        this.service = {
+          testConnection: async () => ({ success: false, message: 'eBay integration is not yet implemented' }),
+          getMarketplaceInfo: async () => ({ success: false, message: 'eBay integration is not yet implemented' }),
+          syncProducts: async () => ({ success: false, message: 'eBay integration is not yet implemented' }),
+          pushProduct: async () => ({ success: false, message: 'eBay integration is not yet implemented' }),
+          prepareItemForPush: async () => ({ success: false, message: 'eBay integration is not yet implemented' }),
+          deleteProduct: async () => ({ success: false, message: 'eBay integration is not yet implemented' })
+        };
+      }
       // Amazon: marketplaceTypeId 3
+      else if (marketplace.marketplaceTypeId === 3 || marketplaceName.includes('amazon')) {
+        // Amazon service not yet implemented - return a stub service
+        this.service = {
+          testConnection: async () => ({ success: false, message: 'Amazon integration is not yet implemented' }),
+          getMarketplaceInfo: async () => ({ success: false, message: 'Amazon integration is not yet implemented' }),
+          syncProducts: async () => ({ success: false, message: 'Amazon integration is not yet implemented' }),
+          pushProduct: async () => ({ success: false, message: 'Amazon integration is not yet implemented' }),
+          prepareItemForPush: async () => ({ success: false, message: 'Amazon integration is not yet implemented' }),
+          deleteProduct: async () => ({ success: false, message: 'Amazon integration is not yet implemented' })
+        };
+      }
+      // Etsy: marketplaceTypeId 4
+      else if (marketplace.marketplaceTypeId === 4 || marketplaceName.includes('etsy')) {
+        // Etsy service not yet implemented - return a stub service
+        this.service = {
+          testConnection: async () => ({ success: false, message: 'Etsy integration is not yet implemented' }),
+          getMarketplaceInfo: async () => ({ success: false, message: 'Etsy integration is not yet implemented' }),
+          syncProducts: async () => ({ success: false, message: 'Etsy integration is not yet implemented' }),
+          pushProduct: async () => ({ success: false, message: 'Etsy integration is not yet implemented' }),
+          prepareItemForPush: async () => ({ success: false, message: 'Etsy integration is not yet implemented' }),
+          deleteProduct: async () => ({ success: false, message: 'Etsy integration is not yet implemented' })
+        };
+      }
       else {
-        throw new Error(`Unsupported marketplace type ID: ${marketplace.marketplaceTypeId} for ${marketplace.name}`);
+        // Unknown marketplace type - return a stub service
+        this.service = {
+          testConnection: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` }),
+          getMarketplaceInfo: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` }),
+          syncProducts: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` }),
+          pushProduct: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` }),
+          prepareItemForPush: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` }),
+          deleteProduct: async () => ({ success: false, message: `Marketplace type not supported: ${marketplace.name}` })
+        };
       }
     } catch (error) {
       console.error(`Error initializing marketplace service for ${marketplace.name}:`, error);
