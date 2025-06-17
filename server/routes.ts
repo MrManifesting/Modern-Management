@@ -5039,7 +5039,10 @@ ${topCustomersCsv}`;
         configuredAt: new Date().toISOString()
       };
 
-      await storage.saveCredential('google_sheets', JSON.stringify(credentialData));
+      await storage.saveCredential({
+        service: 'google_sheets',
+        credentialData: JSON.stringify(credentialData)
+      });
       
       res.json({
         success: true,
