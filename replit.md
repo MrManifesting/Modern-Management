@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 17, 2025: **Enhanced Inventory Display with Newest-First Sorting and Current Stock Summary**
+  - Modified inventory endpoints to display newest items first based on creation date and ID
+  - Enhanced Google Sheets integration to show current stock and pricing at top of spreadsheet
+  - Created `/api/inventory/current-summary` endpoint for real-time stock status display
+  - Inventory now sorts by: newest createdAt dates first, then by highest ID numbers for items without dates
+  - Google Sheets view enhanced with better search functionality and current inventory focus
+  - Price sheet generator now displays newest items first for better client ordering experience
+  - System ensures newly added inventory appears at top of all inventory views and spreadsheet displays
 - June 17, 2025: **Complete Inventory Viewing and Editing System with Image URLs and Media Integration Deployed**
   - Fixed inventory listing viewing functionality enabling users to view any listing live on Shopify or directly on Google Sheets
   - Added proper edit and view action buttons to enhanced inventory table and grid views with dropdown menus
