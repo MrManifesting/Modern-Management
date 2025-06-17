@@ -95,40 +95,27 @@ export default function NotificationsDropdown(): React.JSX.Element {
       <DropdownMenuTrigger asChild>
         <div className="relative">
           <button 
-            className={`rounded-full p-2 ${
-              isCustomTheme 
-                ? 'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
+            className="rounded-full p-2 bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
             aria-label="Notifications"
           >
             <Bell className="h-5 w-5" />
           </button>
           {unreadCount > 0 && (
-            <div className={`absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center ${
-              isCustomTheme 
-                ? 'bg-purple-500 text-white' 
-                : 'bg-primary-500 text-white'
-            }`}>
+            <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center bg-primary text-primary-foreground">
               {unreadCount}
             </div>
           )}
         </div>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className={`w-80 p-0 ${
-        isCustomTheme
-          ? 'bg-white dark:bg-gray-900 border border-blue-300/50 dark:border-blue-700/50'
-          : ''
-      }`}>
-        <div className="flex items-center justify-between p-3 border-b">
-          <h3 className="font-medium">Notifications</h3>
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <div className="flex items-center justify-between p-3 border-b border-border">
+          <h3 className="font-medium text-foreground">Notifications</h3>
           {unreadCount > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={markAllAsRead}
-              className={isCustomTheme ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-500/10' : ''}
             >
               Mark all as read
             </Button>
@@ -154,19 +141,19 @@ export default function NotificationsDropdown(): React.JSX.Element {
                       <div className="flex justify-between">
                         <h4 className={`text-sm font-medium ${
                           notification.read 
-                            ? (isCustomTheme ? 'text-blue-500/80' : 'text-gray-600 dark:text-gray-400') 
-                            : (isCustomTheme ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100')
+                            ? 'text-muted-foreground' 
+                            : 'text-foreground'
                         }`}>
                           {notification.title}
                         </h4>
-                        <span className="text-xs opacity-70">
+                        <span className="text-xs text-muted-foreground">
                           {formatTimestamp(notification.timestamp)}
                         </span>
                       </div>
                       <p className={`text-xs mt-1 ${
                         notification.read 
-                          ? (isCustomTheme ? 'text-gray-500' : 'text-gray-500 dark:text-gray-500') 
-                          : (isCustomTheme ? 'text-gray-700' : 'text-gray-700 dark:text-gray-300')
+                          ? 'text-muted-foreground' 
+                          : 'text-foreground/80'
                       }`}>
                         {notification.message}
                       </p>
@@ -176,9 +163,7 @@ export default function NotificationsDropdown(): React.JSX.Element {
                         e.stopPropagation();
                         deleteNotification(notification.id);
                       }}
-                      className={`absolute top-2 right-2 opacity-60 hover:opacity-100 ${
-                        isCustomTheme ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
-                      }`}
+                      className="absolute top-2 right-2 opacity-60 hover:opacity-100 text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -187,19 +172,17 @@ export default function NotificationsDropdown(): React.JSX.Element {
               })}
             </div>
           ) : (
-            <div className="p-4 text-center text-sm opacity-70">
+            <div className="p-4 text-center text-sm text-muted-foreground">
               No notifications
             </div>
           )}
         </ScrollArea>
         
-        <div className="p-2 border-t text-center">
+        <div className="p-2 border-t border-border text-center">
           <Button 
             variant="ghost" 
             size="sm" 
-            className={`text-xs w-full ${
-              isCustomTheme ? 'text-blue-500 hover:bg-blue-500/10' : ''
-            }`}
+            className="text-xs w-full"
             onClick={() => setOpen(false)}
           >
             View all notifications

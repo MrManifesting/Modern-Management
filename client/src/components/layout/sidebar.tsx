@@ -217,11 +217,9 @@ export default function Sidebar({ expanded }: SidebarProps) {
     <aside
       ref={sidebarRef}
       className={cn(
-        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r shadow-sm overflow-y-auto",
-        // Blue/purple dark theme with translucent background
-        "bg-black/95 border-primary/30", 
+        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-border shadow-sm overflow-y-auto",
+        "bg-background", 
         expanded ? "translate-x-0 w-64" : "translate-x-[-100%] w-64 lg:w-20 lg:translate-x-0",
-        // Add padding to prevent content from being hidden under iOS Safari's bottom navigation bar
         "pb-safe-bottom"
       )}
     >
