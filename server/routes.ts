@@ -4899,5 +4899,9 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register breakdown routes
+  registerBreakdownRoutes(app, storage);
+  registerAutoBreakdownRoutes(app, storage);
+
   return app;
 }

@@ -10,6 +10,66 @@ import { generateBarcodeData } from "./services/barcode";
 import { generateQRCodeDataURL } from "./services/qrcode";
 import { generateSKU, generateBreakdownSKUs } from "./services/sku-generator";
 
+// Cannabis weight conversion functions (accurate to industry standards)
+function convertToGrams(weight: number, unit: string): number {
+  const lowerUnit = unit.toLowerCase();
+  switch (lowerUnit) {
+    case 'pound':
+    case 'pounds':
+    case 'lb':
+    case 'lbs':
+      return weight * 454; // 1 pound = 454 grams
+    case 'ounce':
+    case 'ounces':
+    case 'oz':
+      return weight * 28.35; // 1 ounce = 28.35 grams
+    case 'gram':
+    case 'grams':
+    case 'g':
+      return weight;
+    default:
+      // Handle text weights like "1 pound", "half pound", etc.
+      if (lowerUnit.includes('pound')) {
+        if (lowerUnit.includes('half')) return 227; // half pound
+        if (lowerUnit.includes('quarter')) return 113.5; // quarter pound
+        return 454; // default to 1 pound
+      }
+      if (lowerUnit.includes('ounce')) {
+        if (lowerUnit.includes('half')) return 14.175; // half ounce
+        if (lowerUnit.includes('quarter')) return 7.0875; // quarter ounce
+        return 28.35; // default to 1 ounce
+      }
+      if (lowerUnit.includes('eighth')) return 3.5; // eighth of ounce
+      return weight; // assume grams if unknown
+  }
+}
+
+function parseWeightValue(weightStr: string | number): { value: number; unit: string } {
+  if (typeof weightStr === 'number') {
+    return { value: weightStr, unit: 'grams' };
+  }
+  
+  const str = weightStr.toLowerCase().trim();
+  
+  // Handle common cannabis weights
+  if (str === '1 pound' || str === 'pound') return { value: 1, unit: 'pound' };
+  if (str === 'half pound') return { value: 0.5, unit: 'pound' };
+  if (str === 'quarter pound') return { value: 0.25, unit: 'pound' };
+  if (str === 'ounce' || str === '1 ounce') return { value: 1, unit: 'ounce' };
+  if (str === 'half ounce') return { value: 0.5, unit: 'ounce' };
+  if (str === 'quarter ounce') return { value: 0.25, unit: 'ounce' };
+  if (str === 'eighth') return { value: 3.5, unit: 'grams' };
+  if (str === 'gram' || str === '1 gram') return { value: 1, unit: 'grams' };
+  
+  // Extract numeric value and unit
+  const match = str.match(/^(\d*\.?\d+)\s*([a-z]+)$/);
+  if (match) {
+    return { value: parseFloat(match[1]), unit: match[2] };
+  }
+  
+  return { value: parseFloat(str) || 1, unit: 'grams' };
+}
+
 // Define a schema for breakdown targets
 const breakdownTargetSchema = z.object({
   name: z.string(),
@@ -215,19 +275,19 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
             parentSku: parentItem.sku
           });
         
-        // Prepare breakdown item data
+        // Prepare breakdown item data with proper weight string formatting
         const breakdownItemData = {
           name: target.name,
           description: `${target.weight}${target.weightUnit} breakdown from ${parentItem.name}`,
           sku: breakdownSku,
-          basePrice: target.price,
-          costPrice: parentItem.costPrice ? parentItem.costPrice * (target.weight / (parentItem.weight || 1)) : 0,
+          basePrice: target.price.toString(),
+          costPrice: parentItem.costPrice ? parentItem.costPrice * (target.weight / (typeof parentItem.weight === 'string' ? parseWeightValue(parentItem.weight).value : parentItem.weight || 1)) : 0,
           category: parentItem.category,
           subcategory: parentItem.subcategory,
           brand: parentItem.brand,
           condition: parentItem.condition,
           quantity: target.quantity,
-          weight: target.weight,
+          weight: `${target.weight} ${target.weightUnit}`, // Store as string with unit
           weightUnit: target.weightUnit,
           itemType: ItemType.BREAKDOWN,
           parentItemId: target.parentItemId,
@@ -254,19 +314,26 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
         createdItems.push(newItem);
       }
       
-      // Update the parent item's quantity if needed
-      // Calculate total breakdown weight
-      const totalBreakdownWeight = validTargets.reduce((sum, target) => {
-        return sum + (target.weight * target.quantity);
+      // Update the parent item's quantity based on accurate weight calculations
+      // Convert all weights to grams for precise calculations
+      const totalBreakdownGrams = validTargets.reduce((sum, target) => {
+        const targetGrams = convertToGrams(target.weight, target.weightUnit);
+        return sum + (targetGrams * target.quantity);
       }, 0);
       
-      if (parentItem.weight && totalBreakdownWeight > 0) {
-        // Calculate how many units were consumed
-        const unitsConsumed = Math.ceil(totalBreakdownWeight / parentItem.weight);
+      if (parentItem.weight && totalBreakdownGrams > 0) {
+        // Parse parent item weight and convert to grams
+        const parentWeightInfo = parseWeightValue(parentItem.weight);
+        const parentTotalGrams = convertToGrams(parentWeightInfo.value, parentWeightInfo.unit);
         
-        // Update parent quantity
+        // Calculate how many parent units were consumed (round up to ensure inventory accuracy)
+        const unitsConsumed = Math.ceil(totalBreakdownGrams / parentTotalGrams);
+        
+        // Update parent quantity - ensure we don't go below 0
         const newQuantity = Math.max(0, parentItem.quantity - unitsConsumed);
         await storage.updateItem(itemId, { quantity: newQuantity });
+        
+        console.log(`Breakdown completed: Used ${totalBreakdownGrams}g from ${parentTotalGrams}g units, consumed ${unitsConsumed} parent units, remaining: ${newQuantity}`);
       }
       
       return res.status(200).json({
