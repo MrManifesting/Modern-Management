@@ -131,7 +131,9 @@ export default function AffiliateDashboard() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate both affiliates list and stats
       queryClient.invalidateQueries({ queryKey: ['/api/affiliates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliates/stats'] });
       setShowCreateAffiliate(false);
       toast({
         title: "Success",
@@ -154,7 +156,9 @@ export default function AffiliateDashboard() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate QR codes list and stats
       queryClient.invalidateQueries({ queryKey: ['/api/affiliates', selectedAffiliate, 'qrcodes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliates/stats'] });
       setShowCreateQrCode(false);
       toast({
         title: "Success",
