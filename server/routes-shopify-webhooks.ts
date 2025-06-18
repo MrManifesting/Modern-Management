@@ -29,13 +29,21 @@ function verifyShopifyWebhook(data: string, signature: string): boolean {
       .update(data, 'utf8')
       .digest('base64');
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'utf8'),
-      Buffer.from(calculatedSignature, 'utf8')
-    );
+    log(`Webhook signature verification: received="${signature.substring(0, 10)}...", calculated="${calculatedSignature.substring(0, 10)}..."`, 'shopify-webhook');
+
+    // Compare signatures using timing-safe comparison
+    const receivedBuffer = Buffer.from(signature, 'base64');
+    const calculatedBuffer = Buffer.from(calculatedSignature, 'base64');
+    
+    if (receivedBuffer.length !== calculatedBuffer.length) {
+      log('Webhook signature length mismatch', 'shopify-webhook');
+      return false;
+    }
+
+    return crypto.timingSafeEqual(receivedBuffer, calculatedBuffer);
   } catch (error) {
     log(`Webhook signature verification error: ${error}`, 'shopify-webhook');
-    return true; // Allow webhooks if verification fails (for development)
+    return false; // Reject webhooks if verification fails
   }
 }
 

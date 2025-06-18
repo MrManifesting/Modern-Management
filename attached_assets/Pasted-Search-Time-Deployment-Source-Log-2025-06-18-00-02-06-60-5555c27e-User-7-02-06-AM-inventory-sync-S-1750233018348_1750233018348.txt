@@ -1,0 +1,217 @@
+Search
+Time
+Deployment
+Source
+Log
+2025-06-18 00:02:06.60
+5555c27e
+User
+7:02:06 AM [inventory-sync] Starting automatic inventory sync #80
+2025-06-18 00:43:47.93
+5555c27e
+User
+7:43:47 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:47.93
+5555c27e
+User
+7:43:47 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.06
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.06
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:48.30
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.30
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:48.41
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.41
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.43
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.44
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.44
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.44
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 2ms :: {"error":"Unau…
+2025-06-18 00:43:48.45
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.45
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.45
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.46
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:48.48
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.48
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 2ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.48
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.48
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.51
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.51
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.59
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.59
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 2ms :: {"error":"Unau…
+2025-06-18 00:43:48.73
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.73
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.74
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.74
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.87
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.87
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 2ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.90
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.90
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 2ms :: {"error":"Unau…
+2025-06-18 00:43:48.93
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:48.93
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:48.95
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.95
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 2ms :: {"error":"Unau…
+2025-06-18 00:43:48.97
+5555c27e
+User
+7:43:48 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:48.97
+5555c27e
+User
+7:43:48 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:49.01
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.01
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:49.01
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for product update
+2025-06-18 00:43:49.01
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/products/update 401 in 1ms :: {"error":"Unauthorized…
+2025-06-18 00:43:49.04
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.04
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 2ms :: {"error":"Unau…
+2025-06-18 00:43:49.11
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.11
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:49.11
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.12
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
+2025-06-18 00:43:49.16
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.16
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 3ms :: {"error":"Unau…
+2025-06-18 00:43:49.17
+5555c27e
+User
+7:43:49 AM [shopify-webhook] Invalid webhook signature for inventory update
+2025-06-18 00:43:49.17
+5555c27e
+User
+7:43:49 AM [express] POST /api/shopify/webhooks/inventory_levels/update 401 in 1ms :: {"error":"Unau…
