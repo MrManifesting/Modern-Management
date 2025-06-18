@@ -287,21 +287,16 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
       const uniqueWeightsSet = new Set(targetWeights);
       const uniqueWeights = Array.from(uniqueWeightsSet);
       
-      // Generate SKUs for all weights at once
-      const skuMap = generateBreakdownSKUs(
-        parentItem, 
-        uniqueWeights, 
-        validTargets[0].weightUnit // Assuming all targets use the same weight unit
-      );
+      // Generate SKUs for breakdown items
+      const skuGenerator = new SKUGenerator(storage);
       
       for (const target of validTargets) {
-        // Use the pre-generated SKU for this weight
-        const breakdownSku = skuMap[target.weight] || 
-          generateSKU(parentItem, {
-            weight: target.weight,
-            weightUnit: target.weightUnit,
-            parentSku: parentItem.sku
-          });
+        // Generate SKU for this breakdown item
+        const breakdownSku = await skuGenerator.generateSKU({
+          ...parentItem,
+          weight: `${target.weight} ${target.weightUnit}`,
+          name: `${parentItem.name} (${target.weight}${target.weightUnit})`
+        });
         
         // Calculate proportional cost price
         const parentWeightInfo = parseWeightValue(parentItem.weight || "1 gram");

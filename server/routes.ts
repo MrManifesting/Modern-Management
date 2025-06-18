@@ -2308,7 +2308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Generate SKU if requested
             if (generateCodes.sku) {
-              updateData.sku = generateSKU(item);
+              const skuGenerator = new SKUGenerator(storage);
+              updateData.sku = await skuGenerator.generateSKU(item);
             }
             
             // Generate barcode if requested (include product name)
@@ -2479,7 +2480,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Item IDs are required" });
       }
       
-      const { generateSKU } = await import('./services/sku-generator');
+      const { SKUGenerator } = await import('./services/sku-generator');
+      const skuGenerator = new SKUGenerator(storage);
       let updatedCount = 0;
       const errors: string[] = [];
       
@@ -2494,7 +2496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Generate SKU if missing
           let sku = item.sku;
           if (!sku) {
-            sku = generateSKU(item);
+            sku = await skuGenerator.generateSKU(item);
           }
           
           // Create barcode that includes product name
@@ -2626,7 +2628,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Item IDs are required" });
       }
       
-      const { generateSKU } = await import('./services/sku-generator');
+      const { SKUGenerator } = await import('./services/sku-generator');
+      const skuGenerator = new SKUGenerator(storage);
       let updatedCount = 0;
       const errors: string[] = [];
       
