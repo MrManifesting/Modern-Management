@@ -8,7 +8,7 @@ import { storage } from "./storage.js";
 
 export function registerInventorySyncRoutes(app: Express) {
   
-  // Sync all inventory quantities from Shopify
+  // Sync all inventory quantities from Shopify (bypass auth for direct sync)
   app.post('/api/inventory/sync-from-shopify', async (req, res) => {
     try {
       console.log('[inventory-sync] Starting full Shopify inventory sync...');

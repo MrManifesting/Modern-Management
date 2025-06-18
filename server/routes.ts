@@ -5148,6 +5148,9 @@ ${topCustomersCsv}`;
   // Register real-time sync routes for bidirectional marketplace synchronization
   registerSyncRoutes(app, storage);
   
+  // Remove duplicate inventory sync endpoint and register clean version
+  registerInventorySyncRoutes(app);
+  
   // Register Shopify webhook routes for real-time synchronization
   registerShopifyWebhookRoutes(app, storage);
   
