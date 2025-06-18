@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getItems();
       const sales = await storage.getRecentSales(24); // Last 24 hours
       
-      const todayRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.totalAmount || '0'), 0);
+      const todayRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.total || '0'), 0);
       const todayOrders = sales.length;
       const avgOrderValue = todayOrders > 0 ? todayRevenue / todayOrders : 0;
       const hourlyRate = todayRevenue / 24;
@@ -208,10 +208,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 4) Draft non-flower items without quantity - sorted by newest first
       // 5) Other items - sorted by newest first
       const sortedItems = items.sort((a, b) => {
-        const aPrice = parseFloat(a.base_price || '0');
-        const aQty = parseInt(a.quantity?.toString() || '0');
-        const bPrice = parseFloat(b.base_price || '0');
-        const bQty = parseInt(b.quantity?.toString() || '0');
+        const aPrice = parseFloat((a.base_price || 0).toString());
+        const aQty = parseInt((a.quantity || 0).toString());
+        const bPrice = parseFloat((b.base_price || 0).toString());
+        const bQty = parseInt((b.quantity || 0).toString());
         
         const aIsAvailable = aQty > 0; // Any item with quantity > 0 is available
         const bIsAvailable = bQty > 0;
@@ -1980,7 +1980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate premium HTML catalog
       const currentDate = new Date();
-      const catalogHtml = `
+      let catalogHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
