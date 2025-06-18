@@ -2387,45 +2387,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google Sheets view endpoint for individual items
+  // Google Sheets view endpoint - DISABLED (sync from Shopify only)
   app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      
-      if (isNaN(itemId)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid item ID" 
-        });
-      }
-
-      const item = await storage.getItem(itemId);
-      if (!item) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Item not found" 
-        });
-      }
-
-      // Use the configured spreadsheet ID from environment or default
-      const spreadsheetId = process.env.GOOGLE_SHEETS_ID || "15GHzyL_C2YqEMS68l7Vy3q6MA0SP9aDrhcZ4GS7HRA0";
-      
-      // Create search URL for the item in Google Sheets
-      const searchTerm = item.sku || item.name;
-      const sheetsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0&search=${encodeURIComponent(searchTerm)}`;
-      
-      res.json({
-        success: true,
-        url: sheetsUrl,
-        message: `Opening Google Sheets with search for: ${searchTerm}`
-      });
-    } catch (error) {
-      console.error("Error generating Google Sheets view URL:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to generate Google Sheets view URL" 
-      });
-    }
+    res.status(410).json({
+      success: false,
+      message: "Google Sheets sync disabled - system now syncs from Shopify only"
+    });
   });
 
   // Shopify store view endpoint for individual items  
@@ -5957,26 +5924,8 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Google Sheets view endpoint for items
-  app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      const item = await storage.getItem(itemId);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
-      const searchTerm = item.sku || item.name;
-      const sheetsUrl = `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
-
-      res.json({ success: true, url: sheetsUrl });
-    } catch (error) {
-      console.error('Error getting Google Sheets view:', error);
-      res.status(500).json({ error: "Failed to get Google Sheets view" });
-    }
-  });
+  // Google Sheets view disabled - system syncs from Shopify only
+  // Duplicate endpoint removed to prevent incorrect redirects
 
   // Update item pricing endpoint
   app.patch("/api/items/:id/pricing", async (req: Request, res: Response) => {
