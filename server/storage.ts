@@ -1021,6 +1021,13 @@ export class MemStorage implements IStorage {
     
     return this.sales.delete(id);
   }
+
+  async getRecentSales(limit: number = 50): Promise<Sale[]> {
+    const allSales = Array.from(this.sales.values());
+    return allSales
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, limit);
+  }
   
   // Analytics methods
   async getSalesReport(params: ReportParams): Promise<SalesReport> {

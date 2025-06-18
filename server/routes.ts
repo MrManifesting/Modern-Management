@@ -439,6 +439,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Create sale record in database
+      try {
+        await storage.createSale({
+          orderId: order.name || order.order_number,
+          customerName: order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : '',
+          customerEmail: order.customer?.email || order.email || '',
+          items: order.line_items.map((item: any) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            sku: item.sku
+          })),
+          subtotal: order.subtotal_price || order.total_price,
+          total: order.total_price,
+          status: order.financial_status || 'paid',
+          marketplaceId: null,
+          metadata: {
+            shopifyOrderId: order.id,
+            fulfillmentStatus: order.fulfillment_status,
+            financialStatus: order.financial_status
+          }
+        });
+        log(`Sale record created for order ${order.name}`, 'webhook');
+      } catch (error) {
+        log(`Error creating sale record: ${error}`, 'webhook');
+      }
+
       res.status(200).json({ success: true, message: "Order creation webhook processed" });
     } catch (error) {
       log(`Order creation webhook error: ${error}`, 'webhook');
@@ -557,6 +584,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       log(`Error archiving zero quantity items: ${error}`, 'inventory');
       res.status(500).json({ error: "Failed to archive zero quantity items" });
+    }
+  });
+
+  // Shopify sales reports endpoint
+  app.get("/api/shopify/reports/sales/:period", async (req: Request, res: Response) => {
+    try {
+      const { period } = req.params;
+      
+      // Get sales from database instead of external API
+      const sales = await storage.getRecentSales(50);
+      
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate = new Date();
+      
+      switch (period) {
+        case '7d':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(now.getDate() - 30);
+          break;
+        case '90d':
+          startDate.setDate(now.getDate() - 90);
+          break;
+        default:
+          startDate.setDate(now.getDate() - 7);
+      }
+
+      // Filter sales by date range
+      const filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt || '');
+        return saleDate >= startDate && saleDate <= now;
+      });
+
+      // Calculate summary metrics
+      const totalRevenue = filteredSales.reduce((sum, sale) => sum + parseFloat(sale.total || '0'), 0);
+      const totalOrders = filteredSales.length;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      res.json({
+        success: true,
+        data: {
+          period,
+          totalRevenue,
+          totalOrders,
+          averageOrderValue,
+          sales: filteredSales.slice(0, 10) // Return latest 10 for display
+        }
+      });
+    } catch (error) {
+      log(`Error fetching sales report: ${error}`, 'shopify');
+      res.status(500).json({ error: "Failed to fetch sales report" });
     }
   });
 
