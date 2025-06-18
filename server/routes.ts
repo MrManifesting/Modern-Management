@@ -5019,15 +5019,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Filter for in-stock flower items only with valid pricing
+      // Filter for in-stock items with valid pricing - prioritize active status
       const catalogItems = items
         .filter(item => 
           item.quantity && item.quantity > 0 && 
-          item.status === "available" &&
+          (item.status === "active" || item.status === "available") &&
           (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (item.category?.toLowerCase().includes("flower") || 
-           item.name?.toLowerCase().includes("flower") ||
-           item.name?.toLowerCase().includes("thca"))
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
         )
         .map(item => ({
           id: item.id,
@@ -5047,7 +5045,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: item.description
         }))
         .sort((a, b) => {
-          // Sort by updated date (newest first), then by ID (highest first)
+          // Helper functions for prioritizing active available items
+          const hasPrice = (item: any) => {
+            const basePrice = parseFloat(item.basePrice || '0');
+            const salePrice = parseFloat(item.salePrice || '0');
+            const wholesalePrice = parseFloat(item.wholesalePrice || '0');
+            return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
+          };
+          const hasQuantity = (item: any) => item.quantity && parseInt(item.quantity.toString()) > 0;
+          
+          const isActiveAvailable = (item: any) => {
+            return item.status === 'active' && hasPrice(item) && hasQuantity(item);
+          };
+          
+          const aActiveAvailable = isActiveAvailable(a);
+          const bActiveAvailable = isActiveAvailable(b);
+          
+          // Priority 1: Active available items at the very top
+          if (aActiveAvailable && !bActiveAvailable) return -1;
+          if (!aActiveAvailable && bActiveAvailable) return 1;
+          
+          // Within same priority, sort by updated date (newest first), then by ID (highest first)
           if (a.updatedAt && b.updatedAt) {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
           }
