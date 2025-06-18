@@ -340,6 +340,242 @@ export type InsertShopifyProductLookup = typeof shopifyProductLookup.$inferInser
 export type ThcaSheetData = typeof thcaSheetData.$inferSelect;
 export type InsertThcaSheetData = typeof thcaSheetData.$inferInsert;
 
+// Customer Analytics and Segmentation Tables
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  shopifyCustomerId: varchar("shopify_customer_id").unique(),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  
+  // Customer Demographics
+  dateOfBirth: date("date_of_birth"),
+  gender: varchar("gender"),
+  city: varchar("city"),
+  state: varchar("state"),
+  country: varchar("country").default("US"),
+  zipCode: varchar("zip_code"),
+  
+  // Purchase Behavior Analytics
+  totalOrders: integer("total_orders").default(0),
+  totalSpent: numeric("total_spent", { precision: 12, scale: 2 }).default(0),
+  averageOrderValue: numeric("average_order_value", { precision: 10, scale: 2 }).default(0),
+  lifetimeValue: numeric("lifetime_value", { precision: 12, scale: 2 }).default(0),
+  
+  // Customer Tier and Segmentation
+  customerTier: varchar("customer_tier").default("Bronze"), // Bronze, Silver, Gold, Platinum, Diamond
+  loyaltyPoints: integer("loyalty_points").default(0),
+  referralCode: varchar("referral_code").unique(),
+  referredBy: varchar("referred_by"),
+  
+  // Engagement Metrics
+  firstOrderDate: timestamp("first_order_date"),
+  lastOrderDate: timestamp("last_order_date"),
+  daysSinceLastOrder: integer("days_since_last_order"),
+  orderFrequency: numeric("order_frequency", { precision: 5, scale: 2 }), // orders per month
+  
+  // Purchase Preferences
+  favoriteCategories: text("favorite_categories").array(),
+  favoriteProducts: text("favorite_products").array(),
+  preferredBrands: text("preferred_brands").array(),
+  averageOrderQuantity: numeric("average_order_quantity", { precision: 8, scale: 2 }),
+  
+  // Marketing and Communication
+  marketingOptIn: boolean("marketing_opt_in").default(true),
+  smsOptIn: boolean("sms_opt_in").default(false),
+  preferredCommunication: varchar("preferred_communication").default("email"),
+  
+  // Risk and Compliance
+  isVerified: boolean("is_verified").default(false),
+  riskScore: integer("risk_score").default(0), // 0-100 scale
+  notes: text("notes"),
+  
+  // Shopify Integration
+  shopifyAcceptsMarketing: boolean("shopify_accepts_marketing"),
+  shopifyTags: text("shopify_tags"),
+  shopifyOrdersCount: integer("shopify_orders_count").default(0),
+  shopifyTotalSpent: numeric("shopify_total_spent", { precision: 12, scale: 2 }).default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_customers_email").on(table.email),
+  index("idx_customers_tier").on(table.customerTier),
+  index("idx_customers_total_spent").on(table.totalSpent),
+  index("idx_customers_last_order").on(table.lastOrderDate),
+  index("idx_customers_shopify_id").on(table.shopifyCustomerId),
+]);
+
+// Customer Purchase Analytics - detailed purchase tracking
+export const customerPurchaseAnalytics = pgTable("customer_purchase_analytics", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  // Time-based Analytics
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  quarter: integer("quarter").notNull(), // 1-4
+  
+  // Purchase Metrics
+  ordersThisPeriod: integer("orders_this_period").default(0),
+  totalSpentThisPeriod: numeric("total_spent_this_period", { precision: 10, scale: 2 }).default(0),
+  averageOrderValueThisPeriod: numeric("average_order_value_this_period", { precision: 10, scale: 2 }).default(0),
+  itemsPurchasedThisPeriod: integer("items_purchased_this_period").default(0),
+  
+  // Category Analytics
+  topCategoryThisPeriod: varchar("top_category_this_period"),
+  topProductThisPeriod: varchar("top_product_this_period"),
+  categoriesExploredThisPeriod: text("categories_explored_this_period").array(),
+  
+  // Behavior Patterns
+  daysActiveDuringPeriod: integer("days_active_during_period").default(0),
+  averageDaysBetweenOrders: numeric("average_days_between_orders", { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_purchase_analytics_customer").on(table.customerId),
+  index("idx_purchase_analytics_period").on(table.year, table.month),
+  index("idx_purchase_analytics_quarter").on(table.year, table.quarter),
+]);
+
+// Customer Tier Thresholds - configurable tier requirements
+export const customerTierThresholds = pgTable("customer_tier_thresholds", {
+  id: serial("id").primaryKey(),
+  tierName: varchar("tier_name").notNull().unique(),
+  minTotalSpent: numeric("min_total_spent", { precision: 10, scale: 2 }).default(0),
+  minOrders: integer("min_orders").default(0),
+  minMonthsActive: integer("min_months_active").default(0),
+  
+  // Benefits
+  discountPercentage: numeric("discount_percentage", { precision: 5, scale: 2 }).default(0),
+  freeShippingThreshold: numeric("free_shipping_threshold", { precision: 8, scale: 2 }),
+  loyaltyPointsMultiplier: numeric("loyalty_points_multiplier", { precision: 3, scale: 2 }).default(1),
+  earlyAccessToProducts: boolean("early_access_to_products").default(false),
+  dedicatedSupport: boolean("dedicated_support").default(false),
+  
+  // Display Properties
+  badgeColor: varchar("badge_color").default("#CD7F32"), // Bronze default
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Order Analytics - enhanced order tracking for detailed insights
+export const orderAnalytics = pgTable("order_analytics", {
+  id: serial("id").primaryKey(),
+  orderId: varchar("order_id").notNull(),
+  shopifyOrderId: varchar("shopify_order_id").unique(),
+  customerId: integer("customer_id").references(() => customers.id),
+  
+  // Order Details
+  orderNumber: varchar("order_number"),
+  totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxes: numeric("taxes", { precision: 8, scale: 2 }).default(0),
+  shipping: numeric("shipping", { precision: 8, scale: 2 }).default(0),
+  discounts: numeric("discounts", { precision: 8, scale: 2 }).default(0),
+  
+  // Order Composition
+  itemCount: integer("item_count").default(0),
+  uniqueProductCount: integer("unique_product_count").default(0),
+  categories: text("categories").array(),
+  brands: text("brands").array(),
+  
+  // Customer Context
+  isFirstOrder: boolean("is_first_order").default(false),
+  daysSinceLastOrder: integer("days_since_last_order"),
+  customerTierAtOrderTime: varchar("customer_tier_at_order_time"),
+  
+  // Order Timing
+  orderHour: integer("order_hour"), // 0-23
+  orderDayOfWeek: integer("order_day_of_week"), // 0-6 (Sunday = 0)
+  orderMonth: integer("order_month"), // 1-12
+  
+  // Fulfillment
+  fulfillmentStatus: varchar("fulfillment_status").default("pending"),
+  paymentStatus: varchar("payment_status").default("pending"),
+  shippingMethod: varchar("shipping_method"),
+  
+  // Geographic
+  shippingCity: varchar("shipping_city"),
+  shippingState: varchar("shipping_state"),
+  shippingCountry: varchar("shipping_country"),
+  
+  // Marketing Attribution
+  referralSource: varchar("referral_source"),
+  utmSource: varchar("utm_source"),
+  utmCampaign: varchar("utm_campaign"),
+  
+  orderDate: timestamp("order_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_order_analytics_customer").on(table.customerId),
+  index("idx_order_analytics_date").on(table.orderDate),
+  index("idx_order_analytics_amount").on(table.totalAmount),
+  index("idx_order_analytics_shopify").on(table.shopifyOrderId),
+]);
+
+// Product Performance Analytics - detailed product insights
+export const productPerformanceAnalytics = pgTable("product_performance_analytics", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").references(() => items.id),
+  sku: varchar("sku"),
+  productName: varchar("product_name"),
+  
+  // Time Period
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  
+  // Sales Metrics
+  unitsSold: integer("units_sold").default(0),
+  revenue: numeric("revenue", { precision: 10, scale: 2 }).default(0),
+  averageSellingPrice: numeric("average_selling_price", { precision: 8, scale: 2 }).default(0),
+  profitMargin: numeric("profit_margin", { precision: 5, scale: 2 }).default(0),
+  
+  // Customer Metrics
+  uniqueCustomers: integer("unique_customers").default(0),
+  repeatCustomers: integer("repeat_customers").default(0),
+  newCustomers: integer("new_customers").default(0),
+  
+  // Performance Indicators
+  inventoryTurnover: numeric("inventory_turnover", { precision: 5, scale: 2 }).default(0),
+  daysToSellOut: integer("days_to_sell_out"),
+  reorderRate: numeric("reorder_rate", { precision: 5, scale: 2 }).default(0),
+  
+  // Rankings
+  salesRank: integer("sales_rank"),
+  revenueRank: integer("revenue_rank"),
+  profitRank: integer("profit_rank"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_product_analytics_item").on(table.itemId),
+  index("idx_product_analytics_period").on(table.year, table.month),
+  index("idx_product_analytics_sales").on(table.unitsSold),
+  index("idx_product_analytics_revenue").on(table.revenue),
+]);
+
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;
+
+export type CustomerPurchaseAnalytics = typeof customerPurchaseAnalytics.$inferSelect;
+export type InsertCustomerPurchaseAnalytics = typeof customerPurchaseAnalytics.$inferInsert;
+
+export type CustomerTierThresholds = typeof customerTierThresholds.$inferSelect;
+export type InsertCustomerTierThresholds = typeof customerTierThresholds.$inferInsert;
+
+export type OrderAnalytics = typeof orderAnalytics.$inferSelect;
+export type InsertOrderAnalytics = typeof orderAnalytics.$inferInsert;
+
+export type ProductPerformanceAnalytics = typeof productPerformanceAnalytics.$inferSelect;
+export type InsertProductPerformanceAnalytics = typeof productPerformanceAnalytics.$inferInsert;
+
 // Item table for inventory management
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
@@ -441,39 +677,7 @@ export const marketplaces = stores;
 export type Marketplace = Store;
 export type InsertMarketplace = InsertStore;
 
-// Customer table with enhanced tiering system for high-value customer prioritization
-export const customers = pgTable("customers", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  email: varchar("email"),
-  phone: varchar("phone"),
-  externalId: varchar("external_id"), // ID from marketplace
-  storeId: integer("store_id").references(() => stores.id),
-  tier: varchar("tier").default("standard"), // standard, premium, vip, big_spender
-  totalSpent: numeric("total_spent").default("0"),
-  totalOrders: integer("total_orders").default(0),
-  averageOrderValue: numeric("average_order_value").default("0"),
-  lastOrderDate: timestamp("last_order_date"),
-  lifetimeValue: numeric("lifetime_value").default("0"),
-  loyaltyPoints: integer("loyalty_points").default(0),
-  discountEligibility: numeric("discount_eligibility").default("0"), // percentage
-  priorityLevel: integer("priority_level").default(1), // 1-5, 5 = highest priority
-  preferredPaymentMethod: varchar("preferred_payment_method"),
-  shippingAddress: json("shipping_address"),
-  billingAddress: json("billing_address"),
-  preferredProducts: text("preferred_products").array().default([]),
-  tags: text("tags").array().default([]),
-  notes: text("notes"),
-  isActive: boolean("is_active").default(true),
-  marketingOptIn: boolean("marketing_opt_in").default(false),
-  lastContactDate: timestamp("last_contact_date"),
-  source: varchar("source"), // shopify, manual, import, etc.
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
-export type Customer = typeof customers.$inferSelect;
-export type InsertCustomer = typeof customers.$inferInsert;
 
 // Sales table
 export const sales = pgTable("sales", {
