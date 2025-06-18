@@ -63,6 +63,7 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     
     // Process each line item for inventory reduction
     const storage = (await import('./storage.js')).storage;
+    const { reportingWebhooks } = await import('./services/reporting-webhooks.js');
     
     for (const lineItem of order.line_items || []) {
       if (!lineItem.sku) continue;

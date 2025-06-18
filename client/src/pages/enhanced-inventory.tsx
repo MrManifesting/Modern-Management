@@ -204,6 +204,27 @@ export default function EnhancedInventory() {
             <Package className="w-4 h-4 mr-2" />
             Add Item
           </Button>
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              try {
+                const response = await apiRequest('/api/inventory/cleanup', { method: 'DELETE' });
+                toast({
+                  title: "Cleanup Complete",
+                  description: response.message,
+                });
+                refetch();
+              } catch (error) {
+                toast({
+                  title: "Cleanup Failed",
+                  description: "Failed to clean up inventory",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Clean Up Items
+          </Button>
         </div>
       </div>
 
@@ -328,10 +349,6 @@ export default function EnhancedInventory() {
                           <DropdownMenuItem onClick={() => handleViewShopify(item)}>
                             <ExternalLink className="w-4 h-4 mr-2" />
                             View on Shopify
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleViewSheets(item)}>
-                            <FileSpreadsheet className="w-4 h-4 mr-2" />
-                            View in Sheets
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
