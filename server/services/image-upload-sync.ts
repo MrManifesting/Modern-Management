@@ -67,17 +67,23 @@ export async function uploadItemImages(itemId: number, files: Express.Multer.Fil
       // Set first image as imageUrl if not already set
       const imageUrl = item.imageUrl || uploadedUrls[0];
       
+      log(`Updating database for item ${itemId} with images: ${JSON.stringify(allImages)}`, 'image-upload');
+      
       const updateResult = await storage.updateItem(itemId, {
         images: allImages,
         imageUrl: imageUrl
       });
       
       if (!updateResult) {
+        log(`Failed to update item ${itemId} in database`, 'image-upload');
         throw new Error('Failed to update item in database');
       }
+      
+      log(`Successfully updated item ${itemId} with ${allImages.length} total images`, 'image-upload');
 
       // Sync to Shopify if item has shopifyId
       if (item.shopifyId) {
+        log(`Syncing ${uploadedUrls.length} images to Shopify for item ${itemId}`, 'image-upload');
         await syncImagesToShopify(item.shopifyId, uploadedUrls);
       }
       
