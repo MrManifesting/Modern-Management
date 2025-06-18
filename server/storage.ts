@@ -2418,8 +2418,9 @@ export class DatabaseStorage implements IStorage {
     try {
       // Auto-generate SKU if not provided
       if (!item.sku) {
-        const { generateSKU } = await import('./services/sku-generator');
-        item.sku = generateSKU(item);
+        const { SKUGenerator } = await import('./services/sku-generator.js');
+        const skuGenerator = new SKUGenerator(this);
+        item.sku = await skuGenerator.generateSKU(item);
       }
       
       // Map camelCase properties to snake_case database columns
