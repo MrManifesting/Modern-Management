@@ -96,11 +96,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/csv-validator",
           className: "inventory-link specialty-brand",
         },
-        {
-          title: "Orders Tracking",
-          path: "/orders-tracking",
-          className: "inventory-link specialty-brand",
-        }
+
       ]
     },
     {
