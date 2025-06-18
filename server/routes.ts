@@ -58,6 +58,7 @@ import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
 import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
+import { registerForceSyncRoutes } from "./routes-force-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 
 import { registerCredentialRoutes } from "./routes-credentials";
@@ -5058,6 +5059,9 @@ ${topCustomersCsv}`;
 
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
+  
+  // Register force sync routes for debugging quantity discrepancies
+  registerForceSyncRoutes(app);
   
   // Shopify fix routes consolidated into main routes
   
