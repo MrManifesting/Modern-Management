@@ -1933,7 +1933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: item.displayPrice,
           tier: item.tier || 'Top Shelf',
           brand: item.brand || 'Gold Standard',
-          thca: item.thcaPercentage || '',
+          thca: item.thca_percentage || '',
           strain: item.strainType || ''
         };
         
@@ -2390,7 +2390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           salePrice: item.sale_price,
           wholesalePrice: item.wholesale_price,
           brand: item.brand,
-          thcaPercentage: item.thcaPercentage || null,
+          thcaPercentage: item.thca_percentage || null,
           condition: item.condition,
           imageUrl: item.imageUrl,
           updatedAt: item.updatedAt,
@@ -2567,7 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      await scheduler.removeMarketplaceFromSchedule(marketplace);
+      await scheduler.cancelMarketplaceSync(marketplace.id);
       await storage.deleteMarketplace(id);
       
       res.json({
@@ -2592,13 +2592,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      const service = MarketplaceService.getInstance(marketplace.marketplaceTypeId, marketplace.credentials);
+      const service = new MarketplaceService(marketplace);
       const connectionTest = await service.testConnection();
       
       res.json({
         success: connectionTest.success,
-        message: connectionTest.message,
-        details: connectionTest.details || {}
+        message: connectionTest.message
       });
     } catch (error) {
       console.error(`Error testing marketplace connection ${req.params.id}:`, error);
@@ -2622,10 +2621,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Marketplace not found" });
       }
 
-      const service = MarketplaceService.getInstance(marketplace.marketplaceTypeId, marketplace.credentials);
-      const logger = new MarketplaceLogger(marketplace.id);
+      const service = new MarketplaceService(marketplace);
       
-      const syncResult = await service.syncProducts(storage, logger);
+      const syncResult = await service.syncProducts();
       
       res.json({
         success: true,
