@@ -2408,7 +2408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.post('/api/webhooks/customer-analytics/customer-updated', async (req, res) => {
+  app.post('/api/webhooks/customer-analytics/customer-updated', async (req, res) => {
     try {
       const customerData = req.body;
       
@@ -2425,7 +2425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer Analytics API Endpoints
-  server.get('/api/analytics/customers/report', async (req, res) => {
+  app.get('/api/analytics/customers/report', async (req, res) => {
     try {
       const { timeRange } = req.query;
       const report = await customerAnalyticsService.getCustomerAnalyticsReport(timeRange as any);
@@ -2437,7 +2437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.get('/api/analytics/customers/tiers', async (req, res) => {
+  app.get('/api/analytics/customers/tiers', async (req, res) => {
     try {
       const tiers = await db.select().from(customerTierThresholds)
         .where(eq(customerTierThresholds.isActive, true))
@@ -2450,7 +2450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.post('/api/analytics/customers/tiers', async (req, res) => {
+  app.post('/api/analytics/customers/tiers', async (req, res) => {
     try {
       const tierData = req.body;
       const newTier = await db.insert(customerTierThresholds).values(tierData).returning();
@@ -2462,7 +2462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.get('/api/analytics/customers/:id/profile', async (req, res) => {
+  app.get('/api/analytics/customers/:id/profile', async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       
@@ -2499,7 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.post('/api/analytics/customers/generate-monthly/:customerId', async (req, res) => {
+  app.post('/api/analytics/customers/generate-monthly/:customerId', async (req, res) => {
     try {
       const customerId = parseInt(req.params.customerId);
       const { year, month } = req.body;
@@ -2513,7 +2513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.get('/api/analytics/products/performance', async (req, res) => {
+  app.get('/api/analytics/products/performance', async (req, res) => {
     try {
       const { year, month } = req.query;
       
@@ -2536,7 +2536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  server.post('/api/analytics/initialize', async (req, res) => {
+  app.post('/api/analytics/initialize', async (req, res) => {
     try {
       await customerAnalyticsService.initializeDefaultTiers();
       
