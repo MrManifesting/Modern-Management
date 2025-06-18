@@ -3280,6 +3280,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(inventoryActions.timestamp));
   }
   
+  async getRecentInventoryActions(limit: number = 20): Promise<InventoryAction[]> {
+    return await db
+      .select()
+      .from(inventoryActions)
+      .orderBy(desc(inventoryActions.createdAt))
+      .limit(limit);
+  }
+  
   // Product Breakdown methods
   async getProductBreakdowns(): Promise<ProductBreakdown[]> {
     return await db.select().from(productBreakdowns);
@@ -3630,6 +3638,10 @@ export class DatabaseStorage implements IStorage {
   
   // QR Code methods
   async getQrCodes(): Promise<QrCode[]> {
+    return await db.select().from(qrCodes);
+  }
+  
+  async getAllQrCodes(): Promise<QrCode[]> {
     return await db.select().from(qrCodes);
   }
   
