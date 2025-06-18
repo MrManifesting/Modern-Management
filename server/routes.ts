@@ -63,6 +63,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Photo upload endpoint for mobile interface
+  app.post("/api/media/upload-photo", uploadMemory.single('photo'), async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ error: "No photo uploaded" });
+      }
+
+      // Save photo to uploads directory
+      const fs = await import('fs');
+      const path = await import('path');
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      
+      // Create uploads directory if it doesn't exist
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const originalName = file.originalname || 'photo.jpg';
+      const extension = path.extname(originalName);
+      const fileName = `photo_${timestamp}${extension}`;
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Write file to disk
+      fs.writeFileSync(filePath, file.buffer);
+      
+      // Return the URL for the uploaded photo
+      const imageUrl = `/uploads/${fileName}`;
+      
+      res.json({
+        success: true,
+        imageUrl,
+        message: "Photo uploaded successfully"
+      });
+    } catch (error) {
+      log(`Photo upload error: ${error}`, 'media-upload');
+      res.status(500).json({ error: "Failed to upload photo" });
+    }
+  });
+
   // Real-time monitoring endpoints for $100K/day store
   app.get("/api/system/health", async (_req: Request, res: Response) => {
     try {
