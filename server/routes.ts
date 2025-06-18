@@ -5578,6 +5578,93 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Shopify store view endpoint for items
+  app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      let shopifyUrl;
+      if (item.shopifyId) {
+        // Direct link to Shopify admin product page
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      } else {
+        // Search for the product on Shopify store
+        const searchTerm = item.sku || item.name;
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
+      }
+
+      res.json({ success: true, url: shopifyUrl });
+    } catch (error) {
+      console.error('Error getting Shopify store view:', error);
+      res.status(500).json({ error: "Failed to get Shopify store view" });
+    }
+  });
+
+  // Google Sheets view endpoint for items
+  app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
+      const searchTerm = item.sku || item.name;
+      const sheetsUrl = `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
+
+      res.json({ success: true, url: sheetsUrl });
+    } catch (error) {
+      console.error('Error getting Google Sheets view:', error);
+      res.status(500).json({ error: "Failed to get Google Sheets view" });
+    }
+  });
+
+  // Update item pricing endpoint
+  app.patch("/api/items/:id/pricing", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { basePrice, salePrice, wholesalePrice, costPrice } = req.body;
+      
+      if (isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid item ID" });
+      }
+
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Update item with new pricing
+      const updatedItem = await storage.updateItem(itemId, {
+        basePrice: basePrice?.toString() || item.basePrice,
+        salePrice: salePrice?.toString() || item.salePrice,
+        wholesalePrice: wholesalePrice?.toString() || item.wholesalePrice,
+        costPrice: costPrice?.toString() || item.costPrice,
+        updatedAt: new Date()
+      });
+
+      if (!updatedItem) {
+        return res.status(500).json({ error: "Failed to update item pricing" });
+      }
+
+      res.json({ 
+        success: true, 
+        data: updatedItem,
+        message: "Item pricing updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating item pricing:', error);
+      res.status(500).json({ error: "Failed to update item pricing" });
+    }
+  });
+
   // Configure Google Sheets endpoint
   app.post("/api/google-sheets/configure", async (req: Request, res: Response) => {
     try {
