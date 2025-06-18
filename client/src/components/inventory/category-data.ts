@@ -33,22 +33,20 @@ export const FLOWER_STRAIN_TYPES = [
   'HHC'
 ];
 
-// All flower quality grades (unified system, no special exotic tier)
+// All flower quality grades (unified system with specific cannabis industry tiers)
 export const ALL_FLOWER_QUALITIES = [
-  'Indoor',
   'Exotic',
+  'Exotic Indoor',
   'Top Shelf',
-  'Classic Reserve',
   'AA Indoor',
   'AAA Indoor',
-  'Exotic Indoor',
-  'Outdoor',
-  'Greenhouse',
-  'Premium',
-  'Special Reserve',
-  'Limited Edition',
-  'Rare',
-  'Ultra Premium'
+  'Classic Reserve',
+  'Smalls',
+  'Top Shelf - Smalls',
+  'AA Indoor - Smalls',
+  'Top Shelf - Mediums',
+  'Classic Reserve - Smalls',
+  '➕ Add New Quality Tier'
 ];
 
 // Flower quality grades (for backwards compatibility)
@@ -134,10 +132,18 @@ export const VENDOR_OPTIONS = [
 
 // Flower quality options
 export const FLOWER_QUALITY_OPTIONS = [
+  'Exotic',
+  'Exotic Indoor',
   'Top Shelf',
-  'Premium',
-  'Mid-Grade',
-  'Budget'
+  'AA Indoor',
+  'AAA Indoor',
+  'Classic Reserve',
+  'Smalls',
+  'Top Shelf - Smalls',
+  'AA Indoor - Smalls',
+  'Top Shelf - Mediums',
+  'Classic Reserve - Smalls',
+  '➕ Add New Quality Tier'
 ];
 
 // Product type options

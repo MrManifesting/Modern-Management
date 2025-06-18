@@ -146,6 +146,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Complete webhook system operational: products/create, products/update, products/delete, inventory_levels/update, orders/create, orders/cancelled, refunds/create, customers/create, app/uninstalled
   - Real-time inventory reduction confirmed working when Shopify orders are received
   - Enhanced inventory display: 244 total items with active item prioritization and proper status management
+- June 18, 2025: **Enhanced Quality Tier System with Cannabis Industry Standards and Custom Tier Creation**
+  - Updated quality tier system with specific cannabis industry terminology: Exotic, Exotic Indoor, Top Shelf, AA Indoor, AAA Indoor, Classic Reserve
+  - Added size-specific quality tiers: Top Shelf - Smalls, AA Indoor - Smalls, Top Shelf - Mediums, Classic Reserve - Smalls
+  - Implemented "Add New Quality Tier" functionality with dialog for custom tier creation
+  - Enhanced TierSelector component with custom tier dialog allowing name and description input
+  - Updated all inventory forms and dropdowns to use consistent cannabis quality terminology
+  - System now supports both predefined industry-standard tiers and custom user-defined quality grades
 - June 18, 2025: **Fixed Breakdown Functionality to Create Consolidated Items Instead of Multiple Numbered Items**
   - Updated breakdown logic to create one consolidated item with total quantity instead of multiple individual items
   - Fixed breakdown workflow: 8 ounces now creates "Gelato 47 - Ounce" with quantity 8, not 8 separate "#1, #2, etc." items
