@@ -5148,33 +5148,47 @@ ${topCustomersCsv}`;
   // Register real-time sync routes for bidirectional marketplace synchronization
   registerSyncRoutes(app, storage);
   
-  // Add Shopify inventory fix endpoints
-  app.post('/api/shopify/fix-inventory-tracking', async (req, res) => {
+  // Live inventory sync endpoints
+  app.get('/api/inventory/live-update', async (req, res) => {
     try {
-      const { ShopifyInventoryFix } = await import('./services/shopify-inventory-fix.js');
-      const fix = new ShopifyInventoryFix();
-      const result = await fix.enableInventoryTracking();
+      const { LiveInventorySync } = await import('./services/live-inventory-sync.js');
+      const liveSync = new LiveInventorySync(storage);
+      const result = await liveSync.getLiveInventoryUpdate();
       res.json(result);
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: `Failed to fix inventory tracking: ${error}`,
-        fixed: 0
+        error: `Failed to get live update: ${error}`,
+        updates: []
       });
     }
   });
 
-  app.post('/api/shopify/sync-quantities-to-shopify', async (req, res) => {
+  app.post('/api/inventory/create-draft', async (req, res) => {
     try {
-      const { ShopifyInventoryFix } = await import('./services/shopify-inventory-fix.js');
-      const fix = new ShopifyInventoryFix();
-      const result = await fix.syncQuantitiesFromLocal(storage);
+      const { LiveInventorySync } = await import('./services/live-inventory-sync.js');
+      const liveSync = new LiveInventorySync(storage);
+      const result = await liveSync.createItemAsDraft(req.body);
       res.json(result);
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: `Failed to sync quantities: ${error}`,
-        synced: 0
+        error: `Failed to create draft: ${error}`
+      });
+    }
+  });
+
+  app.post('/api/inventory/:id/sync-quantity', async (req, res) => {
+    try {
+      const { LiveInventorySync } = await import('./services/live-inventory-sync.js');
+      const liveSync = new LiveInventorySync(storage);
+      const { quantity } = req.body;
+      const result = await liveSync.syncQuantityToShopify(parseInt(req.params.id), quantity);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: `Failed to sync quantity: ${error}`
       });
     }
   });
