@@ -44,16 +44,31 @@ export class ShopifyInventorySync {
     try {
       console.log('[shopify-sync] Starting inventory sync from Shopify...');
       
-      // Get Shopify client
-      const shopify = createShopifyClient();
-      if (!shopify) {
-        results.errors.push('Failed to create Shopify client');
+      // Fetch all products from Shopify using direct API calls
+      console.log('[shopify-sync] Fetching products from Shopify...');
+      
+      const storeUrl = process.env.SHOPIFY_STORE;
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!storeUrl || !accessToken) {
+        results.errors.push('Shopify credentials not configured');
         return results;
       }
 
-      // Fetch all products from Shopify with inventory data
-      console.log('[shopify-sync] Fetching products from Shopify...');
-      const shopifyProducts = await shopify.product.list({ limit: 250 });
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        results.errors.push(`Shopify API error: ${response.status}`);
+        return results;
+      }
+
+      const data = await response.json();
+      const shopifyProducts = data.products || [];
       
       console.log(`[shopify-sync] Found ${shopifyProducts.length} products in Shopify`);
 
@@ -170,18 +185,37 @@ export class ShopifyInventorySync {
         };
       }
 
-      const shopify = createShopifyClient();
-      if (!shopify) {
+      const storeUrl = process.env.SHOPIFY_STORE;
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!storeUrl || !accessToken) {
         return {
           success: false,
           oldQuantity: item.quantity || 0,
           newQuantity: item.quantity || 0,
-          message: 'Failed to create Shopify client'
+          message: 'Shopify credentials not configured'
         };
       }
 
-      // Get product from Shopify
-      const product = await shopify.product.get(parseInt(item.shopifyId));
+      // Get product from Shopify using direct API call
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products/${item.shopifyId}.json`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          oldQuantity: item.quantity || 0,
+          newQuantity: item.quantity || 0,
+          message: `Shopify API error: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      const product = data.product;
       const variant = product.variants?.[0];
       
       if (!variant) {
