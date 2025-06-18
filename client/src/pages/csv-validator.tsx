@@ -21,7 +21,7 @@ export default function CSVValidatorPage() {
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <Helmet>
-        <title>CSV Validator | Inventory Pro</title>
+        <title>CSV Validator | Gold-Standard_Management</title>
       </Helmet>
       
       <div className="flex justify-between items-center mb-6">

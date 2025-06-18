@@ -346,7 +346,7 @@ export default function AuthPage() {
         {/* Hero Section */}
         <div className="flex flex-col justify-center p-6 text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-blue-500">
-            Inventory Pro
+            Gold-Standard_Management
             <span className="block text-purple-500 mt-2">All-In-One Management</span>
           </h1>
           <p className="text-lg mb-8 text-slate-300">

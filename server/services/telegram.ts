@@ -192,7 +192,7 @@ export const initializeTelegramBot = (token: string) => {
         if (msg.text === '/start') {
           bot!.sendMessage(
             chatId, 
-            '👋 Welcome to the Inventory Pro Media Bot!\n\n' +
+            '👋 Welcome to the Gold-Standard_Management Media Bot!\n\n' +
             'Send me photos, videos, or documents, and I\'ll save them to your media folder.\n\n' +
             'They will be available in your inventory management system.'
           );

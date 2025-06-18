@@ -1,4 +1,4 @@
-# Inventory Management System
+# Gold-Standard_Management
 
 ## Overview
 
@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Complete Application Rebranding to Gold-Standard_Management with Updated Theme and Webhook Configuration**
+  - Updated application name from "Inventory Management System" to "Gold-Standard_Management" throughout entire codebase
+  - Implemented new gold, green, black, and red color scheme replacing previous blue/purple theme
+  - Updated CSS theme variables: gold primary (#D4AF37), green secondary (#228B22), black text, red destructive colors
+  - Modified all webhook URLs from old domain to https://gold-standard-management.replit.app/api/shopify/webhooks/*
+  - Updated theme storage key from "inventory-pro-theme" to "gold-standard-management-theme"
+  - Replaced all "Inventory Pro" references with "Gold-Standard_Management" in 40+ files including onboarding, auth pages, and components
+  - Enhanced gradient text classes to use gold-to-green gradients instead of blue-to-purple
+  - Updated button themes to use gold primary and green secondary color schemes
+  - Reconfigured webhook documentation files (shopify-webhooks-setup.md, webhook-setup-guide.md) with new domain
+  - System maintains all existing functionality while presenting unified Gold-Standard_Management branding
 - June 18, 2025: **CRITICAL FIX: Resolved Price Field Storage Issue - All Pricing Data Now Saves Correctly to Database**
   - Fixed critical database schema mismatch between Drizzle ORM field definitions and actual PostgreSQL column structure
   - Updated Drizzle schema to use snake_case field names (base_price, sale_price, cost_price) matching database columns

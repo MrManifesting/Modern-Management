@@ -76,7 +76,7 @@ export default function TopBar({
       case "/employees":
         return "Manage employee accounts and permissions";
       default:
-        return "Welcome to Inventory Pro";
+        return "Welcome to Gold-Standard_Management";
     }
   };
 

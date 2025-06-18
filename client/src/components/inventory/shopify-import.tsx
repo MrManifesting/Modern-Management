@@ -179,7 +179,7 @@ export default function ShopifyImport() {
             <Info className="h-6 w-6 text-blue-500 mt-0.5 flex-shrink-0" />
             <div className="text-sm space-y-2">
               <p className="text-white">
-                Use this tool to import your Shopify product inventory data into Inventory Pro. 
+                Use this tool to import your Shopify product inventory data into Gold-Standard_Management. 
                 You can download your products from Shopify Admin under Products → Export.
               </p>
               <p className="text-gray-300">

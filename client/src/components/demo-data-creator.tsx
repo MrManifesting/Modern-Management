@@ -29,9 +29,9 @@ const DemoDataCreator: React.FC = () => {
         syncedToMarketplaces: [],
         aiEnhanced: true,
         aiTags: ["full spectrum", "premium", "oil", "vanilla"],
-        seoTitle: "Premium Full Spectrum Oil 30ml | Inventory Pro",
+        seoTitle: "Premium Full Spectrum Oil 30ml | Gold-Standard_Management",
         attributes: {
-          brand: "Inventory Pro",
+          brand: "Gold-Standard_Management",
           tier: "Premium",
           variant: "Vanilla",
           strengthPercentage: "5.0",

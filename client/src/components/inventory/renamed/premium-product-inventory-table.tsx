@@ -68,7 +68,7 @@ export interface PremiumProduct {
   barcode?: string;
   quantity: number;
   packageType: string; // Bulk, Half, Quarter, Standard, etc.
-  brand: string; // Inventory Pro or Premium Select
+  brand: string; // Gold-Standard_Management or Premium Select
   packageSize: string; // 1 unit, 0.5 unit, 0.25 unit, etc.
   category: string;
   status?: string;
@@ -94,7 +94,7 @@ const mockPremiumProducts: PremiumProduct[] = [
     sku: "PC-PREM-2797",
     quantity: 29,
     packageType: "Bulk Standard",
-    brand: "Inventory Pro",
+    brand: "Gold-Standard_Management",
     packageSize: "1 unit",
     category: "Premium Products",
     status: "In Stock"

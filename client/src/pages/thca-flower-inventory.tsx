@@ -85,7 +85,7 @@ const THCaFlowerInventoryPage = () => {
   return (
     <>
       <Helmet>
-        <title>Premium Products Inventory | Inventory Pro</title>
+        <title>Premium Products Inventory | Gold-Standard_Management</title>
       </Helmet>
 
       {/* Onboarding tour */}
