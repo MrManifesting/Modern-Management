@@ -359,9 +359,9 @@ export const customers = pgTable("customers", {
   
   // Purchase Behavior Analytics
   totalOrders: integer("total_orders").default(0),
-  totalSpent: numeric("total_spent", { precision: 12, scale: 2 }).default(0),
-  averageOrderValue: numeric("average_order_value", { precision: 10, scale: 2 }).default(0),
-  lifetimeValue: numeric("lifetime_value", { precision: 12, scale: 2 }).default(0),
+  totalSpent: numeric("total_spent", { precision: 12, scale: 2 }).default("0"),
+  averageOrderValue: numeric("average_order_value", { precision: 10, scale: 2 }).default("0"),
+  lifetimeValue: numeric("lifetime_value", { precision: 12, scale: 2 }).default("0"),
   
   // Customer Tier and Segmentation
   customerTier: varchar("customer_tier").default("Bronze"), // Bronze, Silver, Gold, Platinum, Diamond

@@ -28,6 +28,7 @@ import ProductsInventoryPage from "@/pages/products-inventory";
 import SpecialtyProductsPage from "@/pages/specialty-products";
 
 import MediaManagerPage from "@/pages/media-manager";
+import CustomerAnalytics from "@/pages/CustomerAnalytics";
 
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";

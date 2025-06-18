@@ -14,7 +14,10 @@ import { setupAuth, requireAuth } from "./auth";
 import { MarketplaceService } from './services/marketplace';
 import { MarketplaceLogger } from './services/marketplace-logger';
 import { getMarketplaceScheduler } from './services/marketplace-scheduler';
-import { insertMarketplaceSchema } from '@shared/schema';
+import { insertMarketplaceSchema, customers, customerTierThresholds, customerPurchaseAnalytics, orderAnalytics, productPerformanceAnalytics } from '@shared/schema';
+import { customerAnalyticsService } from './services/customer-analytics';
+import { db } from './db';
+import { eq, desc } from 'drizzle-orm';
 
 // Memory storage for file uploads
 const uploadMemory = multer({ storage: multer.memoryStorage() });
@@ -2309,6 +2312,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error(`Error syncing marketplace ${req.params.id}:`, error);
       res.status(500).json({ error: "Failed to sync marketplace" });
+    }
+  });
+
+  // Shopify CSV Import endpoint
+  app.post('/api/items/import-shopify', async (req, res) => {
+    try {
+      const { csvData } = req.body;
+      
+      if (!csvData) {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      // Parse CSV data
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
+      const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
+      
+      const importedItems = [];
+      const errors = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          const item: any = {};
+          
+          headers.forEach((header, index) => {
+            item[header] = values[index] || '';
+          });
+
+          // Map Shopify fields to our schema
+          const newItem = {
+            name: item.Title || item.Handle || `Imported Item ${i}`,
+            description: item['Body (HTML)'] || item.Description || '',
+            sku: item['Variant SKU'] || item.SKU || `SHOPIFY-${Date.now()}-${i}`,
+            base_price: parseFloat(item['Variant Price'] || item.Price || '0'),
+            sale_price: parseFloat(item['Variant Compare At Price'] || item['Compare At Price'] || '0'),
+            cost_price: parseFloat(item['Variant Cost'] || item.Cost || '0'),
+            quantity: parseInt(item['Variant Inventory Qty'] || item.Quantity || '0'),
+            category: item['Product Type'] || item.Type || 'Imported',
+            brand: item.Vendor || 'Unknown',
+            weight: item['Variant Weight'] || item.Weight || '',
+            status: item.Status === 'active' ? 'active' : 'draft',
+            shopifyId: item.ID || null,
+            shopifyVariantId: item['Variant ID'] || null,
+            tags: item.Tags ? item.Tags.split(',').map((t: string) => t.trim()) : [],
+            images: item['Image Src'] ? [item['Image Src']] : []
+          };
+
+          const createdItem = await storage.createItem(newItem);
+          importedItems.push(createdItem);
+        } catch (error) {
+          errors.push(`Line ${i + 1}: ${error}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Imported ${importedItems.length} items`,
+        imported: importedItems.length,
+        errors: errors.length,
+        details: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Shopify import error:', error);
+      res.status(500).json({ error: "Import failed", details: error });
+    }
+  });
+
+  // Customer Analytics Webhook Endpoints
+  app.post('/api/webhooks/customer-analytics/order-created', async (req, res) => {
+    try {
+      const orderData = req.body;
+      
+      // Process order analytics
+      await customerAnalyticsService.processOrderAnalytics(orderData);
+      
+      res.json({ success: true, message: "Order analytics processed" });
+    } catch (error) {
+      console.error('Customer analytics webhook error:', error);
+      res.status(500).json({ error: "Failed to process order analytics" });
+    }
+  });
+
+  app.post('/api/webhooks/customer-analytics/customer-created', async (req, res) => {
+    try {
+      const customerData = req.body;
+      
+      // Create or update customer
+      await customerAnalyticsService.upsertCustomerFromShopify(customerData);
+      
+      res.json({ success: true, message: "Customer analytics processed" });
+    } catch (error) {
+      console.error('Customer analytics webhook error:', error);
+      res.status(500).json({ error: "Failed to process customer analytics" });
+    }
+  });
+
+  server.post('/api/webhooks/customer-analytics/customer-updated', async (req, res) => {
+    try {
+      const customerData = req.body;
+      
+      // Update customer and recalculate metrics
+      const customer = await customerAnalyticsService.upsertCustomerFromShopify(customerData);
+      await customerAnalyticsService.recalculateCustomerMetrics(customer.id);
+      await customerAnalyticsService.updateCustomerTier(customer.id);
+      
+      res.json({ success: true, message: "Customer analytics updated" });
+    } catch (error) {
+      console.error('Customer analytics webhook error:', error);
+      res.status(500).json({ error: "Failed to update customer analytics" });
+    }
+  });
+
+  // Customer Analytics API Endpoints
+  server.get('/api/analytics/customers/report', async (req, res) => {
+    try {
+      const { timeRange } = req.query;
+      const report = await customerAnalyticsService.getCustomerAnalyticsReport(timeRange as any);
+      
+      res.json({ success: true, data: report });
+    } catch (error) {
+      console.error('Customer analytics report error:', error);
+      res.status(500).json({ error: "Failed to generate customer analytics report" });
+    }
+  });
+
+  server.get('/api/analytics/customers/tiers', async (req, res) => {
+    try {
+      const tiers = await db.select().from(customerTierThresholds)
+        .where(eq(customerTierThresholds.isActive, true))
+        .orderBy(customerTierThresholds.displayOrder);
+      
+      res.json({ success: true, data: tiers });
+    } catch (error) {
+      console.error('Customer tiers error:', error);
+      res.status(500).json({ error: "Failed to fetch customer tiers" });
+    }
+  });
+
+  server.post('/api/analytics/customers/tiers', async (req, res) => {
+    try {
+      const tierData = req.body;
+      const newTier = await db.insert(customerTierThresholds).values(tierData).returning();
+      
+      res.json({ success: true, data: newTier[0] });
+    } catch (error) {
+      console.error('Create customer tier error:', error);
+      res.status(500).json({ error: "Failed to create customer tier" });
+    }
+  });
+
+  server.get('/api/analytics/customers/:id/profile', async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      
+      // Get customer details
+      const customer = await db.select().from(customers)
+        .where(eq(customers.id, customerId)).limit(1);
+      
+      if (customer.length === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      // Get customer purchase analytics
+      const purchaseAnalytics = await db.select().from(customerPurchaseAnalytics)
+        .where(eq(customerPurchaseAnalytics.customerId, customerId))
+        .orderBy(desc(customerPurchaseAnalytics.year), desc(customerPurchaseAnalytics.month));
+
+      // Get recent orders
+      const recentOrders = await db.select().from(orderAnalytics)
+        .where(eq(orderAnalytics.customerId, customerId))
+        .orderBy(desc(orderAnalytics.orderDate))
+        .limit(10);
+
+      res.json({
+        success: true,
+        data: {
+          customer: customer[0],
+          purchaseAnalytics,
+          recentOrders
+        }
+      });
+    } catch (error) {
+      console.error('Customer profile error:', error);
+      res.status(500).json({ error: "Failed to fetch customer profile" });
+    }
+  });
+
+  server.post('/api/analytics/customers/generate-monthly/:customerId', async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const { year, month } = req.body;
+      
+      await customerAnalyticsService.generateMonthlyCustomerAnalytics(customerId, year, month);
+      
+      res.json({ success: true, message: "Monthly analytics generated" });
+    } catch (error) {
+      console.error('Generate monthly analytics error:', error);
+      res.status(500).json({ error: "Failed to generate monthly analytics" });
+    }
+  });
+
+  server.get('/api/analytics/products/performance', async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      
+      let query = db.select().from(productPerformanceAnalytics);
+      
+      if (year) {
+        query = query.where(eq(productPerformanceAnalytics.year, parseInt(year as string)));
+      }
+      
+      if (month) {
+        query = query.where(eq(productPerformanceAnalytics.month, parseInt(month as string)));
+      }
+      
+      const performance = await query.orderBy(desc(productPerformanceAnalytics.revenue));
+      
+      res.json({ success: true, data: performance });
+    } catch (error) {
+      console.error('Product performance error:', error);
+      res.status(500).json({ error: "Failed to fetch product performance" });
+    }
+  });
+
+  server.post('/api/analytics/initialize', async (req, res) => {
+    try {
+      await customerAnalyticsService.initializeDefaultTiers();
+      
+      res.json({ success: true, message: "Analytics system initialized" });
+    } catch (error) {
+      console.error('Initialize analytics error:', error);
+      res.status(500).json({ error: "Failed to initialize analytics" });
     }
   });
 

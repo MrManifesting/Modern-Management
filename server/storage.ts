@@ -1925,11 +1925,11 @@ export class DatabaseStorage implements IStorage {
     await this.initializeMarketplaceTypes();
     
     // Get marketplace type IDs
-    const marketplaceTypes = await db.select().from(marketplaceTypes);
-    const shopifyType = marketplaceTypes.find(t => t.name === "Shopify");
-    const ebayType = marketplaceTypes.find(t => t.name === "eBay");
-    const etsyType = marketplaceTypes.find(t => t.name === "Etsy");
-    const amazonType = marketplaceTypes.find(t => t.name === "Amazon");
+    const marketplaceTypesData = await db.select().from(marketplaceTypes);
+    const shopifyType = marketplaceTypesData.find(t => t.name === "Shopify");
+    const ebayType = marketplaceTypesData.find(t => t.name === "eBay");
+    const etsyType = marketplaceTypesData.find(t => t.name === "Etsy");
+    const amazonType = marketplaceTypesData.find(t => t.name === "Amazon");
     
     const defaultMarketplaces = [
       { name: "Shopify", marketplaceTypeId: shopifyType?.id || 1, isConnected: false, credentials: {} },
