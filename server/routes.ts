@@ -17,7 +17,7 @@ import {
   generateSkuSuggestion, 
   generateInventoryInsights 
 } from "./services/openai";
-import { generateSKU, generateSKUBatch } from "./services/sku-generator";
+import { SKUGenerator } from "./services/sku-generator";
 import { generateBarcodeData, generateQRCodeDataURL } from "./services/barcode";
 import { 
   getPushStatus, 
@@ -388,9 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         itemData[field] = String(itemData[field]);
       }
       
-      // Always generate SKU for new items, regardless of whether one was provided
-      // This ensures all items have a consistent SKU format
-      itemData.sku = generateSKU(itemData);
+      // Generate SKU using new standardized system
+      const skuGenerator = new SKUGenerator(storage);
+      itemData.sku = await skuGenerator.generateSKU(itemData);
       
       // Generate barcode data
       itemData.barcode = generateBarcodeData(itemData.sku);
@@ -2291,7 +2291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Import required services
-      const { generateSKU } = await import('./services/sku-generator');
+      const { SKUGenerator } = await import('./services/sku-generator');
       const { generateQRCodeDataURL } = await import('./services/qrcode');
       
       let updatedCount = 0;
