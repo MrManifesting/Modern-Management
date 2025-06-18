@@ -128,9 +128,7 @@ export const WEIGHT_OPTIONS = [
 // Vendor options
 export const VENDOR_OPTIONS = [
   'Gold Standard',
-  'Tree Mason',
-  'Mason Jar Co',
-  'Premium Supply'
+  'Tree Mason'
 ];
 
 // Flower quality options
@@ -141,6 +139,7 @@ export const FLOWER_QUALITY_OPTIONS = [
   'AA Indoor',
   'AAA Indoor',
   'Classic Reserve',
+  'Cheap Discount Flower',
   'Smalls',
   'Top Shelf - Smalls',
   'AA Indoor - Smalls',
