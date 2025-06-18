@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { LeafLoadingPattern } from '@/components/ui/leaf-loader';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { LiveInventoryView } from '@/components/LiveInventoryView';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
