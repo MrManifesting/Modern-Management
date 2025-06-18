@@ -33,28 +33,54 @@ export function isShopifyConfigured(): boolean {
   return !!(process.env.SHOPIFY_STORE && process.env.SHOPIFY_ACCESS_TOKEN);
 }
 
-export async function syncProductsFromShopify(): Promise<ShopifyItem[]> {
-  if (!isShopifyConfigured()) {
-    throw new Error('Shopify not configured');
+export async function syncProductsFromShopify(): Promise<{ success: boolean; message: string; data?: any }> {
+  // Check environment variables first
+  const storeUrl = process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE;
+  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+  
+  if (!storeUrl || !accessToken) {
+    return {
+      success: false,
+      message: 'Shopify credentials not configured. Please check your store URL and access token.'
+    };
   }
   
   try {
-    const response = await fetch(`https://${process.env.SHOPIFY_STORE}/admin/api/2023-10/products.json`, {
+    // Clean the store URL
+    const cleanStoreUrl = storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
+    const response = await fetch(`https://${cleanStoreUrl}/admin/api/2023-10/products.json`, {
       headers: {
-        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN!,
+        'X-Shopify-Access-Token': accessToken,
         'Content-Type': 'application/json'
       }
     });
     
     if (!response.ok) {
-      throw new Error(`Shopify API error: ${response.status}`);
+      return {
+        success: false,
+        message: `Shopify API error: ${response.status} ${response.statusText}`
+      };
     }
     
     const data = await response.json();
-    return data.products || [];
-  } catch (error) {
+    const products = data.products || [];
+    
+    return {
+      success: true,
+      message: `Successfully synchronized ${products.length} products from Shopify`,
+      data: {
+        products,
+        total: products.length,
+        synced: products.length
+      }
+    };
+  } catch (error: any) {
     console.error('Error syncing from Shopify:', error);
-    return [];
+    return {
+      success: false,
+      message: `Could not synchronize inventory from Shopify: ${error.message}`
+    };
   }
 }
 
