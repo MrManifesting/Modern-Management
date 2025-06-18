@@ -137,31 +137,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Three-tier priority sorting: 
-      // 1) Active items with pricing and quantity
-      // 2) Draft items with quantity  
-      // 3) Newest items first
+      // Highest quantity sorting with available items prioritized:
+      // 1) Available items (active/available status with price) - sorted by highest quantity
+      // 2) Draft items - sorted by highest quantity
+      // 3) Other items - sorted by newest first
       const sortedItems = items.sort((a, b) => {
         const aPrice = parseFloat(a.basePrice || '0');
         const aQty = parseInt(a.quantity?.toString() || '0');
         const bPrice = parseFloat(b.basePrice || '0');
         const bQty = parseInt(b.quantity?.toString() || '0');
         
-        const aIsActive = a.status === 'active' && aPrice > 0 && aQty > 0;
-        const bIsActive = b.status === 'active' && bPrice > 0 && bQty > 0;
+        const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
+        const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
         
-        const aIsDraft = a.status === 'draft' && aQty > 0;
-        const bIsDraft = b.status === 'draft' && bQty > 0;
+        const aIsDraftWithQty = a.status === 'draft' && aQty > 0;
+        const bIsDraftWithQty = b.status === 'draft' && bQty > 0;
         
-        // Priority 1: Active items with pricing and quantity
-        if (aIsActive && !bIsActive) return -1;
-        if (!aIsActive && bIsActive) return 1;
+        // Priority 1: Available items (highest quantity first)
+        if (aIsAvailable && !bIsAvailable) return -1;
+        if (!aIsAvailable && bIsAvailable) return 1;
+        if (aIsAvailable && bIsAvailable) {
+          return bQty - aQty; // Highest quantity first
+        }
         
-        // Priority 2: Draft items with quantity
-        if (aIsDraft && !bIsDraft) return -1;
-        if (!aIsDraft && bIsDraft) return 1;
+        // Priority 2: Draft items with quantity (highest quantity first)
+        if (aIsDraftWithQty && !bIsDraftWithQty) return -1;
+        if (!aIsDraftWithQty && bIsDraftWithQty) return 1;
+        if (aIsDraftWithQty && bIsDraftWithQty) {
+          return bQty - aQty; // Highest quantity first
+        }
         
-        // Priority 3: Newest first
+        // Priority 3: Other items - newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
@@ -169,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return b.id - a.id;
       });
       
-      log(`Retrieved ${sortedItems.length} items with active item prioritization`, 'inventory');
+      log(`Retrieved ${sortedItems.length} items sorted by highest quantities first`, 'inventory');
       res.json(sortedItems);
     } catch (error) {
       console.error("Error fetching items:", error);
@@ -351,31 +357,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true; // Keep other items for now
       });
       
-      // Sort with available inventory at the top
+      // Sort with highest quantities at the top
       const sortedItems = filteredItems.sort((a, b) => {
         const aPrice = parseFloat(a.basePrice || '0');
         const aQty = parseInt(a.quantity?.toString() || '0');
         const bPrice = parseFloat(b.basePrice || '0');
         const bQty = parseInt(b.quantity?.toString() || '0');
         
-        // First: Available items with stock and pricing
         const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
         const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
         
+        const aIsDraftWithQty = a.status === 'draft' && aQty > 0;
+        const bIsDraftWithQty = b.status === 'draft' && bQty > 0;
+        
+        // Priority 1: Available items (highest quantity first)
         if (aIsAvailable && !bIsAvailable) return -1;
         if (!aIsAvailable && bIsAvailable) return 1;
-        
-        // Second: Draft items by quantity
-        if (a.status === 'draft' && b.status === 'draft') {
-          return bQty - aQty;
-        }
-        
-        // Third: Within same availability status, sort by quantity
         if (aIsAvailable && bIsAvailable) {
-          return bQty - aQty;
+          return bQty - aQty; // Highest quantity first
         }
         
-        // Finally: Newest items first
+        // Priority 2: Draft items with quantity (highest quantity first)
+        if (aIsDraftWithQty && !bIsDraftWithQty) return -1;
+        if (!aIsDraftWithQty && bIsDraftWithQty) return 1;
+        if (aIsDraftWithQty && bIsDraftWithQty) {
+          return bQty - aQty; // Highest quantity first
+        }
+        
+        // Priority 3: Other items - newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
