@@ -131,6 +131,8 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Draft items positioned below available items, also sorted by highest quantity to show potential inventory activation priorities
   - Applied consistent highest-quantity sorting across both /api/items and /api/inventory/enhanced endpoints
   - Fixed pricing calculation for breakdown items: parent item $472.50 ÷ 8 ounces = $59.06 per ounce unit price
+  - **Fixed breakdown quantity reduction**: Parent item quantity now properly decreases when units are broken down (3→2 when 1 unit broken down)
+  - Breakdown creates consolidated items with total unit quantities instead of multiple individual numbered items
   - System now prioritizes inventory management by actual stock levels making high-volume items immediately visible
 - June 18, 2025: **Critical Bug Fixes and Real-Time Monitoring System Deployed for $100K/Day Store**
   - Fixed sale creation bug that caused webhook failures with proper schema mapping and error handling
