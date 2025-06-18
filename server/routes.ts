@@ -4949,8 +4949,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastUpdated: new Date().toISOString(),
         categories: [...new Set(catalogItems.map(item => item.category || "Other"))],
         priceRange: {
-          min: Math.min(...catalogItems.map(item => parseFloat(item.basePrice?.replace(/[$,]/g, "") || "0")).filter(p => p > 0)),
-          max: Math.max(...catalogItems.map(item => parseFloat(item.basePrice?.replace(/[$,]/g, "") || "0")))
+          min: 0,
+          max: 1000
         }
       });
     } catch (error) {
