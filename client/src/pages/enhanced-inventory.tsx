@@ -11,7 +11,9 @@ import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
 import EditItemModal from '@/components/modals/edit-item-modal';
 import ViewItemModal from '@/components/modals/view-item-modal';
+import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { Item } from '@shared/schema';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EnhancedItem {
   id: number;
@@ -38,6 +40,9 @@ export default function EnhancedInventory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<EnhancedItem | null>(null);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<EnhancedItem[]>([]);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: rawItems, isLoading, refetch } = useQuery<EnhancedItem[]>({
@@ -120,6 +125,35 @@ export default function EnhancedInventory() {
     }
   };
 
+  // Bulk selection functions
+  const toggleBulkSelectMode = () => {
+    setBulkSelectMode(!bulkSelectMode);
+    setSelectedItems([]);
+  };
+
+  const handleItemSelect = (item: EnhancedItem, checked: boolean) => {
+    if (checked) {
+      setSelectedItems(prev => [...prev, item]);
+    } else {
+      setSelectedItems(prev => prev.filter(i => i.id !== item.id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(items || []);
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleBulkEditComplete = () => {
+    setIsBulkEditOpen(false);
+    setSelectedItems([]);
+    setBulkSelectMode(false);
+    refetch();
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -142,6 +176,33 @@ export default function EnhancedInventory() {
           </p>
         </div>
         <div className="flex gap-2">
+          {bulkSelectMode && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSelectAll(selectedItems.length !== items?.length)}
+              >
+                {selectedItems.length === items?.length ? 'Deselect All' : 'Select All'}
+              </Button>
+              {selectedItems.length > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setIsBulkEditOpen(true)}
+                >
+                  Edit {selectedItems.length} Items
+                </Button>
+              )}
+            </>
+          )}
+          <Button
+            variant={bulkSelectMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleBulkSelectMode}
+          >
+            {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Edit'}
+          </Button>
           <Button
             variant={viewMode === 'table' ? 'default' : 'outline'}
             size="sm"
@@ -172,6 +233,7 @@ export default function EnhancedInventory() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {bulkSelectMode && <TableHead className="w-12">Select</TableHead>}
                   <TableHead className="w-12">Image</TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>SKU</TableHead>
@@ -186,6 +248,14 @@ export default function EnhancedInventory() {
               <TableBody>
                 {items?.map((item) => (
                   <TableRow key={item.id}>
+                    {bulkSelectMode && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.some(selected => selected.id === item.id)}
+                          onCheckedChange={(checked) => handleItemSelect(item, checked as boolean)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                         {item.imageUrl ? (
