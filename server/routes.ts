@@ -1073,5 +1073,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Live catalog endpoint for public access
+  app.get("/api/catalog/live", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for in-stock items with valid pricing - prioritize active status
+      const catalogItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          (item.status === "active" || item.status === "available") &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+        )
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          category: item.category,
+          weight: item.weight,
+          quantity: item.quantity,
+          basePrice: item.basePrice,
+          salePrice: item.salePrice,
+          wholesalePrice: item.wholesalePrice,
+          brand: item.brand,
+          thcaPercentage: item.thcaPercentage,
+          condition: item.condition,
+          imageUrl: item.imageUrl,
+          updatedAt: item.updatedAt,
+          description: item.description
+        }))
+        .sort((a, b) => {
+          // Prioritize active items with pricing and quantity
+          const hasPrice = (item: any) => {
+            const basePrice = parseFloat(item.basePrice || '0');
+            const salePrice = parseFloat(item.salePrice || '0');
+            const wholesalePrice = parseFloat(item.wholesalePrice || '0');
+            return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
+          };
+          
+          const hasQuantity = (item: any) => item.quantity && item.quantity > 0;
+          
+          const aScore = (hasPrice(a) ? 2 : 0) + (hasQuantity(a) ? 1 : 0);
+          const bScore = (hasPrice(b) ? 2 : 0) + (hasQuantity(b) ? 1 : 0);
+          
+          return bScore - aScore;
+        });
+
+      log(`Live catalog: ${catalogItems.length} items available for public viewing`, 'catalog');
+
+      res.json({
+        items: catalogItems,
+        totalAvailable: catalogItems.length,
+        lastUpdated: new Date().toISOString(),
+        categories: [...new Set(catalogItems.map(item => item.category || "Other"))],
+        priceRange: {
+          min: Math.min(...catalogItems.map(item => parseFloat(item.basePrice || item.salePrice || '0'))),
+          max: Math.max(...catalogItems.map(item => parseFloat(item.basePrice || item.salePrice || '0')))
+        }
+      });
+    } catch (error) {
+      log(`Error fetching live catalog: ${error}`, 'catalog');
+      res.status(500).json({ 
+        error: "Failed to fetch live catalog",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   return server;
 }
