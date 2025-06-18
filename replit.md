@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Real-Time Inventory Sync System Deployed for Immediate Order Processing**
+  - Implemented comprehensive real-time inventory sync service that immediately updates quantities when Shopify orders are placed
+  - Created dedicated real-time-inventory-sync.ts service to handle order processing, cancellations, and inventory restoration
+  - Enhanced Shopify webhook handlers to use real-time sync instead of delayed periodic sync for immediate inventory updates
+  - Added proper webhook route registration to main application ensuring order webhooks trigger inventory reductions instantly
+  - Fixed Shopify view API endpoints to prevent 404 errors when viewing items in store admin or searching live store
+  - Implemented pricing update functionality allowing direct price modifications through dedicated API endpoint
+  - Enhanced affiliate dashboard error handling for undefined commission rates preventing JavaScript crashes
+  - System now processes orders immediately: Shopify order → real-time inventory reduction → inventory action logging → sale record creation
+  - Webhook order processing bypasses periodic sync delays ensuring inventory reflects actual availability within seconds of order placement
 - June 17, 2025: **Complete Automatic Shopify Inventory Sync System with Newest-First Display Deployed**
   - Implemented comprehensive automatic inventory sync scheduler that runs every minute to update quantities from Shopify store
   - Enhanced inventory API endpoints to display newest items first based on creation dates and ID numbers for better business workflow
