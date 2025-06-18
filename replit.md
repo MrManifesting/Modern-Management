@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Comprehensive Cleanup - Removed Duplicate Files and Fixed Marketplace Connection Testing**
+  - Removed 23 duplicate route files causing system conflicts and performance issues
+  - Fixed Shopify marketplace connection test returning proper success/failure status
+  - Cleaned up webhook test files and legacy route duplicates for streamlined codebase
+  - Marketplace connections management page now fully operational with accurate connection testing
+  - System maintains only essential route files: main routes.ts and marketplace routes for clean architecture
 - June 18, 2025: **Enhanced Inventory Sorting - Highest Quantities Display at Top with Available Items Prioritized**
   - Updated inventory sorting to display items with highest available quantities at the top for better business workflow
   - Available items (active/available status with pricing) sorted by highest quantity first for immediate sellability focus  
