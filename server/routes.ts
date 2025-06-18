@@ -48,6 +48,7 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerGoogleOAuthRoutes } from "./routes-google-oauth";
 import { registerLabelRoutes } from "./routes-labels";
+import { ShopifyInventorySync } from "./services/shopify-inventory-sync.js";
 import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
 import { inventorySyncScheduler } from "./services/inventory-sync-scheduler";
 import { registerSyncRoutes } from "./routes-sync";
@@ -1657,6 +1658,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error generating order tracking sheet:', error);
       res.status(500).json({ error: 'Failed to generate order tracking sheet' });
+    }
+  });
+
+  // Sync inventory quantities from Shopify to match exactly
+  app.post('/api/inventory/sync-from-shopify', async (req, res) => {
+    try {
+      const syncService = new ShopifyInventorySync(storage);
+      const result = await syncService.syncInventoryFromShopify();
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error syncing inventory from Shopify:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to sync inventory from Shopify',
+        updated: 0,
+        errors: [String(error)]
+      });
+    }
+  });
+
+  // Sync specific item from Shopify
+  app.post('/api/inventory/:id/sync-from-shopify', async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const syncService = new ShopifyInventorySync(storage);
+      const result = await syncService.syncItemFromShopify(itemId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error syncing item from Shopify:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to sync item from Shopify'
+      });
     }
   });
 
