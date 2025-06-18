@@ -2503,34 +2503,58 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Use a raw SQL approach with properly mapped column names
-      const keys = Object.keys(mappedItem);
-      const values = Object.values(mappedItem);
+
       
 
       
-      // Create a clean object for Drizzle insert with proper type casting
-      const drizzleItem: any = {};
+      // Create a direct insert object with correct field names
+      const insertData: any = {
+        name: item.name,
+        description: item.description,
+        sku: item.sku,
+        brand: item.brand,
+        category: item.category || 'general',
+        tags: item.tags || [],
+        quantity: item.quantity || 0,
+        status: item.status || 'draft',
+        images: item.images || [],
+        weight: item.weight,
+        // Direct price field mapping
+        base_price: item.basePrice ? Number(item.basePrice) : null,
+        sale_price: item.salePrice ? Number(item.salePrice) : null,
+        cost_price: item.costPrice ? Number(item.costPrice) : 0,
+        wholesale_price: item.wholesalePrice ? Number(item.wholesalePrice) : null,
+        // Other fields
+        image_url: item.imageUrl,
+        barcode: item.barcode,
+        dimensions: item.dimensions || {},
+        condition: item.condition || 'new',
+        package_size: item.packageSize,
+        qr_code: item.qrCode,
+        marketplace_id: item.marketplaceId,
+        publish_status: item.publishStatus || 'draft',
+        external_id: item.externalId,
+        marketplace_url: item.marketplaceUrl,
+        marketplace: item.marketplace || [],
+        location: item.location,
+        tier: item.tier,
+        strain_type: item.strainType,
+        published_to_shopify: item.publishedToShopify || false,
+        shopify_id: item.shopifyId,
+        shopify_url: item.shopifyUrl,
+        shopify_variant_id: item.shopifyVariantId,
+        metadata: item.metadata || {},
+        item_type: item.itemType || 'regular',
+        visibility: item.visibility || 'visible',
+        processing_status: item.processingStatus || 'none',
+        assigned_employee_id: item.assignedEmployeeId,
+        parent_item_id: item.parentItemId
+      };
       
-      // Map each field explicitly to ensure proper data types
-      for (const [key, value] of Object.entries(mappedItem)) {
-        if (['base_price', 'sale_price', 'cost_price', 'wholesale_price'].includes(key)) {
-          // Ensure price fields are numbers or null
-          if (value === null || value === undefined || value === '') {
-            drizzleItem[key] = null;
-          } else {
-            const numValue = Number(value);
-            drizzleItem[key] = isNaN(numValue) ? null : numValue;
-          }
-        } else {
-          drizzleItem[key] = value;
-        }
-      }
+
       
-      console.log('Final drizzleItem for insert:', JSON.stringify(drizzleItem, null, 2));
-      
-      // Use Drizzle ORM insert with cleaned data
-      const result = await db.insert(items).values(drizzleItem).returning();
+      // Use Drizzle ORM insert with direct data
+      const result = await db.insert(items).values(insertData).returning();
       
       if (result.length === 0) {
         throw new Error('Failed to create item');

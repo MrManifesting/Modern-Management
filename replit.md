@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **CRITICAL FIX: Resolved Price Field Storage Issue - All Pricing Data Now Saves Correctly to Database**
+  - Fixed critical database schema mismatch between Drizzle ORM field definitions and actual PostgreSQL column structure
+  - Updated Drizzle schema to use snake_case field names (base_price, sale_price, cost_price) matching database columns
+  - Implemented direct field mapping approach bypassing complex column translation logic that was causing data loss
+  - Price fields now properly store and retrieve: basePrice ($140.00) → base_price (140) → basePrice ($140.00) in API responses
+  - All item creation workflows now successfully save pricing data with both snake_case (database) and camelCase (API) formats
+  - Confirmed functionality: Purple Punch item created with base_price: 140, sale_price: 125, cost_price: 85 stored correctly
+  - Item creation and photo upload systems now work seamlessly with proper pricing persistence throughout inventory management
 - June 18, 2025: **Fixed Item Creation and Photo Upload Functionality - Both Features Now Fully Operational**
   - Resolved critical SKU generation error by fixing improper function import in storage.ts - now correctly imports and instantiates SKUGenerator class
   - Added missing /api/media/upload-photo endpoint that was causing 404 errors when uploading photos through mobile interface
