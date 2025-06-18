@@ -5148,8 +5148,36 @@ ${topCustomersCsv}`;
   // Register real-time sync routes for bidirectional marketplace synchronization
   registerSyncRoutes(app, storage);
   
-  // Remove duplicate inventory sync endpoint and register clean version
-  registerInventorySyncRoutes(app);
+  // Add Shopify inventory fix endpoints
+  app.post('/api/shopify/fix-inventory-tracking', async (req, res) => {
+    try {
+      const { ShopifyInventoryFix } = await import('./services/shopify-inventory-fix.js');
+      const fix = new ShopifyInventoryFix();
+      const result = await fix.enableInventoryTracking();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: `Failed to fix inventory tracking: ${error}`,
+        fixed: 0
+      });
+    }
+  });
+
+  app.post('/api/shopify/sync-quantities-to-shopify', async (req, res) => {
+    try {
+      const { ShopifyInventoryFix } = await import('./services/shopify-inventory-fix.js');
+      const fix = new ShopifyInventoryFix();
+      const result = await fix.syncQuantitiesFromLocal(storage);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: `Failed to sync quantities: ${error}`,
+        synced: 0
+      });
+    }
+  });
   
   // Register Shopify webhook routes for real-time synchronization
   registerShopifyWebhookRoutes(app, storage);
