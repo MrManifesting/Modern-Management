@@ -2509,11 +2509,28 @@ export class DatabaseStorage implements IStorage {
       
 
       
-      // Debug: Log the mapped item being inserted
-      console.log('Mapped item for Drizzle insert:', JSON.stringify(mappedItem, null, 2));
+      // Create a clean object for Drizzle insert with proper type casting
+      const drizzleItem: any = {};
       
-      // Use Drizzle ORM insert instead of raw SQL
-      const result = await db.insert(items).values(mappedItem).returning();
+      // Map each field explicitly to ensure proper data types
+      for (const [key, value] of Object.entries(mappedItem)) {
+        if (['base_price', 'sale_price', 'cost_price', 'wholesale_price'].includes(key)) {
+          // Ensure price fields are numbers or null
+          if (value === null || value === undefined || value === '') {
+            drizzleItem[key] = null;
+          } else {
+            const numValue = Number(value);
+            drizzleItem[key] = isNaN(numValue) ? null : numValue;
+          }
+        } else {
+          drizzleItem[key] = value;
+        }
+      }
+      
+      console.log('Final drizzleItem for insert:', JSON.stringify(drizzleItem, null, 2));
+      
+      // Use Drizzle ORM insert with cleaned data
+      const result = await db.insert(items).values(drizzleItem).returning();
       
       if (result.length === 0) {
         throw new Error('Failed to create item');
