@@ -135,6 +135,7 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Breakdown creates consolidated items with total unit quantities instead of multiple individual numbered items
   - **Added vendor-specific weight options**: Weight selector now includes "golden nuggets" (Gold Standard) and "little trees" (Tree Mason) for 1g units
   - **Fixed Shopify view links**: "View on Shopify" buttons now correctly link to actual product admin pages or search results in Shopify
+  - **Fixed marketplace connections management page**: Added missing marketplace routes registration enabling full marketplace management functionality
   - System now prioritizes inventory management by actual stock levels making high-volume items immediately visible
 - June 18, 2025: **Critical Bug Fixes and Real-Time Monitoring System Deployed for $100K/Day Store**
   - Fixed sale creation bug that caused webhook failures with proper schema mapping and error handling
