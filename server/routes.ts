@@ -1365,7 +1365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalItems,
           activeItems,
           lowStockItems,
-          totalValue: items.reduce((sum, item) => sum + (parseFloat(item.basePrice || '0') * (item.quantity || 0)), 0)
+          totalValue: items.reduce((sum, item) => sum + (parseFloat((item.base_price || 0).toString()) * (item.quantity || 0)), 0)
         }
       });
     } catch (error) {
@@ -1739,7 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const parentPrice = parseFloat(item.basePrice || '0');
+      const parentPrice = parseFloat((item.base_price || 0).toString());
       const weightConversions = getWeightConversions(item.weight || '');
       const options = Object.entries(weightConversions).map(([key, conversion]) => ({
         weightType: key,
@@ -1806,7 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const conversion = weightConversions[weightType];
-      const parentPrice = parseFloat(parentItem.basePrice?.toString() || '0');
+      const parentPrice = parseFloat((parentItem.base_price || 0).toString());
       const unitPrice = parentPrice > 0 ? (parentPrice / conversion.quantity) : 0;
       
       log(`Breaking down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`, 'breakdown');
@@ -1828,8 +1828,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tier: parentItem.tier,
         strainType: parentItem.strainType,
         metadata: parentItem.metadata,
-        costPrice: parentItem.costPrice,
-        wholesalePrice: parentItem.wholesalePrice,
+        cost_price: parentItem.cost_price,
+        wholesale_price: parentItem.wholesale_price,
         marketplaceId: parentItem.marketplaceId,
         publishStatus: parentItem.publishStatus,
         externalId: parentItem.externalId,
@@ -1838,8 +1838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Only change these specific fields
         weight: conversion.weight,
-        basePrice: unitPrice,
-        salePrice: unitPrice,
+        base_price: unitPrice,
+        sale_price: unitPrice,
         quantity: conversion.quantity, // Total quantity for this weight
         status: 'draft',
         sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}`,
@@ -1900,7 +1900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (item.status === "active" || item.status === "available" || item.status === "draft")
       ).map(item => {
         // Use a default price if no pricing is set for demonstration
-        const price = parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0');
+        const price = parseFloat((item.base_price || item.sale_price || item.wholesale_price || 0).toString());
         const defaultPrice = price > 0 ? price : 50.00; // Default $50 for items without pricing
         
         return {
