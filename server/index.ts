@@ -43,7 +43,23 @@ app.use((req, res, next) => {
 app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
   try {
     const order = req.body;
-    log(`Order webhook received: ${order.name || order.id}`, 'webhook-direct');
+    
+    // Validate order data
+    if (!order || typeof order !== 'object') {
+      log(`Invalid order data received in webhook`, 'webhook-direct');
+      return res.status(400).json({ error: 'Invalid order data' });
+    }
+    
+    // Handle test webhooks with minimal data
+    if (order.test === 'webhook' || !order.id) {
+      log(`Test webhook received successfully`, 'webhook-direct');
+      return res.json({ success: true, message: 'Test webhook processed' });
+    }
+    
+    const orderId = order.id || order.order_id || 'unknown';
+    const orderName = order.name || order.order_name || `#${orderId}`;
+    
+    log(`Order webhook received: ${orderName} (ID: ${orderId})`, 'webhook-direct');
     
     // Process each line item for inventory reduction
     const storage = (await import('./storage.js')).storage;
@@ -71,7 +87,7 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
         itemId: item.id,
         actionType: 'remove',
         quantity: quantityToReduce,
-        notes: `Order ${order.name} - Direct webhook`,
+        notes: `Order ${orderName} - Direct webhook`,
         previousQuantity,
         newQuantity
       });
@@ -79,35 +95,36 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
       log(`INVENTORY REDUCED: ${item.name} from ${previousQuantity} to ${newQuantity} (SKU: ${lineItem.sku})`, 'webhook-direct');
     }
     
-    // Create sale record with proper schema mapping
+    // Create sale record with proper schema mapping and null checks
     await storage.createSale({
-      orderId: order.id.toString(),
-      customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim(),
+      orderId: String(orderId),
+      customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
       customerEmail: order.email || '',
       items: order.line_items?.map((item: any) => ({
-        sku: item.sku,
-        name: item.name,
-        quantity: item.quantity,
-        price: parseFloat(item.price)
+        sku: item.sku || '',
+        name: item.name || 'Unknown Item',
+        quantity: parseInt(item.quantity) || 1,
+        price: parseFloat(item.price) || 0
       })) || [],
       subtotal: parseFloat(order.subtotal_price) || parseFloat(order.total_price) || 0,
       total: parseFloat(order.total_price) || 0,
       status: order.financial_status || 'completed',
       paymentMethod: 'shopify',
-      externalOrderId: order.id.toString(),
+      externalOrderId: String(orderId),
       metadata: {
-        orderNumber: order.name,
+        orderNumber: orderName,
         marketplace: 'shopify',
-        orderDate: order.created_at,
-        fulfillmentStatus: order.fulfillment_status
+        orderDate: order.created_at || new Date().toISOString(),
+        fulfillmentStatus: order.fulfillment_status || null
       }
     });
     
-    log(`Order ${order.name} processed successfully - inventory updated`, 'webhook-direct');
+    log(`Order ${orderName} processed successfully - inventory updated`, 'webhook-direct');
     res.json({ success: true, message: 'Order processed and inventory updated' });
   } catch (error) {
-    log(`Webhook processing error: ${error}`, 'webhook-direct');
-    res.status(500).json({ error: 'Failed to process webhook' });
+    log(`Webhook processing error: ${error instanceof Error ? error.message : String(error)}`, 'webhook-direct');
+    console.error('Full webhook error:', error);
+    res.status(500).json({ error: 'Failed to process webhook', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
