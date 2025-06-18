@@ -61,7 +61,7 @@ class InventorySyncScheduler {
         return;
       }
 
-      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`, {
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=50&fields=id,title,variants`, {
         headers: {
           'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json'
@@ -97,32 +97,8 @@ class InventorySyncScheduler {
         for (const variant of shopifyProduct.variants) {
           const variantSku = variant.sku;
           
-          // Get actual inventory quantity from inventory levels API
-          let inventoryQty = 0;
-          if (variant.inventory_item_id) {
-            try {
-              const inventoryResponse = await fetch(`https://${storeUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${variant.inventory_item_id}`, {
-                headers: {
-                  'X-Shopify-Access-Token': accessToken,
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              if (inventoryResponse.ok) {
-                const inventoryData = await inventoryResponse.json();
-                const inventoryLevels = inventoryData.inventory_levels || [];
-                
-                // Sum quantities across all locations
-                inventoryQty = inventoryLevels.reduce((total: number, level: any) => {
-                  return total + (level.available || 0);
-                }, 0);
-              } else {
-                log(`Failed to get inventory for ${variantSku}: ${inventoryResponse.status}`, 'inventory-sync');
-              }
-            } catch (inventoryError) {
-              log(`Error fetching inventory for ${variantSku}: ${inventoryError}`, 'inventory-sync');
-            }
-          }
+          // Use inventory_quantity directly from products API to avoid rate limits
+          const inventoryQty = variant.inventory_quantity || 0;
 
           if (!variantSku) {
             continue;
@@ -139,6 +115,9 @@ class InventorySyncScheduler {
             const currentQty = parseInt(String(localItem.quantity || 0));
             const shopifyQty = parseInt(String(inventoryQty));
 
+            // Log all comparisons for debugging
+            log(`Comparing ${localItem.name} (SKU: ${variantSku}): Local=${currentQty}, Shopify=${shopifyQty}`, 'inventory-sync');
+            
             // Only update if quantities are different
             if (currentQty !== shopifyQty) {
               try {
@@ -165,10 +144,12 @@ class InventorySyncScheduler {
                 });
 
                 updatedCount++;
-                log(`Updated ${localItem.name}: ${currentQty} → ${shopifyQty}`, 'inventory-sync');
+                log(`QUANTITY UPDATED: ${localItem.name}: ${currentQty} → ${shopifyQty}`, 'inventory-sync');
               } catch (updateError) {
                 console.error(`Failed to update item ${localItem.id}:`, updateError);
               }
+            } else {
+              log(`Quantities match for ${localItem.name}: ${currentQty}`, 'inventory-sync');
             }
           }
         }
