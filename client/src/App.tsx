@@ -135,6 +135,7 @@ function Router() {
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
+        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoring />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
