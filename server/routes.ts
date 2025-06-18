@@ -6000,37 +6000,7 @@ ${topCustomersCsv}`;
     }
   });
 
-  // Get Google Sheets view URL for item with enhanced inventory display
-  app.get('/api/items/:id/sheets-view', async (req, res) => {
-    try {
-      const itemId = parseInt(req.params.id);
-      const items = await storage.getItems();
-      const item = items.find(i => i.id === itemId);
-
-      if (!item) {
-        return res.status(404).json({ 
-          success: false,
-          message: 'Item not found' 
-        });
-      }
-
-      // Create enhanced URL that opens to current inventory view
-      const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
-      const searchTerm = item.sku || item.name;
-      
-      // Open to the main inventory sheet with search
-      const url = `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
-
-      res.json({ 
-        success: true,
-        url: url,
-        message: `Opening Google Sheets with search for: ${searchTerm}`
-      });
-    } catch (error) {
-      console.error('Error getting Google Sheets view URL:', error);
-      res.status(500).json({ error: 'Failed to get Google Sheets view URL' });
-    }
-  });
+  // Google Sheets view disabled - system syncs from Shopify only
 
   // Test Google Sheets connection endpoint
   app.post("/api/google-sheets/test", async (_req: Request, res: Response) => {
