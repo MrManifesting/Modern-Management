@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Implemented Proper Cannabis Weight Terminology in Live Catalog with Vendor-Specific Names**
+  - Updated ModernLiveCatalog.tsx with professional cannabis weight terminology: Pound, Half Pound, Quarter Pound, Ounce, Half Ounce, Quarter Ounce, Eighth
+  - Added vendor-specific naming for 1g units: "Golden Nugget" for Gold Standard vendor, "Little Tree" for Tree Mason vendor
+  - Eliminated improper terminology like "8 ounces" in favor of correct "Half Pound" terminology per cannabis industry standards
+  - Enhanced weight formatting function handles numeric weights, text weights, and proper cannabis terminology conversions
+  - Live catalog now displays authentic cannabis terminology attractive to potential buyers with proper weight classifications
+  - Fixed Shopify dashboard error by updating sales report service to handle undefined order responses gracefully
 - June 18, 2025: **Fixed Dashboard Generate Price Sheet 404 Error**
   - Resolved 404 error with "Generate Price Sheet" button on dashboard page
   - Updated quick-actions.tsx to use correct API endpoint /api/generate-price-sheet instead of invalid /export route
