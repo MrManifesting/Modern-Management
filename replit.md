@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Logger Utility Module Deployment Issue Resolved**
+  - Created missing logger utility module at server/utils/logger.js to resolve "Could not resolve '../utils/logger.js'" deployment error
+  - Implemented comprehensive logger with proper ES module exports supporting multiple log levels (info, warn, error, debug, inventory, shopify, webhook, sync)
+  - Fixed TypeScript compilation issues in shopify-inventory-direct.ts service preventing successful builds
+  - Verified esbuild compilation completes successfully with all logger imports resolved
+  - Logger now provides consistent formatting with timestamps and context labeling across all services
+  - Deployment-ready logger utility supports both TypeScript and JavaScript imports throughout the application
 - June 18, 2025: **Complete Live Inventory System with Duplicate Prevention and Draft Creation Deployed**
   - Implemented real-time inventory synchronization updating every 15 seconds with exact Shopify quantity matching
   - Added comprehensive duplicate prevention system checking existing SKUs and names before item creation
