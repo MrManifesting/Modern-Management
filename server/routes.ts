@@ -60,6 +60,7 @@ import { registerBulkOperationRoutes } from "./routes-bulk";
 import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
 import { registerForceSyncRoutes } from "./routes-force-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
+import { registerStreamlinedBreakdownRoutes } from "./routes-streamlined-breakdown";
 
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
@@ -6413,6 +6414,9 @@ ${topCustomersCsv}`;
 
   // Register Shopify webhook routes for real-time inventory updates
   registerShopifyWebhookRoutes(app, storage);
+  
+  // Register streamlined breakdown routes
+  registerStreamlinedBreakdownRoutes(app, storage);
 
   return app;
 }
