@@ -15,20 +15,22 @@ import {
   qrCodes
 } from "@shared/schema";
 
-// Stripe and PayPal imports with proper error handling
-let stripeService: any = null;
-let paypalService: any = null;
-
-try {
-  stripeService = require("./services/stripe").default;
-} catch (error) {
-  console.warn("Stripe service not available:", error);
+// Dynamic imports for optional services
+async function getStripeService() {
+  try {
+    const stripe = await import("./services/stripe.js");
+    return stripe.default;
+  } catch (error) {
+    return null;
+  }
 }
 
-try {
-  paypalService = require("./paypal");
-} catch (error) {
-  console.warn("PayPal service not available:", error);
+async function getPayPalService() {
+  try {
+    return await import("./paypal.js");
+  } catch (error) {
+    return null;
+  }
 }
 
 /**
