@@ -2500,7 +2500,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee Management API endpoints
+  app.get('/api/employees', async (req: Request, res: Response) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      log(`Error fetching employees: ${error}`, 'employee-api');
+      res.status(500).json({ error: 'Failed to fetch employees' });
+    }
+  });
 
+  app.post('/api/employees', async (req: Request, res: Response) => {
+    try {
+      const employeeData = req.body;
+      
+      // Generate employee ID if not provided
+      if (!employeeData.employeeId) {
+        const timestamp = Date.now().toString().slice(-6);
+        employeeData.employeeId = `EMP-${timestamp}`;
+      }
+      
+      const newEmployee = await storage.createEmployee(employeeData);
+      log(`Created new employee: ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.employeeId})`, 'employee-api');
+      res.status(201).json(newEmployee);
+    } catch (error) {
+      log(`Error creating employee: ${error}`, 'employee-api');
+      res.status(500).json({ error: 'Failed to create employee' });
+    }
+  });
+
+  app.get('/api/employees/:id', async (req: Request, res: Response) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const employee = await storage.getEmployee(employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      log(`Error fetching employee: ${error}`, 'employee-api');
+      res.status(500).json({ error: 'Failed to fetch employee' });
+    }
+  });
+
+  app.put('/api/employees/:id', async (req: Request, res: Response) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedEmployee = await storage.updateEmployee(employeeId, updates);
+      
+      if (!updatedEmployee) {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+      
+      log(`Updated employee: ${updatedEmployee.firstName} ${updatedEmployee.lastName}`, 'employee-api');
+      res.json(updatedEmployee);
+    } catch (error) {
+      log(`Error updating employee: ${error}`, 'employee-api');
+      res.status(500).json({ error: 'Failed to update employee' });
+    }
+  });
+
+  app.delete('/api/employees/:id', async (req: Request, res: Response) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const deleted = await storage.deleteEmployee(employeeId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+      
+      log(`Deleted employee with ID: ${employeeId}`, 'employee-api');
+      res.json({ success: true, message: 'Employee deleted successfully' });
+    } catch (error) {
+      log(`Error deleting employee: ${error}`, 'employee-api');
+      res.status(500).json({ error: 'Failed to delete employee' });
+    }
+  });
 
   return server;
 }
