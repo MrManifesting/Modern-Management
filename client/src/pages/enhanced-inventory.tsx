@@ -12,6 +12,7 @@ import AddItemModal from '@/components/modals/add-item-modal';
 import EditItemModal from '@/components/modals/edit-item-modal';
 import ViewItemModal from '@/components/modals/view-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
+import ItemThumbnail from '@/components/inventory/item-thumbnail';
 import { Item } from '@shared/schema';
 import { Checkbox } from '@/components/ui/checkbox';
 
