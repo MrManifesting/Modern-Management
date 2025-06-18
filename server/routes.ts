@@ -425,6 +425,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update product categories based on name keywords
+  app.post("/api/items/update-categories", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      let updatedCount = 0;
+
+      for (const item of items) {
+        const itemName = item.name.toLowerCase();
+        let newCategory = item.category;
+
+        // Determine category based on product name keywords
+        if (itemName.includes('flower') || itemName.includes('thca')) {
+          if (itemName.includes('bulk')) {
+            newCategory = 'bulk flower';
+          } else {
+            newCategory = 'flower';
+          }
+        } else if (itemName.includes('bulk')) {
+          newCategory = 'bulk';
+        } else if (itemName.includes('concentrate') || itemName.includes('crumble') || itemName.includes('wax') || itemName.includes('shatter')) {
+          newCategory = 'concentrates';
+        } else if (itemName.includes('edible') || itemName.includes('gummy') || itemName.includes('chocolate')) {
+          newCategory = 'edibles';
+        } else if (itemName.includes('vape') || itemName.includes('cartridge') || itemName.includes('cart')) {
+          newCategory = 'vapes';
+        }
+
+        // Update if category changed
+        if (newCategory !== item.category) {
+          await storage.updateItem(item.id, { ...item, category: newCategory });
+          updatedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Updated categories for ${updatedCount} items`,
+        updatedCount
+      });
+    } catch (error) {
+      console.error("Error updating categories:", error);
+      res.status(500).json({ error: "Failed to update categories" });
+    }
+  });
+
   // Quick breakdown endpoint
   app.post("/api/items/:id/quick-breakdown", async (req: Request, res: Response) => {
     try {
