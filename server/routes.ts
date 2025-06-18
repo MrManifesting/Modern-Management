@@ -459,22 +459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the item with the QR code data
       const updatedItem = await storage.updateItem(item.id, { qrCode: qrCodeDataURL });
       
-      // Trigger real-time sync with marketplaces after item creation
-      try {
-        if (updatedItem) {
-          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
-          syncItemWithMarketplaces(updatedItem, storage).catch(err => {
-            console.error("Real-time sync failed after item creation:", err);
-          });
-          
-          // Note: We don't wait for sync to complete before responding to avoid delays
-          log(`Initiated real-time sync for new item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
-        } else {
-          log(`Skipping real-time sync: Item update returned undefined`, 'marketplace-sync');
-        }
-      } catch (syncError) {
-        console.error("Failed to initiate real-time sync:", syncError);
-        // Continue with response even if sync failed to initialize
+      // Real-time sync handled by inventory sync scheduler
+      if (updatedItem) {
+        log(`Item created successfully: ${updatedItem.name} (ID: ${updatedItem.id})`, 'inventory');
       }
       
       res.status(201).json(updatedItem);
@@ -554,22 +541,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedItem = await storage.updateItem(id, updateData);
       
-      // Trigger real-time sync with marketplaces after item update
-      try {
-        if (updatedItem) {
-          const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
-          syncItemWithMarketplaces(updatedItem, storage).catch(err => {
-            console.error("Real-time sync failed after item update:", err);
-          });
-          
-          // Note: We don't wait for sync to complete before responding to avoid delays
-          log(`Initiated real-time sync for updated item: ${updatedItem.name} (ID: ${updatedItem.id})`, 'marketplace-sync');
-        } else {
-          log(`Skipping real-time sync: Item update returned undefined`, 'marketplace-sync');
-        }
-      } catch (syncError) {
-        console.error("Failed to initiate real-time sync after update:", syncError);
-        // Continue with response even if sync failed to initialize
+      // Item update logged for inventory sync scheduler
+      if (updatedItem) {
+        log(`Item updated successfully: ${updatedItem.name} (ID: ${updatedItem.id})`, 'inventory');
       }
       
       res.json(updatedItem);
@@ -758,28 +732,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Trigger real-time sync with marketplaces for all updated items
-      try {
-        const { syncItemWithMarketplaces } = await import('./services/real-time-sync');
-        
-        // Get all updated items for syncing
-        const updatedItems = await Promise.all(ids.map(id => storage.getItem(id)));
-        const validItems = updatedItems.filter(item => item !== undefined) as Item[];
-        
-        if (validItems.length > 0) {
-          log(`Initiating real-time sync for ${validItems.length} bulk-updated items`, 'marketplace-sync');
-          
-          // Process each item sync in parallel, but don't wait for completion to respond
-          validItems.forEach(item => {
-            syncItemWithMarketplaces(item, storage).catch(err => {
-              console.error(`Real-time sync failed for item ${item.id} (${item.name}):`, err);
-            });
-          });
-        }
-      } catch (syncError) {
-        console.error("Failed to initiate real-time sync for bulk updates:", syncError);
-        // Continue with response even if sync failed to initialize
-      }
+      // Bulk update logged for inventory sync scheduler
+      log(`Bulk updated ${ids.length} items successfully`, 'inventory');
       
       res.json({ 
         success: true, 
@@ -5478,8 +5432,7 @@ ${topCustomersCsv}`;
   // Register Shopify webhook routes for real-time synchronization
   registerShopifyWebhookRoutes(app, storage);
   
-  // Register inventory breakdown routes
-  registerBreakdownRoutes(app, storage);
+
   
   // Register color-coded barcode routes
   registerBarcodeRoutes(app, storage);
