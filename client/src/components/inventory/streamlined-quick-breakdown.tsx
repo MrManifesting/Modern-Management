@@ -83,35 +83,40 @@ const StreamlinedQuickBreakdown: React.FC<StreamlinedQuickBreakdownProps> = ({ i
   // Convert price to number
   const itemPrice = typeof item.basePrice === 'string' ? parseFloat(item.basePrice) : item.basePrice || 0;
 
-  // Check if item can be broken down
+  // Check if item can be broken down and get options
   useEffect(() => {
-    const checkBreakdown = () => {
-      const itemWeight = item.weight?.toString().toLowerCase() || '';
-      const hasWeight = itemWeight.includes('pound') || itemWeight.includes('lb');
-      const hasQuantity = item.quantity && item.quantity > 0;
-      
-      setCanBreakdown(hasWeight && hasQuantity);
-      
-      if (hasWeight && hasQuantity) {
-        // Calculate options with pricing
-        const calculatedOptions = BREAKDOWN_OPTIONS.map(option => ({
-          ...option,
-          unitPrice: itemPrice > 0 ? (itemPrice / option.quantity).toFixed(2) : '0.00',
-          totalValue: itemPrice.toFixed(2)
-        }));
-        setBreakdownOptions(calculatedOptions);
+    const fetchBreakdownOptions = async () => {
+      try {
+        const data = await fetch(`/api/items/${item.id}/simple-breakdown-options`)
+          .then(res => res.json());
+        
+        setCanBreakdown(data.canBreakdown || false);
+        if (data.canBreakdown && data.options) {
+          const calculatedOptions = BREAKDOWN_OPTIONS.map(option => {
+            const serverOption = data.options.find((opt: any) => opt.weightType === option.key);
+            return {
+              ...option,
+              unitPrice: serverOption ? serverOption.unitPrice : '0.00',
+              totalValue: serverOption ? serverOption.totalValue : '0.00'
+            };
+          });
+          setBreakdownOptions(calculatedOptions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch breakdown options:', error);
+        setCanBreakdown(false);
       }
     };
 
-    checkBreakdown();
-  }, [item, itemPrice]);
+    fetchBreakdownOptions();
+  }, [item.id]);
 
   const handleBreakdown = async (weightType: string) => {
     try {
       setIsSubmitting(true);
       
-      // Call streamlined breakdown API
-      const response = await apiRequest('POST', `/api/items/${item.id}/streamlined-breakdown`, { 
+      // Call simple breakdown API
+      const response = await apiRequest('POST', `/api/items/${item.id}/simple-breakdown`, { 
         weightType
       });
       
@@ -121,11 +126,12 @@ const StreamlinedQuickBreakdown: React.FC<StreamlinedQuickBreakdownProps> = ({ i
       
       toast({
         title: "Breakdown successful",
-        description: response.message,
+        description: response.message || `Successfully broke down item into ${weightType} units`,
       });
       
       onClose();
     } catch (error: any) {
+      console.error('Breakdown error:', error);
       toast({
         title: "Breakdown failed",
         description: error.message || "There was an error processing the breakdown.",
