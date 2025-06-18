@@ -4909,11 +4909,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Filter for in-stock flower items only
+      // Filter for in-stock flower items only with valid pricing
       const catalogItems = items
         .filter(item => 
           item.quantity && item.quantity > 0 && 
           item.status === "available" &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
           (item.category?.toLowerCase().includes("flower") || 
            item.name?.toLowerCase().includes("flower") ||
            item.name?.toLowerCase().includes("thca"))
