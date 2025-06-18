@@ -144,14 +144,19 @@ export default function MarketplaceList() {
       const response = await apiRequest('POST', `/api/marketplaces/${marketplace.id}/sync-toggle`);
       const data = await response.json();
       
+      // Use the new state from the response, not the old marketplace state
+      const newSyncState = data.marketplace?.syncEnabled;
+      
       toast({
-        title: marketplace.syncEnabled 
-          ? "Sync disabled" 
-          : "Sync enabled",
+        title: newSyncState 
+          ? "Auto sync enabled" 
+          : "Auto sync disabled",
         description: data.message || "Sync settings updated successfully.",
       });
       
-      queryClient.invalidateQueries({ queryKey: ['/api/marketplaces'] });
+      // Invalidate and refetch to ensure UI updates immediately
+      await queryClient.invalidateQueries({ queryKey: ['/api/marketplaces'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/marketplaces'] });
     } catch (error) {
       toast({
         title: "Failed to update sync settings",
