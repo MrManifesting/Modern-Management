@@ -287,6 +287,45 @@ export class ShopifyService implements IMarketplaceService {
   }
   
   /**
+   * Test Shopify connection
+   */
+  async testConnection(): Promise<{ success: boolean; error?: string; store?: string }> {
+    try {
+      const client = await this.getClient();
+      
+      if (!client) {
+        return { 
+          success: false, 
+          error: 'Shopify client not initialized - check your credentials' 
+        };
+      }
+
+      // Test connection by fetching shop info
+      const shopClient = client.shopify ? client.shopify.shop : client.shop;
+      const shopInfo = await shopClient.get();
+      
+      if (shopInfo && shopInfo.name) {
+        log(`Successfully connected to Shopify store: ${shopInfo.name}`, 'marketplace-shopify');
+        return { 
+          success: true, 
+          store: shopInfo.myshopify_domain || shopInfo.name 
+        };
+      } else {
+        return { 
+          success: false, 
+          error: 'Unable to retrieve shop information' 
+        };
+      }
+    } catch (error: any) {
+      log(`Shopify connection test failed: ${error.message}`, 'marketplace-shopify-error');
+      return { 
+        success: false, 
+        error: error.message || 'Connection test failed' 
+      };
+    }
+  }
+
+  /**
    * Push a product to Shopify
    */
   async pushProduct(item: Item): Promise<{ success: boolean; message: string; data?: any }> {
@@ -745,5 +784,34 @@ export class ShopifyService implements IMarketplaceService {
         message: `Error deleting product from Shopify: ${error.message}` 
       };
     }
+  }
+}
+
+/**
+ * Export function for testing Shopify connection - used by API endpoints
+ */
+export async function testShopifyConnection(): Promise<{ success: boolean; error?: string; store?: string }> {
+  try {
+    // Get credentials from environment variables
+    const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    
+    if (!accessToken) {
+      return { 
+        success: false, 
+        error: 'Shopify access token not configured in environment variables' 
+      };
+    }
+
+    // Create a temporary Shopify service instance to test connection
+    const shopifyService = new ShopifyService(storeUrl, accessToken, '');
+    const result = await shopifyService.testConnection();
+    
+    return result;
+  } catch (error: any) {
+    return { 
+      success: false, 
+      error: error.message || 'Connection test failed' 
+    };
   }
 }
