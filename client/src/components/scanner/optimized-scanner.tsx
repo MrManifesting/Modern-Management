@@ -188,14 +188,20 @@ export function OptimizedScanner({ mode = 'both', onActionComplete }: OptimizedS
       // Update item quantity
       const newQuantity = Math.max(0, scannedItem.quantity + action.quantity);
       
-      await apiRequest(`/api/items/${scannedItem.id}`, {
+      const updateResponse = await fetch(`/api/items/${scannedItem.id}`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQuantity })
       });
 
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update item quantity');
+      }
+
       // Log inventory action
-      await apiRequest('/api/inventory/actions', {
+      const actionResponse = await fetch('/api/inventory/actions', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           itemId: scannedItem.id,
           actionType: currentMode,
@@ -206,6 +212,10 @@ export function OptimizedScanner({ mode = 'both', onActionComplete }: OptimizedS
           employeeId: 1 // System employee
         })
       });
+
+      if (!actionResponse.ok) {
+        throw new Error('Failed to log inventory action');
+      }
 
       const actionResult = {
         item: scannedItem,

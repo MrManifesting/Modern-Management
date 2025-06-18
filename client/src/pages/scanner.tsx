@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScanLine, Barcode, QrCode } from 'lucide-react';
+import { ScanLine, Barcode, QrCode, Package, ArrowUp, ArrowDown } from 'lucide-react';
 import { BarcodeScanner } from '../components/scanner/barcode-scanner';
+import { OptimizedScanner } from '../components/scanner/optimized-scanner';
 import { ErrorBoundary } from '../components/error-boundary';
 
 export default function ScannerPage() {
-  const [scanMode, setScanMode] = useState<string>('quick');
+  const [scanMode, setScanMode] = useState<string>('optimized');
   
   const handleItemFound = (item: any) => {
     console.log('Item found:', item);
@@ -28,7 +29,11 @@ export default function ScannerPage() {
       </div>
       
       <Tabs value={scanMode} onValueChange={setScanMode} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="optimized" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            <span>Optimized</span>
+          </TabsTrigger>
           <TabsTrigger value="mobile" className="flex items-center gap-2">
             <ScanLine className="h-4 w-4" />
             <span>Mobile</span>
@@ -42,6 +47,28 @@ export default function ScannerPage() {
             <span>Universal</span>
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="optimized">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Optimized Scanner for Inventory Management
+              </CardTitle>
+              <CardDescription>
+                Streamlined barcode scanning for inventory intake and order fulfillment with real-time stock updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ErrorBoundary>
+                <OptimizedScanner 
+                  mode="both"
+                  onActionComplete={handleActionComplete}
+                />
+              </ErrorBoundary>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         <TabsContent value="mobile">
           <Card>
