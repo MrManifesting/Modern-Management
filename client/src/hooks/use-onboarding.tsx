@@ -23,7 +23,7 @@ const isFirstVisit = (): boolean => {
 const defaultSteps: OnboardingStep[] = [
   {
     target: 'body',
-    content: 'Welcome to the Inventory Pro Management System! Let me show you around.',
+    content: 'Welcome to the Gold-Standard_Management System! Let me show you around.',
     placement: 'center',
     disableBeacon: true,
     hideCloseButton: true,

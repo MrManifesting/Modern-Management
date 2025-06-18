@@ -414,7 +414,7 @@ export async function pushProduct(item: Item): Promise<{ success: boolean; messa
       const shopifyProduct = {
         title: item.name,
         body_html: item.description || '',
-        vendor: item.brand || 'Inventory Pro',
+        vendor: item.brand || 'Gold-Standard_Management',
         product_type: item.category || 'General',
         status: 'active',
         tags: item.tags && Array.isArray(item.tags) ? item.tags.join(', ') : '',
@@ -697,7 +697,7 @@ export async function pushProduct(item: Item): Promise<{ success: boolean; messa
       const shopifyProduct = {
         title: item.name,
         body_html: item.description || '',
-        vendor: item.brand || 'Inventory Pro',
+        vendor: item.brand || 'Gold-Standard_Management',
         product_type: item.category || 'General',
         status: 'active',
         tags: item.tags && Array.isArray(item.tags) ? item.tags.join(', ') : '',

@@ -252,7 +252,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             </svg>
           </div>
           {expanded && (
-            <span className="text-lg font-semibold text-foreground">Inventory Pro</span>
+            <span className="text-lg font-semibold text-foreground">Gold-Standard_Management</span>
           )}
         </div>
       </div>

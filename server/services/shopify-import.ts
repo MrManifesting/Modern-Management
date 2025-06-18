@@ -913,7 +913,7 @@ export function determineProductAttributes(title: string, variant: string, extra
 } {
   // Extract Brand if present in title format "BrandName - Product Name"
   let brand = 'Default Brand';
-  let prefix = 'INV'; // Default SKU prefix for Inventory Pro
+  let prefix = 'INV'; // Default SKU prefix for Gold-Standard_Management
   
   // Try to extract brand from title pattern like "BrandName - Product"
   const brandMatch = title.match(/^([^-]+)\s*-\s*/);

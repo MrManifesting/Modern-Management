@@ -24,7 +24,7 @@ export default function AnimationDemo() {
     <div className="container py-8 space-y-8">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">Leaf Animation Components</h1>
-        <p className="text-muted-foreground">Playful loading skeleton with leaf animations for Inventory Pro</p>
+        <p className="text-muted-foreground">Playful loading skeleton with leaf animations for Gold-Standard_Management</p>
       </header>
       
       <Tabs defaultValue="loaders">

@@ -37,7 +37,7 @@ const AiToolsPage: React.FC = () => {
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <Helmet>
-        <title>AI Tools | Inventory Pro</title>
+        <title>AI Tools | Gold-Standard_Management</title>
       </Helmet>
 
       <div className="flex items-center space-x-2 mb-6">

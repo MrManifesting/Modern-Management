@@ -46,7 +46,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       case "/credentials":
         return "Credential Management";
       default:
-        return "Inventory Pro";
+        return "Gold-Standard_Management";
     }
   };
 
