@@ -5062,6 +5062,43 @@ ${topCustomersCsv}`;
   
   // Register force sync routes for debugging quantity discrepancies
   registerForceSyncRoutes(app);
+
+  // Direct inventory sync endpoint - bypasses corrupted data sources
+  app.post("/api/inventory/direct-sync", async (_req: Request, res: Response) => {
+    try {
+      const { ShopifyInventoryDirect } = await import('./services/shopify-inventory-direct.js');
+      const directSync = new ShopifyInventoryDirect();
+      
+      // Get all local items
+      const localItems = await storage.getItems();
+      
+      // Compare with authentic Shopify quantities
+      const comparison = await directSync.compareInventoryQuantities(localItems);
+      
+      // If there are discrepancies, sync them
+      let syncResults = { updated: 0, errors: [] };
+      if (comparison.discrepancies.length > 0) {
+        syncResults = await directSync.syncInventoryQuantities(storage, comparison.discrepancies);
+      }
+      
+      res.json({
+        success: true,
+        totalItems: localItems.length,
+        matched: comparison.matched,
+        discrepancies: comparison.discrepancies.length,
+        updated: syncResults.updated,
+        errors: syncResults.errors,
+        details: comparison.discrepancies
+      });
+      
+    } catch (error) {
+      console.error("Direct sync error:", error);
+      res.status(500).json({ 
+        error: "Failed to perform direct sync",
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // Shopify fix routes consolidated into main routes
   
