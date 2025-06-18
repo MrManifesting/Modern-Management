@@ -63,10 +63,10 @@ interface SimpleItemFormProps {
 }
 
 const CATEGORIES = ["Bulk Flower", "Flower", "Edibles", "Concentrates", "Accessories"];
-const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD", "THCA", "THCP"];
+const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD", "THCA", "THCP", "Golden Nuggets", "Little Trees"];
 const WEIGHT_OPTIONS = ["1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"];
-const BRANDS = ["Gold Standard", "Mason Jar Co", "Premium Supply"];
-const TIERS = ["Top Shelf", "Mid Shelf", "Budget"];
+const VENDORS = ["Gold Standard", "Tree Mason"];
+const TIERS = ["Exotic", "Exotic Indoor", "Top Shelf", "AA Indoor", "AAA Indoor", "Classic Reserve", "Cheap Discount Flower"];
 
 export default function SimpleItemForm({
   defaultValues,
@@ -161,17 +161,17 @@ export default function SimpleItemForm({
             name="brand"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Brand</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>Vendor</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "Gold Standard"}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select brand" />
+                      <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {BRANDS.map((brand) => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
+                    {VENDORS.map((vendor) => (
+                      <SelectItem key={vendor} value={vendor}>
+                        {vendor}
                       </SelectItem>
                     ))}
                   </SelectContent>
