@@ -480,6 +480,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Missing Shopify API endpoints for marketplace connections
+  app.get("/api/shopify/test-connection", async (req: Request, res: Response) => {
+    try {
+      const { testShopifyConnection } = await import('./services/marketplaces/shopify.js');
+      const result = await testShopifyConnection();
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: "Connected successfully",
+          store: result.store || "mrlisterscurations.myshopify.com"
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: result.error || "Connection test failed" 
+        });
+      }
+    } catch (error) {
+      console.error("Shopify connection test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to test connection" 
+      });
+    }
+  });
+
+  app.post("/api/credentials/shopify", async (req: Request, res: Response) => {
+    try {
+      const { storeUrl, accessToken } = req.body;
+      
+      if (!storeUrl || !accessToken) {
+        return res.status(400).json({ 
+          error: "Store URL and access token are required" 
+        });
+      }
+
+      // Store credentials (you may want to encrypt these)
+      process.env.SHOPIFY_STORE_URL = storeUrl;
+      process.env.SHOPIFY_ACCESS_TOKEN = accessToken;
+      
+      res.json({ 
+        success: true, 
+        message: "Shopify credentials updated successfully" 
+      });
+    } catch (error) {
+      console.error("Error updating Shopify credentials:", error);
+      res.status(500).json({ 
+        error: "Failed to update Shopify credentials" 
+      });
+    }
+  });
+
+  app.post("/api/shopify/set-push-status", async (req: Request, res: Response) => {
+    try {
+      const { enabled } = req.body;
+      
+      // Update push status in your configuration
+      const { setPushStatus } = await import('./services/shopify-integration.js');
+      await setPushStatus(enabled);
+      
+      res.json({ 
+        success: true, 
+        message: `Shopify push ${enabled ? 'enabled' : 'disabled'}`,
+        enabled 
+      });
+    } catch (error) {
+      console.error("Error setting push status:", error);
+      res.status(500).json({ 
+        error: "Failed to update push status" 
+      });
+    }
+  });
+
   // Shopify view endpoints
   app.get("/api/items/:id/shopify-view", async (req: Request, res: Response) => {
     try {
