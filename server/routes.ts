@@ -1081,18 +1081,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newItems = [];
       for (let i = 1; i <= conversion.quantity; i++) {
         const newItem = {
+          // Keep ALL original item information identical
           name: `${parentItem.name} - ${conversion.description} #${i}`,
-          description: `${conversion.description} from ${parentItem.name} breakdown`,
-          category: parentItem.category || 'Flower',
+          description: parentItem.description,
+          category: parentItem.category,
+          brand: parentItem.brand,
+          condition: parentItem.condition,
+          tags: parentItem.tags,
+          images: parentItem.images,
+          imageUrl: parentItem.imageUrl,
+          dimensions: parentItem.dimensions,
+          packageSize: parentItem.packageSize,
+          location: parentItem.location,
+          tier: parentItem.tier,
+          strainType: parentItem.strainType,
+          metadata: parentItem.metadata,
+          costPrice: parentItem.costPrice,
+          wholesalePrice: parentItem.wholesalePrice,
+          marketplaceId: parentItem.marketplaceId,
+          publishStatus: parentItem.publishStatus,
+          externalId: parentItem.externalId,
+          marketplaceUrl: parentItem.marketplaceUrl,
+          marketplace: parentItem.marketplace,
+          
+          // Only change these specific fields
           weight: conversion.weight,
-          basePrice: unitPrice.toString(),
-          salePrice: unitPrice.toString(),
+          basePrice: unitPrice,
+          salePrice: unitPrice,
           quantity: 1,
           status: 'draft',
           sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}-${String(i).padStart(3, '0')}`,
-          brand: parentItem.brand || 'Gold Standard',
-          condition: parentItem.condition || 'Top Shelf',
-          parentItemId: parentItem.id
+          parentItemId: parentItem.id,
+          
+          // Reset these for new items
+          barcode: null,
+          qrCode: null
         };
         
         try {
