@@ -932,5 +932,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple breakdown functionality
+  const WEIGHT_CONVERSIONS: Record<string, { quantity: number; weight: string; description: string }> = {
+    'ounce': { quantity: 16, weight: 'ounce', description: 'Ounce' },
+    'quarter-pound': { quantity: 4, weight: 'quarter pound', description: 'Quarter Pound (QP)' },
+    'half-pound': { quantity: 2, weight: 'half pound', description: 'Half Pound' },
+    'half-ounce': { quantity: 32, weight: 'half ounce', description: 'Half Ounce' },
+    'quarter-ounce': { quantity: 64, weight: 'quarter ounce', description: 'Quarter Ounce' },
+    'eighth': { quantity: 128, weight: 'eighth', description: 'Eighth (3.5g)' },
+    'gram': { quantity: 454, weight: '1g', description: '1 Gram' }
+  };
+
+  app.get("/api/items/:id/simple-breakdown-options", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      const itemWeight = (item.weight || '').toLowerCase();
+      const canBreakdown = (itemWeight.includes('pound') || itemWeight.includes('lb')) && 
+                          item.quantity && item.quantity > 0;
+      
+      if (!canBreakdown) {
+        return res.json({
+          canBreakdown: false,
+          reason: "Item must be 1 pound or bulk weight with available quantity"
+        });
+      }
+      
+      const parentPrice = parseFloat(item.basePrice || '0');
+      const options = Object.entries(WEIGHT_CONVERSIONS).map(([key, conversion]) => ({
+        weightType: key,
+        description: conversion.description,
+        quantity: conversion.quantity,
+        unitWeight: conversion.weight,
+        unitPrice: parentPrice > 0 ? (parentPrice / conversion.quantity).toFixed(2) : '0.00',
+        totalValue: parentPrice.toFixed(2)
+      }));
+      
+      res.json({
+        canBreakdown: true,
+        itemName: item.name,
+        availableQuantity: item.quantity,
+        currentPrice: parentPrice.toFixed(2),
+        options
+      });
+      
+    } catch (error) {
+      log(`Error fetching breakdown options: ${error}`, 'breakdown');
+      res.status(500).json({ message: "Failed to fetch breakdown options" });
+    }
+  });
+
+  app.post("/api/items/:id/simple-breakdown", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { weightType } = req.body;
+      
+      if (!WEIGHT_CONVERSIONS[weightType]) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid weight type" 
+        });
+      }
+      
+      const parentItem = await storage.getItem(itemId);
+      if (!parentItem) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Item not found" 
+        });
+      }
+      
+      if (!parentItem.quantity || parentItem.quantity < 1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Item must have at least 1 unit available for breakdown" 
+        });
+      }
+      
+      const conversion = WEIGHT_CONVERSIONS[weightType];
+      const parentPrice = parseFloat(parentItem.basePrice || '0');
+      const unitPrice = parentPrice > 0 ? (parentPrice / conversion.quantity).toFixed(2) : '0.00';
+      
+      log(`Breaking down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`, 'breakdown');
+      
+      // Create new items
+      const newItems = [];
+      for (let i = 1; i <= conversion.quantity; i++) {
+        const newItem = {
+          name: `${parentItem.name} - ${conversion.description} #${i}`,
+          description: `${conversion.description} from ${parentItem.name} breakdown`,
+          category: parentItem.category || 'Flower',
+          weight: conversion.weight,
+          basePrice: unitPrice,
+          salePrice: unitPrice,
+          quantity: 1,
+          status: 'draft',
+          sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}-${String(i).padStart(3, '0')}`,
+          brand: parentItem.brand || 'Gold Standard',
+          condition: parentItem.condition || 'Top Shelf',
+          parentItemId: parentItem.id
+        };
+        
+        try {
+          const createdItem = await storage.createItem(newItem);
+          newItems.push(createdItem);
+          log(`Created breakdown item: ${createdItem.name} (${createdItem.sku})`, 'breakdown');
+        } catch (error) {
+          log(`Error creating breakdown item ${i}: ${error}`, 'breakdown');
+        }
+      }
+      
+      // Reduce parent item quantity by 1
+      const newQuantity = Math.max(0, (parentItem.quantity || 0) - 1);
+      await storage.updateItem(itemId, { quantity: newQuantity });
+      
+      log(`Reduced parent item ${parentItem.name} quantity from ${parentItem.quantity} to ${newQuantity}`, 'breakdown');
+      
+      res.json({
+        success: true,
+        message: `Successfully broke down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`,
+        parentItem: {
+          id: parentItem.id,
+          newQuantity
+        },
+        createdItems: newItems.length,
+        items: newItems.map(item => ({ id: item.id, name: item.name, sku: item.sku }))
+      });
+      
+    } catch (error) {
+      log(`Breakdown error: ${error}`, 'breakdown');
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to complete breakdown" 
+      });
+    }
+  });
+
   return server;
 }
