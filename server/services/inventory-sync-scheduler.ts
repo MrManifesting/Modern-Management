@@ -96,7 +96,33 @@ class InventorySyncScheduler {
         // Process each variant (most products have only one variant)
         for (const variant of shopifyProduct.variants) {
           const variantSku = variant.sku;
-          const inventoryQty = variant.inventory_quantity || 0;
+          
+          // Get actual inventory quantity from inventory levels API
+          let inventoryQty = 0;
+          if (variant.inventory_item_id) {
+            try {
+              const inventoryResponse = await fetch(`https://${storeUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${variant.inventory_item_id}`, {
+                headers: {
+                  'X-Shopify-Access-Token': accessToken,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (inventoryResponse.ok) {
+                const inventoryData = await inventoryResponse.json();
+                const inventoryLevels = inventoryData.inventory_levels || [];
+                
+                // Sum quantities across all locations
+                inventoryQty = inventoryLevels.reduce((total: number, level: any) => {
+                  return total + (level.available || 0);
+                }, 0);
+              } else {
+                log(`Failed to get inventory for ${variantSku}: ${inventoryResponse.status}`, 'inventory-sync');
+              }
+            } catch (inventoryError) {
+              log(`Error fetching inventory for ${variantSku}: ${inventoryError}`, 'inventory-sync');
+            }
+          }
 
           if (!variantSku) {
             continue;
@@ -124,11 +150,11 @@ class InventorySyncScheduler {
                 // Log the inventory action
                 await storage.createInventoryAction({
                   itemId: localItem.id,
-                  type: 'sync',
+                  employeeId: 1, // System employee
+                  actionType: 'sync',
                   quantity: shopifyQty - currentQty,
-                  reason: `Auto-sync from Shopify (${currentQty} → ${shopifyQty})`,
-                  previousQuantity: currentQty,
-                  newQuantity: shopifyQty
+                  notes: `Auto-sync from Shopify (${currentQty} → ${shopifyQty})`,
+                  previousQuantity: currentQty
                 });
 
                 updates.push({

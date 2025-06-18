@@ -98,11 +98,11 @@ export function registerForceSyncRoutes(app: Express) {
               // Log the action
               await storage.createInventoryAction({
                 itemId: localItem.id,
-                type: 'force-sync',
+                employeeId: 1, // System employee
+                actionType: 'force-sync',
                 quantity: shopifyQty - appQty,
-                reason: `Force sync: App had ${appQty}, Shopify has ${shopifyQty}`,
-                previousQuantity: appQty,
-                newQuantity: shopifyQty
+                notes: `Force sync: App had ${appQty}, Shopify has ${shopifyQty}`,
+                previousQuantity: appQty
               });
 
               updateRecord.updated = true;
