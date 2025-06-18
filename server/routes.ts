@@ -488,14 +488,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let newCategory = item.category;
 
         // Determine category based on product name keywords
-        if (itemName.includes('bulk preroll')) {
+        // Products with both "flower" and "bulk" can appear in both columns
+        const hasFlower = itemName.includes('flower') || itemName.includes('thca');
+        const hasBulk = itemName.includes('bulk');
+        
+        if (hasBulk && hasFlower) {
+          newCategory = 'bulk flower'; // Appears in both flower and bulk columns
+        } else if (itemName.includes('bulk preroll')) {
           newCategory = 'bulk';
-        } else if (itemName.includes('bulk') && itemName.includes('flower')) {
-          newCategory = 'bulk flower';
-        } else if (itemName.includes('flower') || itemName.includes('thca')) {
-          newCategory = 'flower';
-        } else if (itemName.includes('bulk')) {
-          newCategory = 'bulk';
+        } else if (hasFlower) {
+          newCategory = 'flower'; // Appears in flower column
+        } else if (hasBulk) {
+          newCategory = 'bulk'; // Appears in bulk column
         } else if (itemName.includes('concentrate') || itemName.includes('crumble') || itemName.includes('wax') || itemName.includes('shatter')) {
           newCategory = 'concentrates';
         } else if (itemName.includes('edible') || itemName.includes('gummy') || itemName.includes('chocolate')) {
