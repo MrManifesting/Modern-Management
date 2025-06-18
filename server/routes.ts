@@ -4903,6 +4903,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Live catalog endpoint - optimized for public access
+  app.get("/api/catalog/live", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for in-stock flower items only
+      const catalogItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          item.status === "available" &&
+          (item.category?.toLowerCase().includes("flower") || 
+           item.name?.toLowerCase().includes("flower") ||
+           item.name?.toLowerCase().includes("thca"))
+        )
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          category: item.category,
+          weight: item.weight,
+          quantity: item.quantity,
+          basePrice: item.basePrice,
+          salePrice: item.salePrice,
+          wholesalePrice: item.wholesalePrice,
+          brand: item.brand,
+          thcaPercentage: item.thcaPercentage,
+          condition: item.condition,
+          imageUrl: item.imageUrl,
+          updatedAt: item.updatedAt,
+          description: item.description
+        }))
+        .sort((a, b) => {
+          // Sort by updated date (newest first), then by ID (highest first)
+          if (a.updatedAt && b.updatedAt) {
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          }
+          return (b.id || 0) - (a.id || 0);
+        });
+
+      res.json({
+        items: catalogItems,
+        totalAvailable: catalogItems.length,
+        lastUpdated: new Date().toISOString(),
+        categories: [...new Set(catalogItems.map(item => item.category || "Other"))],
+        priceRange: {
+          min: Math.min(...catalogItems.map(item => parseFloat(item.basePrice?.replace(/[$,]/g, "") || "0")).filter(p => p > 0)),
+          max: Math.max(...catalogItems.map(item => parseFloat(item.basePrice?.replace(/[$,]/g, "") || "0")))
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching live catalog:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch live catalog",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // Export sales report as CSV
   app.get("/api/shopify/reports/sales/:timeframe/export", async (req: Request, res: Response) => {
