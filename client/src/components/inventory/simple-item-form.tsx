@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Package } from "lucide-react";
+import MobilePhotoUpload from "@/components/mobile/mobile-photo-upload";
 import { 
   Form, 
   FormField, 
@@ -62,7 +63,7 @@ interface SimpleItemFormProps {
 }
 
 const CATEGORIES = ["Bulk Flower", "Flower", "Edibles", "Concentrates", "Accessories"];
-const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD"];
+const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD", "THCA", "THCP"];
 const WEIGHT_OPTIONS = ["1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"];
 const BRANDS = ["Gold Standard", "Mason Jar Co", "Premium Supply"];
 const TIERS = ["Top Shelf", "Mid Shelf", "Budget"];
@@ -266,7 +267,7 @@ export default function SimpleItemForm({
                     type="number" 
                     placeholder="1" 
                     {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -279,32 +280,40 @@ export default function SimpleItemForm({
             name="imageUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Image URL</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="https://example.com/image.jpg" 
-                    {...field}
-                  />
-                </FormControl>
-                {field.value && (
-                  <div className="mt-2">
-                    <div className="w-16 h-16 border rounded-lg overflow-hidden bg-gray-50">
-                      <img
-                        src={field.value}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
+                <FormLabel>Product Photo</FormLabel>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input 
+                        placeholder="https://example.com/image.jpg" 
+                        {...field}
                       />
-                      <div className="hidden w-full h-full flex items-center justify-center">
-                        <Package className="w-6 h-6 text-gray-400" />
+                    </FormControl>
+                    <MobilePhotoUpload 
+                      onImageUrl={(url) => field.onChange(url)}
+                      className="flex-shrink-0"
+                    />
+                  </div>
+                  {field.value && (
+                    <div className="mt-2">
+                      <div className="w-20 h-20 border rounded-lg overflow-hidden bg-gray-50">
+                        <img
+                          src={field.value}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <div className="hidden w-full h-full flex items-center justify-center">
+                          <Package className="w-6 h-6 text-gray-400" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -387,43 +396,7 @@ export default function SimpleItemForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="imageUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Image URL</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter image URL" {...field} />
-              </FormControl>
-              <FormMessage />
-              {field.value && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                    <Package className="w-4 h-4" />
-                    Preview:
-                  </div>
-                  <div className="relative w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={field.value}
-                      alt="Image preview"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = target.nextElementSibling as HTMLDivElement;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400" style={{ display: 'none' }}>
-                      <Package className="w-8 h-8" />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </FormItem>
-          )}
-        />
+
 
 
 
