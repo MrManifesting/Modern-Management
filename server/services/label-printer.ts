@@ -97,6 +97,55 @@ export const LABEL_FORMATS: Record<string, LabelFormat> = {
     marginRight: 0.25,
     marginBottom: 0.25,
     labelSpacing: 0.1
+  },
+  // DYMO LabelWriter formats
+  'dymo-address': {
+    name: 'DYMO Address (2.125 x 0.875)',
+    width: 2.125,
+    height: 0.875,
+    columns: 1,
+    rows: 1,
+    marginTop: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginBottom: 0,
+    labelSpacing: 0
+  },
+  'dymo-shipping': {
+    name: 'DYMO Shipping (2.5 x 1.125)',
+    width: 2.5,
+    height: 1.125,
+    columns: 1,
+    rows: 1,
+    marginTop: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginBottom: 0,
+    labelSpacing: 0
+  },
+  'dymo-large': {
+    name: 'DYMO Large (2.5 x 1.25)',
+    width: 2.5,
+    height: 1.25,
+    columns: 1,
+    rows: 1,
+    marginTop: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginBottom: 0,
+    labelSpacing: 0
+  },
+  'dymo-badge': {
+    name: 'DYMO Badge (2.25 x 4)',
+    width: 2.25,
+    height: 4,
+    columns: 1,
+    rows: 1,
+    marginTop: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginBottom: 0,
+    labelSpacing: 0
   }
 };
 
