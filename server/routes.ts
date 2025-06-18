@@ -3967,6 +3967,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete employee" });
     }
   });
+
+  // Register real-time inventory sync API endpoints
+  app.get("/api/inventory-actions/recent", async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const actions = await storage.getRecentInventoryActions(limit);
+      res.json(actions);
+    } catch (error) {
+      console.error("Error fetching recent inventory actions:", error);
+      res.status(500).json({ error: "Failed to fetch inventory actions" });
+    }
+  });
+
+  app.get("/api/sales/recent", async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sales = await storage.getRecentSales(limit);
+      res.json(sales);
+    } catch (error) {
+      console.error("Error fetching recent sales:", error);
+      res.status(500).json({ error: "Failed to fetch sales" });
+    }
+  });
+
+  // Import and register Shopify webhook routes for real-time inventory sync
+  try {
+    const { registerShopifyWebhookRoutes } = await import('./routes-shopify-webhooks');
+    registerShopifyWebhookRoutes(app, storage);
+    log('Shopify webhook routes registered successfully', 'webhook-setup');
+  } catch (error) {
+    log(`Failed to register Shopify webhook routes: ${error}`, 'webhook-setup');
+  }
   
   // Inventory Action Routes
   app.get("/api/inventory-actions", async (req: Request, res: Response) => {

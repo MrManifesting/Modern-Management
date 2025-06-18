@@ -1540,6 +1540,20 @@ export class MemStorage implements IStorage {
       return [];
     }
   }
+
+  async getRecentSales(limit: number = 20): Promise<Sale[]> {
+    try {
+      const sales = await db.select()
+        .from(sales)
+        .orderBy(desc(sales.orderDate))
+        .limit(limit);
+      
+      return sales;
+    } catch (error) {
+      console.error("Error fetching recent sales:", error);
+      return [];
+    }
+  }
   
   // Additional item methods for bulk product handling
   async getItemBySku(sku: string): Promise<Item | undefined> {
