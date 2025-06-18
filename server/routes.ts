@@ -201,11 +201,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      // Priority sorting with active flower inventory at the top:
-      // 1) Active flower items (active/available status with price) - sorted by highest quantity
-      // 2) Active non-flower items (active/available status with price) - sorted by highest quantity
-      // 3) Draft flower items - sorted by highest quantity
-      // 4) Draft non-flower items - sorted by highest quantity
+      // Priority sorting with ALL available flower inventory at the top:
+      // 1) Available flower items (any quantity > 0, regardless of status) - sorted by highest quantity
+      // 2) Available non-flower items (any quantity > 0, regardless of status) - sorted by highest quantity  
+      // 3) Draft flower items without quantity - sorted by newest first
+      // 4) Draft non-flower items without quantity - sorted by newest first
       // 5) Other items - sorted by newest first
       const sortedItems = items.sort((a, b) => {
         const aPrice = parseFloat(a.base_price || '0');
@@ -213,8 +213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bPrice = parseFloat(b.base_price || '0');
         const bQty = parseInt(b.quantity?.toString() || '0');
         
-        const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
-        const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
+        const aIsAvailable = aQty > 0; // Any item with quantity > 0 is available
+        const bIsAvailable = bQty > 0;
         
         const aIsFlower = a.category?.toLowerCase().includes('flower') || a.name?.toLowerCase().includes('flower');
         const bIsFlower = b.category?.toLowerCase().includes('flower') || b.name?.toLowerCase().includes('flower');
@@ -258,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return b.id - a.id;
       });
       
-      log(`Retrieved ${sortedItems.length} items with active flower products prioritized at top`, 'inventory');
+      log(`Retrieved ${sortedItems.length} items with ALL available flower products prioritized at top`, 'inventory');
       res.json(sortedItems);
     } catch (error) {
       console.error("Error fetching items:", error);
