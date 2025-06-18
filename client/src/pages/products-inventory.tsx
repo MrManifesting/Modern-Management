@@ -478,7 +478,35 @@ const ProductsInventoryPage: React.FC = () => {
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.sku ? product.sku.toLowerCase().includes(searchTerm.toLowerCase()) : false);
       
-      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+      let matchesCategory = false;
+      if (selectedCategory === "All") {
+        matchesCategory = true;
+      } else {
+        const productName = product.name.toLowerCase();
+        const productCategory = (product.category || '').toLowerCase();
+        const selectedCat = selectedCategory.toLowerCase();
+        
+        // Check if category matches exactly
+        if (productCategory === selectedCat) {
+          matchesCategory = true;
+        }
+        // Check if product name contains the category keyword
+        else if (selectedCat === 'flower' && (productName.includes('flower') || productName.includes('thca'))) {
+          matchesCategory = true;
+        }
+        else if (selectedCat === 'bulk' && productName.includes('bulk')) {
+          matchesCategory = true;
+        }
+        else if (selectedCat === 'concentrates' && (productName.includes('concentrate') || productName.includes('crumble') || productName.includes('wax') || productName.includes('shatter'))) {
+          matchesCategory = true;
+        }
+        else if (selectedCat === 'edibles' && (productName.includes('edible') || productName.includes('gummy') || productName.includes('chocolate'))) {
+          matchesCategory = true;
+        }
+        else if (selectedCat === 'vapes' && (productName.includes('vape') || productName.includes('cartridge') || productName.includes('cart'))) {
+          matchesCategory = true;
+        }
+      }
       
       return matchesSearch && matchesCategory;
     })

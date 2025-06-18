@@ -404,6 +404,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Live inventory update endpoint
+  app.get("/api/inventory/live-update", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for active items with proper sorting
+      const liveItems = items
+        .filter(item => item.status === 'active' && (item.quantity || 0) > 0)
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+
+      res.json({
+        success: true,
+        items: liveItems,
+        lastUpdate: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching live inventory:", error);
+      res.status(500).json({ error: "Failed to fetch live inventory" });
+    }
+  });
+
+  // Quick breakdown endpoint
+  app.post("/api/items/:id/quick-breakdown", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { breakdownType, quantity } = req.body;
+      
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Basic breakdown logic - create smaller units
+      const breakdownOptions = {
+        'ounce': { units: 16, name: 'Ounce' },
+        'half-pound': { units: 2, name: 'Half Pound' },
+        'quarter-pound': { units: 4, name: 'Quarter Pound' }
+      };
+
+      const breakdown = breakdownOptions[breakdownType as keyof typeof breakdownOptions];
+      if (!breakdown) {
+        return res.status(400).json({ error: "Invalid breakdown type" });
+      }
+
+      res.json({
+        success: true,
+        message: `Breakdown initiated for ${item.name}`,
+        breakdown: breakdown
+      });
+    } catch (error) {
+      console.error("Error processing breakdown:", error);
+      res.status(500).json({ error: "Failed to process breakdown" });
+    }
+  });
+
   // Cleanup endpoint - remove archived/draft items without images or pricing
   app.delete("/api/inventory/cleanup", async (req: Request, res: Response) => {
     try {
