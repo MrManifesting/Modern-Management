@@ -30,7 +30,7 @@ export default function QuickActions() {
       icon: <Zap className="h-6 w-6" />,
       bgColor: "bg-amber-100",
       textColor: "text-amber-500",
-      onClick: () => navigate("/export?type=price-sheet"),
+      onClick: () => window.open("/api/generate-price-sheet", "_blank"),
     },
   ];
 

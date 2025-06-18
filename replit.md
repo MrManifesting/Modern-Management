@@ -125,6 +125,19 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Fixed Dashboard Generate Price Sheet 404 Error**
+  - Resolved 404 error with "Generate Price Sheet" button on dashboard page
+  - Updated quick-actions.tsx to use correct API endpoint /api/generate-price-sheet instead of invalid /export route
+  - Button now properly opens price sheet generator in new tab with live inventory data
+  - Price sheet includes organized flower inventory by weight categories with current pricing and stock levels
+- June 18, 2025: **Modern Live Catalog with Premium Animations Deployed**
+  - Created stunning ModernLiveCatalog.tsx with glassmorphism effects and floating background animations
+  - Added interactive features: favorites system, grid/list view toggle, advanced filtering options
+  - Implemented gradient backgrounds with animated orbs and premium tier badges with custom icons
+  - Enhanced with smooth transitions, micro-interactions, and responsive design for all devices
+  - Fixed duplicate code conflicts by removing server/public/src directory causing sync issues
+  - Updated App.tsx routing to serve modern catalog at /catalog, /menu, and /live-menu routes
+  - Real-time inventory updates every 15 seconds with modern UI elements that wow customers
 - June 18, 2025: **Logger Utility Module Deployment Issue Resolved**
   - Created missing logger utility module at server/utils/logger.js to resolve "Could not resolve '../utils/logger.js'" deployment error
   - Implemented comprehensive logger with proper ES module exports supporting multiple log levels (info, warn, error, debug, inventory, shopify, webhook, sync)
