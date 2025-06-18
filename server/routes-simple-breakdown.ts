@@ -53,7 +53,9 @@ export function registerSimpleBreakdownRoutes(app: Express, storage: any) {
       
       // Check if item is 1 pound (or bulk)
       const itemWeight = (parentItem.weight || '').toLowerCase();
-      if (!itemWeight.includes('pound') && !itemWeight.includes('lb')) {
+      console.log(`Weight validation: "${parentItem.weight}" -> "${itemWeight}"`);
+      
+      if (!itemWeight.includes('pound') && !itemWeight.includes('lb') && !itemWeight.includes('bulk')) {
         return res.status(400).json({ 
           success: false, 
           message: "Item must be 1 pound or bulk weight for breakdown" 
