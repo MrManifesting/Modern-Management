@@ -2507,6 +2507,10 @@ export class DatabaseStorage implements IStorage {
       const keys = Object.keys(mappedItem);
       const values = Object.values(mappedItem);
       
+      // Debug: Log original item data and mapped data
+      console.log('Original item data:', JSON.stringify(item, null, 2));
+      console.log('Mapped item data being inserted:', JSON.stringify(mappedItem, null, 2));
+      
       // Use Drizzle ORM insert instead of raw SQL
       const result = await db.insert(items).values(mappedItem).returning();
       
@@ -2521,6 +2525,10 @@ export class DatabaseStorage implements IStorage {
         ...row,
         id: Number(row.id),
         quantity: row.quantity !== null ? Number(row.quantity) : 0,
+        basePrice: row.base_price !== null ? Number(row.base_price) : null,
+        salePrice: row.sale_price !== null ? Number(row.sale_price) : null,
+        costPrice: row.cost_price !== null ? Number(row.cost_price) : null,
+        wholesalePrice: row.wholesale_price !== null ? Number(row.wholesale_price) : null,
         tags: row.tags || [],
         images: row.images || []
       };
