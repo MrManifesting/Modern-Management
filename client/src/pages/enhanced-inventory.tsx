@@ -62,9 +62,10 @@ export default function EnhancedInventory() {
     return (statusOrder[a.status as keyof typeof statusOrder] || 3) - (statusOrder[b.status as keyof typeof statusOrder] || 3);
   }) : [];
 
-  const formatPrice = (price: string | number) => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return isNaN(numPrice) ? '$0.00' : `$${numPrice.toFixed(2)}`;
+  const formatPrice = (price: string | number | null) => {
+    if (!price || price === 'null' || price === '0') return '$0.00';
+    const numPrice = typeof price === 'string' ? parseFloat(price.replace(/[$,\s]/g, '')) : price;
+    return isNaN(numPrice) || numPrice <= 0 ? '$0.00' : `$${numPrice.toFixed(2)}`;
   };
 
   const getShopifyUrl = (item: EnhancedItem) => {

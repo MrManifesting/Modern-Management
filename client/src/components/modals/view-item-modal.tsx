@@ -71,12 +71,12 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
   });
 
   const formatPrice = (price: string | number | null) => {
-    if (!price || price === '0' || price === 0) return 'No Price';
+    if (!price || price === '0' || price === 0 || price === 'null') return 'No Price';
     
     const priceStr = String(price).replace(/[$,\s]/g, '');
     const num = parseFloat(priceStr);
     
-    if (isNaN(num) || num === 0) return 'No Price';
+    if (isNaN(num) || num <= 0) return 'No Price';
     return `$${num.toFixed(2)}`;
   };
 
