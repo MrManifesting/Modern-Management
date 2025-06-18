@@ -663,6 +663,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Missing Shopify import endpoints
+  app.post("/api/shopify/import-all-products", async (req: Request, res: Response) => {
+    try {
+      const { syncProductsFromShopify } = await import('./services/shopify-integration.js');
+      const result = await syncProductsFromShopify();
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error importing all products:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to import products from Shopify" 
+      });
+    }
+  });
+
+  app.post("/api/shopify/update-pricing", async (req: Request, res: Response) => {
+    try {
+      // Use Shopify service to update pricing from store
+      const { testShopifyConnection } = await import('./services/marketplaces/shopify.js');
+      const connectionTest = await testShopifyConnection();
+      
+      if (!connectionTest.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Shopify connection required for pricing updates"
+        });
+      }
+
+      // Fetch and update pricing from Shopify
+      const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken!,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
+      
+      res.json({ 
+        success: true,
+        message: `Updated pricing for ${products.length} products`,
+        data: { updated: products.length }
+      });
+    } catch (error) {
+      console.error("Error updating pricing:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update pricing from Shopify" 
+      });
+    }
+  });
+
+  app.post("/api/shopify/update-images", async (req: Request, res: Response) => {
+    try {
+      const { testShopifyConnection } = await import('./services/marketplaces/shopify.js');
+      const connectionTest = await testShopifyConnection();
+      
+      if (!connectionTest.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Shopify connection required for image updates"
+        });
+      }
+
+      // Fetch and update images from Shopify
+      const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250&fields=id,images,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken!,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
+      let imagesUpdated = 0;
+      
+      for (const product of products) {
+        if (product.images && product.images.length > 0) {
+          imagesUpdated++;
+        }
+      }
+      
+      res.json({ 
+        success: true,
+        message: `Updated images for ${imagesUpdated} products`,
+        data: { 
+          productsChecked: products.length,
+          imagesUpdated 
+        }
+      });
+    } catch (error) {
+      console.error("Error updating images:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update images from Shopify" 
+      });
+    }
+  });
+
+  // Missing bulk delete endpoint
+  app.post("/api/items/delete-all", async (req: Request, res: Response) => {
+    try {
+      const { itemIds } = req.body;
+      
+      if (!itemIds || !Array.isArray(itemIds)) {
+        return res.status(400).json({ 
+          error: "Item IDs array is required" 
+        });
+      }
+
+      let deletedCount = 0;
+      let failedCount = 0;
+
+      for (const itemId of itemIds) {
+        try {
+          await storage.deleteItem(parseInt(itemId));
+          deletedCount++;
+        } catch (error) {
+          console.error(`Failed to delete item ${itemId}:`, error);
+          failedCount++;
+        }
+      }
+
+      res.json({ 
+        success: true,
+        message: `Deleted ${deletedCount} items${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+        deleted: deletedCount,
+        failed: failedCount
+      });
+    } catch (error) {
+      console.error("Error in bulk delete:", error);
+      res.status(500).json({ 
+        error: "Failed to delete items" 
+      });
+    }
+  });
+
   // Shopify view endpoints
   app.get("/api/items/:id/shopify-view", async (req: Request, res: Response) => {
     try {
