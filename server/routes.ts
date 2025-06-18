@@ -1933,8 +1933,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: item.displayPrice,
           tier: item.tier || 'Top Shelf',
           brand: item.brand || 'Gold Standard',
-          thca: item.thca || '',
-          strain: item.strain || ''
+          thca: item.thcaPercentage || '',
+          strain: item.strainType || ''
         };
         
         if (hasBulk && hasFlower) {
@@ -2376,8 +2376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(item => 
           item.quantity && item.quantity > 0 && 
           (item.status === "active" || item.status === "available") &&
-          (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+          (item.base_price || item.sale_price || item.wholesale_price) &&
+          (parseFloat((item.base_price || item.sale_price || item.wholesale_price || 0).toString()) > 0)
         )
         .map(item => ({
           id: item.id,
@@ -2386,11 +2386,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           category: item.category,
           weight: item.weight,
           quantity: item.quantity,
-          basePrice: item.basePrice,
-          salePrice: item.salePrice,
-          wholesalePrice: item.wholesalePrice,
+          basePrice: item.base_price,
+          salePrice: item.sale_price,
+          wholesalePrice: item.wholesale_price,
           brand: item.brand,
-          thcaPercentage: item.thcaPercentage,
+          thcaPercentage: item.thcaPercentage || null,
           condition: item.condition,
           imageUrl: item.imageUrl,
           updatedAt: item.updatedAt,
@@ -2419,10 +2419,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: catalogItems,
         totalAvailable: catalogItems.length,
         lastUpdated: new Date().toISOString(),
-        categories: [...new Set(catalogItems.map(item => item.category || "Other"))],
+        categories: Array.from(new Set(catalogItems.map(item => item.category || "Other"))),
         priceRange: {
-          min: Math.min(...catalogItems.map(item => parseFloat(item.basePrice || item.salePrice || '0'))),
-          max: Math.max(...catalogItems.map(item => parseFloat(item.basePrice || item.salePrice || '0')))
+          min: Math.min(...catalogItems.map(item => parseFloat((item.basePrice || item.salePrice || 0).toString()))),
+          max: Math.max(...catalogItems.map(item => parseFloat((item.basePrice || item.salePrice || 0).toString())))
         }
       });
     } catch (error) {
