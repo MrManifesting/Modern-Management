@@ -94,8 +94,10 @@ export class ShopifyService implements IMarketplaceService {
       const connectionResult = await testShopifyConnection();
       
       return {
-        success: connectionResult.connected,
-        message: connectionResult.message || (connectionResult.connected ? 'Successfully connected to Shopify' : 'Failed to connect to Shopify')
+        success: connectionResult.success,
+        message: connectionResult.success ? 
+          `Successfully connected to Shopify store: ${connectionResult.shop?.name || 'Unknown'}` : 
+          connectionResult.error || 'Failed to connect to Shopify'
       };
     } catch (error: any) {
       log(`Marketplace Shopify test connection error: ${error.message}`, 'marketplace-shopify-error');
