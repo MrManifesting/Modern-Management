@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Fixed CSV Import Functionality and Aligned Store Configuration with Gold Standard**
+  - Fixed CSV import route to properly handle file uploads using multer middleware instead of expecting CSV data in request body
+  - Implemented proper CSV parsing with quoted field handling for complex Shopify export formats
+  - Updated all hardcoded mrlisterscurations.myshopify.com references to use environment variables
+  - Aligned .env file with Gold Standard store configuration (gold-standard-cbd.myshopify.com)
+  - Enhanced CSV parser to handle multi-line fields and quoted content properly
+  - CSV import now accepts both file uploads and direct CSV data for flexibility
+  - Fixed "CSV data is required" error by adding uploadMemory.single('file') middleware to route
 - June 18, 2025: **Complete Application Rebranding to Gold-Standard_Management with Updated Theme and Webhook Configuration**
   - Updated application name from "Inventory Management System" to "Gold-Standard_Management" throughout entire codebase
   - Implemented new gold, green, black, and red color scheme replacing previous blue/purple theme
