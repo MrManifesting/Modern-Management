@@ -2401,158 +2401,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/webhooks/customer-analytics/customer-created', async (req, res) => {
+  app.post('/api/webhooks/customers/create', async (req, res) => {
     try {
-      const customerData = req.body;
+      const signature = req.get('X-Shopify-Hmac-Sha256');
+      const rawBody = JSON.stringify(req.body);
       
-      // Create or update customer
-      await customerAnalyticsService.upsertCustomerFromShopify(customerData);
-      
-      res.json({ success: true, message: "Customer analytics processed" });
-    } catch (error) {
-      console.error('Customer analytics webhook error:', error);
-      res.status(500).json({ error: "Failed to process customer analytics" });
-    }
-  });
-
-  app.post('/api/webhooks/customer-analytics/customer-updated', async (req, res) => {
-    try {
-      const customerData = req.body;
-      
-      // Update customer and recalculate metrics
-      const customer = await customerAnalyticsService.upsertCustomerFromShopify(customerData);
-      await customerAnalyticsService.recalculateCustomerMetrics(customer.id);
-      await customerAnalyticsService.updateCustomerTier(customer.id);
-      
-      res.json({ success: true, message: "Customer analytics updated" });
-    } catch (error) {
-      console.error('Customer analytics webhook error:', error);
-      res.status(500).json({ error: "Failed to update customer analytics" });
-    }
-  });
-
-  // Customer Analytics API Endpoints
-  app.get('/api/analytics/customers/report', async (req, res) => {
-    try {
-      const { timeRange } = req.query;
-      const report = await customerAnalyticsService.getCustomerAnalyticsReport(timeRange as any);
-      
-      res.json({ success: true, data: report });
-    } catch (error) {
-      console.error('Customer analytics report error:', error);
-      res.status(500).json({ error: "Failed to generate customer analytics report" });
-    }
-  });
-
-  app.get('/api/analytics/customers/tiers', async (req, res) => {
-    try {
-      const tiers = await db.select().from(customerTierThresholds)
-        .where(eq(customerTierThresholds.isActive, true))
-        .orderBy(customerTierThresholds.displayOrder);
-      
-      res.json({ success: true, data: tiers });
-    } catch (error) {
-      console.error('Customer tiers error:', error);
-      res.status(500).json({ error: "Failed to fetch customer tiers" });
-    }
-  });
-
-  app.post('/api/analytics/customers/tiers', async (req, res) => {
-    try {
-      const tierData = req.body;
-      const newTier = await db.insert(customerTierThresholds).values(tierData).returning();
-      
-      res.json({ success: true, data: newTier[0] });
-    } catch (error) {
-      console.error('Create customer tier error:', error);
-      res.status(500).json({ error: "Failed to create customer tier" });
-    }
-  });
-
-  app.get('/api/analytics/customers/:id/profile', async (req, res) => {
-    try {
-      const customerId = parseInt(req.params.id);
-      
-      // Get customer details
-      const customer = await db.select().from(customers)
-        .where(eq(customers.id, customerId)).limit(1);
-      
-      if (customer.length === 0) {
-        return res.status(404).json({ error: "Customer not found" });
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+        return res.status(401).json({ error: 'Unauthorized webhook' });
       }
 
-      // Get customer purchase analytics
-      const purchaseAnalytics = await db.select().from(customerPurchaseAnalytics)
-        .where(eq(customerPurchaseAnalytics.customerId, customerId))
-        .orderBy(desc(customerPurchaseAnalytics.year), desc(customerPurchaseAnalytics.month));
-
-      // Get recent orders
-      const recentOrders = await db.select().from(orderAnalytics)
-        .where(eq(orderAnalytics.customerId, customerId))
-        .orderBy(desc(orderAnalytics.orderDate))
-        .limit(10);
-
-      res.json({
-        success: true,
-        data: {
-          customer: customer[0],
-          purchaseAnalytics,
-          recentOrders
-        }
-      });
+      const result = await ReadOnlyWebhookMonitor.processCustomerWebhook(req.body);
+      
+      res.json(result);
     } catch (error) {
-      console.error('Customer profile error:', error);
-      res.status(500).json({ error: "Failed to fetch customer profile" });
+      console.error('Customer webhook error:', error);
+      res.status(500).json({ error: "Failed to process customer webhook" });
     }
   });
 
-  app.post('/api/analytics/customers/generate-monthly/:customerId', async (req, res) => {
+  app.post('/api/webhooks/products/update', async (req, res) => {
     try {
-      const customerId = parseInt(req.params.customerId);
-      const { year, month } = req.body;
+      const signature = req.get('X-Shopify-Hmac-Sha256');
+      const rawBody = JSON.stringify(req.body);
       
-      await customerAnalyticsService.generateMonthlyCustomerAnalytics(customerId, year, month);
-      
-      res.json({ success: true, message: "Monthly analytics generated" });
-    } catch (error) {
-      console.error('Generate monthly analytics error:', error);
-      res.status(500).json({ error: "Failed to generate monthly analytics" });
-    }
-  });
-
-  app.get('/api/analytics/products/performance', async (req, res) => {
-    try {
-      const { year, month } = req.query;
-      
-      let query = db.select().from(productPerformanceAnalytics);
-      
-      if (year) {
-        query = query.where(eq(productPerformanceAnalytics.year, parseInt(year as string)));
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+        return res.status(401).json({ error: 'Unauthorized webhook' });
       }
+
+      const result = await ReadOnlyWebhookMonitor.processProductWebhook(req.body);
       
-      if (month) {
-        query = query.where(eq(productPerformanceAnalytics.month, parseInt(month as string)));
-      }
-      
-      const performance = await query.orderBy(desc(productPerformanceAnalytics.revenue));
-      
-      res.json({ success: true, data: performance });
+      res.json(result);
     } catch (error) {
-      console.error('Product performance error:', error);
-      res.status(500).json({ error: "Failed to fetch product performance" });
+      console.error('Product webhook error:', error);
+      res.status(500).json({ error: "Failed to process product webhook" });
     }
   });
 
-  app.post('/api/analytics/initialize', async (req, res) => {
+  // Webhook Monitoring Dashboard
+  app.get('/api/webhooks/monitoring', async (req, res) => {
     try {
-      await customerAnalyticsService.initializeDefaultTiers();
-      
-      res.json({ success: true, message: "Analytics system initialized" });
+      const monitoringData = await ReadOnlyWebhookMonitor.getMonitoringData();
+      res.json(monitoringData);
     } catch (error) {
-      console.error('Initialize analytics error:', error);
-      res.status(500).json({ error: "Failed to initialize analytics" });
+      console.error('Monitoring data error:', error);
+      res.status(500).json({ error: "Failed to fetch monitoring data" });
     }
   });
+
+  // System Health Check
+  app.get('/api/webhooks/health', async (req, res) => {
+    try {
+      const healthData = await ReadOnlyWebhookMonitor.healthCheck();
+      res.json(healthData);
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(500).json({ error: "Health check failed" });
+    }
+  });
+
+
 
   return server;
 }
