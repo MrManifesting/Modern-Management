@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Inventory Organization with Active Flower Products Prioritized at Top**
+  - Updated inventory sorting algorithm to prioritize active flower inventory with available quantities at the top
+  - Implemented 5-tier sorting system: 1) Active flower items, 2) Active non-flower items, 3) Draft flower items, 4) Draft non-flower items, 5) Other items
+  - Enhanced both /api/items and /api/inventory/enhanced endpoints with flower-specific categorization
+  - Active flower products now appear first in all inventory displays for optimized business workflow
+  - System identifies flower products by category or name containing "flower" keyword for accurate prioritization
+  - Highest quantity items within each tier displayed first for better inventory management visibility
 - June 18, 2025: **Instant Catalog Generation System and Employee Management Deployed**
   - Created instant price sheet/menu/catalog generation system with multiple professional formats (HTML/JSON)
   - Implemented smart flower/bulk categorization - products with both keywords appear in multiple columns as requested
