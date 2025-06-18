@@ -14,8 +14,9 @@ import { setupAuth, requireAuth } from "./auth";
 import { MarketplaceService } from './services/marketplace';
 import { MarketplaceLogger } from './services/marketplace-logger';
 import { getMarketplaceScheduler } from './services/marketplace-scheduler';
-import { insertMarketplaceSchema, customers, customerTierThresholds, customerPurchaseAnalytics, orderAnalytics, productPerformanceAnalytics } from '@shared/schema';
-import { customerAnalyticsService } from './services/customer-analytics';
+import { insertMarketplaceSchema, webhookLogs } from '@shared/schema';
+import { ReadOnlyWebhookMonitor } from './services/read-only-webhook-monitor.js';
+import { WebhookSecurity } from './utils/webhook-security.js';
 import { db } from './db';
 import { eq, desc } from 'drizzle-orm';
 
@@ -2379,18 +2380,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer Analytics Webhook Endpoints
-  app.post('/api/webhooks/customer-analytics/order-created', async (req, res) => {
+  // Secure Read-Only Webhook Endpoints for $100K/day Store
+  app.post('/api/webhooks/orders/create', async (req, res) => {
     try {
-      const orderData = req.body;
+      // Verify webhook signature for security
+      const signature = req.get('X-Shopify-Hmac-Sha256');
+      const rawBody = JSON.stringify(req.body);
       
-      // Process order analytics
-      await customerAnalyticsService.processOrderAnalytics(orderData);
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+        return res.status(401).json({ error: 'Unauthorized webhook' });
+      }
+
+      // Process in read-only mode
+      const result = await ReadOnlyWebhookMonitor.processOrderWebhook(req.body);
       
-      res.json({ success: true, message: "Order analytics processed" });
+      res.json(result);
     } catch (error) {
-      console.error('Customer analytics webhook error:', error);
-      res.status(500).json({ error: "Failed to process order analytics" });
+      console.error('Order webhook error:', error);
+      res.status(500).json({ error: "Failed to process order webhook" });
     }
   });
 

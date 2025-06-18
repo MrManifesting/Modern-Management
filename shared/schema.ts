@@ -642,6 +642,22 @@ export const marketplaceTypes = pgTable("marketplace_types", {
 export type MarketplaceType = typeof marketplaceTypes.$inferSelect;
 export type InsertMarketplaceType = typeof marketplaceTypes.$inferInsert;
 
+// Webhook Logs for monitoring $100K/day store webhooks
+export const webhookLogs = pgTable("webhook_logs", {
+  id: serial("id").primaryKey(),
+  webhookType: varchar("webhook_type").notNull(), // orders/create, customers/create, etc.
+  shopifyId: varchar("shopify_id"), // ID from Shopify
+  payload: json("payload"), // Full webhook payload
+  processedAt: timestamp("processed_at").defaultNow(),
+  status: varchar("status").default("logged_read_only"), // logged_read_only, processed, error
+  errorMessage: text("error_message"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+});
+
+export type WebhookLog = typeof webhookLogs.$inferSelect;
+export type InsertWebhookLog = typeof webhookLogs.$inferInsert;
+
 // Store Instances (actual connected stores)
 export const stores = pgTable("stores", {
   id: serial("id").primaryKey(),
