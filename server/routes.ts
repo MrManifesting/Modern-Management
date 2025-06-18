@@ -1072,8 +1072,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const conversion = weightConversions[weightType];
-      const parentPrice = parseFloat(parentItem.basePrice || '0');
-      const unitPrice = parentPrice > 0 ? (parentPrice / conversion.quantity).toFixed(2) : '0.00';
+      const parentPrice = parseFloat(parentItem.basePrice?.toString() || '0');
+      const unitPrice = parentPrice > 0 ? (parentPrice / conversion.quantity) : 0;
       
       log(`Breaking down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`, 'breakdown');
       
@@ -1085,8 +1085,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: `${conversion.description} from ${parentItem.name} breakdown`,
           category: parentItem.category || 'Flower',
           weight: conversion.weight,
-          basePrice: unitPrice,
-          salePrice: unitPrice,
+          basePrice: unitPrice.toString(),
+          salePrice: unitPrice.toString(),
           quantity: 1,
           status: 'draft',
           sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}-${String(i).padStart(3, '0')}`,
