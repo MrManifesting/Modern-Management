@@ -932,15 +932,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple breakdown functionality
-  const WEIGHT_CONVERSIONS: Record<string, { quantity: number; weight: string; description: string }> = {
-    'ounce': { quantity: 16, weight: 'ounce', description: 'Ounce' },
-    'quarter-pound': { quantity: 4, weight: 'quarter pound', description: 'Quarter Pound (QP)' },
-    'half-pound': { quantity: 2, weight: 'half pound', description: 'Half Pound' },
-    'half-ounce': { quantity: 32, weight: 'half ounce', description: 'Half Ounce' },
-    'quarter-ounce': { quantity: 64, weight: 'quarter ounce', description: 'Quarter Ounce' },
-    'eighth': { quantity: 128, weight: 'eighth', description: 'Eighth (3.5g)' },
-    'gram': { quantity: 454, weight: '1g', description: '1 Gram' }
+  // Simple breakdown functionality - weight conversions based on the parent item's actual weight
+  const getWeightConversions = (parentWeight: string): Record<string, { quantity: number; weight: string; description: string }> => {
+    const weight = parentWeight.toLowerCase();
+    
+    // For 1 pound items
+    if (weight.includes('1 pound') || weight === 'pound') {
+      return {
+        'half-pound': { quantity: 2, weight: 'half pound', description: 'Half Pound' },
+        'quarter-pound': { quantity: 4, weight: 'quarter pound', description: 'Quarter Pound (QP)' },
+        'ounce': { quantity: 16, weight: 'ounce', description: 'Ounce' },
+        'half-ounce': { quantity: 32, weight: 'half ounce', description: 'Half Ounce' },
+        'quarter-ounce': { quantity: 64, weight: 'quarter ounce', description: 'Quarter Ounce' },
+        'eighth': { quantity: 128, weight: 'eighth', description: 'Eighth (3.5g)' },
+        'gram': { quantity: 454, weight: '1g', description: '1 Gram' }
+      };
+    }
+    
+    // For half pound items (8 ounces)
+    if (weight.includes('8 ounce') || weight.includes('half pound')) {
+      return {
+        'quarter-pound': { quantity: 2, weight: 'quarter pound', description: 'Quarter Pound (QP)' },
+        'ounce': { quantity: 8, weight: 'ounce', description: 'Ounce' },
+        'half-ounce': { quantity: 16, weight: 'half ounce', description: 'Half Ounce' },
+        'quarter-ounce': { quantity: 32, weight: 'quarter ounce', description: 'Quarter Ounce' },
+        'eighth': { quantity: 64, weight: 'eighth', description: 'Eighth (3.5g)' },
+        'gram': { quantity: 227, weight: '1g', description: '1 Gram' }
+      };
+    }
+    
+    // For quarter pound items (4 ounces)
+    if (weight.includes('4 ounce') || weight.includes('quarter pound')) {
+      return {
+        'ounce': { quantity: 4, weight: 'ounce', description: 'Ounce' },
+        'half-ounce': { quantity: 8, weight: 'half ounce', description: 'Half Ounce' },
+        'quarter-ounce': { quantity: 16, weight: 'quarter ounce', description: 'Quarter Ounce' },
+        'eighth': { quantity: 32, weight: 'eighth', description: 'Eighth (3.5g)' },
+        'gram': { quantity: 113, weight: '1g', description: '1 Gram' }
+      };
+    }
+    
+    // Default for other bulk weights
+    return {
+      'half-pound': { quantity: 2, weight: 'half pound', description: 'Half Pound' },
+      'quarter-pound': { quantity: 4, weight: 'quarter pound', description: 'Quarter Pound (QP)' },
+      'ounce': { quantity: 16, weight: 'ounce', description: 'Ounce' }
+    };
   };
 
   app.get("/api/items/:id/simple-breakdown-options", async (req: Request, res: Response) => {
@@ -969,7 +1006,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const parentPrice = parseFloat(item.basePrice || '0');
-      const options = Object.entries(WEIGHT_CONVERSIONS).map(([key, conversion]) => ({
+      const weightConversions = getWeightConversions(item.weight || '');
+      const options = Object.entries(weightConversions).map(([key, conversion]) => ({
         weightType: key,
         description: conversion.description,
         quantity: conversion.quantity,
@@ -997,13 +1035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const itemId = parseInt(req.params.id);
       const { weightType } = req.body;
       
-      if (!WEIGHT_CONVERSIONS[weightType]) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid weight type" 
-        });
-      }
-      
       const parentItem = await storage.getItem(itemId);
       if (!parentItem) {
         return res.status(404).json({ 
@@ -1030,7 +1061,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const conversion = WEIGHT_CONVERSIONS[weightType];
+      // Get weight conversions for this specific item
+      const weightConversions = getWeightConversions(parentItem.weight || '');
+      
+      if (!weightConversions[weightType]) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid weight type for this item" 
+        });
+      }
+      
+      const conversion = weightConversions[weightType];
       const parentPrice = parseFloat(parentItem.basePrice || '0');
       const unitPrice = parentPrice > 0 ? (parentPrice / conversion.quantity).toFixed(2) : '0.00';
       
