@@ -7,6 +7,7 @@ import type { Express, Request, Response } from "express";
 import { IStorage } from "./storage";
 import crypto from "crypto";
 import { log } from "./vite";
+import { realTimeInventorySync } from "./services/real-time-inventory-sync";
 
 // Webhook signature verification
 function verifyShopifyWebhook(data: string, signature: string): boolean {
@@ -242,64 +243,13 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
       const order = JSON.parse(rawBody);
       log(`Order created webhook received: ${order.name} (ID: ${order.id})`, 'shopify-webhook');
 
-      const inventoryUpdates = [];
-      const processedItems = [];
-
-      // Process order line items and update inventory
-      for (const lineItem of order.line_items || []) {
-        if (lineItem.sku) {
-          const items = await storage.getItems();
-          const item = items.find(i => i.sku === lineItem.sku);
-          
-          if (item && item.id !== undefined) {
-            const currentQuantity = item.quantity || 0;
-            const newQuantity = Math.max(0, currentQuantity - lineItem.quantity);
-            
-            await storage.updateItem(item.id, {
-              quantity: newQuantity
-            });
-
-            // Log inventory action
-            await storage.logInventoryAction({
-              itemId: item.id,
-              action: 'sale',
-              quantity: -lineItem.quantity,
-              previousQuantity: currentQuantity,
-              newQuantity,
-              reason: `Shopify order ${order.name}`,
-              notes: `Line item: ${lineItem.name}`,
-              metadata: {
-                shopifyOrderId: order.id,
-                shopifyOrderNumber: order.name,
-                lineItemId: lineItem.id
-              }
-            });
-
-            // Track for Google Sheets update
-            inventoryUpdates.push({
-              sku: lineItem.sku,
-              name: item.name,
-              quantityOrdered: lineItem.quantity,
-              remainingStock: newQuantity,
-              previousStock: currentQuantity,
-              orderNumber: order.name,
-              timestamp: order.created_at
-            });
-
-            processedItems.push({
-              productId: lineItem.product_id?.toString() || '',
-              variantId: lineItem.variant_id?.toString() || '',
-              sku: lineItem.sku,
-              name: lineItem.name,
-              quantity: lineItem.quantity,
-              price: lineItem.price
-            });
-
-            log(`Reduced inventory for ${item.name}: ${currentQuantity} -> ${newQuantity}`, 'shopify-webhook');
-          } else {
-            log(`Item not found for SKU: ${lineItem.sku}`, 'shopify-webhook');
-          }
-        }
+      // Use real-time inventory sync service for immediate updates
+      const syncSuccess = await realTimeInventorySync.processOrderCreated(order);
+      
+      if (syncSuccess) {
+        log(`Real-time inventory sync completed for order ${order.name}`, 'shopify-webhook');
+      } else {
+        log(`Real-time inventory sync failed for order ${order.name}`, 'shopify-webhook');
       }
 
       // Update THCa spreadsheet inventory (Column B deduction)
@@ -360,15 +310,30 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
         })) || []
       });
 
+      // Create sale record for order tracking
+      await storage.createSale({
+        orderId: order.name,
+        storeId: 1, // Shopify store
+        customerEmail: order.email || '',
+        customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim(),
+        marketplace: 'shopify',
+        status: order.financial_status || 'pending',
+        orderDate: new Date(order.created_at),
+        items: order.line_items?.map((item: any) => ({
+          sku: item.sku,
+          name: item.name,
+          quantity: item.quantity,
+          price: parseFloat(item.price)
+        })) || [],
+        subtotal: order.subtotal_price || '0',
+        total: order.total_price || '0',
+        externalOrderId: order.id?.toString()
+      });
+
       res.json({ 
         success: true, 
-        message: `Order ${order.name} processed successfully`,
-        itemsUpdated: inventoryUpdates.length,
-        inventoryUpdates: inventoryUpdates.map(update => ({
-          sku: update.sku,
-          newStock: update.remainingStock,
-          ordered: update.quantityOrdered
-        }))
+        message: `Order ${order.name} processed with real-time inventory sync`,
+        realTimeSync: syncSuccess
       });
     } catch (error) {
       log(`Error processing order create webhook: ${error}`, 'shopify-webhook');
