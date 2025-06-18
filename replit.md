@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Enhanced Inventory Status Management and Active Item Prioritization**
+  - Updated breakdown functionality to ensure all breakdown child items are created with 'draft' status until manually activated
+  - Implemented active item prioritization - all active items with valid pricing and quantity now appear at top of inventory lists
+  - Added strict validation preventing items from being set to 'active' status without both valid pricing (>$0) and available quantity (>0)
+  - Enhanced inventory sorting across all endpoints (/api/items, /api/inventory/enhanced) to prioritize valid active items first
+  - Active items now require human approval to change from draft to active status ensuring quality control
+  - System prevents accidental activation of items missing essential business requirements (pricing and stock)
 - June 18, 2025: **Critical Security Fix: Removed Hardcoded Google OAuth Credentials**
   - Removed hardcoded Google OAuth client secret from attached_assets/client_secret_*.json file that was flagged by security scan
   - Updated GoogleOAuthService to use only environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) for authentication

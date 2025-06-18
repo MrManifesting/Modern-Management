@@ -183,18 +183,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
       });
       
-      // Sort by newest items first: newest createdAt dates first, then by highest ID numbers
+      // Sort with active items with pricing and quantity at the top
       const sortedItems = itemsWithPricing.sort((a, b) => {
-        // First, try to sort by createdAt if both have it
+        // Helper function to check if item is valid for active status
+        const isValidActive = (item: any) => {
+          const hasPrice = item.basePrice && parseFloat(item.basePrice) > 0;
+          const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
+          const isActive = item.status === 'active';
+          return isActive && hasPrice && hasQuantity;
+        };
+        
+        const aValidActive = isValidActive(a);
+        const bValidActive = isValidActive(b);
+        
+        // First priority: valid active items at the top
+        if (aValidActive && !bValidActive) return -1;
+        if (!aValidActive && bValidActive) return 1;
+        
+        // Within same category, sort by newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
-        
-        // If one has createdAt and the other doesn't, prioritize the one with createdAt
         if (a.createdAt && !b.createdAt) return -1;
         if (!a.createdAt && b.createdAt) return 1;
-        
-        // If neither has createdAt, sort by ID (newest/highest first)
         return b.id - a.id;
       });
       
@@ -476,6 +487,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle numeric values
       if (updateData.basePrice) {
         updateData.basePrice = String(parseFloat(updateData.basePrice));
+      }
+      
+      // Validate status change to active - items must have pricing and quantity
+      if (updateData.status === 'active') {
+        const hasPrice = updateData.basePrice ? parseFloat(updateData.basePrice) > 0 : 
+                        existingItem.basePrice ? parseFloat(existingItem.basePrice) > 0 : false;
+        const hasQuantity = updateData.quantity ? parseInt(updateData.quantity.toString()) > 0 : 
+                           existingItem.quantity ? parseInt(existingItem.quantity.toString()) > 0 : false;
+        
+        if (!hasPrice || !hasQuantity) {
+          return res.status(400).json({ 
+            error: "Cannot set item to active status without valid pricing and available quantity",
+            details: {
+              hasPrice,
+              hasQuantity,
+              currentPrice: updateData.basePrice || existingItem.basePrice,
+              currentQuantity: updateData.quantity || existingItem.quantity
+            }
+          });
+        }
       }
       
       // Handle JSON fields
@@ -5455,16 +5486,29 @@ ${topCustomersCsv}`;
       console.log('Fetching enhanced inventory items with Google Sheets data...');
       const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
       
-      // Sort by newest first (createdAt desc, then by ID desc for items without createdAt)
+      // Sort with active items with pricing and quantity at the top
       const sortedItems = enhancedItems.sort((a, b) => {
-        // First priority: items with createdAt dates
+        // Helper function to check if item is valid for active status
+        const isValidActive = (item: any) => {
+          const hasPrice = item.basePrice && parseFloat(item.basePrice) > 0;
+          const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
+          const isActive = item.status === 'active';
+          return isActive && hasPrice && hasQuantity;
+        };
+        
+        const aValidActive = isValidActive(a);
+        const bValidActive = isValidActive(b);
+        
+        // First priority: valid active items at the top
+        if (aValidActive && !bValidActive) return -1;
+        if (!aValidActive && bValidActive) return 1;
+        
+        // Within same category, sort by newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
-        // Second priority: items with createdAt vs without
         if (a.createdAt && !b.createdAt) return -1;
         if (!a.createdAt && b.createdAt) return 1;
-        // Third priority: sort by ID descending (newer IDs first)
         return b.id - a.id;
       });
       
