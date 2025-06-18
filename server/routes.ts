@@ -36,10 +36,10 @@ import {
 } from "./services/shopify-reports";
 import { testShopifyConnection } from "./services/shopify-auth";
 import { getShopifyProducts, createShopifyProduct, updateShopifyProduct } from "./services/shopify-sync";
+// Route imports - cleaned up to remove duplicates
 import { registerShopifyImportRoutes } from "./routes-shopify-import";
 import { registerCSVImportRoutes } from "./routes-csv-import";
 import { registerCleanupRoutes } from "./routes-cleanup";
-
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
 import { registerAffiliateRoutes } from "./routes-affiliate-fixed";
@@ -48,27 +48,20 @@ import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";
 import { registerGoogleOAuthRoutes } from "./routes-google-oauth";
 import { registerLabelRoutes } from "./routes-labels";
-import { registerInventorySyncRoutes } from "./routes-inventory-sync.js";
 import { registerShopifyWebhookRoutes } from "./routes-shopify-webhooks";
-import { inventorySyncScheduler } from "./services/inventory-sync-scheduler";
-import { registerSyncRoutes } from "./routes-sync";
-import { ShopifyProductImportService } from "./services/shopify-product-import.js";
-import { registerBreakdownRoutes } from "./routes-breakdown";
 import { registerBarcodeRoutes } from "./routes-barcode";
 import { registerTelegramRoutes } from "./routes-telegram";
-import { registerBulkOperationRoutes } from "./routes-bulk";
-import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-sync";
-import { registerForceSyncRoutes } from "./routes-force-sync";
-import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
-import { registerStreamlinedBreakdownRoutes } from "./routes-streamlined-breakdown";
 import { registerSimpleBreakdownRoutes } from "./routes-simple-breakdown";
-
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
 import { registerBidirectionalSyncRoutes } from "./routes-bidirectional-sync";
 import { registerBarcodeFulfillmentRoutes } from "./routes-barcode-fulfillment";
 import { setupAuth, requireAuth } from "./auth-simple";
 import priceSheetRoutes from "./routes-price-sheet";
+
+// Service imports
+import { inventorySyncScheduler } from "./services/inventory-sync-scheduler";
+import { ShopifyProductImportService } from "./services/shopify-product-import.js";
 import { 
   insertItemSchema, 
   insertMarketplaceSchema, 
@@ -5249,8 +5242,7 @@ ${topCustomersCsv}`;
   // Register specialized Shopify import routes
   registerShopifyImportRoutes(app, storage);
   
-  // Register force sync routes for debugging quantity discrepancies
-  registerForceSyncRoutes(app);
+
 
   // Direct inventory sync endpoint - bypasses corrupted data sources
   app.post("/api/inventory/direct-sync", async (_req: Request, res: Response) => {
@@ -5436,7 +5428,7 @@ ${topCustomersCsv}`;
   registerCleanupRoutes(app, storage);
   
   // Register real-time sync routes for bidirectional marketplace synchronization
-  registerSyncRoutes(app, storage);
+
   
   // Live inventory sync endpoints
   app.get('/api/inventory/live-update', async (req, res) => {
