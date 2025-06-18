@@ -778,6 +778,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Missing Shopify products endpoint for sync preview
+  app.get("/api/shopify/products", async (req: Request, res: Response) => {
+    try {
+      const { syncProductsFromShopify } = await import('./services/shopify-integration.js');
+      const result = await syncProductsFromShopify();
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.message || "Failed to fetch products from Shopify" 
+        });
+      }
+
+      // Return just the products array for sync preview
+      res.json(result.data?.products || []);
+    } catch (error) {
+      console.error("Error fetching Shopify products:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch products from Shopify" 
+      });
+    }
+  });
+
   // Missing bulk delete endpoint
   app.post("/api/items/delete-all", async (req: Request, res: Response) => {
     try {

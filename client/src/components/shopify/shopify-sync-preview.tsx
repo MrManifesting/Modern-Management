@@ -218,7 +218,7 @@ const ShopifySyncPreview: React.FC = () => {
       const connectionResponse = await fetch('/api/shopify/test-connection');
       const connectionStatus = await connectionResponse.json();
       
-      if (!connectionStatus.connected) {
+      if (!connectionStatus.success) {
         throw new Error(connectionStatus.message || 'Unable to connect to Shopify. Please check your API credentials.');
       }
       
