@@ -83,6 +83,7 @@ export interface IStorage {
   createSale(sale: InsertSale): Promise<Sale>;
   updateSale(id: number, sale: Partial<InsertSale>): Promise<Sale | undefined>;
   deleteSale(id: number): Promise<boolean>;
+  getRecentSales(limit?: number): Promise<Sale[]>;
   
   // Analytics methods
   getSalesReport(params: ReportParams): Promise<SalesReport>;
@@ -106,6 +107,7 @@ export interface IStorage {
   logInventoryAction?(action: InsertInventoryAction): Promise<InventoryAction>;
   getInventoryActionsByItem(itemId: number): Promise<InventoryAction[]>;
   getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]>;
+  getRecentInventoryActions(limit?: number): Promise<InventoryAction[]>;
   
   // Product Breakdown methods
   getProductBreakdowns(): Promise<ProductBreakdown[]>;
@@ -1498,6 +1500,45 @@ export class MemStorage implements IStorage {
   
   async getInventoryActionsByEmployee(employeeId: number): Promise<InventoryAction[]> {
     return this.getInventoryActions({ employeeId });
+  }
+
+  async getRecentInventoryActions(limit: number = 20): Promise<InventoryAction[]> {
+    try {
+      const actions = await db.select({
+        id: inventoryActions.id,
+        itemId: inventoryActions.itemId,
+        actionType: inventoryActions.actionType,
+        quantity: inventoryActions.quantity,
+        notes: inventoryActions.notes,
+        previousQuantity: inventoryActions.previousQuantity,
+        newQuantity: inventoryActions.newQuantity,
+        createdAt: inventoryActions.createdAt,
+        itemName: items.name,
+        itemSku: items.sku
+      })
+      .from(inventoryActions)
+      .leftJoin(items, eq(inventoryActions.itemId, items.id))
+      .orderBy(desc(inventoryActions.createdAt))
+      .limit(limit);
+      
+      return actions.map(action => ({
+        id: action.id,
+        itemId: action.itemId,
+        actionType: action.actionType,
+        quantity: action.quantity,
+        notes: action.notes || '',
+        previousQuantity: action.previousQuantity || 0,
+        newQuantity: action.newQuantity || 0,
+        createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
+        item: action.itemName ? {
+          name: action.itemName,
+          sku: action.itemSku || ''
+        } : undefined
+      }));
+    } catch (error) {
+      console.error("Error fetching recent inventory actions:", error);
+      return [];
+    }
   }
   
   // Additional item methods for bulk product handling
