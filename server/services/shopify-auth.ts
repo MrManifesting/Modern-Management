@@ -170,6 +170,8 @@ export async function testShopifyConnection() {
     
     return {
       success: true,
+      connected: true,
+      message: `Successfully connected to Shopify store: ${shop.name}`,
       shop: {
         name: shop.name,
         email: shop.email,
@@ -181,6 +183,8 @@ export async function testShopifyConnection() {
     log(`Failed to connect to Shopify: ${error.message}`, 'shopify');
     return {
       success: false,
+      connected: false,
+      message: `Failed to connect to Shopify: ${error.message}`,
       error: error.message
     };
   }
