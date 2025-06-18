@@ -2661,7 +2661,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Telegram photo upload endpoint
+  // Mobile photo upload endpoint with automatic Telegram and Shopify integration
+  app.post("/api/media/upload-photo", upload.single('photo'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No photo file provided" });
+      }
+
+      const timestamp = req.body.timestamp || Date.now();
+      const source = req.body.source || 'mobile_upload';
+      
+      // Generate accessible image URL
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] || `${req.protocol}://${req.get('host')}`;
+      const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      
+      // Try to send to Telegram media chat if configured
+      let telegramSent = false;
+      try {
+        const telegramService = await import('./services/telegram.js');
+        
+        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_MEDIA_CHAT_ID) {
+          const bot = telegramService.getTelegramBot();
+          if (bot) {
+            await bot.telegram.sendPhoto(
+              process.env.TELEGRAM_MEDIA_CHAT_ID,
+              { source: req.file.path },
+              {
+                caption: `📱 Mobile Upload - ${req.file.filename}\nSource: ${source}\nTimestamp: ${new Date(timestamp).toLocaleString()}`
+              }
+            );
+            telegramSent = true;
+          }
+        }
+      } catch (telegramError) {
+        console.log('Telegram integration not available or failed:', telegramError);
+      }
+
+      // Try to upload to Google Drive if configured
+      let driveUrl = null;
+      try {
+        const googleDriveService = await import('./services/google-drive.js').catch(() => null);
+        if (googleDriveService && process.env.GOOGLE_DRIVE_FOLDER_ID) {
+          const uploadResult = await googleDriveService.uploadFile(
+            req.file.path,
+            req.file.filename,
+            'image/*'
+          );
+          if (uploadResult && uploadResult.webViewLink) {
+            driveUrl = uploadResult.webViewLink;
+          }
+        }
+      } catch (driveError) {
+        console.log('Google Drive integration not available or failed:', driveError);
+      }
+
+      res.json({
+        success: true,
+        message: "Photo uploaded successfully",
+        imageUrl: imageUrl,
+        driveUrl: driveUrl,
+        telegramSent: telegramSent,
+        filename: req.file.filename,
+        timestamp: timestamp,
+        source: source,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype
+      });
+
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to upload photo",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Telegram photo upload endpoint (legacy)
   app.post("/api/telegram/send-photo", upload.single('image'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
