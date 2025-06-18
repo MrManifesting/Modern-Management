@@ -2750,7 +2750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signature = req.get('X-Shopify-Hmac-Sha256');
       const rawBody = JSON.stringify(req.body);
       
-      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature || '')) {
         return res.status(401).json({ error: 'Unauthorized webhook' });
       }
 
@@ -2769,7 +2769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signature = req.get('X-Shopify-Hmac-Sha256');
       const rawBody = JSON.stringify(req.body);
       
-      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature || '')) {
         return res.status(401).json({ error: 'Unauthorized webhook' });
       }
 
@@ -2787,7 +2787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signature = req.get('X-Shopify-Hmac-Sha256');
       const rawBody = JSON.stringify(req.body);
       
-      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature)) {
+      if (!WebhookSecurity.verifyShopifyWebhook(rawBody, signature || '')) {
         return res.status(401).json({ error: 'Unauthorized webhook' });
       }
 
