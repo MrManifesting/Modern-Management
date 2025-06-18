@@ -1,7 +1,7 @@
 // Direct Shopify pricing fetch service
 
 export async function getShopifyPricing() {
-  const SHOPIFY_STORE = process.env.SHOPIFY_STORE || 'mrlisterscurations.myshopify.com';
+  const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
   const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   
   if (!SHOPIFY_ACCESS_TOKEN) {
