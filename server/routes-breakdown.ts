@@ -8,7 +8,7 @@ import { z } from "zod";
 import { ItemType, BreakdownStatus } from "@shared/schema";
 import { generateBarcodeData } from "./services/barcode";
 import { generateQRCodeDataURL } from "./services/qrcode";
-import { generateSKU, generateBreakdownSKUs } from "./services/sku-generator";
+import { SKUGenerator } from "./services/sku-generator";
 
 // Cannabis weight conversion functions (accurate to industry standards)
 function convertToGrams(weight: number, unit: string): number {
@@ -168,10 +168,11 @@ export function registerBreakdownRoutes(app: Express, storage: IStorage) {
       }
 
       // Generate SKU for the breakdown item
-      const breakdownSku = generateSKU(parentItem, {
-        weight: targetWeight,
-        weightUnit: targetUnit,
-        parentSku: parentItem.sku
+      const skuGenerator = new SKUGenerator(storage);
+      const breakdownSku = await skuGenerator.generateSKU({
+        ...parentItem,
+        weight: `${targetWeight} ${targetUnit}`,
+        name: `${parentItem.name} (${targetWeight}${targetUnit})`
       });
 
       // Create the breakdown item

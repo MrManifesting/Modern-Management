@@ -164,22 +164,13 @@ export function registerShopifyInventorySyncRoutes(app: Express, storage: IStora
         fulfillmentStatus: order.fulfillment_status || 'unfulfilled'
       };
 
-      // Update Google Sheets if configured
-      if (await googleSheets.isConfigured()) {
-        try {
-          await googleSheets.logOrderToSheet(orderForSheets, inventoryUpdates);
-          await googleSheets.updateInventoryInSheet(inventoryUpdates);
-          console.log(`Order ${order.order_number} logged to Google Sheets`);
-        } catch (error) {
-          console.error("Error updating Google Sheets:", error);
-        }
-      }
+      // Orders are now only tracked via Shopify webhooks - no Google Sheets order sync
 
       // Create sale record in our database
       const saleData = {
         orderId: order.order_number,
-        customerName: orderForSheets.customerName,
-        customerEmail: orderForSheets.customerEmail,
+        customerName: `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`.trim(),
+        customerEmail: order.customer?.email || order.email || '',
         items: order.line_items,
         subtotal: order.total_price,
         total: order.total_price,
