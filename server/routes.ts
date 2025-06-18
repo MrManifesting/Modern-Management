@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
       });
       
-      // Sort with priority: active items with quantities, then draft items with quantities, then newest items
+      // Sort with priority: active available items first, archived/inactive items last
       const sortedItems = itemsWithPricing.sort((a, b) => {
         // Helper functions for categorizing items
         const hasPrice = (item: any) => {
@@ -202,19 +202,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return item.status === 'draft' && hasQuantity(item);
         };
         
+        const isArchived = (item: any) => {
+          return item.status === 'archived' || item.status === 'inactive';
+        };
+        
         const aActiveAvailable = isActiveAvailable(a);
         const bActiveAvailable = isActiveAvailable(b);
         const aDraftAvailable = isDraftAvailable(a);
         const bDraftAvailable = isDraftAvailable(b);
+        const aArchived = isArchived(a);
+        const bArchived = isArchived(b);
         
-        // Priority 1: Active items with pricing and quantity at the top
+        // Priority 1: Active available items at the very top
         if (aActiveAvailable && !bActiveAvailable) return -1;
         if (!aActiveAvailable && bActiveAvailable) return 1;
         
-        // Priority 2: Draft items with available quantities (underneath active)
+        // Priority 2: Draft items with quantities (underneath active)
         if (!aActiveAvailable && !bActiveAvailable) {
           if (aDraftAvailable && !bDraftAvailable) return -1;
           if (!aDraftAvailable && bDraftAvailable) return 1;
+        }
+        
+        // Priority 3: Push archived/inactive items to the bottom
+        if (!aActiveAvailable && !bActiveAvailable && !aDraftAvailable && !bDraftAvailable) {
+          if (!aArchived && bArchived) return -1;
+          if (aArchived && !bArchived) return 1;
         }
         
         // Within same priority category, sort by newest first
@@ -5507,7 +5519,7 @@ ${topCustomersCsv}`;
       console.log('Fetching enhanced inventory items with Google Sheets data...');
       const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
       
-      // Sort with priority: active items with quantities, then draft items with quantities, then newest items
+      // Sort with priority: active available items first, archived/inactive items last
       const sortedItems = enhancedItems.sort((a, b) => {
         // Helper functions for categorizing items
         const hasPrice = (item: any) => item.basePrice && parseFloat(item.basePrice) > 0;
@@ -5521,19 +5533,31 @@ ${topCustomersCsv}`;
           return item.status === 'draft' && hasQuantity(item);
         };
         
+        const isArchived = (item: any) => {
+          return item.status === 'archived' || item.status === 'inactive';
+        };
+        
         const aActiveAvailable = isActiveAvailable(a);
         const bActiveAvailable = isActiveAvailable(b);
         const aDraftAvailable = isDraftAvailable(a);
         const bDraftAvailable = isDraftAvailable(b);
+        const aArchived = isArchived(a);
+        const bArchived = isArchived(b);
         
-        // Priority 1: Active items with pricing and quantity at the top
+        // Priority 1: Active available items at the very top
         if (aActiveAvailable && !bActiveAvailable) return -1;
         if (!aActiveAvailable && bActiveAvailable) return 1;
         
-        // Priority 2: Draft items with available quantities (underneath active)
+        // Priority 2: Draft items with quantities (underneath active)
         if (!aActiveAvailable && !bActiveAvailable) {
           if (aDraftAvailable && !bDraftAvailable) return -1;
           if (!aDraftAvailable && bDraftAvailable) return 1;
+        }
+        
+        // Priority 3: Push archived/inactive items to the bottom
+        if (!aActiveAvailable && !bActiveAvailable && !aDraftAvailable && !bDraftAvailable) {
+          if (!aArchived && bArchived) return -1;
+          if (aArchived && !bArchived) return 1;
         }
         
         // Within same priority category, sort by newest first
