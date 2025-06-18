@@ -436,12 +436,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let newCategory = item.category;
 
         // Determine category based on product name keywords
-        if (itemName.includes('flower') || itemName.includes('thca')) {
-          if (itemName.includes('bulk')) {
-            newCategory = 'bulk flower';
-          } else {
-            newCategory = 'flower';
-          }
+        if (itemName.includes('bulk preroll')) {
+          newCategory = 'bulk';
+        } else if (itemName.includes('bulk') && itemName.includes('flower')) {
+          newCategory = 'bulk flower';
+        } else if (itemName.includes('flower') || itemName.includes('thca')) {
+          newCategory = 'flower';
         } else if (itemName.includes('bulk')) {
           newCategory = 'bulk';
         } else if (itemName.includes('concentrate') || itemName.includes('crumble') || itemName.includes('wax') || itemName.includes('shatter')) {
@@ -467,6 +467,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating categories:", error);
       res.status(500).json({ error: "Failed to update categories" });
+    }
+  });
+
+  // Fix bulk prerolls categorization
+  app.post("/api/items/fix-bulk-prerolls", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      let updatedCount = 0;
+
+      for (const item of items) {
+        if (item.name.toLowerCase().includes('bulk preroll') && item.category === 'bulk flower') {
+          await storage.updateItem(item.id, { ...item, category: 'bulk' });
+          updatedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Fixed ${updatedCount} bulk preroll items`,
+        updatedCount
+      });
+    } catch (error) {
+      console.error("Error fixing bulk prerolls:", error);
+      res.status(500).json({ error: "Failed to fix bulk prerolls" });
     }
   });
 
