@@ -2009,13 +2009,14 @@ const ProductsInventoryPage: React.FC = () => {
             ) : (
               // Desktop view - Cannabis product categories only
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid grid-cols-6 mb-4">
+                <TabsList className="grid grid-cols-7 mb-4">
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="flower">Flower</TabsTrigger>
                   <TabsTrigger value="concentrates">Concentrates</TabsTrigger>
                   <TabsTrigger value="edibles">Edibles</TabsTrigger>
                   <TabsTrigger value="vapes">Vapes</TabsTrigger>
                   <TabsTrigger value="bulk">Bulk</TabsTrigger>
+                  <TabsTrigger value="live" className="text-green-600 font-medium">Live View</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="all" className="mt-0">
@@ -2917,6 +2918,21 @@ const ProductsInventoryPage: React.FC = () => {
                       "No bulk items found." : 
                       `${filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length} bulk items available`
                     }
+                  </div>
+                </TabsContent>
+                
+                {/* Live View Tab */}
+                <TabsContent value="live" className="mt-0">
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-green-700 mb-2">
+                        Live Inventory Synchronization
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Real-time view of inventory synchronization with Shopify. Updates every 15 seconds to match Shopify's update frequency.
+                      </p>
+                    </div>
+                    <LiveInventoryView />
                   </div>
                 </TabsContent>
               </Tabs>
