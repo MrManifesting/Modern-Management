@@ -2186,26 +2186,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Quick menu generation endpoints
-  app.get("/api/menu", async (req: Request, res: Response) => {
+  // Media download endpoint for individual items
+  app.get("/api/items/:id/download-media", async (req: Request, res: Response) => {
     try {
-      // Redirect to price sheet with simplified format
-      return res.redirect('/api/generate-price-sheet?format=html&style=menu');
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      let mediaUrls: string[] = [];
+      
+      // Parse images from item.images field
+      if (item.images) {
+        try {
+          const images = typeof item.images === 'string' ? JSON.parse(item.images) : item.images;
+          if (Array.isArray(images)) {
+            mediaUrls = images;
+          }
+        } catch (e) {
+          // If parsing fails, treat as single URL
+          if (typeof item.images === 'string') {
+            mediaUrls = [item.images];
+          }
+        }
+      }
+
+      if (mediaUrls.length === 0) {
+        return res.status(404).json({ error: "No media found for this item" });
+      }
+
+      res.json({
+        success: true,
+        itemId: item.id,
+        itemName: item.name,
+        sku: item.sku,
+        mediaCount: mediaUrls.length,
+        mediaUrls: mediaUrls,
+        downloadUrls: mediaUrls.map((url, index) => ({
+          url: url,
+          filename: `${item.sku || item.id}_media_${index + 1}.jpg`,
+          index: index + 1
+        }))
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to generate menu" });
+      console.error("Error getting media for item:", error);
+      res.status(500).json({ error: "Failed to get media" });
     }
   });
 
-  app.get("/api/live-menu", async (req: Request, res: Response) => {
-    try {
-      // Redirect to price sheet with live format
-      return res.redirect('/api/generate-price-sheet?format=html&style=live');
-    } catch (error) {
-      res.status(500).json({ error: "Failed to generate live menu" });
-    }
-  });
-
-  // Catalog generation endpoints
+  // Catalog generation endpoints with media links
   app.get("/api/catalog", async (req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
@@ -2215,8 +2246,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(item => 
           item.quantity && item.quantity > 0 && 
           (item.status === "active" || item.status === "available") &&
-          (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+          (item.base_price || item.sale_price || item.wholesale_price) &&
+          (parseFloat(String(item.base_price || item.sale_price || item.wholesale_price || '0')) > 0)
         )
         .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
         .map(item => ({
@@ -2226,18 +2257,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weight: item.weight,
           category: item.category,
           quantity: item.quantity,
-          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          price: item.base_price || item.sale_price || item.wholesale_price,
           tier: item.tier,
           brand: item.brand,
           description: item.description,
-          status: item.status
+          status: item.status,
+          hasMedia: !!item.images,
+          mediaUrl: item.images ? `/api/media/item-images/${item.id}` : null,
+          downloadLink: `/api/items/${item.id}/download-media`
         }));
 
       res.json({
         success: true,
         data: catalogItems,
         totalItems: catalogItems.length,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        mediaItemsCount: catalogItems.filter(item => item.hasMedia).length
       });
     } catch (error) {
       console.error("Error generating catalog:", error);
@@ -2254,8 +2289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(item => 
           item.quantity && item.quantity > 0 && 
           (item.status === "active" || item.status === "available") &&
-          (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+          (item.base_price || item.sale_price || item.wholesale_price) &&
+          (parseFloat(String(item.base_price || item.sale_price || item.wholesale_price || '0')) > 0)
         )
         .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
         .map(item => ({
@@ -2265,18 +2300,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weight: item.weight,
           category: item.category,
           quantity: item.quantity,
-          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          price: item.base_price || item.sale_price || item.wholesale_price,
           tier: item.tier,
           brand: item.brand,
           description: item.description,
-          status: item.status
+          status: item.status,
+          hasMedia: !!item.images,
+          mediaUrl: item.images ? `/api/media/item-images/${item.id}` : null,
+          downloadLink: `/api/items/${item.id}/download-media`
         }));
 
       res.json({
         success: true,
         data: menuItems,
         totalItems: menuItems.length,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        mediaItemsCount: menuItems.filter(item => item.hasMedia).length
       });
     } catch (error) {
       console.error("Error generating menu:", error);
@@ -2293,8 +2332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(item => 
           item.quantity && item.quantity > 0 && 
           (item.status === "active" || item.status === "available") &&
-          (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+          (item.base_price || item.sale_price || item.wholesale_price) &&
+          (parseFloat(String(item.base_price || item.sale_price || item.wholesale_price || '0')) > 0)
         )
         .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
         .map(item => ({
@@ -2304,18 +2343,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weight: item.weight,
           category: item.category,
           quantity: item.quantity,
-          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          price: item.base_price || item.sale_price || item.wholesale_price,
           tier: item.tier,
           brand: item.brand,
           description: item.description,
-          status: item.status
+          status: item.status,
+          hasMedia: !!item.images,
+          mediaUrl: item.images ? `/api/media/item-images/${item.id}` : null,
+          downloadLink: `/api/items/${item.id}/download-media`
         }));
 
       res.json({
         success: true,
         data: liveMenuItems,
         totalItems: liveMenuItems.length,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        mediaItemsCount: liveMenuItems.filter(item => item.hasMedia).length
       });
     } catch (error) {
       console.error("Error generating live menu:", error);
