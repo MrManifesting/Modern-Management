@@ -85,6 +85,59 @@ export default function ModernLiveCatalog() {
     return { price: "Contact for Price", type: "" };
   };
 
+  // Format weight display with proper cannabis terminology
+  const formatWeight = (weight: string | null, brand: string | null) => {
+    if (!weight) return 'Contact Us';
+    
+    const cleanWeight = weight.toLowerCase().trim();
+    
+    // Handle pound variations
+    if (cleanWeight.includes('pound')) {
+      if (cleanWeight.includes('half')) return 'Half Pound';
+      if (cleanWeight.includes('quarter')) return 'Quarter Pound';
+      return 'Pound';
+    }
+    
+    // Handle ounce variations - NO 8 ounce terminology
+    if (cleanWeight.includes('ounce')) {
+      if (cleanWeight.includes('half')) return 'Half Ounce';
+      if (cleanWeight.includes('quarter')) return 'Quarter Ounce';
+      // Single ounce only
+      return 'Ounce';
+    }
+    
+    // Handle eighth (3.5g)
+    if (cleanWeight.includes('eighth') || cleanWeight.includes('3.5')) {
+      return 'Eighth';
+    }
+    
+    // Handle 1g units with vendor-specific names
+    if (cleanWeight.includes('1g') || cleanWeight === 'gram' || cleanWeight.includes('1 g')) {
+      if (brand?.toLowerCase().includes('gold standard')) return 'Golden Nugget';
+      if (brand?.toLowerCase().includes('tree mason')) return 'Little Tree';
+      return 'Gram';
+    }
+    
+    // Handle numeric weights
+    if (/^\d+\.?\d*$/.test(cleanWeight)) {
+      const num = parseFloat(cleanWeight);
+      if (num >= 454) return 'Pound';
+      if (num >= 227) return 'Half Pound';
+      if (num >= 113) return 'Quarter Pound';
+      if (num >= 28) return 'Ounce';
+      if (num >= 14) return 'Half Ounce';
+      if (num >= 7) return 'Quarter Ounce';
+      if (num >= 3.5) return 'Eighth';
+      if (num >= 1) {
+        if (brand?.toLowerCase().includes('gold standard')) return 'Golden Nugget';
+        if (brand?.toLowerCase().includes('tree mason')) return 'Little Tree';
+        return 'Gram';
+      }
+    }
+    
+    return weight;
+  };
+
   // Get tier badge styling
   const getTierStyle = (name: string) => {
     const nameUpper = name.toUpperCase();
@@ -448,7 +501,7 @@ export default function ModernLiveCatalog() {
                         <div className="space-y-2">
                           <div className="flex items-center text-sm text-white/70">
                             <Package className="h-4 w-4 mr-2 text-emerald-400" />
-                            <span>{item.weight || "Contact for details"}</span>
+                            <span>{formatWeight(item.weight, item.brand)}</span>
                           </div>
                           
                           {item.thcaPercentage && (
