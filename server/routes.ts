@@ -953,13 +953,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const itemWeight = (item.weight || '').toLowerCase();
-      const canBreakdown = (itemWeight.includes('pound') || itemWeight.includes('lb')) && 
-                          item.quantity && item.quantity > 0;
+      const canBreakdown = (
+        itemWeight.includes('pound') || 
+        itemWeight.includes('lb') || 
+        itemWeight.includes('ounce') ||
+        itemWeight.includes('oz') ||
+        itemWeight.includes('bulk')
+      ) && item.quantity && item.quantity > 0;
       
       if (!canBreakdown) {
         return res.json({
           canBreakdown: false,
-          reason: "Item must be 1 pound or bulk weight with available quantity"
+          reason: "Item must be bulk weight (pound/ounce/bulk) with available quantity"
         });
       }
       
@@ -1011,6 +1016,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           success: false, 
           message: "Item must have at least 1 unit available for breakdown" 
+        });
+      }
+      
+      // Check if item is bulk weight (pound, ounces, or bulk)
+      const itemWeight = (parentItem.weight || '').toString().toLowerCase();
+      log(`Weight validation: "${parentItem.weight}" -> "${itemWeight}"`, 'breakdown');
+      
+      if (!itemWeight.includes('pound') && !itemWeight.includes('lb') && !itemWeight.includes('ounce') && !itemWeight.includes('oz') && !itemWeight.includes('bulk')) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Item must be bulk weight (pound/ounce/bulk) for breakdown" 
         });
       }
       
