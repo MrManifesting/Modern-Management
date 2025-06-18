@@ -88,6 +88,7 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
   };
 
   const handleDelete = () => {
+    console.log('ViewItemModal handleDelete called for item:', item.id, item.name);
     if (item.id) {
       deleteMutation.mutate(item.id);
     }
