@@ -39,6 +39,72 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add webhook endpoints before authentication middleware
+app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
+  try {
+    const order = req.body;
+    log(`Order webhook received: ${order.name || order.id}`, 'webhook-direct');
+    
+    // Process each line item for inventory reduction
+    const storage = (await import('./storage.js')).storage;
+    
+    for (const lineItem of order.line_items || []) {
+      if (!lineItem.sku) continue;
+      
+      // Find item by SKU
+      const item = await storage.getItemBySku(lineItem.sku);
+      if (!item) {
+        log(`Item not found for SKU: ${lineItem.sku}`, 'webhook-direct');
+        continue;
+      }
+      
+      // Calculate new quantity
+      const quantityToReduce = parseInt(lineItem.quantity) || 0;
+      const previousQuantity = item.quantity || 0;
+      const newQuantity = Math.max(0, previousQuantity - quantityToReduce);
+      
+      // Update item quantity immediately
+      await storage.updateItem(item.id, { quantity: newQuantity });
+      
+      // Log inventory action
+      await storage.createInventoryAction({
+        itemId: item.id,
+        actionType: 'remove',
+        quantity: quantityToReduce,
+        notes: `Order ${order.name} - Direct webhook`,
+        previousQuantity,
+        newQuantity
+      });
+      
+      log(`INVENTORY REDUCED: ${item.name} from ${previousQuantity} to ${newQuantity} (SKU: ${lineItem.sku})`, 'webhook-direct');
+    }
+    
+    // Create sale record
+    await storage.createSale({
+      orderId: order.id.toString(),
+      orderNumber: order.name,
+      totalAmount: parseFloat(order.total_price) || 0,
+      customerEmail: order.email || '',
+      customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim(),
+      marketplace: 'shopify',
+      status: order.financial_status || 'pending',
+      orderDate: new Date(order.created_at),
+      items: order.line_items?.map((item: any) => ({
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        price: parseFloat(item.price)
+      })) || []
+    });
+    
+    log(`Order ${order.name} processed successfully - inventory updated`, 'webhook-direct');
+    res.json({ success: true, message: 'Order processed and inventory updated' });
+  } catch (error) {
+    log(`Webhook processing error: ${error}`, 'webhook-direct');
+    res.status(500).json({ error: 'Failed to process webhook' });
+  }
+});
+
 (async () => {
   await registerRoutes(app);
 
