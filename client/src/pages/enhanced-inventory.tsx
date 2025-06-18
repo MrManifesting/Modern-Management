@@ -40,9 +40,27 @@ export default function EnhancedInventory() {
   const [editingItem, setEditingItem] = useState<EnhancedItem | null>(null);
   const { toast } = useToast();
 
-  const { data: items, isLoading, refetch } = useQuery<EnhancedItem[]>({
+  const { data: rawItems, isLoading, refetch } = useQuery<EnhancedItem[]>({
     queryKey: ['/api/inventory/enhanced'],
   });
+
+  // Sort items to show available quantity items at the top, then draft items with quantity
+  const items = rawItems ? [...rawItems].sort((a, b) => {
+    // First priority: Active items with quantity > 0
+    if (a.status === 'active' && a.quantity > 0 && (b.status !== 'active' || b.quantity <= 0)) return -1;
+    if (b.status === 'active' && b.quantity > 0 && (a.status !== 'active' || a.quantity <= 0)) return 1;
+    
+    // Second priority: Draft items with quantity > 0
+    if (a.status === 'draft' && a.quantity > 0 && b.quantity <= 0) return -1;
+    if (b.status === 'draft' && b.quantity > 0 && a.quantity <= 0) return 1;
+    
+    // Third priority: Sort by quantity descending within same status
+    if (a.status === b.status) return b.quantity - a.quantity;
+    
+    // Finally sort by status (active before draft before others)
+    const statusOrder = { 'active': 0, 'draft': 1, 'archived': 2 };
+    return (statusOrder[a.status as keyof typeof statusOrder] || 3) - (statusOrder[b.status as keyof typeof statusOrder] || 3);
+  }) : [];
 
   const formatPrice = (price: string | number) => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
