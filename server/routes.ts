@@ -187,7 +187,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sortedItems = itemsWithPricing.sort((a, b) => {
         // Helper function to check if item is valid for active status
         const isValidActive = (item: any) => {
-          const hasPrice = item.basePrice && parseFloat(item.basePrice) > 0;
+          const basePrice = parseFloat(item.basePrice || '0');
+          const salePrice = parseFloat(item.salePrice || '0');
+          const wholesalePrice = parseFloat(item.wholesalePrice || '0');
+          const hasPrice = basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
           const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
           const isActive = item.status === 'active';
           return isActive && hasPrice && hasQuantity;
@@ -491,8 +494,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate status change to active - items must have pricing and quantity
       if (updateData.status === 'active') {
-        const hasPrice = updateData.basePrice ? parseFloat(updateData.basePrice) > 0 : 
-                        existingItem.basePrice ? parseFloat(existingItem.basePrice) > 0 : false;
+        const basePrice = parseFloat(updateData.basePrice || existingItem.basePrice || '0');
+        const salePrice = parseFloat(updateData.salePrice || existingItem.salePrice || '0');
+        const wholesalePrice = parseFloat(updateData.wholesalePrice || existingItem.wholesalePrice || '0');
+        const hasPrice = basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
         const hasQuantity = updateData.quantity ? parseInt(updateData.quantity.toString()) > 0 : 
                            existingItem.quantity ? parseInt(existingItem.quantity.toString()) > 0 : false;
         
@@ -502,7 +507,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             details: {
               hasPrice,
               hasQuantity,
-              currentPrice: updateData.basePrice || existingItem.basePrice,
+              basePrice: updateData.basePrice || existingItem.basePrice,
+              salePrice: updateData.salePrice || existingItem.salePrice,
+              wholesalePrice: updateData.wholesalePrice || existingItem.wholesalePrice,
               currentQuantity: updateData.quantity || existingItem.quantity
             }
           });
