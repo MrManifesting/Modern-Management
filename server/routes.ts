@@ -183,27 +183,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
       });
       
-      // Sort with active items with pricing and quantity at the top
+      // Sort with priority: active items with quantities, then draft items with quantities, then newest items
       const sortedItems = itemsWithPricing.sort((a, b) => {
-        // Helper function to check if item is valid for active status
-        const isValidActive = (item: any) => {
+        // Helper functions for categorizing items
+        const hasPrice = (item: any) => {
           const basePrice = parseFloat(item.basePrice || '0');
           const salePrice = parseFloat(item.salePrice || '0');
           const wholesalePrice = parseFloat(item.wholesalePrice || '0');
-          const hasPrice = basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
-          const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
-          const isActive = item.status === 'active';
-          return isActive && hasPrice && hasQuantity;
+          return basePrice > 0 || salePrice > 0 || wholesalePrice > 0;
+        };
+        const hasQuantity = (item: any) => item.quantity && parseInt(item.quantity.toString()) > 0;
+        
+        const isActiveAvailable = (item: any) => {
+          return item.status === 'active' && hasPrice(item) && hasQuantity(item);
         };
         
-        const aValidActive = isValidActive(a);
-        const bValidActive = isValidActive(b);
+        const isDraftAvailable = (item: any) => {
+          return item.status === 'draft' && hasQuantity(item);
+        };
         
-        // First priority: valid active items at the top
-        if (aValidActive && !bValidActive) return -1;
-        if (!aValidActive && bValidActive) return 1;
+        const aActiveAvailable = isActiveAvailable(a);
+        const bActiveAvailable = isActiveAvailable(b);
+        const aDraftAvailable = isDraftAvailable(a);
+        const bDraftAvailable = isDraftAvailable(b);
         
-        // Within same category, sort by newest first
+        // Priority 1: Active items with pricing and quantity at the top
+        if (aActiveAvailable && !bActiveAvailable) return -1;
+        if (!aActiveAvailable && bActiveAvailable) return 1;
+        
+        // Priority 2: Draft items with available quantities (underneath active)
+        if (!aActiveAvailable && !bActiveAvailable) {
+          if (aDraftAvailable && !bDraftAvailable) return -1;
+          if (!aDraftAvailable && bDraftAvailable) return 1;
+        }
+        
+        // Within same priority category, sort by newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
@@ -5493,24 +5507,36 @@ ${topCustomersCsv}`;
       console.log('Fetching enhanced inventory items with Google Sheets data...');
       const enhancedItems = await simpleSheetsSync.getEnhancedInventory();
       
-      // Sort with active items with pricing and quantity at the top
+      // Sort with priority: active items with quantities, then draft items with quantities, then newest items
       const sortedItems = enhancedItems.sort((a, b) => {
-        // Helper function to check if item is valid for active status
-        const isValidActive = (item: any) => {
-          const hasPrice = item.basePrice && parseFloat(item.basePrice) > 0;
-          const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
-          const isActive = item.status === 'active';
-          return isActive && hasPrice && hasQuantity;
+        // Helper functions for categorizing items
+        const hasPrice = (item: any) => item.basePrice && parseFloat(item.basePrice) > 0;
+        const hasQuantity = (item: any) => item.quantity && parseInt(item.quantity.toString()) > 0;
+        
+        const isActiveAvailable = (item: any) => {
+          return item.status === 'active' && hasPrice(item) && hasQuantity(item);
         };
         
-        const aValidActive = isValidActive(a);
-        const bValidActive = isValidActive(b);
+        const isDraftAvailable = (item: any) => {
+          return item.status === 'draft' && hasQuantity(item);
+        };
         
-        // First priority: valid active items at the top
-        if (aValidActive && !bValidActive) return -1;
-        if (!aValidActive && bValidActive) return 1;
+        const aActiveAvailable = isActiveAvailable(a);
+        const bActiveAvailable = isActiveAvailable(b);
+        const aDraftAvailable = isDraftAvailable(a);
+        const bDraftAvailable = isDraftAvailable(b);
         
-        // Within same category, sort by newest first
+        // Priority 1: Active items with pricing and quantity at the top
+        if (aActiveAvailable && !bActiveAvailable) return -1;
+        if (!aActiveAvailable && bActiveAvailable) return 1;
+        
+        // Priority 2: Draft items with available quantities (underneath active)
+        if (!aActiveAvailable && !bActiveAvailable) {
+          if (aDraftAvailable && !bDraftAvailable) return -1;
+          if (!aDraftAvailable && bDraftAvailable) return 1;
+        }
+        
+        // Within same priority category, sort by newest first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }

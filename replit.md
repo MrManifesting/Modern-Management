@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Enhanced Inventory Prioritization System with Active and Draft Item Sorting**
+  - Implemented comprehensive inventory sorting prioritizing active items with available quantities at the top
+  - Added secondary priority for draft items with available quantities underneath active items
+  - Updated both /api/items and /api/inventory/enhanced endpoints with consistent three-tier sorting system
+  - Priority order: 1) Active items with pricing and quantity, 2) Draft items with quantity, 3) Newest items first
+  - Enhanced bulk edit functionality with checkbox selection for multiple item operations
+  - Fixed $NaN price display errors with proper null/undefined handling in formatPrice functions
+  - Confirmed Shopify integration maintaining perfect sync with all 265 items in real-time
 - June 18, 2025: **Enhanced Inventory Status Management and Active Item Prioritization**
   - Updated breakdown functionality to ensure all breakdown child items are created with 'draft' status until manually activated
   - Implemented active item prioritization - all active items with valid pricing and quantity now appear at top of inventory lists
