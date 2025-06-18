@@ -479,6 +479,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify view endpoints
+  app.get("/api/items/:id/shopify-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      let shopifyUrl;
+      if (item.shopifyId) {
+        // Direct link to admin product page
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      } else {
+        // Search for the product
+        const searchTerm = item.sku || item.name;
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      res.json({
+        success: true,
+        url: shopifyUrl,
+        message: item.shopifyId ? 
+          `Opening Shopify admin for product ${item.shopifyId}` : 
+          `Searching Shopify for: ${item.sku || item.name}`
+      });
+    } catch (error) {
+      console.error("Error generating Shopify view URL:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate Shopify view URL" 
+      });
+    }
+  });
+
+  // Shopify store view endpoint for items
+  app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      let shopifyUrl;
+      if (item.shopifyId) {
+        // Direct link to Shopify admin product page
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      } else {
+        // Search for the product on Shopify store
+        const searchTerm = item.sku || item.name;
+        shopifyUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
+      }
+
+      res.json({ success: true, url: shopifyUrl });
+    } catch (error) {
+      console.error('Error getting Shopify store view:', error);
+      res.status(500).json({ error: "Failed to get Shopify store view" });
+    }
+  });
+
   // Customer tier management endpoints
   app.get("/api/customers/tiers", async (_req: Request, res: Response) => {
     try {
