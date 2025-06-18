@@ -3,7 +3,7 @@
  * Bypasses corrupted endpoints and fetches authentic inventory data directly from Shopify API
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/logger';
 
 export class ShopifyInventoryDirect {
   private storeUrl: string;
