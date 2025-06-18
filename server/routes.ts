@@ -1020,6 +1020,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/affiliates", async (req: Request, res: Response) => {
     try {
+      // Generate unique affiliate code if not provided
+      if (!req.body.code) {
+        const nameBase = req.body.name ? req.body.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase() : 'AFF';
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        req.body.code = `${nameBase}${randomSuffix}`;
+      }
+      
       const affiliate = await storage.createAffiliate(req.body);
       res.json({ success: true, data: affiliate });
     } catch (error) {
@@ -1045,6 +1052,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating QR code:", error);
       res.status(500).json({ success: false, message: "Error creating QR code" });
+    }
+  });
+
+  // Affiliate-specific QR codes endpoints
+  app.get("/api/affiliates/:id/qrcodes", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      const qrCodes = await storage.getQrCodesByAffiliateId(affiliateId);
+      res.json({ success: true, data: qrCodes });
+    } catch (error) {
+      console.error("Error fetching affiliate QR codes:", error);
+      res.status(500).json({ success: false, message: "Error fetching QR codes" });
+    }
+  });
+
+  app.post("/api/affiliates/:id/qrcodes", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      const qrCodeData = { ...req.body, affiliateId };
+      const qrCode = await storage.createQrCode(qrCodeData);
+      res.json({ success: true, data: qrCode });
+    } catch (error) {
+      console.error("Error creating affiliate QR code:", error);
+      res.status(500).json({ success: false, message: "Error creating QR code" });
+    }
+  });
+
+  // Affiliate transactions endpoints
+  app.get("/api/affiliates/:id/transactions", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      const transactions = await storage.getAffiliateTransactionsByAffiliateId(affiliateId);
+      res.json({ success: true, data: transactions });
+    } catch (error) {
+      console.error("Error fetching affiliate transactions:", error);
+      res.status(500).json({ success: false, message: "Error fetching transactions" });
+    }
+  });
+
+  app.post("/api/affiliates/:id/transactions", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      const transactionData = { ...req.body, affiliateId };
+      const transaction = await storage.createAffiliateTransaction(transactionData);
+      res.json({ success: true, data: transaction });
+    } catch (error) {
+      console.error("Error creating affiliate transaction:", error);
+      res.status(500).json({ success: false, message: "Error creating transaction" });
     }
   });
 
@@ -1581,6 +1636,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: "Failed to complete breakdown" 
       });
+    }
+  });
+
+  // Price sheet generation endpoint
+  app.get("/api/generate-price-sheet", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for items with valid pricing and group by category
+      const catalogItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          (item.status === "active" || item.status === "available") &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+        )
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0)); // Sort by highest quantity first
+
+      const priceSheetData = catalogItems.map(item => ({
+        name: item.name,
+        sku: item.sku || 'N/A',
+        weight: item.weight || 'N/A',
+        category: item.category || 'Flower',
+        quantity: item.quantity || 0,
+        price: item.basePrice || item.salePrice || item.wholesalePrice || '0',
+        tier: item.tier || 'Top Shelf',
+        brand: item.brand || 'Gold Standard'
+      }));
+
+      // Generate HTML price sheet
+      const priceSheetHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Live Price Sheet - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .date { color: #666; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .category-header { background-color: #e8f5e8; font-weight: bold; }
+            .price { font-weight: bold; color: #2e7d32; }
+            .qty { text-align: center; }
+            .tier { font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Live Inventory Price Sheet</h1>
+            <div class="date">Generated: ${new Date().toLocaleString()}</div>
+            <div class="date">Total Items Available: ${priceSheetData.length}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>SKU</th>
+                <th>Weight</th>
+                <th>Quality Tier</th>
+                <th>Qty</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${priceSheetData.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.sku}</td>
+                  <td>${item.weight}</td>
+                  <td class="tier">${item.tier}</td>
+                  <td class="qty">${item.quantity}</td>
+                  <td class="price">$${parseFloat(item.price).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <p>Prices are subject to change. Contact for bulk pricing and availability.</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(priceSheetHtml);
+    } catch (error) {
+      console.error("Error generating price sheet:", error);
+      res.status(500).json({ error: "Failed to generate price sheet" });
+    }
+  });
+
+  // Catalog generation endpoints
+  app.get("/api/catalog", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for active items with valid pricing and stock
+      const catalogItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          (item.status === "active" || item.status === "available") &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+        )
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          weight: item.weight,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          tier: item.tier,
+          brand: item.brand,
+          description: item.description,
+          status: item.status
+        }));
+
+      res.json({
+        success: true,
+        data: catalogItems,
+        totalItems: catalogItems.length,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error generating catalog:", error);
+      res.status(500).json({ error: "Failed to generate catalog" });
+    }
+  });
+
+  app.get("/api/menu", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for active items with valid pricing and stock
+      const menuItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          (item.status === "active" || item.status === "available") &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+        )
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          weight: item.weight,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          tier: item.tier,
+          brand: item.brand,
+          description: item.description,
+          status: item.status
+        }));
+
+      res.json({
+        success: true,
+        data: menuItems,
+        totalItems: menuItems.length,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error generating menu:", error);
+      res.status(500).json({ error: "Failed to generate menu" });
+    }
+  });
+
+  app.get("/api/live-menu", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for active items with valid pricing and stock
+      const liveMenuItems = items
+        .filter(item => 
+          item.quantity && item.quantity > 0 && 
+          (item.status === "active" || item.status === "available") &&
+          (item.basePrice || item.salePrice || item.wholesalePrice) &&
+          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
+        )
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          weight: item.weight,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.basePrice || item.salePrice || item.wholesalePrice,
+          tier: item.tier,
+          brand: item.brand,
+          description: item.description,
+          status: item.status
+        }));
+
+      res.json({
+        success: true,
+        data: liveMenuItems,
+        totalItems: liveMenuItems.length,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error generating live menu:", error);
+      res.status(500).json({ error: "Failed to generate live menu" });
     }
   });
 
