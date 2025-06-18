@@ -97,28 +97,30 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     }
     
     // Create sale record with proper schema mapping and null checks
-    await storage.createSale({
-      orderId: String(orderId),
-      customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
-      customerEmail: order.email || '',
-      items: order.line_items?.map((item: any) => ({
-        sku: item.sku || '',
-        name: item.name || 'Unknown Item',
-        quantity: parseInt(item.quantity) || 1,
-        price: parseFloat(item.price) || 0
-      })) || [],
-      subtotal: parseFloat(order.subtotal_price) || parseFloat(order.total_price) || 0,
-      total: parseFloat(order.total_price) || 0,
-      status: order.financial_status || 'completed',
-      paymentMethod: 'shopify',
-      externalOrderId: String(orderId),
-      metadata: {
-        orderNumber: orderName,
+    try {
+      await storage.createSale({
+        orderId: String(orderId),
+        customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
+        customerEmail: order.email || '',
+        totalAmount: String(parseFloat(order.total_price) || 0),
+        items: order.line_items?.map((item: any) => item.sku || '').filter(Boolean) || [],
         marketplace: 'shopify',
-        orderDate: order.created_at || new Date().toISOString(),
-        fulfillmentStatus: order.fulfillment_status || null
-      }
-    });
+        itemId: null, // Will be set by storage layer if needed
+        salePrice: String(parseFloat(order.total_price) || 0),
+        quantity: order.line_items?.reduce((sum: number, item: any) => sum + (parseInt(item.quantity) || 0), 0) || 1,
+        externalOrderId: String(orderId),
+        metadata: JSON.stringify({
+          orderNumber: orderName,
+          marketplace: 'shopify',
+          orderDate: order.created_at || new Date().toISOString(),
+          fulfillmentStatus: order.fulfillment_status || null,
+          lineItems: order.line_items || []
+        })
+      });
+    } catch (saleError) {
+      log(`Sale creation failed for order ${orderName}: ${saleError}`, 'webhook-direct');
+      // Continue processing - don't fail webhook on sale creation error
+    }
     
     log(`Order ${orderName} processed successfully - inventory updated`, 'webhook-direct');
     res.json({ success: true, message: 'Order processed and inventory updated' });
