@@ -39,6 +39,7 @@ import SheetsConfigPage from "@/pages/sheets-config";
 import GoogleAppsScriptAdminPage from "@/pages/google-apps-script-admin";
 import CustomersPage from "@/pages/customers";
 import AuthPage from "@/pages/auth-page-simple";
+import LiveCatalog from "@/pages/LiveCatalog";
 import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
@@ -137,6 +138,11 @@ function Router() {
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
+        
+        {/* Public Live Catalog - No authentication required */}
+        <Route path="/catalog" component={() => <LiveCatalog />} />
+        <Route path="/menu" component={() => <LiveCatalog />} />
+        
         <Route path="/auth" component={() => <AuthPage />} />
         <Route path="/login-debug" component={() => {
           const LoginDebug = React.lazy(() => import("@/pages/login-debug"));
