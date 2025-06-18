@@ -133,23 +133,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ids } = req.body;
       
       if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: "Invalid or empty item IDs array" });
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid or empty item IDs array" 
+        });
       }
       
       let deletedCount = 0;
+      const errors = [];
+      
       for (const id of ids) {
-        const success = await storage.deleteItem(parseInt(id));
-        if (success) deletedCount++;
+        try {
+          const success = await storage.deleteItem(parseInt(id));
+          if (success) {
+            deletedCount++;
+          } else {
+            errors.push(`Failed to delete item ${id}`);
+          }
+        } catch (error) {
+          errors.push(`Error deleting item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       
       log(`Bulk deleted ${deletedCount} items`, 'inventory');
       res.json({ 
         success: true, 
-        message: `Successfully deleted ${deletedCount} items` 
+        deleted: deletedCount,
+        failed: ids.length - deletedCount,
+        message: `Successfully deleted ${deletedCount} items`,
+        errors: errors.length > 0 ? errors : undefined
       });
     } catch (error) {
       console.error("Error in bulk delete:", error);
-      res.status(500).json({ error: "Failed to delete items" });
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to delete items",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
