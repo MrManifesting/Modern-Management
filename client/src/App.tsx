@@ -140,8 +140,36 @@ function Router() {
         <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
         
         {/* Public Live Catalog - No authentication required */}
-        <Route path="/catalog" component={() => <LiveCatalog />} />
-        <Route path="/menu" component={() => <LiveCatalog />} />
+        <Route path="/catalog" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/menu" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/live-menu" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
         
         <Route path="/auth" component={() => <AuthPage />} />
         <Route path="/login-debug" component={() => {
