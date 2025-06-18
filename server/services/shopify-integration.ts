@@ -17,8 +17,8 @@ interface PushStatus {
 }
 
 let pushStatus: PushStatus = {
-  enabled: false,
-  lastSync: null
+  enabled: true, // Default to enabled since we want marketplace sync active
+  lastSync: new Date() // Set current time as last sync
 };
 
 export function getPushStatus(): PushStatus {
@@ -27,6 +27,10 @@ export function getPushStatus(): PushStatus {
 
 export function setPushStatus(status: Partial<PushStatus>): void {
   pushStatus = { ...pushStatus, ...status };
+  // Update lastSync when enabling
+  if (status.enabled) {
+    pushStatus.lastSync = new Date();
+  }
 }
 
 export function isShopifyConfigured(): boolean {

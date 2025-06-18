@@ -134,21 +134,13 @@ interface Product {
 // Product categories
 const categories = [
   "All",
-  "Classic Reserve",
-  "Top Shelf",
-  "Top Shelf Smalls",
-  "Exotics",
-  "AA Indoor",
-  "AAA Indoor",
-  "thcA",
-  "AAA Indoor THCA discounted flower",
-  "AA Indoor THCA discounted flower",
-  "CLASSIC RESERVE SMALLS",
-  "exotic indoor",
-  "extracts",
-  "pre rolls",
-  "merch",
-  "bulk flower"
+  "flower",
+  "bulk flower",
+  "bulk",
+  "concentrates",
+  "edibles",
+  "vapes",
+  "Other"
 ];
 
 const ProductsInventoryPage: React.FC = () => {
