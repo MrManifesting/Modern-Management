@@ -2317,24 +2317,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shopify CSV Import endpoint
-  app.post('/api/items/import-shopify', async (req, res) => {
+  app.post('/api/items/import-shopify', uploadMemory.single('file'), async (req, res) => {
     try {
-      const { csvData } = req.body;
+      let csvData = '';
       
-      if (!csvData) {
-        return res.status(400).json({ error: "CSV data is required" });
+      // Check if file was uploaded
+      if (req.file) {
+        csvData = req.file.buffer.toString('utf-8');
+      } else if (req.body.csvData) {
+        csvData = req.body.csvData;
+      } else {
+        return res.status(400).json({ error: "CSV file or data is required" });
       }
 
-      // Parse CSV data
+      if (!csvData.trim()) {
+        return res.status(400).json({ error: "CSV data is empty" });
+      }
+
+      // Parse CSV data with better handling of quoted fields
       const lines = csvData.split('\n').filter((line: string) => line.trim());
-      const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
       
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "CSV must contain at least a header and one data row" });
+      }
+
+      // Parse headers - handle quoted fields properly
+      const parseCSVLine = (line: string): string[] => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"' && (i === 0 || line[i-1] === ',')) {
+            inQuotes = true;
+          } else if (char === '"' && inQuotes && (i === line.length - 1 || line[i+1] === ',')) {
+            inQuotes = false;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        if (current) {
+          result.push(current.trim());
+        }
+        
+        return result;
+      };
+
+      const headers = parseCSVLine(lines[0]);
       const importedItems = [];
       const errors = [];
 
       for (let i = 1; i < lines.length; i++) {
         try {
-          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          const values = parseCSVLine(lines[i]);
           const item: any = {};
           
           headers.forEach((header, index) => {
