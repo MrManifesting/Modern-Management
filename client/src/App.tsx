@@ -48,6 +48,7 @@ import CredentialsManagement from "@/pages/credentials-management";
 import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
+import WebhookMonitoring from "@/pages/webhook-monitoring";
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import RealTimeSyncDashboard from "@/pages/real-time-sync-dashboard";
 import ThcaPivotTablesPage from "@/pages/thca-pivot-tables";
