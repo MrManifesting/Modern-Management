@@ -358,35 +358,20 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
       const order = JSON.parse(rawBody);
       log(`Order cancelled webhook received: ${order.name} (ID: ${order.id})`, 'shopify-webhook');
 
-      // Restore inventory for cancelled items
-      for (const lineItem of order.line_items || []) {
-        if (lineItem.sku) {
-          const item = await storage.getItemBySKU(lineItem.sku);
-          
-          if (item) {
-            const newQuantity = item.quantity + lineItem.quantity;
-            
-            await storage.updateItem(item.id, {
-              ...item,
-              quantity: newQuantity
-            });
-
-            // Log inventory action
-            await storage.logInventoryAction({
-              itemId: item.id,
-              action: 'intake',
-              quantity: lineItem.quantity,
-              previousQuantity: item.quantity,
-              reason: `Order cancellation ${order.name}`,
-              performedBy: 'shopify'
-            });
-
-            log(`Restored inventory for ${item.name}: ${item.quantity} -> ${newQuantity}`, 'shopify-webhook');
-          }
-        }
+      // Use real-time inventory sync service for immediate restoration
+      const syncSuccess = await realTimeInventorySync.processOrderCancelled(order);
+      
+      if (syncSuccess) {
+        log(`Real-time inventory restoration completed for cancelled order ${order.name}`, 'shopify-webhook');
+      } else {
+        log(`Real-time inventory restoration failed for cancelled order ${order.name}`, 'shopify-webhook');
       }
 
-      res.json({ success: true, message: 'Order cancellation processed successfully' });
+      res.json({ 
+        success: true, 
+        message: `Cancelled order ${order.name} processed with real-time inventory restoration`,
+        realTimeSync: syncSuccess
+      });
     } catch (error) {
       log(`Error processing order cancellation webhook: ${error}`, 'shopify-webhook');
       res.status(500).json({ error: 'Internal server error' });
