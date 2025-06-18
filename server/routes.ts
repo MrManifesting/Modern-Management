@@ -323,6 +323,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reporting webhook endpoints
+  app.post("/api/webhooks/reporting/test", async (req: Request, res: Response) => {
+    try {
+      const { event, data } = req.body;
+      const { reportingWebhooks } = await import('./services/reporting-webhooks.js');
+      
+      await reportingWebhooks.triggerTestWebhook(event, data);
+      res.json({ success: true, message: `Test webhook sent for ${event}` });
+    } catch (error) {
+      console.error("Error sending test webhook:", error);
+      res.status(500).json({ error: "Failed to send test webhook" });
+    }
+  });
+
+  app.get("/api/webhooks/reporting/configured", async (_req: Request, res: Response) => {
+    try {
+      const { reportingWebhooks } = await import('./services/reporting-webhooks.js');
+      const configured = reportingWebhooks.getConfiguredWebhooks();
+      res.json({ success: true, webhooks: configured });
+    } catch (error) {
+      console.error("Error getting configured webhooks:", error);
+      res.status(500).json({ error: "Failed to get webhook configuration" });
+    }
+  });
+
+  app.post("/api/webhooks/reporting/daily-sales", async (_req: Request, res: Response) => {
+    try {
+      const { reportingWebhooks } = await import('./services/reporting-webhooks.js');
+      await reportingWebhooks.sendDailySalesReport();
+      res.json({ success: true, message: "Daily sales report sent" });
+    } catch (error) {
+      console.error("Error sending daily sales report:", error);
+      res.status(500).json({ error: "Failed to send daily sales report" });
+    }
+  });
+
+  // Customer tier management endpoints
+  app.get("/api/customers/tiers", async (_req: Request, res: Response) => {
+    try {
+      const tiers = await storage.getCustomerTiers();
+      res.json({ success: true, data: tiers });
+    } catch (error) {
+      console.error("Error fetching customer tiers:", error);
+      res.status(500).json({ error: "Failed to fetch customer tiers" });
+    }
+  });
+
+  app.post("/api/customers/tiers", async (req: Request, res: Response) => {
+    try {
+      const tier = await storage.createCustomerTier(req.body);
+      res.json({ success: true, data: tier });
+    } catch (error) {
+      console.error("Error creating customer tier:", error);
+      res.status(500).json({ error: "Failed to create customer tier" });
+    }
+  });
+
+  app.put("/api/customers/tiers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const tier = await storage.updateCustomerTier(id, req.body);
+      res.json({ success: true, data: tier });
+    } catch (error) {
+      console.error("Error updating customer tier:", error);
+      res.status(500).json({ error: "Failed to update customer tier" });
+    }
+  });
+
+  app.post("/api/customers/recalculate-tiers", async (_req: Request, res: Response) => {
+    try {
+      const result = await storage.recalculateCustomerTiers();
+      res.json({ success: true, data: result });
+    } catch (error) {
+      console.error("Error recalculating customer tiers:", error);
+      res.status(500).json({ error: "Failed to recalculate customer tiers" });
+    }
+  });
+
+  app.get("/api/customers/big-spenders", async (_req: Request, res: Response) => {
+    try {
+      const bigSpenders = await storage.getBigSpenders();
+      res.json({ success: true, data: bigSpenders });
+    } catch (error) {
+      console.error("Error fetching big spenders:", error);
+      res.status(500).json({ error: "Failed to fetch big spenders" });
+    }
+  });
+
   // Shopify status endpoint
   app.get("/api/shopify/status", async (_req: Request, res: Response) => {
     try {
