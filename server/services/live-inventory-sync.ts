@@ -32,6 +32,7 @@ export class LiveInventorySync {
       // Create item in local database first
       const localItem = await this.storage.createItem({
         ...itemData,
+        description: itemData.description || '', // Ensure description is not null
         status: 'draft' // Always start as draft
       });
 
