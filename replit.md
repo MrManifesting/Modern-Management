@@ -515,11 +515,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - App-to-Sheets, Shopify-to-App, and incremental sync operations tested
   - Connection status dashboard displaying proper data (326 app items, 311 Shopify products)
   - Conflict resolution set to "app-wins" with 5-minute sync intervals
+- June 18, 2025: **Removed All Legacy simplifiedcurations References - Clean mrlisterscurations.myshopify.com Integration**
+  - Completely removed all simplifiedcurations references from Shopify authentication service
+  - Cleaned up direct Shopify check service to use standard hostname instead of hardcoded simplifiedcurations
+  - Replaced complex legacy authentication logic with clean, standard Shopify client implementation
+  - System now connects exclusively to mrlisterscurations.myshopify.com without any legacy store references
+  - Enhanced inventory sync logging provides detailed quantity comparisons showing exact Local vs Shopify values
+  - Fixed false "perfect sync" reports that were caused by Shopify API rate limiting issues
 - June 13, 2025: Successfully resolved Shopify store connection issues
   - Fixed store URL spelling from "curatioins" to "curations" 
   - Updated credentials validation and Admin API token requirements
   - Successfully synced 47 products from actual Shopify store
-  - Store now properly connects to simplifiedcurations.myshopify.com
+  - Store now properly connects to mrlisterscurations.myshopify.com
 - June 13, 2025: Fixed database schema issues and port conflicts
 - June 13, 2025: Initial setup
 
