@@ -78,7 +78,7 @@ const SettingsPage = () => {
             <CardHeader className="bg-gold/5 border-b border-gold/20">
               <CardTitle className="text-gold">Theme Settings</CardTitle>
               <CardDescription>
-                Customize how Gold-Standard-Inventory looks and feels
+                Customize how Gold-Standard_Management looks and feels
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

@@ -119,39 +119,50 @@
 }
 
 :root {
-  /* Light mode - High contrast for readability */
+  /* Light mode - Gold Standard Management theme */
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --foreground: 0 0% 0%;        /* Pure black text */
+  --muted: 45 20% 95%;
+  --muted-foreground: 0 0% 25%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
+  --popover-foreground: 0 0% 0%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --primary: 142 76% 36%;      /* Green for cannabis theme */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --ring: 142 76% 36%;
+  --card-foreground: 0 0% 0%;
+  --border: 45 30% 85%;
+  --input: 45 30% 90%;
+  --primary: 45 95% 45%;        /* Rich gold */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 142 85% 35%;     /* Deep green */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 45 90% 50%;         /* Bright gold accent */
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 85% 50%;     /* Pure red */
+  --destructive-foreground: 0 0% 100%;
+  --ring: 45 95% 45%;
   --radius: 0.5rem;
   
-  /* Blue/Purple theme colors */
-  --blue: 220 90% 50%;         /* Vibrant blue */
-  --blue-light: 220 85% 75%;
-  --blue-dark: 220 60% 40%;    /* Darker blue for hover states */
-  --blue-foreground: 0 0% 100%;
+  /* Gold Standard Management color palette */
+  --gold: 45 95% 45%;           /* Primary gold */
+  --gold-light: 45 90% 70%;     /* Light gold */
+  --gold-dark: 45 100% 35%;     /* Dark gold */
+  --gold-foreground: 0 0% 0%;   /* Black text on gold */
   
-  /* Secondary purple color */
-  --purple: 260 70% 50%;
+  --green: 142 85% 35%;         /* Deep green */
+  --green-light: 142 75% 55%;   /* Light green */
+  --green-dark: 142 90% 25%;    /* Dark green */
+  --green-foreground: 0 0% 100%; /* White text on green */
   
-  /* Premium background gradient - for banners and important sections */
-  --premium-gradient: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 70%, 55%));
+  --red: 0 85% 50%;             /* Pure red */
+  --red-light: 0 75% 70%;       /* Light red */
+  --red-dark: 0 90% 35%;        /* Dark red */
+  --red-foreground: 0 0% 100%;  /* White text on red */
+  
+  --black: 0 0% 0%;             /* Pure black */
+  --black-light: 0 0% 15%;      /* Dark gray */
+  --black-foreground: 0 0% 100%; /* White text on black */
+  
+  /* Premium gradient - gold to green */
+  --premium-gradient: linear-gradient(to right, hsl(45, 95%, 45%), hsl(142, 85%, 35%));
   
   /* Safe padding for mobile devices with notches/home indicators */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -161,38 +172,49 @@
 }
 
 .dark {
-  /* Dark mode - High contrast for readability */
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --primary: 142 76% 36%;       /* Green for cannabis theme */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --ring: 142 72% 29%;
+  /* Dark mode - Gold Standard Management theme */
+  --background: 0 0% 8%;        /* Deep black background */
+  --foreground: 45 90% 70%;     /* Light gold text */
+  --muted: 0 0% 15%;
+  --muted-foreground: 45 40% 60%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 45 90% 70%;
+  --card: 0 0% 12%;
+  --card-foreground: 45 90% 70%;
+  --border: 0 0% 20%;
+  --input: 0 0% 18%;
+  --primary: 45 95% 55%;        /* Bright gold for dark mode */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 142 80% 45%;     /* Bright green for dark mode */
+  --secondary-foreground: 0 0% 0%;
+  --accent: 45 100% 60%;        /* Bright gold accent */
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 85% 60%;     /* Bright red for dark mode */
+  --destructive-foreground: 0 0% 100%;
+  --ring: 45 95% 55%;
   
-  /* Blue/Purple theme colors - Same as in light mode for consistency */
-  --blue: 220 90% 50%;          /* Vibrant blue */
-  --blue-light: 220 85% 75%;
-  --blue-dark: 220 60% 40%;     /* Darker blue for hover states */
-  --blue-foreground: 0 0% 100%;
+  /* Gold Standard Management dark mode palette */
+  --gold: 45 95% 55%;           /* Bright gold for dark mode */
+  --gold-light: 45 85% 75%;     /* Very light gold */
+  --gold-dark: 45 100% 40%;     /* Dark gold */
+  --gold-foreground: 0 0% 0%;   /* Black text on gold */
   
-  /* Secondary purple color */
-  --purple: 260 70% 50%;
+  --green: 142 80% 45%;         /* Bright green for dark mode */
+  --green-light: 142 70% 65%;   /* Light green */
+  --green-dark: 142 85% 30%;    /* Dark green */
+  --green-foreground: 0 0% 0%;  /* Black text on green */
   
-  /* Premium background gradient - for banners and important sections */
-  --premium-gradient: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 70%, 55%));
+  --red: 0 85% 60%;             /* Bright red for dark mode */
+  --red-light: 0 75% 75%;       /* Light red */
+  --red-dark: 0 90% 40%;        /* Dark red */
+  --red-foreground: 0 0% 100%;  /* White text on red */
+  
+  --black: 0 0% 8%;             /* Deep black background */
+  --black-light: 0 0% 20%;      /* Dark gray */
+  --black-foreground: 45 90% 70%; /* Gold text on black */
+  
+  /* Premium gradient - gold to green for dark mode */
+  --premium-gradient: linear-gradient(to right, hsl(45, 95%, 55%), hsl(142, 80%, 45%));
 }
 
 @layer base {
@@ -291,28 +313,28 @@
   background-color: hsl(var(--secondary)) !important;
 }
 
-/* Blue/Purple gradient text */
+/* Gold Standard Management gradient text */
 .gradient-text,
-.blue-gradient-text {
-  background: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 80%, 65%), hsl(220, 80%, 55%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  display: inline-block;
-}
-
-/* Primary gradient text - blue/purple theme */
 .primary-gradient-text {
-  background: linear-gradient(to right, hsl(220, 80%, 55%), hsl(260, 80%, 65%), hsl(220, 80%, 55%));
+  background: linear-gradient(to right, hsl(45, 95%, 45%), hsl(142, 85%, 35%), hsl(45, 95%, 45%));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   display: inline-block;
 }
 
-/* Gold gradient text - keeping for reference during transition */
+/* Gold gradient text */
 .gold-gradient-text {
-  background: linear-gradient(to right, hsl(45, 90%, 52%), hsl(45, 100%, 60%), hsl(45, 90%, 52%));
+  background: linear-gradient(to right, hsl(45, 95%, 45%), hsl(45, 100%, 60%), hsl(45, 90%, 35%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* Green gradient text */
+.green-gradient-text {
+  background: linear-gradient(to right, hsl(142, 85%, 35%), hsl(142, 75%, 55%), hsl(142, 90%, 25%));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -454,11 +476,14 @@
   padding: 0.125rem 0.5rem;
 }
 
-/* Enhanced Button System - High Contrast & Responsive */
+/* Enhanced Button System - Gold Standard Management theme */
 .btn-primary {
-  @apply bg-blue-600 text-white font-semibold px-4 py-2 rounded-md;
-  @apply hover:bg-blue-700 active:bg-blue-800;
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  background-color: hsl(45, 95%, 45%);
+  color: hsl(0, 0%, 0%);
+  @apply font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-opacity-90 active:bg-opacity-80;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  focus-ring-color: hsl(45, 95%, 45%);
   @apply transition-all duration-200 ease-in-out;
   @apply shadow-md hover:shadow-lg;
   min-height: 40px;
@@ -466,9 +491,12 @@
 }
 
 .btn-secondary {
-  @apply bg-purple-600 text-white font-semibold px-4 py-2 rounded-md;
-  @apply hover:bg-purple-700 active:bg-purple-800;
-  @apply focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2;
+  background-color: hsl(142, 85%, 35%);
+  color: hsl(0, 0%, 100%);
+  @apply font-semibold px-4 py-2 rounded-md;
+  @apply hover:bg-opacity-90 active:bg-opacity-80;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  focus-ring-color: hsl(142, 85%, 35%);
   @apply transition-all duration-200 ease-in-out;
   @apply shadow-md hover:shadow-lg;
   min-height: 40px;
@@ -506,11 +534,18 @@
 }
 
 .btn-outline {
-  @apply bg-transparent border-2 border-blue-600 text-blue-600 font-semibold px-4 py-2 rounded-md;
-  @apply hover:bg-blue-600 hover:text-white active:bg-blue-700;
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply bg-transparent font-semibold px-4 py-2 rounded-md;
+  border: 2px solid hsl(45, 95%, 45%);
+  color: hsl(45, 95%, 45%);
+  @apply hover:text-black active:bg-opacity-80;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
   @apply transition-all duration-200 ease-in-out;
   min-height: 40px;
+}
+
+.btn-outline:hover {
+  background-color: hsl(45, 95%, 45%);
+  color: hsl(0, 0%, 0%);
 }
 
 .btn-ghost {
