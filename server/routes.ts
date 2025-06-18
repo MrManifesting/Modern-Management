@@ -872,7 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch and update pricing from Shopify
-      const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+      const storeUrl = process.env.SHOPIFY_STORE;
       const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
       const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250`, {
@@ -916,7 +916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch and update images from Shopify
-      const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+      const storeUrl = process.env.SHOPIFY_STORE;
       const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
       const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250&fields=id,images,variants`, {
