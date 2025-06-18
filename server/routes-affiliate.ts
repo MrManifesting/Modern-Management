@@ -6,8 +6,6 @@ import type { IStorage } from "./storage";
 import { z } from "zod";
 import qrcode from "qrcode";
 import { generateUniqueCode } from "./services/codes";
-import stripeService from "./services/stripe";
-import * as paypalService from "./paypal";
 import { eq } from "drizzle-orm";
 import { 
   insertAffiliateSchema, 
@@ -16,6 +14,22 @@ import {
   affiliates,
   qrCodes
 } from "@shared/schema";
+
+// Stripe and PayPal imports with proper error handling
+let stripeService: any = null;
+let paypalService: any = null;
+
+try {
+  stripeService = require("./services/stripe").default;
+} catch (error) {
+  console.warn("Stripe service not available:", error);
+}
+
+try {
+  paypalService = require("./paypal");
+} catch (error) {
+  console.warn("PayPal service not available:", error);
+}
 
 /**
  * Generate a QR code as a data URL
@@ -56,6 +70,13 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
         return res.status(400).json({
           success: false,
           message: "Invalid affiliate ID"
+        });
+      }
+      
+      if (!stripeService) {
+        return res.status(503).json({
+          success: false,
+          message: "Stripe service not configured. Please contact administrator to set up STRIPE_SECRET_KEY."
         });
       }
       
