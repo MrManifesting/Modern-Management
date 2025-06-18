@@ -26,15 +26,28 @@ export async function uploadItemImages(itemId: number, files: Express.Multer.Fil
         // Save file to uploads directory
         const fs = await import('fs/promises');
         const path = await import('path');
+        const sharp = await import('sharp');
         
         const uploadsDir = path.join(process.cwd(), 'uploads');
+        const thumbsDir = path.join(uploadsDir, 'thumbnails');
         await fs.mkdir(uploadsDir, { recursive: true });
+        await fs.mkdir(thumbsDir, { recursive: true });
         
         const filePath = path.join(uploadsDir, fileName);
         await fs.writeFile(filePath, file.buffer);
         
-        // Create public URL
+        // Generate thumbnail (300x300)
+        const thumbnailName = `thumb_${fileName}`;
+        const thumbnailPath = path.join(thumbsDir, thumbnailName);
+        
+        await sharp.default(file.buffer)
+          .resize(300, 300, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toFile(thumbnailPath);
+        
+        // Create public URLs
         const publicUrl = `/uploads/${fileName}`;
+        const thumbnailUrl = `/uploads/thumbnails/${thumbnailName}`;
         uploadedUrls.push(publicUrl);
         
         log(`Uploaded image: ${fileName} for item ${item.name}`, 'image-upload');
@@ -44,15 +57,19 @@ export async function uploadItemImages(itemId: number, files: Express.Multer.Fil
       }
     }
 
-    // Update item with new images
+    // Update item with new images and thumbnails
     if (uploadedUrls.length > 0) {
       const currentImages = Array.isArray(item.images) ? item.images : 
                            (typeof item.images === 'string' && item.images) ? [item.images] : [];
       
       const allImages = [...currentImages, ...uploadedUrls];
       
+      // Set first image as imageUrl if not already set
+      const imageUrl = item.imageUrl || uploadedUrls[0];
+      
       await storage.updateItem(itemId, {
-        images: allImages
+        images: allImages,
+        imageUrl: imageUrl
       });
 
       // Sync to Shopify if item has shopifyId
@@ -118,13 +135,47 @@ export async function getItemThumbnail(itemId: number): Promise<string | null> {
     const item = await storage.getItem(itemId);
     if (!item) return null;
 
-    // Priority order: item.images array, Shopify images, default
+    // Check for thumbnails first
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    const thumbsDir = path.join(process.cwd(), 'uploads', 'thumbnails');
+    
+    // Look for existing thumbnails
     if (Array.isArray(item.images) && item.images.length > 0) {
-      return item.images[0];
+      for (const imageUrl of item.images) {
+        if (imageUrl.startsWith('/uploads/')) {
+          const fileName = path.basename(imageUrl);
+          const thumbnailName = `thumb_${fileName}`;
+          const thumbnailPath = path.join(thumbsDir, thumbnailName);
+          
+          try {
+            await fs.access(thumbnailPath);
+            return `/uploads/thumbnails/${thumbnailName}`;
+          } catch {
+            // Thumbnail doesn't exist, return original image
+            return imageUrl;
+          }
+        }
+      }
+      return item.images[0]; // Return first image if no local thumbnails
     }
 
-    if (typeof item.images === 'string' && item.images) {
-      return item.images;
+    // Check imageUrl field
+    if (item.imageUrl) {
+      if (item.imageUrl.startsWith('/uploads/')) {
+        const fileName = path.basename(item.imageUrl);
+        const thumbnailName = `thumb_${fileName}`;
+        const thumbnailPath = path.join(thumbsDir, thumbnailName);
+        
+        try {
+          await fs.access(thumbnailPath);
+          return `/uploads/thumbnails/${thumbnailName}`;
+        } catch {
+          return item.imageUrl;
+        }
+      }
+      return item.imageUrl;
     }
 
     // Try to get from Shopify if available

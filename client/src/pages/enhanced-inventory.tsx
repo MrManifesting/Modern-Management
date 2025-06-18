@@ -368,20 +368,11 @@ export default function EnhancedInventory() {
             <Card key={item.id} className="group hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
+                  <ItemThumbnail 
+                    itemId={item.id}
+                    itemName={item.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
                 </div>
                 <CardTitle className="text-sm line-clamp-2">{item.name}</CardTitle>
                 <div className="text-xs text-gray-500">{item.brand}</div>
