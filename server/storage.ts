@@ -2475,7 +2475,7 @@ export class DatabaseStorage implements IStorage {
           } else {
             mappedItem[dbColumn] = [];
           }
-        } else if (['marketplace', 'metadata'].includes(dbColumn)) {
+        } else if (['marketplace', 'metadata', 'dimensions'].includes(dbColumn)) {
           // Handle JSON fields - ensure valid JSON or empty object
           if (value === null || value === undefined || value === '') {
             mappedItem[dbColumn] = {};
@@ -2489,6 +2489,14 @@ export class DatabaseStorage implements IStorage {
             mappedItem[dbColumn] = value;
           } else {
             mappedItem[dbColumn] = {};
+          }
+        } else if (['base_price', 'sale_price', 'cost_price', 'wholesale_price'].includes(dbColumn)) {
+          // Handle price fields - ensure they are numbers or null
+          if (value === null || value === undefined || value === '') {
+            mappedItem[dbColumn] = null;
+          } else {
+            const numericValue = parseFloat(String(value));
+            mappedItem[dbColumn] = isNaN(numericValue) ? null : numericValue;
           }
         } else {
           mappedItem[dbColumn] = value;
