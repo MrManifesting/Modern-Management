@@ -1,285 +1,292 @@
 /**
- * SKU Generator Service
- * 
- * This service provides functions for generating SKUs for inventory items
+ * Advanced SKU Generation Service
+ * Generates SKUs in format: [STRAIN-3-LETTERS]-[TIER-ABBREV]-[POTENCY%]-[SEQUENCE]
+ * Example: BD-TS-3400-1 for Blue Dream, Top Shelf, 34%, first item
  */
 
-import { InsertItem, Item } from "@shared/schema";
+export class SKUGenerator {
+  private storage: any;
 
-/**
- * Generate a SKU (Stock Keeping Unit) for an item
- * 
- * @param item The item data to generate a SKU for
- * @param options Optional configuration for SKU generation
- * @returns A unique SKU string
- */
-export function generateSKU(
-  item: Partial<InsertItem> | Item, 
-  options?: { 
-    quantity?: number, 
-    weight?: number, 
-    weightUnit?: string,
-    parentSku?: string,
-    unitIndex?: number // For generating unique SKUs per unit
+  constructor(storage: any) {
+    this.storage = storage;
   }
-): string {
-  // Start with a category prefix (max 3 chars)
-  const categoryPrefix = getCategoryPrefix(item.category || 'MISC');
-  
-  // Add a brand prefix if available (max 3 chars)
-  const brandPrefix = item.brand 
-    ? item.brand.substring(0, 3).toUpperCase() 
-    : 'GEN';
-  
-  // Add a name part (max 4 chars)
-  const namePart = (item.name || 'ITEM')
-    .replace(/[^a-zA-Z0-9]/g, '') // Remove special chars
-    .substring(0, 4)
-    .toUpperCase();
-  
-  // Add a timestamp for uniqueness - this creates the base SKU ending in -0
-  const timestamp = Date.now().toString().substring(7);
-  
-  // Base SKU always ends with -0 for the master record
-  let sku = `${categoryPrefix}-${brandPrefix}-${namePart}-${timestamp}-0`;
-  
-  // If we have options for quantity or weight, incorporate them into the SKU
-  if (options) {
-    // If this is a breakdown or derived item with quantity/weight
-    if (options.parentSku) {
-      // Use parent SKU as base (remove the -0 ending if present)
-      const baseSku = options.parentSku.replace(/-0$/, '');
-      sku = baseSku;
-      
-      // Add a weight suffix if provided
-      if (options.weight && options.weightUnit) {
-        sku = `${sku}-${options.weight}${options.weightUnit}`;
-      }
-      
-      // Add unit index for individual tracking (1, 2, 3, etc.)
-      if (options.unitIndex !== undefined && options.unitIndex > 0) {
-        sku = `${sku}-${options.unitIndex}`;
-      } else {
-        sku = `${sku}-0`; // Default to 0 for master record
-      }
-    }
-    // If this is a standalone item with unit index
-    else if (options.unitIndex !== undefined && options.unitIndex > 0) {
-      // Replace the -0 ending with the actual unit number
-      sku = sku.replace(/-0$/, `-${options.unitIndex}`);
-    }
-  }
-  
-  return sku;
-}
 
-/**
- * Generate multiple SKUs for items with quantities > 1
- * Each unit gets its own unique SKU and barcode for individual tracking
- * @param baseSku The base SKU (ending in -0)
- * @param quantity The number of individual units to create SKUs for
- * @returns Array of numbered SKUs (1, 2, 3, etc.)
- */
-export function generateNumberedSKUs(baseSku: string, quantity: number): string[] {
-  const skus: string[] = [];
-  
-  // Remove -0 ending if present to get the base
-  const base = baseSku.replace(/-0$/, '');
-  
-  // Generate numbered SKUs starting from 1
-  for (let i = 1; i <= quantity; i++) {
-    skus.push(`${base}-${i}`);
-  }
-  
-  return skus;
-}
-
-/**
- * Get the next available unit number for a base SKU
- * This checks existing items to find the highest unit number and returns the next one
- * @param baseSku The base SKU pattern (without unit number)
- * @param existingSkus Array of existing SKUs to check against
- * @returns The next available unit number
- */
-export function getNextUnitNumber(baseSku: string, existingSkus: string[]): number {
-  const base = baseSku.replace(/-\d+$/, ''); // Remove any existing number
-  const pattern = new RegExp(`^${base}-(\\d+)$`);
-  
-  let maxUnit = 0;
-  
-  existingSkus.forEach(sku => {
-    const match = sku.match(pattern);
-    if (match) {
-      const unitNumber = parseInt(match[1]);
-      if (unitNumber > maxUnit) {
-        maxUnit = unitNumber;
-      }
-    }
-  });
-  
-  return maxUnit + 1;
-}
-
-/**
- * Generate multiple items with numbered SKUs for inventory tracking
- * Each unit gets its own unique SKU and can be tracked individually
- */
-export function generateMultipleSkus(
-  item: Partial<InsertItem> | Item,
-  quantity: number
-): string[] {
-  const skus: string[] = [];
-  
-  for (let i = 1; i <= quantity; i++) {
-    const sku = generateSKU(item, { unitIndex: i });
-    skus.push(sku);
-  }
-  
-  return skus;
-}
-
-/**
- * Generate SKUs in batch for multiple items
- * 
- * @param items Array of items to generate SKUs for
- * @param options Optional configuration for SKU generation, keyed by item ID
- * @returns Map of item IDs to generated SKUs
- */
-export function generateSKUBatch(
-  items: Item[], 
-  options?: Record<number, { 
-    quantity?: number, 
-    weight?: number, 
-    weightUnit?: string,
-    parentSku?: string
-  }>
-): Record<number, string> {
-  const skuMap: Record<number, string> = {};
-  
-  for (const item of items) {
-    if (item.id) {
-      const itemOptions = options?.[item.id];
-      skuMap[item.id] = generateSKU(item, itemOptions);
-    }
-  }
-  
-  return skuMap;
-}
-
-/**
- * Generate a quantity-specific SKU for an item
- * 
- * @param item The base item
- * @param quantity The specific quantity
- * @returns A quantity-specific SKU
- */
-export function generateQuantitySKU(item: Item, quantity: number): string {
-  // Generate a SKU that includes the quantity
-  return generateSKU(item, { quantity });
-}
-
-/**
- * Generate SKUs for a breakdown of an item
- * 
- * @param parentItem The parent/bulk item
- * @param weights Array of weight breakdowns (e.g., [7, 14, 28])
- * @param weightUnit The unit of weight (e.g., 'g')
- * @returns Map of weights to generated SKUs
- */
-export function generateBreakdownSKUs(
-  parentItem: Item, 
-  weights: number[], 
-  weightUnit: string
-): Record<number, string> {
-  const skuMap: Record<number, string> = {};
-  
-  if (!parentItem.sku) {
-    // Generate a parent SKU if it doesn't exist
-    const parentSku = generateSKU(parentItem);
+  /**
+   * Extract first 3 letters from strain name
+   */
+  private getStrainAbbreviation(name: string): string {
+    // Remove common words and get strain name
+    const strainName = name
+      .replace(/\b(flower|bud|strain|cannabis|thca|hemp)\b/gi, '')
+      .replace(/[^a-zA-Z\s]/g, '')
+      .trim();
     
-    for (const weight of weights) {
-      const sku = generateSKU(parentItem, {
-        weight,
-        weightUnit,
-        parentSku
-      });
-      skuMap[weight] = sku;
-    }
-  } else {
-    // Use the existing parent SKU
-    for (const weight of weights) {
-      const sku = generateSKU(parentItem, {
-        weight,
-        weightUnit,
-        parentSku: parentItem.sku
-      });
-      skuMap[weight] = sku;
-    }
+    // Split into words and take first significant word
+    const words = strainName.split(/\s+/).filter(word => word.length > 2);
+    const primaryWord = words[0] || strainName;
+    
+    // Take first 3 letters, uppercase
+    return primaryWord.substring(0, 3).toUpperCase();
   }
-  
-  return skuMap;
-}
 
-/**
- * Get a prefix for a category
- * 
- * @param category The category name
- * @returns A 3-character prefix for the category
- */
-function getCategoryPrefix(category: string): string {
-  // Standard category prefixes
-  const categoryPrefixes: Record<string, string> = {
-    'Electronics': 'ELC',
-    'Clothing': 'CLO',
-    'Accessories': 'ACC',
-    'Food': 'FOD',
-    'Beverage': 'BEV',
-    'General': 'GEN',
-    'Software': 'SFT',
-    'Hardware': 'HRD',
-    'Toys': 'TOY',
-    'Kitchen': 'KIT',
-    'Office': 'OFF',
-    'Books': 'BOK',
-    'Health': 'HLT',
-    'Beauty': 'BTY',
-    'Sports': 'SPT',
-    'Automotive': 'AUT',
-    'Home': 'HOM',
-    'Furniture': 'FRN',
-    'Art': 'ART',
-    'Craft': 'CRF',
-    'Tools': 'TLS',
-    'Garden': 'GRD',
-    'Pet': 'PET',
-    'Baby': 'BBY',
-    'Medicine': 'MED',
-    'Supplements': 'SUP',
-    'Misc': 'MSC',
-    'Flower': 'FLW',
-    'Concentrate': 'CON',
-    'Edible': 'EDB',
-    'Topical': 'TOP',
-    'Accessory': 'ACS',
-    'Bulk': 'BLK',
-    'Exotic': 'EXO',
-    'Indoor': 'IND',
-    'Outdoor': 'ODR',
-    'THCA': 'THA'
-  };
-  
-  // Normalize the category name
-  const normalizedCategory = category.trim();
-  
-  // Return the predefined prefix or derive one from the category name
-  if (categoryPrefixes[normalizedCategory]) {
-    return categoryPrefixes[normalizedCategory];
+  /**
+   * Get tier abbreviation
+   */
+  private getTierAbbreviation(tier: string): string {
+    const tierMap: { [key: string]: string } = {
+      'top shelf': 'TS',
+      'topshelf': 'TS',
+      'top-shelf': 'TS',
+      'premium': 'PR',
+      'mid shelf': 'MS',
+      'midshelf': 'MS',
+      'mid-shelf': 'MS',
+      'bottom shelf': 'BS',
+      'bottomshelf': 'BS',
+      'bottom-shelf': 'BS',
+      'budget': 'BU',
+      'regular': 'RG',
+      'standard': 'ST',
+      'house': 'HO',
+      'value': 'VA'
+    };
+
+    const lowerTier = tier.toLowerCase().trim();
+    return tierMap[lowerTier] || 'RG'; // Default to Regular
   }
-  
-  // Generate a prefix from the category name
-  return normalizedCategory
-    .replace(/[^a-zA-Z0-9]/g, '') // Remove special characters
-    .substring(0, 3)
-    .toUpperCase()
-    || 'MSC'; // Default to 'MSC' if no valid characters
+
+  /**
+   * Extract potency percentage from description or name
+   */
+  private getPotencyPercentage(item: any): string {
+    // Look for percentage in name, description, or potency field
+    const searchText = `${item.name || ''} ${item.description || ''} ${item.potency || ''}`;
+    
+    // Match patterns like "34%", "34.5%", "THCa 34%", etc.
+    const potencyMatch = searchText.match(/(\d+(?:\.\d+)?)\s*%/);
+    
+    if (potencyMatch) {
+      const percentage = parseFloat(potencyMatch[1]);
+      // Format as 2-digit number (34% becomes 3400, 25.5% becomes 2550)
+      return Math.round(percentage * 100).toString().padStart(4, '0');
+    }
+    
+    // Default potency if not found
+    return '0000';
+  }
+
+  /**
+   * Get tier from item quality field or category
+   */
+  private getItemTier(item: any): string {
+    const quality = item.quality || item.tier || item.grade || '';
+    const category = item.category || '';
+    const description = item.description || '';
+    
+    const searchText = `${quality} ${category} ${description}`.toLowerCase();
+    
+    if (searchText.includes('top shelf') || searchText.includes('topshelf') || searchText.includes('premium')) {
+      return 'top shelf';
+    } else if (searchText.includes('mid shelf') || searchText.includes('midshelf') || searchText.includes('mid')) {
+      return 'mid shelf';
+    } else if (searchText.includes('bottom shelf') || searchText.includes('bottomshelf') || searchText.includes('budget')) {
+      return 'bottom shelf';
+    }
+    
+    return 'regular'; // Default tier
+  }
+
+  /**
+   * Get next sequence number for a strain-tier-potency combination
+   */
+  private async getNextSequenceNumber(strainAbbrev: string, tierAbbrev: string, potency: string): Promise<number> {
+    try {
+      // Get all items with similar SKU pattern
+      const allItems = await this.storage.getItems();
+      const skuPrefix = `${strainAbbrev}-${tierAbbrev}-${potency}`;
+      
+      // Find existing SKUs with this pattern
+      const existingSKUs = allItems
+        .filter((item: any) => item.sku && item.sku.startsWith(skuPrefix))
+        .map((item: any) => item.sku);
+      
+      // Extract sequence numbers
+      const sequenceNumbers = existingSKUs
+        .map((sku: string) => {
+          const parts = sku.split('-');
+          if (parts.length >= 4) {
+            const lastPart = parts[parts.length - 1];
+            return parseInt(lastPart) || 0;
+          }
+          return 0;
+        })
+        .filter((num: number) => num > 0);
+      
+      // Return next available number
+      if (sequenceNumbers.length === 0) {
+        return 1;
+      }
+      
+      return Math.max(...sequenceNumbers) + 1;
+    } catch (error) {
+      console.error('Error getting sequence number:', error);
+      return 1;
+    }
+  }
+
+  /**
+   * Generate SKU for a single item
+   */
+  async generateSKU(item: any): Promise<string> {
+    const strainAbbrev = this.getStrainAbbreviation(item.name || '');
+    const tier = this.getItemTier(item);
+    const tierAbbrev = this.getTierAbbreviation(tier);
+    const potency = this.getPotencyPercentage(item);
+    const sequence = await this.getNextSequenceNumber(strainAbbrev, tierAbbrev, potency);
+    
+    return `${strainAbbrev}-${tierAbbrev}-${potency}-${sequence}`;
+  }
+
+  /**
+   * Generate multiple SKUs for quantity > 1
+   */
+  async generateMultipleSKUs(item: any, quantity: number): Promise<string[]> {
+    const strainAbbrev = this.getStrainAbbreviation(item.name || '');
+    const tier = this.getItemTier(item);
+    const tierAbbrev = this.getTierAbbreviation(tier);
+    const potency = this.getPotencyPercentage(item);
+    const startSequence = await this.getNextSequenceNumber(strainAbbrev, tierAbbrev, potency);
+    
+    const skus: string[] = [];
+    for (let i = 0; i < quantity; i++) {
+      skus.push(`${strainAbbrev}-${tierAbbrev}-${potency}-${startSequence + i}`);
+    }
+    
+    return skus;
+  }
+
+  /**
+   * Clear all existing SKUs and regenerate for all items
+   */
+  async regenerateAllSKUs(): Promise<{ updated: number; errors: any[] }> {
+    try {
+      const allItems = await this.storage.getItems();
+      let updated = 0;
+      const errors: any[] = [];
+      
+      console.log(`[sku-generator] Starting SKU regeneration for ${allItems.length} items`);
+      
+      // Clear all existing SKUs first
+      for (const item of allItems) {
+        try {
+          await this.storage.updateItem(item.id, { sku: null });
+        } catch (error) {
+          console.error(`Error clearing SKU for item ${item.id}:`, error);
+        }
+      }
+      
+      // Group items by strain-tier-potency to ensure proper sequencing
+      const itemGroups: { [key: string]: any[] } = {};
+      
+      for (const item of allItems) {
+        const strainAbbrev = this.getStrainAbbreviation(item.name || '');
+        const tier = this.getItemTier(item);
+        const tierAbbrev = this.getTierAbbreviation(tier);
+        const potency = this.getPotencyPercentage(item);
+        const groupKey = `${strainAbbrev}-${tierAbbrev}-${potency}`;
+        
+        if (!itemGroups[groupKey]) {
+          itemGroups[groupKey] = [];
+        }
+        itemGroups[groupKey].push(item);
+      }
+      
+      // Generate SKUs for each group
+      for (const [groupKey, items] of Object.entries(itemGroups)) {
+        let sequence = 1;
+        
+        for (const item of items) {
+          try {
+            const newSKU = `${groupKey}-${sequence}`;
+            await this.storage.updateItem(item.id, { sku: newSKU });
+            updated++;
+            sequence++;
+            
+            console.log(`[sku-generator] Updated item ${item.id} (${item.name}) with SKU: ${newSKU}`);
+          } catch (error) {
+            console.error(`Error updating SKU for item ${item.id}:`, error);
+            errors.push({ itemId: item.id, error: error.message });
+          }
+        }
+      }
+      
+      console.log(`[sku-generator] SKU regeneration complete: ${updated} items updated, ${errors.length} errors`);
+      
+      return { updated, errors };
+    } catch (error) {
+      console.error('Error in regenerateAllSKUs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process imported items and assign SKUs
+   */
+  async processImportedItems(items: any[]): Promise<{ processed: number; errors: any[] }> {
+    try {
+      let processed = 0;
+      const errors: any[] = [];
+      
+      console.log(`[sku-generator] Processing ${items.length} imported items for SKU assignment`);
+      
+      // Group items by strain-tier-potency for consistent sequencing
+      const itemGroups: { [key: string]: any[] } = {};
+      
+      for (const item of items) {
+        const strainAbbrev = this.getStrainAbbreviation(item.name || '');
+        const tier = this.getItemTier(item);
+        const tierAbbrev = this.getTierAbbreviation(tier);
+        const potency = this.getPotencyPercentage(item);
+        const groupKey = `${strainAbbrev}-${tierAbbrev}-${potency}`;
+        
+        if (!itemGroups[groupKey]) {
+          itemGroups[groupKey] = [];
+        }
+        itemGroups[groupKey].push(item);
+      }
+      
+      // Assign SKUs to each group
+      for (const [groupKey, groupItems] of Object.entries(itemGroups)) {
+        const [strainAbbrev, tierAbbrev, potency] = groupKey.split('-');
+        const startSequence = await this.getNextSequenceNumber(strainAbbrev, tierAbbrev, potency);
+        
+        for (let i = 0; i < groupItems.length; i++) {
+          try {
+            const item = groupItems[i];
+            const newSKU = `${groupKey}-${startSequence + i}`;
+            
+            // Update the item with new SKU
+            if (item.id) {
+              await this.storage.updateItem(item.id, { sku: newSKU });
+            } else {
+              item.sku = newSKU; // For new items not yet in database
+            }
+            
+            processed++;
+            console.log(`[sku-generator] Assigned SKU ${newSKU} to imported item: ${item.name}`);
+          } catch (error) {
+            console.error(`Error assigning SKU to imported item:`, error);
+            errors.push({ item: groupItems[i], error: error.message });
+          }
+        }
+      }
+      
+      console.log(`[sku-generator] Import SKU processing complete: ${processed} items processed, ${errors.length} errors`);
+      
+      return { processed, errors };
+    } catch (error) {
+      console.error('Error in processImportedItems:', error);
+      throw error;
+    }
+  }
 }

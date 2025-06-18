@@ -1,5 +1,5 @@
 import { Item, ItemType, BreakdownStatus } from "@shared/schema";
-import { generateSKU } from './sku-generator';
+import { SKUGenerator } from './sku-generator';
 import { 
   getShopifyStoreName as getShopifyStoreNameAuth, 
   getShopifyCredentials as getShopifyCredentialsAuth, 

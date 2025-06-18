@@ -2566,6 +2566,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SKU Generation System - Strain-Tier-Potency-Sequence format
+  app.post("/api/sku/regenerate-all", async (req: Request, res: Response) => {
+    try {
+      const { SKUGenerator } = await import('./services/sku-generator.js');
+      const skuGenerator = new SKUGenerator(storage);
+      
+      const result = await skuGenerator.regenerateAllSKUs();
+      
+      res.json({
+        success: true,
+        message: `SKU regeneration complete: ${result.updated} items updated`,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error regenerating SKUs:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/sku/process-import", async (req: Request, res: Response) => {
+    try {
+      const { items } = req.body;
+      
+      if (!Array.isArray(items)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Items array is required'
+        });
+      }
+      
+      const { SKUGenerator } = await import('./services/sku-generator.js');
+      const skuGenerator = new SKUGenerator(storage);
+      
+      const result = await skuGenerator.processImportedItems(items);
+      
+      res.json({
+        success: true,
+        message: `Import SKU processing complete: ${result.processed} items processed`,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error processing import SKUs:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.post("/api/items/generate-skus-bulk", async (req: Request, res: Response) => {
     try {
       const { ids } = req.body;
@@ -3184,19 +3236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Generate SKU if not provided
-          if (fieldIndices['sku'] !== undefined && row[fieldIndices['sku']]) {
-            itemData.sku = row[fieldIndices['sku']];
-          } else {
-            // For stamp collection, create a more specific SKU
-            if (isStampImport) {
-              const prefix = 'STAMP';
-              const namePart = itemData.name.slice(0, 10).replace(/[^a-zA-Z0-9]/g, '');
-              const randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-              itemData.sku = `${prefix}-${namePart}-${randomPart}`;
-            } else {
-            }
-          }
+          // SKU will be generated after import using new strain-tier-potency-sequence system
+          // Do not set SKU during import - it will be cleared and regenerated
           
           // Generate barcode data
           
@@ -3222,6 +3263,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error('Error processing row:', error);
           // Continue with next row
+        }
+      }
+      
+      // Apply new SKU system to all imported items
+      if (importedItems.length > 0) {
+        try {
+          console.log(`[csv-import] Applying new SKU system to ${importedItems.length} imported items`);
+          const { SKUGenerator } = await import('./services/sku-generator.js');
+          const skuGenerator = new SKUGenerator(storage);
+          
+          // Process imported items with new SKU system
+          const skuResult = await skuGenerator.processImportedItems(importedItems);
+          console.log(`[csv-import] SKU generation complete: ${skuResult.processed} items processed, ${skuResult.errors.length} errors`);
+        } catch (error) {
+          console.error('[csv-import] Error applying SKU system:', error);
+          // Continue with import even if SKU generation fails
         }
       }
       

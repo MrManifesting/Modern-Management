@@ -311,30 +311,7 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
         log(`THCa inventory sync error: ${thcaError}`, 'shopify-webhook');
       }
 
-      // Log order to Google Sheets if configured
-      try {
-        const { GoogleSheetsService } = await import('./services/google-sheets.js');
-        const googleSheets = new GoogleSheetsService();
-        
-        if (await googleSheets.isConfigured()) {
-          const orderForSheets = {
-            id: order.id.toString(),
-            orderNumber: order.name,
-            lineItems: processedItems,
-            customerName: `${order.customer?.first_name || order.billing_address?.first_name || ''} ${order.customer?.last_name || order.billing_address?.last_name || ''}`.trim(),
-            customerEmail: order.customer?.email || order.email || '',
-            totalPrice: order.total_price,
-            createdAt: order.created_at,
-            fulfillmentStatus: order.fulfillment_status || 'unfulfilled'
-          };
-
-          await googleSheets.logOrderToSheet(orderForSheets, inventoryUpdates);
-          await googleSheets.updateInventoryInSheet(inventoryUpdates);
-          log(`Order ${order.name} logged to Google Sheets`, 'shopify-webhook');
-        }
-      } catch (error) {
-        log(`Error updating Google Sheets: ${error}`, 'shopify-webhook');
-      }
+      // Orders are now only tracked via Shopify webhooks - no Google Sheets order sync
 
       // Create sale record
       await storage.createSale({
