@@ -80,11 +80,7 @@ export default function EnhancedInventory() {
     return `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(item.name)}`;
   };
 
-  const getSheetsUrl = (item: EnhancedItem) => {
-    const baseUrl = 'https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit';
-    const searchTerm = item.sku || item.name;
-    return `${baseUrl}#gid=0&range=A:Z&search=${encodeURIComponent(searchTerm)}`;
-  };
+  // Removed Google Sheets integration - system syncs from Shopify only
 
   const handleEditItem = (itemId: number) => {
     const item = items?.find(i => i.id === itemId);
@@ -108,22 +104,7 @@ export default function EnhancedInventory() {
     }
   };
 
-  const handleViewSheets = async (item: EnhancedItem) => {
-    try {
-      const response = await fetch(`/api/items/${item.id}/sheets-view`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.open(data.url, '_blank');
-      } else {
-        window.open(getSheetsUrl(item), '_blank');
-      }
-    } catch (error) {
-      window.open(getSheetsUrl(item), '_blank');
-    }
-  };
+  // Google Sheets removed - system syncs from Shopify only
 
   // Bulk selection functions
   const toggleBulkSelectMode = () => {
@@ -172,7 +153,7 @@ export default function EnhancedInventory() {
         <div>
           <h1 className="text-2xl font-bold">Enhanced Inventory</h1>
           <p className="text-gray-600">
-            {items?.length || 0} items • Merged database and Google Sheets data
+            {items?.length || 0} items • Available inventory prioritized at top
           </p>
         </div>
         <div className="flex gap-2">

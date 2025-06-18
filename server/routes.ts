@@ -211,30 +211,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced inventory endpoint with same prioritization
+  // Enhanced inventory endpoint - clean Shopify-only data with available items prioritized
   app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
       
-      // Apply same three-tier priority sorting
-      const sortedItems = items.sort((a, b) => {
+      // Filter and prioritize available inventory items
+      const filteredItems = items.filter(item => {
+        const hasPrice = parseFloat(item.basePrice || '0') > 0;
+        const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
+        const hasImage = item.imageUrl && item.imageUrl.trim() !== '';
+        
+        // Keep active/available items with price and quantity
+        if ((item.status === 'active' || item.status === 'available') && hasPrice && hasQuantity) {
+          return true;
+        }
+        
+        // Keep draft items only if they have both price and image
+        if (item.status === 'draft' && hasPrice && hasImage) {
+          return true;
+        }
+        
+        // Remove archived items without both price and image
+        if (item.status === 'archived' && (!hasPrice || !hasImage)) {
+          return false;
+        }
+        
+        return true; // Keep other items for now
+      });
+      
+      // Sort with available inventory at the top
+      const sortedItems = filteredItems.sort((a, b) => {
         const aPrice = parseFloat(a.basePrice || '0');
         const aQty = parseInt(a.quantity?.toString() || '0');
         const bPrice = parseFloat(b.basePrice || '0');
         const bQty = parseInt(b.quantity?.toString() || '0');
         
-        const aIsActive = a.status === 'active' && aPrice > 0 && aQty > 0;
-        const bIsActive = b.status === 'active' && bPrice > 0 && bQty > 0;
+        // First: Available items with stock and pricing
+        const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
+        const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
         
-        const aIsDraft = a.status === 'draft' && aQty > 0;
-        const bIsDraft = b.status === 'draft' && bQty > 0;
+        if (aIsAvailable && !bIsAvailable) return -1;
+        if (!aIsAvailable && bIsAvailable) return 1;
         
-        if (aIsActive && !bIsActive) return -1;
-        if (!aIsActive && bIsActive) return 1;
+        // Second: Draft items by quantity
+        if (a.status === 'draft' && b.status === 'draft') {
+          return bQty - aQty;
+        }
         
-        if (aIsDraft && !bIsDraft) return -1;
-        if (!aIsDraft && bIsDraft) return 1;
+        // Third: Within same availability status, sort by quantity
+        if (aIsAvailable && bIsAvailable) {
+          return bQty - aQty;
+        }
         
+        // Finally: Newest items first
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
@@ -242,11 +272,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return b.id - a.id;
       });
       
-      log(`Enhanced inventory retrieved ${sortedItems.length} items with active prioritization`, 'inventory');
+      log(`Enhanced inventory: ${sortedItems.length} items (${filteredItems.length - items.length} cleaned)`, 'inventory');
       res.json(sortedItems);
     } catch (error) {
       console.error("Error fetching enhanced inventory:", error);
       res.status(500).json({ error: "Failed to fetch inventory" });
+    }
+  });
+
+  // Cleanup endpoint - remove archived/draft items without images or pricing
+  app.delete("/api/inventory/cleanup", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const itemsToDelete = items.filter(item => {
+        const hasPrice = parseFloat(item.basePrice || '0') > 0;
+        const hasImage = item.imageUrl && item.imageUrl.trim() !== '';
+        
+        // Delete archived items without both price and image
+        if (item.status === 'archived' && (!hasPrice || !hasImage)) {
+          return true;
+        }
+        
+        // Delete draft items without both price and image
+        if (item.status === 'draft' && (!hasPrice || !hasImage)) {
+          return true;
+        }
+        
+        return false;
+      });
+
+      let deletedCount = 0;
+      for (const item of itemsToDelete) {
+        try {
+          await storage.deleteItem(item.id);
+          deletedCount++;
+        } catch (error) {
+          log(`Failed to delete item ${item.id}: ${error}`, 'cleanup');
+        }
+      }
+
+      log(`Cleaned up ${deletedCount} items without proper images or pricing`, 'cleanup');
+      res.json({ 
+        success: true, 
+        deleted: deletedCount,
+        message: `Removed ${deletedCount} incomplete items`
+      });
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+      res.status(500).json({ error: "Failed to cleanup inventory" });
     }
   });
 
