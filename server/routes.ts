@@ -184,9 +184,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Basic inventory endpoints
-  app.get("/api/items", async (_req: Request, res: Response) => {
+  app.get("/api/items", async (req: Request, res: Response) => {
     try {
-      const items = await storage.getItems();
+      const { search } = req.query;
+      let items = await storage.getItems();
+
+      // Apply search filter if provided
+      if (search && typeof search === 'string') {
+        const searchTerm = search.toLowerCase();
+        items = items.filter(item => 
+          item.name?.toLowerCase().includes(searchTerm) ||
+          item.sku?.toLowerCase().includes(searchTerm) ||
+          item.barcode?.toLowerCase().includes(searchTerm) ||
+          item.category?.toLowerCase().includes(searchTerm) ||
+          item.brand?.toLowerCase().includes(searchTerm)
+        );
+      }
       
       // Highest quantity sorting with available items prioritized:
       // 1) Available items (active/available status with price) - sorted by highest quantity
@@ -2727,6 +2740,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Health check error:', error);
       res.status(500).json({ error: "Health check failed" });
+    }
+  });
+
+  // Inventory Actions API for scanner
+  app.post('/api/inventory/actions', async (req: Request, res: Response) => {
+    try {
+      const actionData = req.body;
+      const inventoryAction = await storage.createInventoryAction({
+        itemId: actionData.itemId,
+        employeeId: actionData.employeeId || 1,
+        actionType: actionData.actionType,
+        quantity: actionData.quantity,
+        previousQuantity: actionData.previousQuantity,
+        newQuantity: actionData.newQuantity,
+        notes: actionData.notes || '',
+        timestamp: new Date()
+      });
+      
+      log(`Inventory action logged: ${actionData.actionType} ${actionData.quantity} for item ${actionData.itemId}`, 'scanner');
+      res.status(201).json(inventoryAction);
+    } catch (error) {
+      log(`Error logging inventory action: ${error}`, 'scanner');
+      res.status(500).json({ error: 'Failed to log inventory action' });
+    }
+  });
+
+  app.get('/api/inventory/actions', async (req: Request, res: Response) => {
+    try {
+      const { itemId, employeeId, actionType, limit = 50 } = req.query;
+      const filters: any = {};
+      
+      if (itemId) filters.itemId = parseInt(itemId as string);
+      if (employeeId) filters.employeeId = parseInt(employeeId as string);
+      if (actionType) filters.actionType = actionType as string;
+      
+      const actions = await storage.getInventoryActions(filters);
+      const limitedActions = actions.slice(0, parseInt(limit as string));
+      
+      res.json(limitedActions);
+    } catch (error) {
+      log(`Error fetching inventory actions: ${error}`, 'scanner');
+      res.status(500).json({ error: 'Failed to fetch inventory actions' });
     }
   });
 
