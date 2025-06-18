@@ -254,7 +254,56 @@ export function registerShopifyWebhookRoutes(app: Express, storage: IStorage) {
       const order = JSON.parse(rawBody);
       log(`Order created webhook received: ${order.name} (ID: ${order.id})`, 'shopify-webhook');
 
-      // Use real-time inventory sync service for immediate updates
+      // Process each line item for inventory reduction
+      const processedItems = [];
+      const inventoryUpdates = [];
+      
+      for (const lineItem of order.line_items || []) {
+        if (!lineItem.sku) continue;
+        
+        // Find item by SKU
+        const item = await storage.getItemBySku(lineItem.sku);
+        if (!item) {
+          log(`Item not found for SKU: ${lineItem.sku}`, 'shopify-webhook');
+          continue;
+        }
+        
+        // Calculate new quantity
+        const quantityToReduce = parseInt(lineItem.quantity) || 0;
+        const previousQuantity = item.quantity || 0;
+        const newQuantity = Math.max(0, previousQuantity - quantityToReduce);
+        
+        // Update item quantity immediately
+        await storage.updateItem(item.id, { quantity: newQuantity });
+        
+        // Log inventory action
+        await storage.createInventoryAction({
+          itemId: item.id,
+          actionType: 'remove',
+          quantity: quantityToReduce,
+          notes: `Order ${order.name} - Shopify webhook`,
+          previousQuantity,
+          newQuantity
+        });
+        
+        processedItems.push({
+          sku: lineItem.sku,
+          name: lineItem.name,
+          quantity: quantityToReduce,
+          price: parseFloat(lineItem.price) || 0
+        });
+        
+        inventoryUpdates.push({
+          sku: lineItem.sku,
+          previousQuantity,
+          newQuantity,
+          quantityReduced: quantityToReduce
+        });
+        
+        log(`Reduced inventory: ${item.name} from ${previousQuantity} to ${newQuantity} (SKU: ${lineItem.sku})`, 'shopify-webhook');
+      }
+
+      // Use real-time inventory sync service for additional processing
       const syncSuccess = await realTimeInventorySync.processOrderCreated(order);
       
       if (syncSuccess) {

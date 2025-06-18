@@ -1504,36 +1504,20 @@ export class MemStorage implements IStorage {
 
   async getRecentInventoryActions(limit: number = 20): Promise<InventoryAction[]> {
     try {
-      const actions = await db.select({
-        id: inventoryActions.id,
-        itemId: inventoryActions.itemId,
-        actionType: inventoryActions.actionType,
-        quantity: inventoryActions.quantity,
-        notes: inventoryActions.notes,
-        previousQuantity: inventoryActions.previousQuantity,
-        newQuantity: inventoryActions.newQuantity,
-        createdAt: inventoryActions.createdAt,
-        itemName: items.name,
-        itemSku: items.sku
-      })
-      .from(inventoryActions)
-      .leftJoin(items, eq(inventoryActions.itemId, items.id))
-      .orderBy(desc(inventoryActions.createdAt))
-      .limit(limit);
+      const actions = await db.select()
+        .from(inventoryActions)
+        .orderBy(desc(inventoryActions.createdAt))
+        .limit(limit);
       
       return actions.map(action => ({
         id: action.id,
         itemId: action.itemId,
         actionType: action.actionType,
-        quantity: action.quantity,
+        quantity: action.quantity || 0,
         notes: action.notes || '',
         previousQuantity: action.previousQuantity || 0,
         newQuantity: action.newQuantity || 0,
-        createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
-        item: action.itemName ? {
-          name: action.itemName,
-          sku: action.itemSku || ''
-        } : undefined
+        createdAt: action.createdAt?.toISOString() || new Date().toISOString()
       }));
     } catch (error) {
       console.error("Error fetching recent inventory actions:", error);
