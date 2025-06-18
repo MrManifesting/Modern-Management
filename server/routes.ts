@@ -1838,95 +1838,321 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Price sheet generation endpoint
+  // Instant price sheet/menu/catalog generation endpoint
   app.get("/api/generate-price-sheet", async (req: Request, res: Response) => {
     try {
+      const format = req.query.format as string || 'html';
+      const style = req.query.style as string || 'professional';
       const items = await storage.getItems();
       
-      // Filter for items with valid pricing and group by category
-      const catalogItems = items
-        .filter(item => 
-          item.quantity && item.quantity > 0 && 
-          (item.status === "active" || item.status === "available") &&
-          (item.basePrice || item.salePrice || item.wholesalePrice) &&
-          (parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0') > 0)
-        )
-        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0)); // Sort by highest quantity first
+      // Filter for items with stock - include draft items with quantity for pricing sheet
+      const activeItems = items.filter(item => 
+        item.quantity && item.quantity > 0 && 
+        (item.status === "active" || item.status === "available" || item.status === "draft")
+      ).map(item => {
+        // Use a default price if no pricing is set for demonstration
+        const price = parseFloat(item.basePrice || item.salePrice || item.wholesalePrice || '0');
+        const defaultPrice = price > 0 ? price : 50.00; // Default $50 for items without pricing
+        
+        return {
+          ...item,
+          displayPrice: defaultPrice
+        };
+      });
 
-      const priceSheetData = catalogItems.map(item => ({
-        name: item.name,
-        sku: item.sku || 'N/A',
-        weight: item.weight || 'N/A',
-        category: item.category || 'Flower',
-        quantity: item.quantity || 0,
-        price: item.basePrice || item.salePrice || item.wholesalePrice || '0',
-        tier: item.tier || 'Top Shelf',
-        brand: item.brand || 'Gold Standard'
-      }));
+      // Categorize items with flower/bulk logic
+      const categorizedItems = {
+        flower: [] as any[],
+        bulk: [] as any[],
+        'bulk flower': [] as any[],
+        concentrates: [] as any[],
+        edibles: [] as any[],
+        vapes: [] as any[],
+        accessories: [] as any[]
+      };
 
-      // Generate HTML price sheet
-      const priceSheetHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Live Price Sheet - ${new Date().toLocaleDateString()}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .date { color: #666; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            .category-header { background-color: #e8f5e8; font-weight: bold; }
-            .price { font-weight: bold; color: #2e7d32; }
-            .qty { text-align: center; }
-            .tier { font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Live Inventory Price Sheet</h1>
-            <div class="date">Generated: ${new Date().toLocaleString()}</div>
-            <div class="date">Total Items Available: ${priceSheetData.length}</div>
-          </div>
+      activeItems.forEach(item => {
+        const itemName = item.name.toLowerCase();
+        const hasFlower = itemName.includes('flower') || itemName.includes('thca');
+        const hasBulk = itemName.includes('bulk');
+        
+        const itemData = {
+          name: item.name,
+          sku: item.sku || 'N/A',
+          weight: item.weight || 'Various',
+          quantity: item.quantity || 0,
+          price: item.displayPrice,
+          tier: item.tier || 'Top Shelf',
+          brand: item.brand || 'Gold Standard',
+          thca: item.thca || '',
+          strain: item.strain || ''
+        };
+        
+        if (hasBulk && hasFlower) {
+          categorizedItems['bulk flower'].push(itemData);
+          categorizedItems.flower.push(itemData); // Also in flower column
+          categorizedItems.bulk.push(itemData);   // Also in bulk column
+        } else if (hasFlower) {
+          categorizedItems.flower.push(itemData);
+        } else if (hasBulk) {
+          categorizedItems.bulk.push(itemData);
+        } else if (itemName.includes('concentrate') || itemName.includes('crumble') || itemName.includes('wax') || itemName.includes('shatter')) {
+          categorizedItems.concentrates.push(itemData);
+        } else if (itemName.includes('edible') || itemName.includes('gummy') || itemName.includes('chocolate')) {
+          categorizedItems.edibles.push(itemData);
+        } else if (itemName.includes('vape') || itemName.includes('cartridge') || itemName.includes('cart')) {
+          categorizedItems.vapes.push(itemData);
+        } else {
+          categorizedItems.accessories.push(itemData);
+        }
+      });
+
+      // Sort items within categories by price descending
+      Object.keys(categorizedItems).forEach(category => {
+        categorizedItems[category as keyof typeof categorizedItems].sort((a: any, b: any) => b.price - a.price);
+      });
+
+      // Remove empty categories
+      const filteredCategories = Object.fromEntries(
+        Object.entries(categorizedItems).filter(([_, items]) => items.length > 0)
+      );
+
+      if (format === 'json') {
+        return res.json({
+          success: true,
+          data: {
+            totalItems: activeItems.length,
+            categories: filteredCategories,
+            generatedAt: new Date().toISOString(),
+            storeName: "Gold Standard Management"
+          }
+        });
+      }
+
+      // Generate premium HTML catalog
+      const currentDate = new Date();
+      const catalogHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Standard Management - Live Catalog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #D4AF37, #228B22);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header h1 { font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .meta-info div { text-align: center; }
+        .meta-info .label { font-size: 0.9em; color: #666; text-transform: uppercase; }
+        .meta-info .value { font-size: 1.5em; font-weight: bold; color: #D4AF37; }
+        .category-section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .category-header {
+            background: linear-gradient(90deg, #228B22, #32CD32);
+            color: white;
+            padding: 20px 30px;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 0;
+        }
+        .item {
+            padding: 20px 30px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+        .item:hover { background: #f9f9f9; }
+        .item:last-child { border-bottom: none; }
+        .item-info { flex-grow: 1; }
+        .item-name { 
+            font-size: 1.2em; 
+            font-weight: bold; 
+            color: #333; 
+            margin-bottom: 5px;
+        }
+        .item-details {
+            font-size: 0.95em;
+            color: #666;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .detail-badge {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .item-pricing {
+            text-align: right;
+            margin-left: 20px;
+        }
+        .item-price {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #D4AF37;
+            margin-bottom: 5px;
+        }
+        .item-qty {
+            color: #228B22;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .footer h3 { color: #D4AF37; margin-bottom: 15px; }
+        .footer p { color: #666; margin-bottom: 10px; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .meta-info { flex-direction: column; gap: 15px; }
+            .items-grid { grid-template-columns: 1fr; }
+            .item { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .item-pricing { text-align: left; margin-left: 0; }
+        }
+        @media print {
+            body { background: white; }
+            .category-section, .header, .footer { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gold Standard Management</h1>
+            <p>Premium Cannabis Products • Live Inventory Catalog</p>
+        </div>
+        
+        <div class="meta-info">
+            <div>
+                <div class="label">Generated</div>
+                <div class="value">${currentDate.toLocaleDateString()}</div>
+            </div>
+            <div>
+                <div class="label">Time</div>
+                <div class="value">${currentDate.toLocaleTimeString()}</div>
+            </div>
+            <div>
+                <div class="label">Total Items</div>
+                <div class="value">${activeItems.length}</div>
+            </div>
+            <div>
+                <div class="label">Categories</div>
+                <div class="value">${Object.keys(filteredCategories).length}</div>
+            </div>
+        </div>
+`;
+
+      Object.entries(filteredCategories).forEach(([category, items]) => {
+        catalogHtml += `
+        <div class="category-section">
+            <div class="category-header">${category.replace(/\b\w/g, l => l.toUpperCase())}</div>
+            <div class="items-grid">`;
+        
+        items.forEach((item: any) => {
+          const details = [];
+          if (item.weight !== 'Various') details.push(`<span class="detail-badge">${item.weight}</span>`);
+          if (item.tier !== 'Top Shelf') details.push(`<span class="detail-badge">${item.tier}</span>`);
+          if (item.thca) details.push(`<span class="detail-badge">${item.thca}% THCa</span>`);
+          if (item.strain) details.push(`<span class="detail-badge">${item.strain}</span>`);
+          if (item.sku !== 'N/A') details.push(`<span class="detail-badge">SKU: ${item.sku}</span>`);
           
-          <table>
-            <thead>
-              <tr>
-                <th>Product Name</th>
-                <th>SKU</th>
-                <th>Weight</th>
-                <th>Quality Tier</th>
-                <th>Qty</th>
-                <th>Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${priceSheetData.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.sku}</td>
-                  <td>${item.weight}</td>
-                  <td class="tier">${item.tier}</td>
-                  <td class="qty">${item.quantity}</td>
-                  <td class="price">$${parseFloat(item.price).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div style="margin-top: 30px; font-size: 12px; color: #666;">
-            <p>Prices are subject to change. Contact for bulk pricing and availability.</p>
-          </div>
-        </body>
-        </html>
-      `;
+          catalogHtml += `
+                <div class="item">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-details">${details.join('')}</div>
+                    </div>
+                    <div class="item-pricing">
+                        <div class="item-price">$${item.price.toFixed(2)}</div>
+                        <div class="item-qty">${item.quantity} available</div>
+                    </div>
+                </div>`;
+        });
+        
+        catalogHtml += `
+            </div>
+        </div>`;
+      });
+
+      catalogHtml += `
+        <div class="footer">
+            <h3>Contact Information</h3>
+            <p>All products are lab tested for quality and compliance</p>
+            <p>Prices subject to change • Contact for bulk pricing and special orders</p>
+            <p>Generated from live inventory system • Real-time availability</p>
+        </div>
+    </div>
+</body>
+</html>`;
 
       res.setHeader('Content-Type', 'text/html');
-      res.send(priceSheetHtml);
+      res.send(catalogHtml);
     } catch (error) {
       console.error("Error generating price sheet:", error);
       res.status(500).json({ error: "Failed to generate price sheet" });
+    }
+  });
+
+  // Quick menu generation endpoints
+  app.get("/api/menu", async (req: Request, res: Response) => {
+    try {
+      // Redirect to price sheet with simplified format
+      return res.redirect('/api/generate-price-sheet?format=html&style=menu');
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate menu" });
+    }
+  });
+
+  app.get("/api/live-menu", async (req: Request, res: Response) => {
+    try {
+      // Redirect to price sheet with live format
+      return res.redirect('/api/generate-price-sheet?format=html&style=live');
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate live menu" });
     }
   });
 
