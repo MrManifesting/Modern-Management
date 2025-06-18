@@ -118,8 +118,8 @@ export const WEIGHT_OPTIONS = [
   'quarter ounce', 
   'eighth',
   'gram',
-  'little trees',
-  'gold nuggets'
+  'golden nuggets',
+  'little trees'
 ];
 
 // Vendor options
