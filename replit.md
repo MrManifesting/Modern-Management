@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Fixed Enhanced Inventory Cleanup Button Error and Consolidated Duplicate Config Files**
+  - Fixed critical bug in cleanup button where apiRequest parameters were in wrong order causing "not a valid HTTP method" error
+  - Corrected response handling to properly parse JSON from Response object instead of trying to access .message directly
+  - Removed all duplicate configuration files from attached_assets directory that were causing confusion
+  - Consolidated routes by moving marketplace routes directly into main routes.ts file eliminating routes-marketplace.ts
+  - Renamed auth-simple.ts to auth.ts for consistent naming convention and updated all import references
+  - Enhanced inventory cleanup button now works properly with correct DELETE request to /api/inventory/cleanup endpoint
+  - System maintains clean codebase structure with single routes file and proper configuration organization
 - June 18, 2025: **Removed Google Sheets Order Processing - System Now Uses Shopify-Only Order Management**
   - Completely removed readAndProcessOrders() and getOrdersFromSheet() methods from Google Sheets service
   - Eliminated OrderRow interface and all Google Sheets order processing API endpoints
