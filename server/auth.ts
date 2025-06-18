@@ -1,15 +1,16 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends User {}
   }
 }
 
@@ -22,35 +23,23 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  // Special case for the hardcoded default user's password hash
-  // Default admin123 hash is 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818
-  if (stored === "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8.b87eb7a3186a47b8a905645fd1798818" && supplied === "admin123") {
-    return true;
-  }
-  
-  if (stored.includes(".") && stored.length > 100) {
-    // This is likely a scrypt hash with salt (new format)
-    const [hashed, salt] = stored.split(".");
-    const hashedBuf = Buffer.from(hashed, "hex");
-    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-    return timingSafeEqual(hashedBuf, suppliedBuf);
-  } else {
-    // This might be a simple SHA-256 hash without salt
-    const hash = createHash('sha256').update(supplied).digest('hex');
-    return hash === stored;
-  }
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "inventory-pro-secret",
+    secret: process.env.SESSION_SECRET || "inventory-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    }
+    },
   };
 
   app.set("trust proxy", 1);
@@ -58,20 +47,78 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Local Strategy (Username/Password)
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
-        } else {
+    new LocalStrategy(
+      { usernameField: "email" },
+      async (email, password, done) => {
+        try {
+          const user = await storage.getUserByEmail(email);
+          if (!user || !user.password || !(await comparePasswords(password, user.password))) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
+          
+          // Update last login
+          await storage.updateUser(user.id, { lastLogin: new Date() });
           return done(null, user);
+        } catch (error) {
+          return done(error);
         }
-      } catch (error) {
-        return done(error);
       }
-    }),
+    )
   );
+
+  // Google OAuth Strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: "/api/auth/google/callback",
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            let user = await storage.getUserByGoogleId(profile.id);
+            
+            if (!user) {
+              // Check if user exists by email
+              const existingUser = await storage.getUserByEmail(profile.emails?.[0]?.value || "");
+              
+              if (existingUser) {
+                // Link Google account to existing user
+                user = await storage.updateUser(existingUser.id, {
+                  googleId: profile.id,
+                  profileImageUrl: profile.photos?.[0]?.value,
+                  provider: "google",
+                  lastLogin: new Date(),
+                });
+              } else {
+                // Create new user
+                user = await storage.createUser({
+                  email: profile.emails?.[0]?.value || "",
+                  firstName: profile.name?.givenName || "",
+                  lastName: profile.name?.familyName || "",
+                  profileImageUrl: profile.photos?.[0]?.value || "",
+                  googleId: profile.id,
+                  provider: "google",
+                  isActive: true,
+                  lastLogin: new Date(),
+                });
+              }
+            } else {
+              // Update last login
+              await storage.updateUser(user.id, { lastLogin: new Date() });
+            }
+            
+            return done(null, user);
+          } catch (error) {
+            return done(error);
+          }
+        }
+      )
+    );
+  }
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
@@ -83,73 +130,97 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Register API routes
+  // Auth routes
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ success: false, message: "Username already exists" });
+      const { email, password, firstName, lastName } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
       }
 
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists with this email" });
+      }
+
+      const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        email,
+        password: hashedPassword,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        provider: "local",
+        isActive: true,
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        return res.status(201).json({ success: true, user });
+        res.status(201).json({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        });
       });
     } catch (error) {
       console.error("Registration error:", error);
-      return res.status(500).json({ success: false, message: "Registration failed" });
+      res.status(500).json({ message: "Registration failed" });
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    console.log("Login attempt:", req.body.username);
-    
-    passport.authenticate("local", (err, user, info) => {
-      if (err) {
-        console.error("Login error:", err);
-        return next(err);
-      }
-      if (!user) {
-        console.log("Login failed: Invalid credentials");
-        return res.status(401).json({ success: false, message: "Invalid username or password" });
-      }
-      
-      console.log("User authenticated successfully:", user.username);
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Session login error:", err);
-          return next(err);
-        }
-        console.log("Login completed successfully for:", user.username);
-        return res.status(200).json({ success: true, user, redirectTo: "/" });
-      });
-    })(req, res, next);
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    res.json({
+      id: req.user?.id,
+      email: req.user?.email,
+      firstName: req.user?.firstName,
+      lastName: req.user?.lastName,
+      role: req.user?.role,
+    });
   });
+
+  // Google OAuth routes
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    app.get("/api/auth/google", passport.authenticate("google", { 
+      scope: ["profile", "email", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"] 
+    }));
+
+    app.get("/api/auth/google/callback", 
+      passport.authenticate("google", { failureRedirect: "/auth" }),
+      (req, res) => {
+        // Successful authentication, redirect to dashboard
+        res.redirect("/");
+      }
+    );
+  }
 
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      res.status(200).json({ success: true, message: "Logged out successfully" });
+      res.json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ success: false, message: "Not authenticated" });
+      return res.status(401).json({ message: "Not authenticated" });
     }
-    res.json({ success: true, user: req.user });
+    
+    res.json({
+      id: req.user?.id,
+      email: req.user?.email,
+      firstName: req.user?.firstName,
+      lastName: req.user?.lastName,
+      role: req.user?.role,
+      profileImageUrl: req.user?.profileImageUrl,
+    });
   });
+}
 
-  // Middleware to check if user is authenticated
-  app.use("/api/protected/*", (req, res, next) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).json({ success: false, message: "Authentication required" });
-  });
+export function requireAuth(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
 }

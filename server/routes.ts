@@ -10,8 +10,11 @@ import {
   getItemPushInfo,
   pushItemToShopify 
 } from "./services/shopify-integration";
-import { setupAuth, requireAuth } from "./auth-simple";
-import { registerMarketplaceRoutes } from "./routes-marketplace";
+import { setupAuth, requireAuth } from "./auth";
+import { MarketplaceService } from './services/marketplace';
+import { MarketplaceLogger } from './services/marketplace-logger';
+import { getMarketplaceScheduler } from './services/marketplace-scheduler';
+import { insertMarketplaceSchema } from '@shared/schema';
 
 // Memory storage for file uploads
 const uploadMemory = multer({ storage: multer.memoryStorage() });
@@ -1934,7 +1937,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register marketplace routes
-  registerMarketplaceRoutes(app, storage);
+  // Initialize the marketplace scheduler
+  const scheduler = getMarketplaceScheduler(storage);
+  scheduler.initialize().catch(error => {
+    log(`Error initializing marketplace scheduler: ${error.message}`, 'marketplace-error');
+  });
+
+  // Marketplace routes
+  app.get("/api/marketplaces", async (_req: Request, res: Response) => {
+    try {
+      const marketplaces = await storage.getMarketplaces();
+      res.json(marketplaces);
+    } catch (error) {
+      console.error("Error fetching marketplaces:", error);
+      res.status(500).json({ error: "Failed to fetch marketplaces" });
+    }
+  });
+
+  app.get("/api/marketplaces/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      // Don't expose sensitive credential values
+      const maskedCredentials = Object.fromEntries(
+        Object.entries(marketplace.credentials as Record<string, any>).map(([key, value]) => {
+          if (typeof value === 'string' && key.toLowerCase().includes('key') || key.toLowerCase().includes('token') || key.toLowerCase().includes('secret')) {
+            if (value.length > 8) {
+              return [key, `${value.substring(0, 4)}...${value.substring(value.length - 4)}`];
+            } else {
+              return [key, '********'];
+            }
+          }
+          return [key, value];
+        })
+      );
+
+      res.json({
+        ...marketplace,
+        credentials: maskedCredentials
+      });
+    } catch (error) {
+      console.error(`Error fetching marketplace ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to fetch marketplace" });
+    }
+  });
+
+  app.post("/api/marketplaces", async (req: Request, res: Response) => {
+    try {
+      const validateResult = insertMarketplaceSchema.safeParse(req.body);
+      if (!validateResult.success) {
+        return res.status(400).json({
+          error: "Invalid marketplace data",
+          details: validateResult.error.format()
+        });
+      }
+
+      const newMarketplace = await storage.createMarketplace(validateResult.data);
+      
+      res.status(201).json({
+        success: true,
+        message: "Marketplace created successfully",
+        marketplace: newMarketplace
+      });
+    } catch (error) {
+      console.error("Error creating marketplace:", error);
+      res.status(500).json({ error: "Failed to create marketplace" });
+    }
+  });
+
+  app.patch("/api/marketplaces/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      const partialSchema = insertMarketplaceSchema.partial();
+      const validateResult = partialSchema.safeParse(req.body);
+      if (!validateResult.success) {
+        return res.status(400).json({
+          error: "Invalid marketplace data",
+          details: validateResult.error.format()
+        });
+      }
+
+      const updatedMarketplace = await storage.updateMarketplace(id, validateResult.data);
+      
+      if (updatedMarketplace && (
+        'syncEnabled' in validateResult.data || 
+        'syncPullInterval' in validateResult.data || 
+        'syncPushInterval' in validateResult.data ||
+        'isSyncEnabled' in validateResult.data
+      )) {
+        await scheduler.scheduleMarketplaceSync(updatedMarketplace);
+        log(`Rescheduled marketplace sync for ${updatedMarketplace.name}`, 'marketplace-sync');
+      }
+      
+      res.json({
+        success: true,
+        message: "Marketplace updated successfully",
+        marketplace: updatedMarketplace
+      });
+    } catch (error) {
+      console.error(`Error updating marketplace ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to update marketplace" });
+    }
+  });
+
+  app.delete("/api/marketplaces/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      await scheduler.removeMarketplaceFromSchedule(marketplace);
+      await storage.deleteMarketplace(id);
+      
+      res.json({
+        success: true,
+        message: "Marketplace deleted successfully"
+      });
+    } catch (error) {
+      console.error(`Error deleting marketplace ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to delete marketplace" });
+    }
+  });
+
+  app.post("/api/marketplaces/:id/test-connection", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      const service = MarketplaceService.getInstance(marketplace.marketplaceTypeId, marketplace.credentials);
+      const connectionTest = await service.testConnection();
+      
+      res.json({
+        success: connectionTest.success,
+        message: connectionTest.message,
+        details: connectionTest.details || {}
+      });
+    } catch (error) {
+      console.error(`Error testing marketplace connection ${req.params.id}:`, error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to test marketplace connection",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/marketplaces/:id/sync", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid marketplace ID" });
+      }
+
+      const marketplace = await storage.getMarketplace(id);
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      const service = MarketplaceService.getInstance(marketplace.marketplaceTypeId, marketplace.credentials);
+      const logger = new MarketplaceLogger(marketplace.id);
+      
+      const syncResult = await service.syncProducts(storage, logger);
+      
+      res.json({
+        success: true,
+        message: "Sync completed successfully",
+        result: syncResult
+      });
+    } catch (error) {
+      console.error(`Error syncing marketplace ${req.params.id}:`, error);
+      res.status(500).json({ error: "Failed to sync marketplace" });
+    }
+  });
 
   return server;
 }
