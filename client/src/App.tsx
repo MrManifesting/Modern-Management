@@ -30,7 +30,7 @@ import SpecialtyProductsPage from "@/pages/specialty-products";
 import MediaManagerPage from "@/pages/media-manager";
 
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
-import AffiliateDashboard from "@/pages/affiliate-dashboard";
+import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
 import CSVValidatorPage from "@/pages/csv-validator";
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
