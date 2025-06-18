@@ -67,11 +67,17 @@ export default function LiveCatalog() {
 
   // Get price display
   const getPrice = (item: CatalogItem) => {
-    if (item.salePrice && item.salePrice !== "null" && parseFloat(item.salePrice.replace(/[$,]/g, "")) > 0) {
-      return { price: item.salePrice, type: "Sale" };
+    if (item.salePrice && item.salePrice !== "null") {
+      const price = typeof item.salePrice === 'number' ? item.salePrice : parseFloat(item.salePrice?.toString().replace(/[$,]/g, "") || "0");
+      if (price > 0) return { price: `$${price.toFixed(2)}`, type: "Sale" };
     }
-    if (item.basePrice && item.basePrice !== "null" && parseFloat(item.basePrice.replace(/[$,]/g, "")) > 0) {
-      return { price: item.basePrice, type: "Regular" };
+    if (item.basePrice && item.basePrice !== "null") {
+      const price = typeof item.basePrice === 'number' ? item.basePrice : parseFloat(item.basePrice?.toString().replace(/[$,]/g, "") || "0");
+      if (price > 0) return { price: `$${price.toFixed(2)}`, type: "Regular" };
+    }
+    if (item.wholesalePrice && item.wholesalePrice !== "null") {
+      const price = typeof item.wholesalePrice === 'number' ? item.wholesalePrice : parseFloat(item.wholesalePrice?.toString().replace(/[$,]/g, "") || "0");
+      if (price > 0) return { price: `$${price.toFixed(2)}`, type: "Wholesale" };
     }
     return { price: "Contact for Price", type: "" };
   };
