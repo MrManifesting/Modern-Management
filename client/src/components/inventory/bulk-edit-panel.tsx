@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { CircleDollarSign, Percent, Tags, ShoppingCart, CircleCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
   Alert,
   AlertDescription,
@@ -236,6 +236,9 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
   // Handle bulk delete submission
   const handleBulkDelete = async () => {
     setLoading(true);
+    const itemIds = selectedItems.map(item => item.id);
+    console.log("Starting bulk delete for items:", itemIds);
+    
     try {
       // Send DELETE request with body containing item IDs
       const response = await fetch('/api/items/bulk-delete', {
@@ -245,16 +248,25 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
         },
         credentials: 'include',
         body: JSON.stringify({
-          ids: selectedItems.map(item => item.id),
+          ids: itemIds,
         }),
       });
 
       const result = await response.json();
+      console.log("Bulk delete API response:", result);
+      
       if (result.success) {
+        // Invalidate all relevant queries to refresh the UI
+        await queryClient.invalidateQueries({ queryKey: ['/api/inventory/enhanced'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+        
         toast({
           title: "Items deleted",
-          description: `${result.deleted} items deleted successfully.`
+          description: `${result.deleted || itemIds.length} items deleted successfully.`
         });
+        
+        console.log("Cache invalidated, calling onBulkEditComplete");
         onBulkEditComplete();
       } else {
         throw new Error(result.message || "Failed to delete items");
@@ -263,7 +275,7 @@ const BulkEditPanel: React.FC<BulkEditPanelProps> = ({ selectedItems, onBulkEdit
       console.error("Bulk delete error:", error);
       toast({
         title: "Deletion failed",
-        description: "There was an error deleting the selected items.",
+        description: `Error deleting items: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
