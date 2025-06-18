@@ -357,5 +357,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify Webhook Endpoints
+  app.post("/api/shopify/webhooks/products/create", async (req: Request, res: Response) => {
+    try {
+      log(`Product creation webhook received: ${req.body?.title}`, 'webhook');
+      // Process product creation
+      res.status(200).json({ success: true, message: "Product creation webhook processed" });
+    } catch (error) {
+      log(`Product creation webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/products/update", async (req: Request, res: Response) => {
+    try {
+      log(`Product update webhook received: ${req.body?.title}`, 'webhook');
+      // Process product update
+      res.status(200).json({ success: true, message: "Product update webhook processed" });
+    } catch (error) {
+      log(`Product update webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/products/delete", async (req: Request, res: Response) => {
+    try {
+      log(`Product deletion webhook received: ${req.body?.id}`, 'webhook');
+      // Process product deletion
+      res.status(200).json({ success: true, message: "Product deletion webhook processed" });
+    } catch (error) {
+      log(`Product deletion webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/inventory_levels/update", async (req: Request, res: Response) => {
+    try {
+      log(`Inventory levels update webhook received: ${req.body?.inventory_item_id}`, 'webhook');
+      // Process inventory level update
+      res.status(200).json({ success: true, message: "Inventory levels update webhook processed" });
+    } catch (error) {
+      log(`Inventory levels update webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
+    try {
+      const order = req.body;
+      log(`Order creation webhook received: ${order?.name || 'Unknown Order'}`, 'webhook');
+      
+      if (!order || !order.line_items) {
+        log('Invalid order data received in webhook', 'webhook');
+        return res.status(400).json({ error: "Invalid order data" });
+      }
+
+      // Process each line item to reduce inventory
+      for (const lineItem of order.line_items) {
+        if (lineItem.sku) {
+          try {
+            const item = await storage.getItemBySku(lineItem.sku);
+            if (item) {
+              const newQuantity = Math.max(0, (item.quantity || 0) - lineItem.quantity);
+              await storage.updateItem(item.id, { quantity: newQuantity });
+              
+              // Log inventory action
+              await storage.createInventoryAction({
+                itemId: item.id,
+                employeeId: 1, // System employee
+                actionType: 'sale',
+                quantity: -lineItem.quantity,
+                previousQuantity: item.quantity || 0,
+                notes: `Shopify order ${order.name}`
+              });
+              
+              log(`Reduced inventory for ${lineItem.sku}: ${item.quantity} → ${newQuantity}`, 'webhook');
+            }
+          } catch (error) {
+            log(`Error processing line item ${lineItem.sku}: ${error}`, 'webhook');
+          }
+        }
+      }
+
+      res.status(200).json({ success: true, message: "Order creation webhook processed" });
+    } catch (error) {
+      log(`Order creation webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/orders/cancelled", async (req: Request, res: Response) => {
+    try {
+      log(`Order cancellation webhook received: ${req.body?.name}`, 'webhook');
+      // Process order cancellation - restore inventory
+      res.status(200).json({ success: true, message: "Order cancellation webhook processed" });
+    } catch (error) {
+      log(`Order cancellation webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/refunds/create", async (req: Request, res: Response) => {
+    try {
+      log(`Refund creation webhook received: ${req.body?.id}`, 'webhook');
+      // Process refund creation - restore inventory
+      res.status(200).json({ success: true, message: "Refund creation webhook processed" });
+    } catch (error) {
+      log(`Refund creation webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/customers/create", async (req: Request, res: Response) => {
+    try {
+      log(`Customer creation webhook received: ${req.body?.email}`, 'webhook');
+      // Process customer creation
+      res.status(200).json({ success: true, message: "Customer creation webhook processed" });
+    } catch (error) {
+      log(`Customer creation webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/app/uninstalled", async (req: Request, res: Response) => {
+    try {
+      log(`App uninstalled webhook received`, 'webhook');
+      // Process app uninstallation cleanup
+      res.status(200).json({ success: true, message: "App uninstalled webhook processed" });
+    } catch (error) {
+      log(`App uninstalled webhook error: ${error}`, 'webhook');
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  // Webhook status endpoint
+  app.get("/api/shopify/webhooks/status", async (_req: Request, res: Response) => {
+    try {
+      const webhooks = [
+        { topic: 'products/create', endpoint: '/api/shopify/webhooks/products/create' },
+        { topic: 'products/update', endpoint: '/api/shopify/webhooks/products/update' },
+        { topic: 'products/delete', endpoint: '/api/shopify/webhooks/products/delete' },
+        { topic: 'inventory_levels/update', endpoint: '/api/shopify/webhooks/inventory_levels/update' },
+        { topic: 'orders/create', endpoint: '/api/shopify/webhooks/orders/create' },
+        { topic: 'orders/cancelled', endpoint: '/api/shopify/webhooks/orders/cancelled' },
+        { topic: 'refunds/create', endpoint: '/api/shopify/webhooks/refunds/create' },
+        { topic: 'customers/create', endpoint: '/api/shopify/webhooks/customers/create' },
+        { topic: 'app/uninstalled', endpoint: '/api/shopify/webhooks/app/uninstalled' }
+      ];
+
+      res.json({
+        success: true,
+        webhooks,
+        baseUrl: process.env.REPLIT_DEV_DOMAIN ? 
+          `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+          'https://your-app-domain.replit.app',
+        webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET ? 'configured' : 'not configured'
+      });
+    } catch (error) {
+      log(`Error getting webhook status: ${error}`, 'webhook');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Archive zero quantity items
+  app.post("/api/items/archive-zero-quantity", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const zeroQuantityItems = items.filter(item => (item.quantity === 0 || item.quantity === null));
+      
+      let updatedCount = 0;
+      const updatedItems = [];
+
+      for (const item of zeroQuantityItems) {
+        if (item.status !== 'archived') {
+          const updatedItem = await storage.updateItem(item.id, { 
+            status: 'archived'
+          });
+          if (updatedItem) {
+            updatedCount++;
+            updatedItems.push({
+              id: item.id,
+              name: item.name,
+              sku: item.sku,
+              previousStatus: item.status,
+              newStatus: 'archived'
+            });
+          }
+        }
+      }
+
+      log(`Archived ${updatedCount} items with zero quantity`, 'inventory');
+      res.json({
+        success: true,
+        message: `Successfully archived ${updatedCount} items with zero quantity`,
+        updatedCount,
+        totalZeroQuantityItems: zeroQuantityItems.length,
+        updatedItems
+      });
+    } catch (error) {
+      log(`Error archiving zero quantity items: ${error}`, 'inventory');
+      res.status(500).json({ error: "Failed to archive zero quantity items" });
+    }
+  });
+
   return server;
 }
