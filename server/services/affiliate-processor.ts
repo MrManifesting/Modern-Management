@@ -98,18 +98,15 @@ export async function processCommission(
   calculation: CommissionCalculation
 ): Promise<ProcessedCommission> {
   try {
-    // Create initial transaction record
+    // Create initial transaction record with proper type conversion
     const transactionData = {
       affiliateId: calculation.affiliateId,
-      orderId: calculation.orderId,
-      amount: calculation.commissionAmount,
-      commissionRate: calculation.commissionRate,
-      orderAmount: calculation.orderAmount,
-      status: 'pending',
       type: 'commission',
+      amount: calculation.commissionAmount.toString(), // Convert to string as required by schema
+      status: 'pending',
       description: `Commission for order ${calculation.orderId}`,
-      qrCodeId: calculation.qrCodeId || null,
-      metadata: calculation.metadata || {}
+      orderId: calculation.orderId,
+      qrCodeId: calculation.qrCodeId || null
     };
 
     const transaction = await storage.createAffiliateTransaction(transactionData);

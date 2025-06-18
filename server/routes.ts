@@ -42,7 +42,7 @@ import { registerCleanupRoutes } from "./routes-cleanup";
 
 import { registerShopifyCredentialsRoutes } from "./routes-shopify-credentials";
 import { registerMarketplaceRoutes } from "./routes-marketplace";
-import { registerAffiliateRoutes } from "./routes-affiliate";
+import { registerAffiliateRoutes } from "./routes-affiliate-fixed";
 import { registerPayPalRoutes } from "./routes-paypal";
 import { registerAIRoutes } from "./routes-ai";
 import { registerGoogleSheetsRoutes } from "./routes-google-sheets";

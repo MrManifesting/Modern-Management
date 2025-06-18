@@ -469,7 +469,11 @@ export default function AffiliateDashboard() {
             <DialogTitle>Create New Affiliate</DialogTitle>
             <DialogDescription>Add a new affiliate partner to your program</DialogDescription>
           </DialogHeader>
-          <form action={handleCreateAffiliate} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleCreateAffiliate(formData);
+          }} className="space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" required />
@@ -514,7 +518,11 @@ export default function AffiliateDashboard() {
             <DialogTitle>Create QR Code</DialogTitle>
             <DialogDescription>Generate a new QR code for the selected affiliate</DialogDescription>
           </DialogHeader>
-          <form action={handleCreateQrCode} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleCreateQrCode(formData);
+          }} className="space-y-4">
             <div>
               <Label htmlFor="title">Title</Label>
               <Input id="title" name="title" required />
