@@ -48,6 +48,7 @@ import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
+import RealTimeSyncDashboard from "@/pages/real-time-sync-dashboard";
 import ThcaPivotTablesPage from "@/pages/thca-pivot-tables";
 import ThcaInventoryManagerPage from "@/pages/thca-inventory-manager";
 import OrdersTracking from "@/pages/orders-tracking";
@@ -130,6 +131,7 @@ function Router() {
         <ProtectedRoute path="/manual-auth" component={() => <ManualAuthPage />} />
         <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
+        <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
