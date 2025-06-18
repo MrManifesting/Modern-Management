@@ -210,6 +210,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         itemData.status = 'draft';
       }
       
+      // Ensure required fields have default values
+      if (!itemData.description || itemData.description.trim() === '') {
+        itemData.description = `${itemData.name || 'New Item'} - Cannabis product`;
+      }
+      
       const newItem = await storage.createItem(itemData);
       log(`Created new item: ${newItem.name} (ID: ${newItem.id})`, 'inventory');
       res.json(newItem);
