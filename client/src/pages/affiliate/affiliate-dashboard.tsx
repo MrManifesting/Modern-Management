@@ -302,8 +302,8 @@ export default function AffiliateDashboard() {
                       <TableCell>
                         <Badge variant="outline">{affiliate.code}</Badge>
                       </TableCell>
-                      <TableCell>{(affiliate.commissionRate * 100).toFixed(1)}%</TableCell>
-                      <TableCell>${(affiliate.totalEarnings || 0).toFixed(2)}</TableCell>
+                      <TableCell>{((Number(affiliate.commissionRate) || 0) * 100).toFixed(1)}%</TableCell>
+                      <TableCell>${(Number(affiliate.totalEarnings) || 0).toFixed(2)}</TableCell>
                       <TableCell>{affiliate.totalSales || 0}</TableCell>
                       <TableCell>
                         <Badge variant={affiliate.status === 'active' ? 'default' : 'secondary'}>
