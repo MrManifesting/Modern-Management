@@ -468,6 +468,14 @@ export default function EnhancedInventory() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
+
+      {/* Bulk Edit Panel */}
+      {isBulkEditOpen && (
+        <BulkEditPanel
+          selectedItems={selectedItems}
+          onBulkEditComplete={handleBulkEditComplete}
+        />
+      )}
     </div>
   );
 }
