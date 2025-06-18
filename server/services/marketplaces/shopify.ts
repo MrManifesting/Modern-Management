@@ -285,19 +285,24 @@ export class ShopifyService implements IMarketplaceService {
  */
 export async function testShopifyConnection(): Promise<{ success: boolean; error?: string; store?: string }> {
   try {
-    // Check environment variables first
-    const storeUrl = process.env.SHOPIFY_STORE_URL;
-    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    // Check environment variables - use SHOPIFY_STORE instead of SHOPIFY_STORE_URL
+    const storeUrl = process.env.SHOPIFY_STORE;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || process.env.SHOPIFY_ADMIN_API_ACCESS_TOKEN;
     
     if (!storeUrl || !accessToken) {
       return { 
         success: false, 
-        error: 'Shopify credentials not configured. Please set SHOPIFY_STORE_URL and SHOPIFY_ACCESS_TOKEN environment variables.' 
+        error: `Shopify credentials not configured. Store: ${storeUrl ? 'set' : 'missing'}, Token: ${accessToken ? 'set' : 'missing'}` 
       };
     }
 
-    // Clean up store URL
-    const cleanStoreUrl = storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    // Clean up store URL - ensure it doesn't include protocol or trailing slash
+    let cleanStoreUrl = storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
+    // Ensure .myshopify.com domain if not already included
+    if (!cleanStoreUrl.includes('myshopify.com')) {
+      cleanStoreUrl = `${cleanStoreUrl}.myshopify.com`;
+    }
     
     // Test connection with direct API call
     const response = await fetch(`https://${cleanStoreUrl}/admin/api/2023-10/shop.json`, {
@@ -310,9 +315,10 @@ export async function testShopifyConnection(): Promise<{ success: boolean; error
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       return { 
         success: false, 
-        error: `HTTP ${response.status}: ${response.statusText}` 
+        error: `HTTP ${response.status}: ${response.statusText} - ${errorText}` 
       };
     }
 
