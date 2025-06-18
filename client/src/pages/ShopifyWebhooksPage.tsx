@@ -127,9 +127,9 @@ export default function ShopifyWebhooksPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Shopify Webhook Configuration</h1>
+        <h1 className="text-3xl font-bold">Gold-Standard_Management Webhook Configuration</h1>
         <p className="text-muted-foreground mt-2">
-          Set up these webhooks in your Shopify admin to enable real-time synchronization between your store and inventory system.
+          Set up these webhooks in your Shopify admin to enable real-time synchronization between your store and Gold-Standard_Management system.
         </p>
       </div>
 
