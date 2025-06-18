@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **DYMO Printer Label Formatting and Live Menu Media Downloads Complete**
+  - Added comprehensive DYMO printer label formats: address (2.125 x 0.875), shipping (2.5 x 1.125), large (2.5 x 1.25), badge (2.25 x 4)
+  - Enhanced live menu generation with product media download links at /api/catalog, /api/menu, /api/live-menu endpoints
+  - Created /api/items/:id/download-media endpoint providing direct access to product images with filename organization
+  - All catalog and menu endpoints now include hasMedia, mediaUrl, and downloadLink fields for complete media access
+  - Media download system supports multiple image URLs per product with proper SKU-based filename generation
+  - DYMO formats optimized for thermal printing with single-label layouts and zero margins for professional inventory labeling
 - June 18, 2025: **Inventory Organization with Active Flower Products Prioritized at Top**
   - Updated inventory sorting algorithm to prioritize active flower inventory with available quantities at the top
   - Implemented 5-tier sorting system: 1) Active flower items, 2) Active non-flower items, 3) Draft flower items, 4) Draft non-flower items, 5) Other items
