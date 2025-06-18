@@ -49,7 +49,7 @@ import CredentialsManagement from "@/pages/credentials-management";
 import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
-import WebhookMonitoring from "@/pages/webhook-monitoring";
+
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import RealTimeSyncDashboard from "@/pages/real-time-sync-dashboard";
 import ThcaPivotTablesPage from "@/pages/thca-pivot-tables";
@@ -112,6 +112,8 @@ function Router() {
         <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
         <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
+        <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
+        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoring />} />
 
         <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
