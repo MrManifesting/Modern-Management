@@ -117,6 +117,58 @@ export function registerAffiliateRoutes(app: Express, storage: IStorage) {
   });
 
   /**
+   * Get affiliate stats by ID
+   */
+  app.get("/api/affiliates/:id/stats", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid affiliate ID"
+        });
+      }
+
+      const affiliate = await storage.getAffiliateById(id);
+      if (!affiliate) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate not found"
+        });
+      }
+
+      // Get QR codes for this affiliate
+      const qrCodes = await storage.getQrCodesByAffiliateId(id);
+      const totalScans = qrCodes.reduce((sum, qr) => sum + (qr.scans || 0), 0);
+      const totalConversions = qrCodes.reduce((sum, qr) => sum + (qr.conversions || 0), 0);
+      const conversionRate = totalScans > 0 ? (totalConversions / totalScans) * 100 : 0;
+
+      // Get recent transactions
+      const transactions = await storage.getAffiliateTransactionsByAffiliateId(id);
+      const pendingPayouts = transactions
+        .filter(t => t.status === 'pending')
+        .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+
+      res.json({
+        success: true,
+        data: {
+          totalSales: affiliate.totalSales || 0,
+          totalEarnings: parseFloat(affiliate.totalEarnings || '0'),
+          pendingPayouts,
+          conversionRate: conversionRate.toFixed(2),
+          recentTransactions: transactions.slice(0, 10)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate stats:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching affiliate stats"
+      });
+    }
+  });
+
+  /**
    * Get affiliate by ID
    */
   app.get("/api/affiliates/:id", async (req: Request, res: Response) => {
