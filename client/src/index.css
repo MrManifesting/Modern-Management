@@ -172,21 +172,21 @@
 }
 
 .dark {
-  /* Dark mode - Gold Standard Management theme */
+  /* Dark mode - Gold Standard Management theme with high contrast */
   --background: 0 0% 8%;        /* Deep black background */
-  --foreground: 45 90% 70%;     /* Light gold text */
+  --foreground: 0 0% 95%;       /* Bright white text for maximum contrast */
   --muted: 0 0% 15%;
-  --muted-foreground: 45 40% 60%;
+  --muted-foreground: 0 0% 75%; /* Light gray for muted text */
   --popover: 0 0% 10%;
-  --popover-foreground: 45 90% 70%;
+  --popover-foreground: 0 0% 95%;
   --card: 0 0% 12%;
-  --card-foreground: 45 90% 70%;
-  --border: 0 0% 20%;
+  --card-foreground: 0 0% 95%;  /* Bright white text on cards */
+  --border: 0 0% 25%;           /* Lighter border for visibility */
   --input: 0 0% 18%;
   --primary: 45 95% 55%;        /* Bright gold for dark mode */
   --primary-foreground: 0 0% 0%;
   --secondary: 142 80% 45%;     /* Bright green for dark mode */
-  --secondary-foreground: 0 0% 0%;
+  --secondary-foreground: 0 0% 100%;
   --accent: 45 100% 60%;        /* Bright gold accent */
   --accent-foreground: 0 0% 0%;
   --destructive: 0 85% 60%;     /* Bright red for dark mode */
