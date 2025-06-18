@@ -2641,7 +2641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
           
-          const sku = generateSKU(item);
+          const sku = await skuGenerator.generateSKU(item);
           await storage.updateItem(id, { sku });
           updatedCount++;
         } catch (error) {
@@ -2709,7 +2709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...originalItem,
           id: undefined, // Let database generate new ID
           name: `${originalItem.name} - Unit ${i}`,
-          sku: await generateSKU(originalItem, { unitIndex: i }),
+          sku: `${originalItem.sku}-UNIT-${i}`,
           quantity: 1, // Each unit is quantity 1
           parentItemId: originalItem.id, // Reference to original item
           createdAt: undefined,
