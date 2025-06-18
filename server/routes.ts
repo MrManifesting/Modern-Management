@@ -1134,11 +1134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         log(`Error creating breakdown item: ${error}`, 'breakdown');
       }
       
-      // Reduce parent item quantity by 1
-      const newQuantity = Math.max(0, (parentItem.quantity || 0) - 1);
+      // Reduce parent item quantity by the amount that was broken down
+      // For example: 8 ounces broken down from 1 pound = reduce parent by 1 unit that contained 8 ounces
+      const amountUsed = 1; // Always using 1 unit of parent item (1 pound, 1 half-pound, etc.)
+      const newQuantity = Math.max(0, (parentItem.quantity || 0) - amountUsed);
       await storage.updateItem(itemId, { quantity: newQuantity });
       
-      log(`Reduced parent item ${parentItem.name} quantity from ${parentItem.quantity} to ${newQuantity}`, 'breakdown');
+      log(`Reduced parent item ${parentItem.name} quantity from ${parentItem.quantity} to ${newQuantity} (used ${amountUsed} ${parentItem.weight} to create ${conversion.quantity} ${conversion.description})`, 'breakdown');
       
       res.json({
         success: true,
