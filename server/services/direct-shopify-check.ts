@@ -93,11 +93,7 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
     
     log(`Token type: ${tokenType}`, 'shopify-direct');
     
-    // Special handling for simplifiedcurations.myshopify.com
-    const isSimplifiedCurations = cleanUrl.includes('simplifiedcurations.myshopify.com');
-    if (isSimplifiedCurations) {
-      log(`Special handling for simplifiedcurations store`, 'shopify-direct');
-      // For simplifiedcurations, we'll use a direct approach that bypasses most of the checks
+    // Standard Shopify store handling
       // since we know precisely which endpoint works
       
       // Select appropriate endpoint based on token type
@@ -137,16 +133,16 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
         log(`Using GraphQL body: ${body}`, 'shopify-direct');
       }
       
-      // Use a direct HTTPS request to a known working endpoint
+      // Use a direct HTTPS request to the store endpoint
       const apiReq = https.request({
-        hostname: 'simplifiedcurations.myshopify.com',
+        hostname: cleanUrl,
         port: 443,
         path: apiPath,
         method: method,
         headers,
         timeout: 30000 // Extended timeout
       }, (apiRes) => {
-        log(`Direct API call to simplifiedcurations - Status: ${apiRes.statusCode}`, 'shopify-direct');
+        log(`Direct API call to ${cleanUrl} - Status: ${apiRes.statusCode}`, 'shopify-direct');
         
         let data = '';
         apiRes.on('data', (chunk) => {
@@ -155,15 +151,15 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
         
         apiRes.on('end', () => {
           if (apiRes.statusCode === 200) {
-            log(`Successfully connected to simplifiedcurations Shopify API`, 'shopify-direct');
+            log(`Successfully connected to Shopify API`, 'shopify-direct');
             resolve({
               accessible: true,
               status: apiRes.statusCode,
-              message: `Successfully connected to simplifiedcurations Shopify API`,
+              message: `Successfully connected to Shopify API`,
               isShopify: true
             });
           } else if (apiRes.statusCode === 401) {
-            log(`Authentication failed for simplifiedcurations: ${data}`, 'shopify-direct');
+            log(`Authentication failed: ${data}`, 'shopify-direct');
             resolve({
               accessible: false,
               status: apiRes.statusCode,
@@ -171,11 +167,11 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
               isShopify: true
             });
           } else {
-            log(`Unexpected status code for simplifiedcurations: ${apiRes.statusCode}`, 'shopify-direct');
+            log(`Unexpected status code: ${apiRes.statusCode}`, 'shopify-direct');
             resolve({
               accessible: false,
               status: apiRes.statusCode,
-              message: `Unexpected status code: ${apiRes.statusCode} when connecting to simplifiedcurations`,
+              message: `Unexpected status code: ${apiRes.statusCode} when connecting to Shopify`,
               isShopify: true
             });
           }
@@ -183,20 +179,20 @@ export async function testShopifyDirect(storeUrl: string, accessToken: string): 
       });
       
       apiReq.on('error', (error) => {
-        log(`Error accessing simplifiedcurations API: ${error.message}`, 'shopify-direct');
+        log(`Error accessing Shopify API: ${error.message}`, 'shopify-direct');
         resolve({
           accessible: false,
-          message: `Connection error for simplifiedcurations: ${error.message}`,
+          message: `Connection error: ${error.message}`,
           isShopify: true
         });
       });
       
       apiReq.on('timeout', () => {
-        log(`Timeout accessing simplifiedcurations API`, 'shopify-direct');
+        log(`Timeout accessing Shopify API`, 'shopify-direct');
         apiReq.destroy();
         resolve({
           accessible: false,
-          message: 'Connection timed out after 30 seconds for simplifiedcurations',
+          message: 'Connection timed out after 30 seconds',
           isShopify: true
         });
       });
