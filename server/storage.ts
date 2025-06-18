@@ -2491,12 +2491,12 @@ export class DatabaseStorage implements IStorage {
             mappedItem[dbColumn] = {};
           }
         } else if (['base_price', 'sale_price', 'cost_price', 'wholesale_price'].includes(dbColumn)) {
-          // Handle price fields - ensure they are numbers or null
+          // Handle price fields - ensure they are properly formatted numbers for double precision
           if (value === null || value === undefined || value === '') {
             mappedItem[dbColumn] = null;
           } else {
             const numericValue = parseFloat(String(value));
-            mappedItem[dbColumn] = isNaN(numericValue) ? null : numericValue;
+            mappedItem[dbColumn] = isNaN(numericValue) ? null : Number(numericValue.toFixed(2));
           }
         } else {
           mappedItem[dbColumn] = value;
@@ -2507,9 +2507,7 @@ export class DatabaseStorage implements IStorage {
       const keys = Object.keys(mappedItem);
       const values = Object.values(mappedItem);
       
-      // Debug: Log original item data and mapped data
-      console.log('Original item data:', JSON.stringify(item, null, 2));
-      console.log('Mapped item data being inserted:', JSON.stringify(mappedItem, null, 2));
+
       
       // Use Drizzle ORM insert instead of raw SQL
       const result = await db.insert(items).values(mappedItem).returning();
