@@ -1077,54 +1077,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`Breaking down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`, 'breakdown');
       
-      // Create new items
-      const newItems = [];
-      for (let i = 1; i <= conversion.quantity; i++) {
-        const newItem = {
-          // Keep ALL original item information identical
-          name: `${parentItem.name} - ${conversion.description} #${i}`,
-          description: parentItem.description,
-          category: parentItem.category,
-          brand: parentItem.brand,
-          condition: parentItem.condition,
-          tags: parentItem.tags,
-          images: parentItem.images,
-          imageUrl: parentItem.imageUrl,
-          dimensions: parentItem.dimensions,
-          packageSize: parentItem.packageSize,
-          location: parentItem.location,
-          tier: parentItem.tier,
-          strainType: parentItem.strainType,
-          metadata: parentItem.metadata,
-          costPrice: parentItem.costPrice,
-          wholesalePrice: parentItem.wholesalePrice,
-          marketplaceId: parentItem.marketplaceId,
-          publishStatus: parentItem.publishStatus,
-          externalId: parentItem.externalId,
-          marketplaceUrl: parentItem.marketplaceUrl,
-          marketplace: parentItem.marketplace,
-          
-          // Only change these specific fields
-          weight: conversion.weight,
-          basePrice: unitPrice,
-          salePrice: unitPrice,
-          quantity: 1,
-          status: 'draft',
-          sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}-${String(i).padStart(3, '0')}`,
-          parentItemId: parentItem.id,
-          
-          // Reset these for new items
-          barcode: null,
-          qrCode: null
-        };
+      // Create one new item with consolidated quantity
+      const newItem = {
+        // Keep ALL original item information identical
+        name: `${parentItem.name} - ${conversion.description}`,
+        description: parentItem.description,
+        category: parentItem.category,
+        brand: parentItem.brand,
+        condition: parentItem.condition,
+        tags: parentItem.tags,
+        images: parentItem.images,
+        imageUrl: parentItem.imageUrl,
+        dimensions: parentItem.dimensions,
+        packageSize: parentItem.packageSize,
+        location: parentItem.location,
+        tier: parentItem.tier,
+        strainType: parentItem.strainType,
+        metadata: parentItem.metadata,
+        costPrice: parentItem.costPrice,
+        wholesalePrice: parentItem.wholesalePrice,
+        marketplaceId: parentItem.marketplaceId,
+        publishStatus: parentItem.publishStatus,
+        externalId: parentItem.externalId,
+        marketplaceUrl: parentItem.marketplaceUrl,
+        marketplace: parentItem.marketplace,
         
-        try {
-          const createdItem = await storage.createItem(newItem);
-          newItems.push(createdItem);
-          log(`Created breakdown item: ${createdItem.name} (${createdItem.sku})`, 'breakdown');
-        } catch (error) {
-          log(`Error creating breakdown item ${i}: ${error}`, 'breakdown');
-        }
+        // Only change these specific fields
+        weight: conversion.weight,
+        basePrice: unitPrice,
+        salePrice: unitPrice,
+        quantity: conversion.quantity, // Total quantity for this weight
+        status: 'draft',
+        sku: `${parentItem.sku || 'BRK'}-${weightType.toUpperCase()}`,
+        parentItemId: parentItem.id,
+        
+        // Reset these for new items
+        barcode: null,
+        qrCode: null
+      };
+      
+      const newItems = [];
+      try {
+        const createdItem = await storage.createItem(newItem);
+        newItems.push(createdItem);
+        log(`Created breakdown item: ${createdItem.name} (${createdItem.sku}) with ${conversion.quantity} units`, 'breakdown');
+      } catch (error) {
+        log(`Error creating breakdown item: ${error}`, 'breakdown');
       }
       
       // Reduce parent item quantity by 1
@@ -1135,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        message: `Successfully broke down ${parentItem.name} into ${conversion.quantity} ${conversion.description} units`,
+        message: `Successfully broke down ${parentItem.name} into ${conversion.description} with ${conversion.quantity} units`,
         parentItem: {
           id: parentItem.id,
           newQuantity
