@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Removed Google Sheets Order Processing - System Now Uses Shopify-Only Order Management**
+  - Completely removed readAndProcessOrders() and getOrdersFromSheet() methods from Google Sheets service
+  - Eliminated OrderRow interface and all Google Sheets order processing API endpoints
+  - System now processes orders exclusively through Shopify webhooks for real-time inventory updates
+  - Cleaned up Google Sheets service to focus only on inventory sync and reporting functionality
+  - Orders Tracking page removed from frontend navigation as all order data comes from Shopify
+  - Streamlined order management workflow: Shopify order → immediate inventory reduction → sales record creation
 - June 18, 2025: **Fixed All Shopify Integration Issues - Complete API Endpoint Coverage**
   - Added missing Shopify API endpoints: /api/shopify/test-connection, /api/credentials/shopify, /api/shopify/sync-inventory
   - Fixed syncProductsFromShopify function to return proper success/error responses instead of raw arrays
