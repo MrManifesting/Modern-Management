@@ -30,7 +30,9 @@ export const FLOWER_STRAIN_TYPES = [
   'CBG',
   'Delta-8',
   'Delta-9',
-  'HHC'
+  'HHC',
+  'Golden Nuggets',
+  'Little Trees'
 ];
 
 // All flower quality grades (unified system with specific cannabis industry tiers)
@@ -41,6 +43,7 @@ export const ALL_FLOWER_QUALITIES = [
   'AA Indoor',
   'AAA Indoor',
   'Classic Reserve',
+  'Cheap Discount Flower',
   'Smalls',
   'Top Shelf - Smalls',
   'AA Indoor - Smalls',
