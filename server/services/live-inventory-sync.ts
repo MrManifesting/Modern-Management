@@ -73,7 +73,7 @@ export class LiveInventorySync {
           variants: [{
             sku: item.sku,
             price: item.basePrice || '0.00',
-            inventory_quantity: item.quantity || 0,
+            inventory_quantity: parseInt(item.quantity) || 0,
             inventory_management: 'shopify',
             inventory_policy: 'deny'
           }],

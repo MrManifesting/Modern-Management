@@ -52,14 +52,29 @@ class InventorySyncScheduler {
     try {
       log(`Starting automatic inventory sync #${this.syncCount + 1}`, 'inventory-sync');
       
-      // Fetch Shopify products using the working API endpoint
-      const response = await fetch(`http://localhost:5000/api/shopify/products`);
+      // Fetch Shopify products with inventory quantities directly from Shopify API
+      const storeUrl = process.env.SHOPIFY_STORE;
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!storeUrl || !accessToken) {
+        log('Missing Shopify credentials for inventory sync', 'inventory-sync');
+        return;
+      }
+
+      const response = await fetch(`https://${storeUrl}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (!response.ok) {
         log(`Shopify API request failed: ${response.status} ${response.statusText}`, 'inventory-sync');
         return;
       }
       
-      const shopifyProducts = await response.json();
+      const responseData = await response.json();
+      const shopifyProducts = responseData.products || [];
       
       if (!shopifyProducts || shopifyProducts.length === 0) {
         log('No Shopify products found during sync', 'inventory-sync');
@@ -74,34 +89,60 @@ class InventorySyncScheduler {
 
       // Match Shopify products to local items and update quantities
       for (const shopifyProduct of shopifyProducts) {
-        // Find matching local item by SKU or product title
-        const localItem = localItems.find(item => 
-          item.sku === shopifyProduct.sku || 
-          item.name?.toLowerCase().includes(shopifyProduct.title?.toLowerCase() || '') ||
-          shopifyProduct.title?.toLowerCase().includes(item.name?.toLowerCase() || '')
-        );
+        if (!shopifyProduct.variants || shopifyProduct.variants.length === 0) {
+          continue;
+        }
 
-        if (localItem && shopifyProduct.inventory_quantity !== undefined) {
-          const currentQty = parseInt(String(localItem.quantity || 0));
-          const shopifyQty = parseInt(String(shopifyProduct.inventory_quantity));
+        // Process each variant (most products have only one variant)
+        for (const variant of shopifyProduct.variants) {
+          const variantSku = variant.sku;
+          const inventoryQty = variant.inventory_quantity || 0;
 
-          // Only update if quantities are different
-          if (currentQty !== shopifyQty) {
-            try {
-              await storage.updateItem(localItem.id, {
-                quantity: shopifyQty
-              });
+          if (!variantSku) {
+            continue;
+          }
 
-              updates.push({
-                itemId: localItem.id,
-                oldQty: currentQty,
-                newQty: shopifyQty,
-                sku: localItem.sku || 'N/A'
-              });
+          // Find matching local item by SKU
+          const localItem = localItems.find(item => 
+            item.sku === variantSku || 
+            item.name?.toLowerCase().includes(shopifyProduct.title?.toLowerCase() || '') ||
+            shopifyProduct.title?.toLowerCase().includes(item.name?.toLowerCase() || '')
+          );
 
-              updatedCount++;
-            } catch (updateError) {
-              console.error(`Failed to update item ${localItem.id}:`, updateError);
+          if (localItem) {
+            const currentQty = parseInt(String(localItem.quantity || 0));
+            const shopifyQty = parseInt(String(inventoryQty));
+
+            // Only update if quantities are different
+            if (currentQty !== shopifyQty) {
+              try {
+                await storage.updateItem(localItem.id, {
+                  quantity: shopifyQty,
+                  shopifyId: shopifyProduct.id.toString()
+                });
+
+                // Log the inventory action
+                await storage.createInventoryAction({
+                  itemId: localItem.id,
+                  type: 'sync',
+                  quantity: shopifyQty - currentQty,
+                  reason: `Auto-sync from Shopify (${currentQty} → ${shopifyQty})`,
+                  previousQuantity: currentQty,
+                  newQuantity: shopifyQty
+                });
+
+                updates.push({
+                  itemId: localItem.id,
+                  oldQty: currentQty,
+                  newQty: shopifyQty,
+                  sku: variantSku
+                });
+
+                updatedCount++;
+                log(`Updated ${localItem.name}: ${currentQty} → ${shopifyQty}`, 'inventory-sync');
+              } catch (updateError) {
+                console.error(`Failed to update item ${localItem.id}:`, updateError);
+              }
             }
           }
         }
