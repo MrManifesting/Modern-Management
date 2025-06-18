@@ -11,6 +11,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Google OAuth credentials (security sensitive)
+google-credentials.json
+client_secret_*.json
+
 # Build outputs
 dist/
 build/

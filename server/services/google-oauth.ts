@@ -30,14 +30,23 @@ export class GoogleOAuthService {
   }
 
   private loadCredentials() {
-    try {
-      const credentialsPath = path.join(process.cwd(), 'google-credentials.json');
-      const credentialsContent = fs.readFileSync(credentialsPath, 'utf8');
-      this.credentials = JSON.parse(credentialsContent);
-    } catch (error) {
-      console.error('Error loading Google credentials:', error);
-      throw new Error('Google credentials file not found or invalid');
+    // Load credentials from environment variables only
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      throw new Error('Google OAuth credentials must be provided via GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables');
     }
+    
+    this.credentials = {
+      installed: {
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uris: ['http://localhost'],
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token'
+      }
+    };
   }
 
   private initializeOAuth() {

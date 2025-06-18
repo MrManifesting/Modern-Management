@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Critical Security Fix: Removed Hardcoded Google OAuth Credentials**
+  - Removed hardcoded Google OAuth client secret from attached_assets/client_secret_*.json file that was flagged by security scan
+  - Updated GoogleOAuthService to use only environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) for authentication
+  - Added Google OAuth credential files to .gitignore to prevent future accidental commits of sensitive data
+  - Enhanced security by eliminating hardcoded credentials that could be exploited if codebase is exposed
+  - System now requires proper environment variable configuration for Google OAuth functionality
 - June 18, 2025: **Removed All Google Sheets Sync Functionality and Added Delete Capabilities to Edit Views**
   - Completely removed all Google Sheets API routes and frontend references that were causing 404 redirects to non-existent items
   - Disabled Google Sheets view buttons in inventory interface with clear "system syncs from Shopify only" messaging
