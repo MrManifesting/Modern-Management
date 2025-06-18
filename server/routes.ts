@@ -402,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter for catalog: active or available status with valid pricing
       const catalogItems = items.filter(item => {
-        const price = parseFloat(item.basePrice || '0');
+        const price = parseFloat((item.base_price || 0).toString());
         const quantity = parseInt(item.quantity?.toString() || '0');
         const hasValidStatus = item.status === 'active' || item.status === 'available';
         return hasValidStatus && price > 0 && quantity > 0;
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter and prioritize available inventory items
       const filteredItems = items.filter(item => {
-        const hasPrice = parseFloat(item.basePrice || '0') > 0;
+        const hasPrice = parseFloat((item.base_price || 0).toString()) > 0;
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
         const hasImage = item.imageUrl && item.imageUrl.trim() !== '';
         
@@ -447,10 +447,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sort with active flower products at the top
       const sortedItems = filteredItems.sort((a, b) => {
-        const aPrice = parseFloat(a.base_price || '0');
-        const aQty = parseInt(a.quantity?.toString() || '0');
-        const bPrice = parseFloat(b.base_price || '0');
-        const bQty = parseInt(b.quantity?.toString() || '0');
+        const aPrice = parseFloat((a.base_price || 0).toString());
+        const aQty = parseInt((a.quantity || 0).toString());
+        const bPrice = parseFloat((b.base_price || 0).toString());
+        const bQty = parseInt((b.quantity || 0).toString());
         
         const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
         const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
@@ -638,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       const itemsToDelete = items.filter(item => {
-        const hasPrice = parseFloat(item.basePrice || '0') > 0;
+        const hasPrice = parseFloat((item.base_price || 0).toString()) > 0;
         const hasImage = item.imageUrl && item.imageUrl.trim() !== '';
         
         // Delete archived items without both price and image
