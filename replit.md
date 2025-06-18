@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Fixed Live Catalog Generation and Bulk Delete Functionality with Enhanced Active Item Prioritization**
+  - Fixed live catalog endpoint to properly generate menu at /catalog, /menu, and /live-menu routes with 8 available items
+  - Updated catalog filtering to include both "active" and "available" status items with valid pricing (>$0)
+  - Fixed bulk delete functionality with proper JSON body format in DELETE requests eliminating previous errors
+  - Enhanced inventory sorting system with three-tier prioritization: 1) Active items with pricing/quantities, 2) Draft items with quantities, 3) Archived items at bottom
+  - Applied consistent active item prioritization across all inventory endpoints (/api/items and /api/inventory/enhanced)
+  - Live catalog now displays cannabis products with authentic pricing and proper active item prioritization
 - June 18, 2025: **Enhanced Inventory Prioritization System with Active and Draft Item Sorting**
   - Implemented comprehensive inventory sorting prioritizing active items with available quantities at the top
   - Added secondary priority for draft items with available quantities underneath active items
