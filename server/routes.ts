@@ -246,5 +246,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Affiliate API endpoints
+  app.get("/api/affiliates", async (_req: Request, res: Response) => {
+    try {
+      const affiliates = await storage.getAllAffiliates();
+      res.json({ success: true, data: affiliates });
+    } catch (error) {
+      console.error("Error fetching affiliates:", error);
+      res.status(500).json({ success: false, message: "Error fetching affiliates" });
+    }
+  });
+
+  app.get("/api/affiliates/stats", async (_req: Request, res: Response) => {
+    try {
+      const affiliates = await storage.getAllAffiliates();
+      const totalAffiliates = affiliates.length;
+      const totalEarnings = affiliates.reduce((sum, affiliate) => {
+        const earnings = typeof affiliate.totalEarnings === 'string' 
+          ? parseFloat(affiliate.totalEarnings) || 0 
+          : affiliate.totalEarnings || 0;
+        return sum + earnings;
+      }, 0);
+      const totalSales = affiliates.reduce((sum, affiliate) => sum + (affiliate.totalSales || 0), 0);
+      
+      // Count active QR codes
+      let activeQrCodes = 0;
+      for (const affiliate of affiliates) {
+        try {
+          const qrCodes = await storage.getQrCodesByAffiliateId(affiliate.id);
+          activeQrCodes += qrCodes.filter(qr => qr.status === 'active').length;
+        } catch (error) {
+          console.warn(`Failed to get QR codes for affiliate ${affiliate.id}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          totalAffiliates,
+          totalEarnings,
+          totalSales,
+          activeQrCodes
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate stats:", error);
+      res.status(500).json({ success: false, message: "Error fetching affiliate stats" });
+    }
+  });
+
+  app.post("/api/affiliates", async (req: Request, res: Response) => {
+    try {
+      const affiliate = await storage.createAffiliate(req.body);
+      res.json({ success: true, data: affiliate });
+    } catch (error) {
+      console.error("Error creating affiliate:", error);
+      res.status(500).json({ success: false, message: "Error creating affiliate" });
+    }
+  });
+
+  app.get("/api/qr-codes", async (_req: Request, res: Response) => {
+    try {
+      const qrCodes = await storage.getAllQrCodes();
+      res.json({ success: true, data: qrCodes });
+    } catch (error) {
+      console.error("Error fetching QR codes:", error);
+      res.status(500).json({ success: false, message: "Error fetching QR codes" });
+    }
+  });
+
+  app.post("/api/qr-codes", async (req: Request, res: Response) => {
+    try {
+      const qrCode = await storage.createQrCode(req.body);
+      res.json({ success: true, data: qrCode });
+    } catch (error) {
+      console.error("Error creating QR code:", error);
+      res.status(500).json({ success: false, message: "Error creating QR code" });
+    }
+  });
+
+  // Stats endpoint
+  app.get("/api/stats", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const totalItems = items.length;
+      const activeItems = items.filter(item => item.status === 'active').length;
+      const lowStockItems = items.filter(item => (item.quantity || 0) < 10).length;
+      
+      res.json({
+        success: true,
+        data: {
+          totalItems,
+          activeItems,
+          lowStockItems,
+          totalValue: items.reduce((sum, item) => sum + (parseFloat(item.basePrice || '0') * (item.quantity || 0)), 0)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ success: false, message: "Error fetching stats" });
+    }
+  });
+
+  // User endpoint  
+  app.get("/api/user", async (req: Request, res: Response) => {
+    if (req.user) {
+      res.json({ success: true, user: req.user });
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+
   return server;
 }
