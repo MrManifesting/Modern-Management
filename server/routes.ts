@@ -1480,7 +1480,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subtotal: order.subtotal_price || order.total_price,
           total: order.total_price,
           status: order.financial_status || 'paid',
-          marketplaceId: null,
           metadata: {
             shopifyOrderId: order.id,
             fulfillmentStatus: order.fulfillment_status,
@@ -1933,7 +1932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: item.displayPrice,
           tier: item.tier || 'Top Shelf',
           brand: item.brand || 'Gold Standard',
-          thca: item.thca_percentage || '',
+          thca: '',
           strain: item.strainType || ''
         };
         
@@ -2390,7 +2389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           salePrice: item.sale_price,
           wholesalePrice: item.wholesale_price,
           brand: item.brand,
-          thcaPercentage: item.thca_percentage || null,
+          thcaPercentage: null,
           condition: item.condition,
           imageUrl: item.imageUrl,
           updatedAt: item.updatedAt,
