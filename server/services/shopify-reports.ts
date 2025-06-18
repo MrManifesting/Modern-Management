@@ -348,7 +348,12 @@ export async function fetchShopifyCustomerReport(): Promise<ShopifyCustomerRepor
 // Helper function to get Shopify client and generate mock reports if needed
 async function getShopifyClient() {
   try {
-    const { shopify, isMock } = await createShopifyClient();
+    const shopify = await createShopifyClient();
+    
+    // Check if shopify client was created successfully
+    if (!shopify) {
+      throw new Error('Failed to create Shopify client');
+    }
     
     // If we don't have the proper client with order.list, let's create a mock implementation
     if (!shopify.order || !shopify.order.list) {
@@ -380,7 +385,7 @@ async function getShopifyClient() {
       }
     }
     
-    return { shopify, isMock };
+    return shopify;
   } catch (error) {
     log('Error getting Shopify client for reports:', 'shopify');
     log(error instanceof Error ? error.message : 'Unknown error', 'shopify');
