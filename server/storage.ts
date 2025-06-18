@@ -2509,6 +2509,9 @@ export class DatabaseStorage implements IStorage {
       
 
       
+      // Debug: Log the mapped item being inserted
+      console.log('Mapped item for Drizzle insert:', JSON.stringify(mappedItem, null, 2));
+      
       // Use Drizzle ORM insert instead of raw SQL
       const result = await db.insert(items).values(mappedItem).returning();
       
