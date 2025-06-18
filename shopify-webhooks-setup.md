@@ -1,4 +1,4 @@
-# Complete Shopify Webhook Configuration
+# Complete Shopify Webhook Configuration - Gold-Standard_Management
 
 ## Webhook URLs for MrListersCurations Store
 
@@ -7,59 +7,59 @@ Configure these webhooks in your Shopify Admin → Settings → Notifications �
 ### 1. Product Management Webhooks
 ```
 Topic: products/create
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/products/create
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/products/create
 Format: JSON
 ```
 
 ```
 Topic: products/update  
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/products/update
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/products/update
 Format: JSON
 ```
 
 ```
 Topic: products/delete
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/products/delete
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/products/delete
 Format: JSON
 ```
 
 ### 2. Inventory Management Webhooks
 ```
 Topic: inventory_levels/update
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/inventory_levels/update
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/inventory_levels/update
 Format: JSON
 ```
 
 ### 3. Order Processing Webhooks (CRITICAL FOR BUSINESS)
 ```
 Topic: orders/create
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/orders/create
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/orders/create
 Format: JSON
 ```
 
 ```
 Topic: orders/cancelled
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/orders/cancelled
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/orders/cancelled
 Format: JSON
 ```
 
 ```
 Topic: refunds/create
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/refunds/create
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/refunds/create
 Format: JSON
 ```
 
 ### 4. Customer Management Webhooks
 ```
 Topic: customers/create
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/customers/create
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/customers/create
 Format: JSON
 ```
 
 ### 5. App Management Webhooks
 ```
 Topic: app/uninstalled
-URL: https://modern-inventory-and-sales-management-whateversclever.replit.app/api/shopify/webhooks/app/uninstalled
+URL: https://gold-standard-management.replit.app/api/shopify/webhooks/app/uninstalled
 Format: JSON
 ```
 

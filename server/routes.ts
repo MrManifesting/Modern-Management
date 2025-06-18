@@ -1506,7 +1506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         webhooks,
         baseUrl: process.env.REPLIT_DEV_DOMAIN ? 
           `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-          'https://your-app-domain.replit.app',
+          'https://gold-standard-management.replit.app',
         webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET ? 'configured' : 'not configured'
       });
     } catch (error) {

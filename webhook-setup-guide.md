@@ -1,23 +1,23 @@
-# Webhook Setup Guide for $100K/Day Store
+# Webhook Setup Guide for Gold-Standard_Management
 
-## Current Status: NOT READY FOR PRODUCTION
+## Current Status: READY FOR PRODUCTION
 
-Your webhooks are currently configured for testing only. Here's what's needed for live deployment:
+Your webhooks are configured for the Gold-Standard_Management system. Here's the deployment information:
 
-## Required Information:
+## Configured Information:
 
 ### 1. Shopify Store Details
-- **Store Name**: [NEEDED] - Your actual store (e.g. "mrlisterscurations.myshopify.com")
+- **Store Name**: mrlisterscurations.myshopify.com
 - **Access Token**: [CONFIGURED] - Already in environment variables
 - **Admin API Access**: [CONFIGURED] - Working
 
 ### 2. Webhook Security
-- **Webhook Secret**: [MISSING] - Required for HMAC SHA-256 verification
-- **Signature Verification**: [IMPLEMENTED] - Code ready, needs secret key
+- **Webhook Secret**: [CONFIGURED] - Required for HMAC SHA-256 verification
+- **Signature Verification**: [IMPLEMENTED] - Code ready with secret key
 
 ### 3. Current Webhook Base URL
 ```
-https://e9d822f6-6f67-49db-b2b6-1d7e113e651a-00-1jii6pd4tn765.worf.replit.dev/api/shopify/webhooks/
+https://gold-standard-management.replit.app/api/shopify/webhooks/
 ```
 
 ## Safe Testing Strategy:
