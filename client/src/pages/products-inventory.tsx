@@ -297,6 +297,7 @@ const ProductsInventoryPage: React.FC = () => {
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [isStreamlinedBreakdownOpen, setIsStreamlinedBreakdownOpen] = useState(false);
   const [generateUnitsDialogOpen, setGenerateUnitsDialogOpen] = useState(false);
   const [itemForUnitsGeneration, setItemForUnitsGeneration] = useState<Product | null>(null);
   const { toast } = useToast();
@@ -562,6 +563,19 @@ const ProductsInventoryPage: React.FC = () => {
         id: itemToBreakdown.id // Ensure id is passed
       });
       setIsBreakdownModalOpen(true);
+    }
+  };
+
+  // Handle streamlined breakdown
+  const handleStreamlinedBreakdownClick = (id: number | undefined) => {
+    if (!id) return; // Skip if id is undefined
+    const itemToBreakdown = products.find((item: Product) => item.id === id);
+    if (itemToBreakdown && itemToBreakdown.id) { // Ensure id is defined
+      setSelectedItem({
+        ...itemToBreakdown,
+        id: itemToBreakdown.id // Ensure id is passed
+      });
+      setIsStreamlinedBreakdownOpen(true);
     }
   };
 
@@ -2354,13 +2368,22 @@ const ProductsInventoryPage: React.FC = () => {
                                       </DropdownMenuItem>
                                     </NumberedLabelsDialog>
                                     {product.weight && (
-                                      <DropdownMenuItem 
-                                        className="flex items-center cursor-pointer"
-                                        onClick={() => handleQuickBreakdownClick(product.id)}
-                                      >
-                                        <PackageOpen className="mr-2 h-4 w-4" />
-                                        Quick Breakdown
-                                      </DropdownMenuItem>
+                                      <>
+                                        <DropdownMenuItem 
+                                          className="flex items-center cursor-pointer"
+                                          onClick={() => handleQuickBreakdownClick(product.id)}
+                                        >
+                                          <PackageOpen className="mr-2 h-4 w-4" />
+                                          Quick Breakdown
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          className="flex items-center cursor-pointer"
+                                          onClick={() => handleStreamlinedBreakdownClick(product.id)}
+                                        >
+                                          <CircleDollarSign className="mr-2 h-4 w-4" />
+                                          Streamlined Breakdown
+                                        </DropdownMenuItem>
+                                      </>
                                     )}
                                     <DropdownMenuSeparator />
                                     
@@ -3047,6 +3070,19 @@ const ProductsInventoryPage: React.FC = () => {
         item={itemForUnitsGeneration}
         onUnitsGenerated={handleUnitsGenerated}
       />
+
+      {/* Streamlined Breakdown Dialog */}
+      {selectedItem && (
+        <StreamlinedQuickBreakdown
+          item={selectedItem}
+          isOpen={isStreamlinedBreakdownOpen}
+          onClose={() => {
+            setIsStreamlinedBreakdownOpen(false);
+            setSelectedItem(null);
+            refetchItems();
+          }}
+        />
+      )}
     </div>
   );
 };
