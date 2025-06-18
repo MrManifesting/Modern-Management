@@ -140,6 +140,7 @@ export interface IStorage {
   
   // QR Code methods
   getQrCodes(): Promise<QrCode[]>;
+  getAllQrCodes(): Promise<QrCode[]>; // Alias for consistency
   getQrCodeById(id: number): Promise<QrCode | undefined>;
   getQrCodeByCode(code: string): Promise<QrCode | undefined>;
   getQrCodesByAffiliateId(affiliateId: number): Promise<QrCode[]>;

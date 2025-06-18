@@ -1018,6 +1018,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/affiliates/:id", async (req: Request, res: Response) => {
+    try {
+      const affiliateId = parseInt(req.params.id);
+      const affiliate = await storage.getAffiliateById(affiliateId);
+      
+      if (!affiliate) {
+        return res.status(404).json({ success: false, message: "Affiliate not found" });
+      }
+      
+      res.json({ success: true, data: affiliate });
+    } catch (error) {
+      console.error("Error fetching affiliate:", error);
+      res.status(500).json({ success: false, message: "Error fetching affiliate" });
+    }
+  });
+
   app.post("/api/affiliates", async (req: Request, res: Response) => {
     try {
       // Generate unique affiliate code if not provided
