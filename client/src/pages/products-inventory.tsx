@@ -688,31 +688,13 @@ const ProductsInventoryPage: React.FC = () => {
       });
   };
 
-  // Handle viewing in Google Sheets
+  // Google Sheets view disabled - system syncs from Shopify only
   const handleViewSheetsClick = (id: number | undefined) => {
-    if (!id) return; // Skip if id is undefined
-    
-    // Call API to get Google Sheets view URL for this item
-    apiRequest('GET', `/api/items/${id}/sheets-view`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success && data.url) {
-          window.open(data.url, '_blank');
-        } else {
-          toast({
-            title: "Error",
-            description: data.message || "Unable to open Google Sheets view.",
-            variant: "destructive"
-          });
-        }
-      })
-      .catch(() => {
-        toast({
-          title: "Error",
-          description: "Failed to open Google Sheets view. Please try again.",
-          variant: "destructive"
-        });
-      });
+    toast({
+      title: "Google Sheets Sync Disabled",
+      description: "System now syncs from Shopify only. Use 'View in Shopify' instead.",
+      variant: "destructive"
+    });
   };
 
   const confirmDelete = () => {

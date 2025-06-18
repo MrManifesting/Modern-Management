@@ -10,12 +10,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, Package, ExternalLink, FileSpreadsheet } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Eye, Package, ExternalLink, Trash2, Edit } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ViewItemModalProps {
   item: any; // Accept any item type to handle both Item and EnhancedItem
   trigger?: React.ReactNode;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 interface ItemImage {
@@ -26,8 +30,11 @@ interface ItemImage {
   filename?: string;
 }
 
-export default function ViewItemModal({ item, trigger }: ViewItemModalProps) {
+export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewItemModalProps) {
   const [open, setOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch item images from multiple sources
   const { data: imageData } = useQuery({
@@ -36,6 +43,32 @@ export default function ViewItemModal({ item, trigger }: ViewItemModalProps) {
   });
 
   const images: any[] = (imageData as any)?.images || [];
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      const response = await apiRequest('DELETE', `/api/items/${itemId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory/enhanced'] });
+      toast({
+        title: "Item Deleted",
+        description: "The item has been successfully removed from your inventory."
+      });
+      setDeleteConfirmOpen(false);
+      setOpen(false);
+      onDelete?.();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete the item. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
 
   const formatPrice = (price: string | number | null) => {
     if (!price || price === '0' || price === 0) return 'No Price';
@@ -54,15 +87,9 @@ export default function ViewItemModal({ item, trigger }: ViewItemModalProps) {
     return `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
   };
 
-  const handleViewSheetsClick = async (itemId: number) => {
-    try {
-      const response = await fetch(`/api/items/${itemId}/sheets-view`);
-      if (response.ok) {
-        const data = await response.json();
-        window.open(data.url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error opening Google Sheets:', error);
+  const handleDelete = () => {
+    if (item.id) {
+      deleteMutation.mutate(item.id);
     }
   };
 
@@ -276,15 +303,55 @@ export default function ViewItemModal({ item, trigger }: ViewItemModalProps) {
               View on Shopify
             </Button>
             
+            {onEdit && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpen(false);
+                  onEdit();
+                }}
+                className="flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Item
+              </Button>
+            )}
+            
             <Button
-              variant="outline"
-              onClick={() => handleViewSheetsClick(item.id)}
+              variant="destructive"
+              onClick={() => setDeleteConfirmOpen(true)}
               className="flex items-center gap-2"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              View in Google Sheets
+              <Trash2 className="w-4 h-4" />
+              Delete Item
             </Button>
           </div>
+
+          {/* Delete Confirmation Dialog */}
+          {deleteConfirmOpen && (
+            <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Deletion</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-3 mt-4">
+                  <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </DialogContent>
     </Dialog>
