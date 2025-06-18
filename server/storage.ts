@@ -1921,14 +1921,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   private async initializeMarketplaces() {
-    // Get marketplace type IDs first
-    const marketplaceTypes = await db.select().from(stores).limit(0); // Just to check if stores table exists
+    // First initialize marketplace types
+    await this.initializeMarketplaceTypes();
+    
+    // Get marketplace type IDs
+    const marketplaceTypes = await db.select().from(marketplaceTypes);
+    const shopifyType = marketplaceTypes.find(t => t.name === "Shopify");
+    const ebayType = marketplaceTypes.find(t => t.name === "eBay");
+    const etsyType = marketplaceTypes.find(t => t.name === "Etsy");
+    const amazonType = marketplaceTypes.find(t => t.name === "Amazon");
     
     const defaultMarketplaces = [
-      { name: "eBay", marketplaceTypeId: 2, isConnected: true, credentials: {} },
-      { name: "Etsy", marketplaceTypeId: 4, isConnected: true, credentials: {} },
-      { name: "Amazon", marketplaceTypeId: 3, isConnected: true, credentials: {} },
-      { name: "Shopify", marketplaceTypeId: 1, isConnected: false, credentials: {} },
+      { name: "Shopify", marketplaceTypeId: shopifyType?.id || 1, isConnected: false, credentials: {} },
+      { name: "eBay", marketplaceTypeId: ebayType?.id || 2, isConnected: true, credentials: {} },
+      { name: "Amazon", marketplaceTypeId: amazonType?.id || 3, isConnected: true, credentials: {} },
+      { name: "Etsy", marketplaceTypeId: etsyType?.id || 4, isConnected: true, credentials: {} },
     ];
     
     for (const marketplace of defaultMarketplaces) {
@@ -1938,6 +1945,45 @@ export class DatabaseStorage implements IStorage {
         console.log(`Failed to create marketplace ${marketplace.name}:`, error);
         // Continue with other marketplaces
       }
+    }
+  }
+
+  private async initializeMarketplaceTypes() {
+    const existingTypes = await db.select().from(marketplaceTypes).limit(1);
+    
+    if (existingTypes.length === 0) {
+      const defaultTypes = [
+        {
+          name: "Shopify",
+          description: "Shopify e-commerce platform",
+          authType: "api_key",
+          requiredFields: ["shop_domain", "access_token"],
+          supportedFeatures: ["sync", "push", "pull", "webhooks"]
+        },
+        {
+          name: "eBay",
+          description: "eBay marketplace",
+          authType: "oauth",
+          requiredFields: ["client_id", "client_secret"],
+          supportedFeatures: ["sync", "push", "pull"]
+        },
+        {
+          name: "Amazon",
+          description: "Amazon marketplace",
+          authType: "api_key",
+          requiredFields: ["access_key", "secret_key", "marketplace_id"],
+          supportedFeatures: ["sync", "push", "pull"]
+        },
+        {
+          name: "Etsy",
+          description: "Etsy marketplace",
+          authType: "oauth",
+          requiredFields: ["api_key", "shared_secret"],
+          supportedFeatures: ["sync", "push", "pull"]
+        }
+      ];
+
+      await db.insert(marketplaceTypes).values(defaultTypes);
     }
   }
   
