@@ -88,6 +88,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import ItemFormComponent from '@/components/inventory/item-form';
 import QuickBreakdown from '@/components/inventory/quick-breakdown';
+import StreamlinedQuickBreakdown from '@/components/inventory/streamlined-quick-breakdown';
 import BarcodePrint from '@/components/inventory/barcode-print';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';

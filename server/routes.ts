@@ -61,6 +61,7 @@ import { registerShopifyInventorySyncRoutes } from "./routes-shopify-inventory-s
 import { registerForceSyncRoutes } from "./routes-force-sync";
 import { registerAutoBreakdownRoutes } from "./routes-auto-breakdown";
 import { registerStreamlinedBreakdownRoutes } from "./routes-streamlined-breakdown";
+import { registerSimpleBreakdownRoutes } from "./routes-simple-breakdown";
 
 import { registerCredentialRoutes } from "./routes-credentials";
 import csvDirectRoutes from "./routes-csv-direct";
@@ -6417,6 +6418,9 @@ ${topCustomersCsv}`;
   
   // Register streamlined breakdown routes
   registerStreamlinedBreakdownRoutes(app, storage);
+  
+  // Register simple breakdown routes  
+  registerSimpleBreakdownRoutes(app, storage);
 
   return app;
 }
