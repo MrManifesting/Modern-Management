@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Fixed Item Creation and Photo Upload Functionality - Both Features Now Fully Operational**
+  - Resolved critical SKU generation error by fixing improper function import in storage.ts - now correctly imports and instantiates SKUGenerator class
+  - Added missing /api/media/upload-photo endpoint that was causing 404 errors when uploading photos through mobile interface
+  - SKU generation now works properly: creates intelligent SKUs like "TES-TS-0000-1" based on strain abbreviation, tier, potency, and sequence
+  - Photo upload saves images to uploads directory with timestamped filenames and returns proper image URLs
+  - Confirmed functionality: successfully created test item with ID 39782 and SKU "TES-TS-0000-1", photo upload returns success with image URL
+  - System now provides complete item creation workflow: add item → auto-generate description and SKU → upload photos → save to inventory
+  - Inventory count properly increases (253→254 items) confirming successful item persistence to database
 - June 18, 2025: **Fixed Enhanced Inventory Cleanup Button Error and Consolidated Duplicate Config Files**
   - Fixed critical bug in cleanup button where apiRequest parameters were in wrong order causing "not a valid HTTP method" error
   - Corrected response handling to properly parse JSON from Response object instead of trying to access .message directly
