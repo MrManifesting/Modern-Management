@@ -4,7 +4,6 @@
  */
 
 import { storage } from '../storage';
-import { getShopifyProducts } from './shopify-sync';
 import { log } from '../vite';
 
 class InventorySyncScheduler {
@@ -53,17 +52,14 @@ class InventorySyncScheduler {
     try {
       log(`Starting automatic inventory sync #${this.syncCount + 1}`, 'inventory-sync');
       
-      // Get all Shopify products with current inventory
-      const shopifyProductsResponse: any = await getShopifyProducts();
-      let shopifyProducts: any[] = [];
-      
-      if (Array.isArray(shopifyProductsResponse)) {
-        shopifyProducts = shopifyProductsResponse;
-      } else if (shopifyProductsResponse && shopifyProductsResponse.products) {
-        shopifyProducts = shopifyProductsResponse.products;
-      } else if (shopifyProductsResponse && shopifyProductsResponse.data) {
-        shopifyProducts = shopifyProductsResponse.data;
+      // Fetch Shopify products using the working API endpoint
+      const response = await fetch(`http://localhost:5000/api/shopify/products`);
+      if (!response.ok) {
+        log(`Shopify API request failed: ${response.status} ${response.statusText}`, 'inventory-sync');
+        return;
       }
+      
+      const shopifyProducts = await response.json();
       
       if (!shopifyProducts || shopifyProducts.length === 0) {
         log('No Shopify products found during sync', 'inventory-sync');
