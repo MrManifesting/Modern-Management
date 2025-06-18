@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 18, 2025: **Removed All Google Sheets Sync Functionality and Added Delete Capabilities to Edit Views**
+  - Completely removed all Google Sheets API routes and frontend references that were causing 404 redirects to non-existent items
+  - Disabled Google Sheets view buttons in inventory interface with clear "system syncs from Shopify only" messaging
+  - Added delete functionality to view item modal with confirmation dialog and proper error handling
+  - Enhanced ViewItemModal with edit and delete buttons for complete item management from view interface
+  - Streamlined system to sync exclusively from Shopify as requested, eliminating duplicate sync endpoints
+  - Fixed all redirect issues by removing duplicate /api/items/:id/sheets-view routes causing navigation errors
+  - System now provides clean Shopify-only workflow without Google Sheets complications or broken redirects
 - June 18, 2025: **Implemented Proper Cannabis Weight Terminology in Live Catalog with Vendor-Specific Names**
   - Updated ModernLiveCatalog.tsx with professional cannabis weight terminology: Pound, Half Pound, Quarter Pound, Ounce, Half Ounce, Quarter Ounce, Eighth
   - Added vendor-specific naming for 1g units: "Golden Nugget" for Gold Standard vendor, "Little Tree" for Tree Mason vendor
