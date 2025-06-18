@@ -94,6 +94,7 @@ export interface IStorage {
   
   // Employee methods
   getEmployees(): Promise<Employee[]>;
+  getAllEmployees(): Promise<Employee[]>;
   getEmployee(id: number): Promise<Employee | undefined>;
   getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
@@ -3195,6 +3196,10 @@ export class DatabaseStorage implements IStorage {
   // Employee methods
   async getEmployees(): Promise<Employee[]> {
     return await db.select().from(employees);
+  }
+
+  async getAllEmployees(): Promise<Employee[]> {
+    return await db.select().from(employees).orderBy(desc(employees.createdAt));
   }
   
   async getEmployee(id: number): Promise<Employee | undefined> {
