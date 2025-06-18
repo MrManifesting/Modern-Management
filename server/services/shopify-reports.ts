@@ -74,12 +74,15 @@ export async function fetchShopifySalesReport(timeframe: string): Promise<Shopif
   
   try {
     // Fetch orders within date range
-    const orders = await shopify.order.list({
+    const ordersResponse = await shopify.order.list({
       status: 'any',
       created_at_min: startDateStr,
       created_at_max: endDateStr,
       limit: 250
-    }) as any[];
+    });
+    
+    // Extract orders array from response
+    const orders = ordersResponse?.orders || ordersResponse || [];
     
     // If orders is undefined or not an array, return an empty report
     if (!Array.isArray(orders)) {
