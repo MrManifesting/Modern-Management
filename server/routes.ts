@@ -6061,5 +6061,8 @@ ${topCustomersCsv}`;
     }
   });
 
+  // Register Shopify webhook routes for real-time inventory updates
+  registerShopifyWebhookRoutes(app, storage);
+
   return app;
 }
