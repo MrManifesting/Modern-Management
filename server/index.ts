@@ -79,22 +79,28 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
       log(`INVENTORY REDUCED: ${item.name} from ${previousQuantity} to ${newQuantity} (SKU: ${lineItem.sku})`, 'webhook-direct');
     }
     
-    // Create sale record
+    // Create sale record with proper schema mapping
     await storage.createSale({
       orderId: order.id.toString(),
-      orderNumber: order.name,
-      totalAmount: parseFloat(order.total_price) || 0,
-      customerEmail: order.email || '',
       customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim(),
-      marketplace: 'shopify',
-      status: order.financial_status || 'pending',
-      orderDate: new Date(order.created_at),
+      customerEmail: order.email || '',
       items: order.line_items?.map((item: any) => ({
         sku: item.sku,
         name: item.name,
         quantity: item.quantity,
         price: parseFloat(item.price)
-      })) || []
+      })) || [],
+      subtotal: parseFloat(order.subtotal_price) || parseFloat(order.total_price) || 0,
+      total: parseFloat(order.total_price) || 0,
+      status: order.financial_status || 'completed',
+      paymentMethod: 'shopify',
+      externalOrderId: order.id.toString(),
+      metadata: {
+        orderNumber: order.name,
+        marketplace: 'shopify',
+        orderDate: order.created_at,
+        fulfillmentStatus: order.fulfillment_status
+      }
     });
     
     log(`Order ${order.name} processed successfully - inventory updated`, 'webhook-direct');
