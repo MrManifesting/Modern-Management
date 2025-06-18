@@ -2753,9 +2753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: actionData.actionType,
         quantity: actionData.quantity,
         previousQuantity: actionData.previousQuantity,
-        newQuantity: actionData.newQuantity,
-        notes: actionData.notes || '',
-        timestamp: new Date()
+        notes: actionData.notes || ''
       });
       
       log(`Inventory action logged: ${actionData.actionType} ${actionData.quantity} for item ${actionData.itemId}`, 'scanner');
