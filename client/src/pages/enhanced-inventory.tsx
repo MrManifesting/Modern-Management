@@ -209,10 +209,11 @@ export default function EnhancedInventory() {
             variant="outline" 
             onClick={async () => {
               try {
-                const response = await apiRequest('/api/inventory/cleanup', { method: 'DELETE' });
+                const response = await apiRequest('DELETE', '/api/inventory/cleanup');
+                const data = await response.json();
                 toast({
                   title: "Cleanup Complete",
-                  description: response.message,
+                  description: data.message,
                 });
                 refetch();
               } catch (error) {
