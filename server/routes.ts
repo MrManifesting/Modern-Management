@@ -11,6 +11,7 @@ import {
   pushItemToShopify 
 } from "./services/shopify-integration";
 import { setupAuth, requireAuth } from "./auth-simple";
+import { registerMarketplaceRoutes } from "./routes-marketplace";
 
 // Memory storage for file uploads
 const uploadMemory = multer({ storage: multer.memoryStorage() });
@@ -1292,6 +1293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Register marketplace routes
+  registerMarketplaceRoutes(app, storage);
 
   return server;
 }
