@@ -2780,6 +2780,14 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(sales).where(eq(sales.id, id));
     return result.rowCount > 0;
   }
+
+  async getRecentSales(limit: number = 50): Promise<Sale[]> {
+    return await db
+      .select()
+      .from(sales)
+      .orderBy(desc(sales.createdAt))
+      .limit(limit);
+  }
   
   // Analytics methods
   async getSalesReport(params: ReportParams): Promise<SalesReport> {
