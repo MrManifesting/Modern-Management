@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **COMPLETE SHOPIFY INTEGRATION MIGRATION: All mrlisterscurations References Removed - System Now Uses gold-standard-cbd.myshopify.com**
+  - Successfully removed all hardcoded mrlisterscurations.myshopify.com references from server/routes.ts Shopify view endpoints
+  - Updated both /api/items/:id/shopify-view and /api/items/:id/shopify-store-view to use gold-standard-cbd.myshopify.com
+  - Verified "View on Shopify" functionality now correctly redirects to Gold Standard CBD store instead of wrong store
+  - Updated webhook configuration documentation (shopify-webhooks-setup.md, webhook-setup-guide.md) to reference Gold Standard CBD store
+  - All Shopify service files already properly configured to use environment variables pointing to gold-standard-cbd store
+  - Complete integration now aligned: inventory system, webhook endpoints, view buttons, and documentation all use correct store
 - June 20, 2025: **Complete Authentic Inventory Display - All 26 Strain Products from Live Menu Showing**
   - Fixed enhanced inventory filtering to display all 26 authentic strain products instead of only 6 items
   - Removed 344 text description entries that were cluttering the inventory with non-product content

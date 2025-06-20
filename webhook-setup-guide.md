@@ -7,7 +7,7 @@ Your webhooks are configured for the Gold-Standard_Management system. Here's the
 ## Configured Information:
 
 ### 1. Shopify Store Details
-- **Store Name**: mrlisterscurations.myshopify.com
+- **Store Name**: gold-standard-cbd.myshopify.com
 - **Access Token**: [CONFIGURED] - Already in environment variables
 - **Admin API Access**: [CONFIGURED] - Working
 
