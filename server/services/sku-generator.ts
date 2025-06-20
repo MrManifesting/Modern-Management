@@ -4,7 +4,7 @@
  * Example: BD-TS-3400-1 for Blue Dream, Top Shelf, 34%, first item
  */
 
-export class SKUGenerator {
+class SKUGenerator {
   private storage: any;
 
   constructor(storage: any) {
@@ -289,4 +289,9 @@ export class SKUGenerator {
       throw error;
     }
   }
+}
+
+export default function generateSKU(item: any): string {
+  const generator = new SKUGenerator(null);
+  return generator.generateSKU(item);
 }

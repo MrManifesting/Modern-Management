@@ -396,7 +396,7 @@ export const customers = pgTable("customers", {
   shopifyAcceptsMarketing: boolean("shopify_accepts_marketing"),
   shopifyTags: text("shopify_tags"),
   shopifyOrdersCount: integer("shopify_orders_count").default(0),
-  shopifyTotalSpent: numeric("shopify_total_spent", { precision: 12, scale: 2 }).default(0),
+  shopifyTotalSpent: numeric("shopify_total_spent", { precision: 12, scale: 2 }).default("0"),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -420,8 +420,8 @@ export const customerPurchaseAnalytics = pgTable("customer_purchase_analytics", 
   
   // Purchase Metrics
   ordersThisPeriod: integer("orders_this_period").default(0),
-  totalSpentThisPeriod: numeric("total_spent_this_period", { precision: 10, scale: 2 }).default(0),
-  averageOrderValueThisPeriod: numeric("average_order_value_this_period", { precision: 10, scale: 2 }).default(0),
+  totalSpentThisPeriod: numeric("total_spent_this_period", { precision: 10, scale: 2 }).default("0"),
+  averageOrderValueThisPeriod: numeric("average_order_value_this_period", { precision: 10, scale: 2 }).default("0"),
   itemsPurchasedThisPeriod: integer("items_purchased_this_period").default(0),
   
   // Category Analytics
@@ -445,14 +445,14 @@ export const customerPurchaseAnalytics = pgTable("customer_purchase_analytics", 
 export const customerTierThresholds = pgTable("customer_tier_thresholds", {
   id: serial("id").primaryKey(),
   tierName: varchar("tier_name").notNull().unique(),
-  minTotalSpent: numeric("min_total_spent", { precision: 10, scale: 2 }).default(0),
+  minTotalSpent: numeric("min_total_spent", { precision: 10, scale: 2 }).default("0"),
   minOrders: integer("min_orders").default(0),
   minMonthsActive: integer("min_months_active").default(0),
   
   // Benefits
-  discountPercentage: numeric("discount_percentage", { precision: 5, scale: 2 }).default(0),
+  discountPercentage: numeric("discount_percentage", { precision: 5, scale: 2 }).default("0"),
   freeShippingThreshold: numeric("free_shipping_threshold", { precision: 8, scale: 2 }),
-  loyaltyPointsMultiplier: numeric("loyalty_points_multiplier", { precision: 3, scale: 2 }).default(1),
+  loyaltyPointsMultiplier: numeric("loyalty_points_multiplier", { precision: 3, scale: 2 }).default("1"),
   earlyAccessToProducts: boolean("early_access_to_products").default(false),
   dedicatedSupport: boolean("dedicated_support").default(false),
   
@@ -476,9 +476,9 @@ export const orderAnalytics = pgTable("order_analytics", {
   orderNumber: varchar("order_number"),
   totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  taxes: numeric("taxes", { precision: 8, scale: 2 }).default(0),
-  shipping: numeric("shipping", { precision: 8, scale: 2 }).default(0),
-  discounts: numeric("discounts", { precision: 8, scale: 2 }).default(0),
+  taxes: numeric("taxes", { precision: 8, scale: 2 }).default("0"),
+  shipping: numeric("shipping", { precision: 8, scale: 2 }).default("0"),
+  discounts: numeric("discounts", { precision: 8, scale: 2 }).default("0"),
   
   // Order Composition
   itemCount: integer("item_count").default(0),
