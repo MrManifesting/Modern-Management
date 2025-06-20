@@ -2071,6 +2071,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const style = req.query.style as string || 'professional';
       const items = await storage.getItems();
       
+      // Import flower variants mapping service
+      const { flowerVariantsMappingService } = await import('./services/flower-variants-mapping.js');
+      
       // Filter for items with stock - include draft items with quantity for pricing sheet
       const activeItems = items.filter(item => 
         item.quantity && item.quantity > 0 && 
@@ -2086,22 +2089,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      // Categorize items with flower/bulk logic
+      // Categorize items with flower/bulk logic - REMOVED ACCESSORIES
       const categorizedItems = {
         flower: [] as any[],
         bulk: [] as any[],
         'bulk flower': [] as any[],
         concentrates: [] as any[],
         edibles: [] as any[],
-        vapes: [] as any[],
-        accessories: [] as any[]
+        vapes: [] as any[]
       };
 
       activeItems.forEach(item => {
         const itemName = item.name.toLowerCase();
         const hasFlower = itemName.includes('flower') || itemName.includes('thca');
         const hasBulk = itemName.includes('bulk');
+        const isAccessory = itemName.includes('accessory') || itemName.includes('tool') || itemName.includes('grinder') || itemName.includes('paper') || itemName.includes('lighter');
         
+        // Skip accessories completely
+        if (isAccessory) {
+          return;
+        }
+
+        // Generate strain slug for COA link
+        const strainSlug = item.name?.toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'unknown';
+
         const itemData = {
           name: item.name,
           sku: item.sku || 'N/A',
@@ -2111,7 +2125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tier: item.tier || 'Top Shelf',
           brand: item.brand || 'Gold Standard',
           thca: '',
-          strain: item.strainType || ''
+          strain: item.strainType || '',
+          // Add required links
+          coaLink: `https://gold-standard-cbd.com/coa/${strainSlug}`,
+          mediaDownloadLink: `https://gold-standard-cbd.com/media/download/${item.sku || item.id}`,
+          storeOrderLink: flowerVariantsMappingService.getStoreUrl(item.name, item.sku)
         };
         
         if (hasBulk && hasFlower) {
@@ -2129,7 +2147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (itemName.includes('vape') || itemName.includes('cartridge') || itemName.includes('cart')) {
           categorizedItems.vapes.push(itemData);
         } else {
-          categorizedItems.accessories.push(itemData);
+          // Default to flower for remaining cannabis products
+          categorizedItems.flower.push(itemData);
         }
       });
 
@@ -2262,6 +2281,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             font-size: 0.9em;
             font-weight: 500;
         }
+        .item-links {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .link-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.8em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .coa-link {
+            background: #228B22;
+            color: white;
+        }
+        .coa-link:hover {
+            background: #1e6b1e;
+        }
+        .order-link {
+            background: #D4AF37;
+            color: white;
+        }
+        .order-link:hover {
+            background: #b8941f;
+        }
+        .media-link {
+            background: #666;
+            color: white;
+        }
+        .media-link:hover {
+            background: #555;
+        }
         .footer {
             text-align: center;
             margin-top: 40px;
@@ -2331,6 +2386,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     <div class="item-info">
                         <div class="item-name">${item.name}</div>
                         <div class="item-details">${details.join('')}</div>
+                        <div class="item-links">
+                            <a href="${item.coaLink}" class="link-btn coa-link" target="_blank">COA Certificate</a>
+                            <a href="${item.storeOrderLink}" class="link-btn order-link" target="_blank">Order Now</a>
+                            <a href="${item.mediaDownloadLink}" class="link-btn media-link" target="_blank">Download Media</a>
+                        </div>
                     </div>
                     <div class="item-pricing">
                         <div class="item-price">$${item.price.toFixed(2)}</div>
