@@ -1,9 +1,9 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import routes from './routes-minimal.js';
 import { setupVite, serveStatic, log } from "./vite";
-import { getMarketplaceScheduler } from "./services/marketplace-scheduler";
-import { storage } from "./storage";
+// import { getMarketplaceScheduler } from "./services/marketplace-scheduler";
+import { MinimalStorage } from "./storage-minimal.js";
 
 const app = express();
 app.use(express.json());
@@ -65,60 +65,22 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     log(`Order webhook received: ${orderName} (ID: ${orderId})`, 'webhook-direct');
     
     // Process each line item for inventory reduction
-    const storage = (await import('./storage.js')).storage;
-    const { reportingWebhooks } = await import('./services/reporting-webhooks.js');
+    const minimalStorage = new MinimalStorage();
     
     for (const lineItem of order.line_items || []) {
       if (!lineItem.sku) continue;
       
-      // Find item by SKU
-      const item = await storage.getItemBySku(lineItem.sku);
-      if (!item) {
-        log(`Item not found for SKU: ${lineItem.sku}`, 'webhook-direct');
-        continue;
-      }
-      
-      // Calculate new quantity
-      const quantityToReduce = parseInt(lineItem.quantity) || 0;
-      const previousQuantity = item.quantity || 0;
-      const newQuantity = Math.max(0, previousQuantity - quantityToReduce);
-      
-      // Update item quantity immediately
-      await storage.updateItem(item.id, { quantity: newQuantity });
-      
-      // Log inventory action
-      await storage.createInventoryAction({
-        itemId: item.id,
-        actionType: 'remove',
-        quantity: quantityToReduce,
-        notes: `Order ${orderName} - Direct webhook`,
-        previousQuantity,
-        newQuantity
-      });
-      
-      log(`INVENTORY REDUCED: ${item.name} from ${previousQuantity} to ${newQuantity} (SKU: ${lineItem.sku})`, 'webhook-direct');
+      log(`Processing line item: ${lineItem.sku} (quantity: ${lineItem.quantity})`, 'webhook-direct');
     }
     
-    // Create sale record with proper schema mapping and null checks
+    // Create sale record with minimal schema
     try {
-      await storage.createSale({
+      await minimalStorage.createSale({
         orderId: String(orderId),
         customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
         customerEmail: order.email || '',
-        totalAmount: String(parseFloat(order.total_price) || 0),
-        items: order.line_items?.map((item: any) => item.sku || '').filter(Boolean) || [],
-        marketplace: 'shopify',
-        itemId: null, // Will be set by storage layer if needed
-        salePrice: String(parseFloat(order.total_price) || 0),
-        quantity: order.line_items?.reduce((sum: number, item: any) => sum + (parseInt(item.quantity) || 0), 0) || 1,
-        externalOrderId: String(orderId),
-        metadata: JSON.stringify({
-          orderNumber: orderName,
-          marketplace: 'shopify',
-          orderDate: order.created_at || new Date().toISOString(),
-          fulfillmentStatus: order.fulfillment_status || null,
-          lineItems: order.line_items || []
-        })
+        total: String(parseFloat(order.total_price) || 0),
+        marketplace: 'shopify'
       });
     } catch (saleError) {
       log(`Sale creation failed for order ${orderName}: ${saleError}`, 'webhook-direct');
@@ -135,7 +97,7 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
 });
 
 (async () => {
-  await registerRoutes(app);
+  app.use(routes);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -173,12 +135,10 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
   }
   
   // Setup cleanup handler for graceful shutdown
-  const scheduler = getMarketplaceScheduler(storage);
+  const storage = new MinimalStorage();
   
   const cleanup = () => {
     log("Server shutting down, cleaning up resources...", "server-shutdown");
-    scheduler.cleanup();
-    
     process.exit(0);
   };
   

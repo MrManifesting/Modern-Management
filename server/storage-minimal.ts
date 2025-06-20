@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
+import { eq } from 'drizzle-orm';
 import * as schema from '../shared/schema.js';
 import type { Item, InsertItem, Sale, InsertSale } from '../shared/schema.js';
 
@@ -36,7 +37,7 @@ export class MinimalStorage {
 
   async getItem(id: number): Promise<Item | undefined> {
     try {
-      const items = await this.db.select().from(schema.items).where(schema.eq(schema.items.id, id));
+      const items = await this.db.select().from(schema.items).where(eq(schema.items.id, id));
       return items[0];
     } catch (error) {
       console.error('Error fetching item:', error);
@@ -58,7 +59,7 @@ export class MinimalStorage {
     try {
       const result = await this.db.update(schema.items)
         .set(updates)
-        .where(schema.eq(schema.items.id, id))
+        .where(eq(schema.items.id, id))
         .returning();
       return result[0];
     } catch (error) {
@@ -69,7 +70,7 @@ export class MinimalStorage {
 
   async deleteItem(id: number): Promise<boolean> {
     try {
-      const result = await this.db.delete(schema.items).where(schema.eq(schema.items.id, id));
+      const result = await this.db.delete(schema.items).where(eq(schema.items.id, id));
       return true;
     } catch (error) {
       console.error('Error deleting item:', error);
