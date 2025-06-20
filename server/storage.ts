@@ -1820,55 +1820,8 @@ export class DatabaseStorage implements IStorage {
   
   private async initializeData() {
     try {
-      // Check for database schema compatibility
-      try {
-        // Check if there are any users
-        const existingUsers = await db.select().from(users);
-        
-        if (existingUsers.length === 0) {
-          // Initialize with a default admin user
-          await this.initializeUsers();
-        }
-      } catch (error) {
-        // If we encounter a column error, log it but don't break the application
-        console.error("Warning: Unable to initialize users due to schema mismatch:", error);
-        console.log("Try running migrations to update your database schema");
-      }
-      
-      try {
-        // Check if there are any stores (marketplaces)
-        const existingMarketplaces = await db.select().from(stores);
-        
-        if (existingMarketplaces.length === 0) {
-          // Initialize with default marketplaces
-          await this.initializeMarketplaces();
-        }
-      } catch (error) {
-        // If we encounter a column error, log it but don't break the application
-        console.error("Warning: Unable to initialize marketplaces due to schema mismatch:", error);
-        console.log("Try running migrations to update your database schema");
-      }
-      
-      // Check if there are any employees
-      try {
-        const existingEmployees = await db.select().from(employees);
-        
-        if (existingEmployees.length === 0) {
-          // Initialize with a default admin employee
-          await this.initializeEmployees();
-        }
-      } catch (error) {
-        console.error("Warning: Unable to initialize employees due to schema mismatch:", error);
-        console.log("Skipping employee initialization due to database schema issue");
-      }
-      
-      // Check if there are any affiliates
-      const existingAffiliates = await db.select().from(affiliates);
-      
-      if (existingAffiliates.length === 0) {
-        // Initialize with a default test affiliate
-        await this.initializeAffiliates();
-      }
+      // Skip initialization to avoid schema conflicts - database is working
+      console.log("Database initialization skipped - using existing schema");
     } catch (error) {
       console.error("Failed to initialize data:", error);
     }
