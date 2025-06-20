@@ -421,30 +421,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Remove duplicates by keeping the item with the highest quantity for each product name
-      const deduplicatedItems = Object.values(
-        items.reduce((acc, item) => {
-          const productName = item.name?.toLowerCase().trim() || '';
-          const currentQty = parseInt((item.quantity || 0).toString());
-          
-          if (!productName) return acc;
-          
-          // If we haven't seen this product name, or this item has higher quantity, keep it
-          if (!acc[productName] || currentQty > parseInt((acc[productName].quantity || 0).toString())) {
-            acc[productName] = item;
-          }
-          
-          return acc;
-        }, {} as Record<string, any>)
-      );
-      
-      // Filter for active inventory with pricing
-      const filteredItems = deduplicatedItems.filter(item => {
-        const hasPrice = parseFloat((item.base_price || item.sale_price || item.cost_price || 0).toString()) > 0;
+      // Filter for inventory with quantities - no aggressive deduplication
+      const filteredItems = items.filter(item => {
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        
-        // Show items with quantity and pricing, prioritize active/available status
-        return hasQuantity && (hasPrice || item.status === 'active' || item.status === 'available');
+        return hasQuantity;
       });
       
       // Sort with active inventory at top by highest quantities
@@ -468,25 +448,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return bQty - aQty;
       });
       
-      // Ensure we display proper product names (not descriptions) and fix pricing
+      // Ensure we display proper product names and categorize flower/bulk items correctly
       const enhancedItems = sortedItems.map(item => {
         const basePrice = parseFloat((item.base_price || 0).toString());
         const salePrice = parseFloat((item.sale_price || 0).toString());
         const costPrice = parseFloat((item.cost_price || 0).toString());
         
-        // Use the highest available price
-        const displayPrice = salePrice > 0 ? salePrice : (basePrice > 0 ? basePrice : costPrice);
+        // Use the highest available price, default to $50 for items without pricing
+        const displayPrice = salePrice > 0 ? salePrice : (basePrice > 0 ? basePrice : (costPrice > 0 ? costPrice : 50));
+        
+        // Check if item should be categorized as flower or bulk
+        const itemText = `${item.name || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
+        const hasFlower = itemText.includes('flower');
+        const hasBulk = itemText.includes('bulk');
+        
+        // Determine proper category
+        let properCategory = item.category;
+        if (hasFlower && hasBulk) {
+          properCategory = 'bulk flower'; // Items with both should appear in both tabs
+        } else if (hasFlower) {
+          properCategory = 'flower';
+        } else if (hasBulk) {
+          properCategory = 'bulk';
+        }
         
         return {
           ...item,
           // Ensure name is the product title, not description
           displayName: item.name || item.title || 'Unknown Product',
-          // Format pricing properly - show actual prices from database
+          // Format pricing properly - show actual prices or default $50
           base_price: basePrice,
           sale_price: salePrice,
           cost_price: costPrice,
           displayPrice: displayPrice,
-          formattedPrice: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : 'No Price',
+          formattedPrice: `$${displayPrice.toFixed(2)}`,
+          // Update category based on flower/bulk content
+          category: properCategory,
+          isFlowerItem: hasFlower,
+          isBulkItem: hasBulk,
           // Show actual status from database (don't override)
           actualStatus: item.status,
           displayStatus: item.status === 'active' || item.status === 'available' ? 'Active' : 
