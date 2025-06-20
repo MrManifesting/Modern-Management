@@ -1,5 +1,5 @@
 // Essential API endpoints for Gold-Standard_Management system
-import { Router } from 'express';
+import { Request, Response } from 'express';
 import { FixedStorage } from './storage-fixed.js';
 
 const storage = new FixedStorage();
@@ -197,7 +197,7 @@ export function registerRoutes(app: any) {
   });
 
   // Update item
-  router.put('/api/items/:id', async (req, res) => {
+  app.put('/api/items/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
@@ -210,7 +210,7 @@ export function registerRoutes(app: any) {
   });
 
   // Get system stats
-  router.get('/api/stats', async (req, res) => {
+  app.get('/api/stats', async (req, res) => {
     try {
       const stats = await storage.getStats();
       const allItems = await storage.getItems();
@@ -237,7 +237,7 @@ export function registerRoutes(app: any) {
   });
 
   // Live catalog endpoint with authentic products only
-  router.get('/api/catalog', async (req, res) => {
+  app.get('/api/catalog', async (req, res) => {
     try {
       const allItems = await storage.getItems();
       const authenticItems = filterAuthenticItems(allItems);
@@ -289,7 +289,7 @@ export function registerRoutes(app: any) {
   });
 
   // Sales endpoints
-  router.get('/api/sales/recent', async (req, res) => {
+  app.get('/api/sales/recent', async (req, res) => {
     try {
       const sales = await storage.getRecentSales(10);
       res.json(sales);
@@ -300,7 +300,7 @@ export function registerRoutes(app: any) {
   });
 
   // System health check
-  router.get('/api/system/health', async (req, res) => {
+  app.get('/api/system/health', async (req, res) => {
     try {
       const stats = await storage.getStats();
       res.json({
@@ -315,5 +315,6 @@ export function registerRoutes(app: any) {
     }
   });
 
-  app.use(router);
+  // Routes are already registered directly on app, no need for router
+  console.log('✓ All routes registered successfully');
 }
