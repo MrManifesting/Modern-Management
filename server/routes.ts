@@ -548,8 +548,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const salePrice = parseFloat((item.sale_price || 0).toString());
         const costPrice = parseFloat((item.cost_price || 0).toString());
         
-        // Use the highest available price, default to $50 for items without pricing
-        const displayPrice = salePrice > 0 ? salePrice : (basePrice > 0 ? basePrice : (costPrice > 0 ? costPrice : 50));
+        // Only use real pricing - skip items without actual prices
+        const displayPrice = salePrice > 0 ? salePrice : (basePrice > 0 ? basePrice : (costPrice > 0 ? costPrice : 0));
+        
+        // Skip items without real pricing
+        if (displayPrice <= 0) {
+          return null;
+        }
         
         // Check if item should be categorized as flower or bulk
         const itemText = `${item.name || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
@@ -613,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         (item.status === 'draft' && parseInt((item.quantity || 0).toString()) > 0) ? 'Available' : 
                         item.status === 'draft' ? 'Draft' : 'Archived'
         };
-      });
+      }).filter(item => item !== null); // Remove items without pricing
       
       log(`Enhanced inventory: ${enhancedItems.length} items with quantities available`, 'inventory');
       res.json(enhancedItems);
@@ -2079,15 +2084,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         item.quantity && item.quantity > 0 && 
         (item.status === "active" || item.status === "available" || item.status === "draft")
       ).map(item => {
-        // Use a default price if no pricing is set for demonstration
+        // Only include items with actual pricing - no default prices
         const price = parseFloat((item.base_price || item.sale_price || item.wholesale_price || 0).toString());
-        const defaultPrice = price > 0 ? price : 50.00; // Default $50 for items without pricing
+        if (price <= 0) {
+          return null; // Skip items without real pricing
+        }
         
         return {
           ...item,
-          displayPrice: defaultPrice
+          displayPrice: price
         };
-      });
+      }).filter(item => item !== null); // Remove items without pricing
 
       // Categorize items with flower/bulk logic - REMOVED ACCESSORIES
       const categorizedItems = {
