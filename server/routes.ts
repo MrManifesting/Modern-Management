@@ -1365,12 +1365,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalItems,
           activeItems,
           lowStockItems,
-          totalValue: items.reduce((sum, item) => sum + (parseFloat((item.basePrice || 0).toString()) * (item.quantity || 0)), 0)
+          totalValue: items.reduce((sum, item) => sum + (parseFloat((item.base_price || 0).toString()) * (item.quantity || 0)), 0)
         }
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ success: false, message: "Error fetching stats" });
+    }
+  });
+
+  // CSV Inventory Sync endpoints
+  app.get("/api/csv-sync/summary", async (_req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      const summary = await csvSync.getSyncSummary();
+      
+      res.json({
+        success: true,
+        data: summary
+      });
+    } catch (error) {
+      console.error("Error getting CSV sync summary:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to get sync summary",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/csv-sync/menu-tab-updated", async (_req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      const updatedItems = await csvSync.syncMenuTabWithShopifyQuantities();
+      
+      res.json({
+        success: true,
+        data: updatedItems
+      });
+    } catch (error) {
+      console.error("Error syncing menu tab:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to sync menu tab",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/csv-sync/download-updated-csv", async (_req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      const updatedCSV = await csvSync.generateUpdatedMenuTabCSV();
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="updated-menu-tab.csv"');
+      res.send(updatedCSV);
+    } catch (error) {
+      console.error("Error generating updated CSV:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate updated CSV",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
