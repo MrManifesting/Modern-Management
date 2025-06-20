@@ -3052,6 +3052,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Sync Status and Control API Endpoints
+  app.get("/api/csv-sync/status", async (req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      const status = csvSyncScheduler.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting CSV sync status:', error);
+      res.status(500).json({ error: 'Failed to get sync status' });
+    }
+  });
+
+  app.post("/api/csv-sync/manual", async (req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      const result = await csvSyncScheduler.performSync();
+      res.json({ success: true, result });
+    } catch (error) {
+      console.error('Error performing manual CSV sync:', error);
+      res.status(500).json({ error: 'Failed to perform manual sync' });
+    }
+  });
+
+  app.post("/api/csv-sync/start", async (req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      csvSyncScheduler.start();
+      res.json({ success: true, message: 'CSV sync scheduler started' });
+    } catch (error) {
+      console.error('Error starting CSV sync scheduler:', error);
+      res.status(500).json({ error: 'Failed to start sync scheduler' });
+    }
+  });
+
+  app.post("/api/csv-sync/stop", async (req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      csvSyncScheduler.stop();
+      res.json({ success: true, message: 'CSV sync scheduler stopped' });
+    } catch (error) {
+      console.error('Error stopping CSV sync scheduler:', error);
+      res.status(500).json({ error: 'Failed to stop sync scheduler' });
+    }
+  });
+
   // Shopify webhook for instant CSV sync updates
   app.post("/api/shopify/webhooks/inventory_levels/csv-sync", async (req: Request, res: Response) => {
     try {
