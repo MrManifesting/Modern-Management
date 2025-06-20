@@ -812,7 +812,7 @@ export class MemStorage implements IStorage {
       // Ensure the item has a SKU
       if (!item.sku || item.sku.trim() === '') {
         // Import the SKU generator if needed
-        const { generateSKU } = await import('./services/sku-generator');
+        const { default: generateSKU } = await import('./services/sku-generator');
         
         // Generate a SKU for the item
         item.sku = generateSKU(item);
