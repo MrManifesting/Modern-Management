@@ -75,6 +75,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
 
+  // Inventory validation and pricing fix endpoint
+  app.post("/api/inventory/validate-and-fix", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      let fixedCount = 0;
+
+      for (const item of items) {
+        let needsUpdate = false;
+        const updates: any = {};
+
+        // Fix pricing - ensure all items with quantities have valid pricing
+        if (item.quantity && item.quantity > 0) {
+          if (!item.base_price || item.base_price <= 0) {
+            updates.base_price = 50; // Default $50 for items with quantities
+            needsUpdate = true;
+          }
+          // Update status to available if item has quantity and pricing
+          if ((item.base_price > 0 || updates.base_price) && item.status === 'draft') {
+            updates.status = 'available';
+            needsUpdate = true;
+          }
+        }
+
+        // Fix categorization
+        const newCategory = getCategoryForItem(item);
+        if (newCategory !== item.category) {
+          updates.category = newCategory;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          await storage.updateItem(item.id, updates);
+          fixedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Fixed ${fixedCount} inventory items with proper pricing and categorization`,
+        fixedCount
+      });
+    } catch (error) {
+      console.error('Error validating inventory:', error);
+      res.status(500).json({ error: 'Failed to validate inventory' });
+    }
+  });
+
   // Image upload endpoint for items
   app.post("/api/items/:id/upload-images", uploadMemory.array('images', 10), async (req: Request, res: Response) => {
     try {
@@ -2482,6 +2529,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating menu:", error);
       res.status(500).json({ error: "Failed to generate menu" });
+    }
+  });
+
+  // Modern Price Sheet with COA links, live listings, and media downloads
+  app.get("/api/modern-price-sheet", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Get all items with proper categorization and validation
+      const validatedItems = items.map(item => {
+        const hasQuantity = item.quantity && item.quantity > 0;
+        const hasValidPricing = item.base_price > 0 || item.sale_price > 0 || item.wholesale_price > 0;
+        const defaultPrice = hasQuantity && !hasValidPricing ? 50 : 0;
+        
+        return {
+          ...item,
+          base_price: item.base_price || defaultPrice,
+          sale_price: item.sale_price || 0,
+          wholesale_price: item.wholesale_price || 0,
+          category: getCategoryForItem(item),
+          isFlowerProduct: isFlowerProduct(item),
+          isBulkProduct: isBulkProduct(item),
+          isPreRollProduct: isPreRollProduct(item),
+          isConcentrateProduct: isConcentrateProduct(item),
+          isEdibleProduct: isEdibleProduct(item),
+          hasQuantity,
+          hasValidPricing: hasValidPricing || defaultPrice > 0
+        };
+      });
+
+      // Group items by category for organized display
+      const categorizedItems = {
+        flower: validatedItems.filter(item => item.isFlowerProduct && !item.isBulkProduct),
+        bulkFlower: validatedItems.filter(item => item.isFlowerProduct && item.isBulkProduct),
+        preRolls: validatedItems.filter(item => item.isPreRollProduct),
+        concentrates: validatedItems.filter(item => item.isConcentrateProduct),
+        edibles: validatedItems.filter(item => item.isEdibleProduct),
+        other: validatedItems.filter(item => 
+          !item.isFlowerProduct && !item.isPreRollProduct && 
+          !item.isConcentrateProduct && !item.isEdibleProduct
+        )
+      };
+
+      // Create comprehensive price sheet data
+      const priceSheetData = Object.entries(categorizedItems).map(([categoryName, categoryItems]) => ({
+        category: categoryName,
+        displayName: categoryName.charAt(0).toUpperCase() + categoryName.slice(1).replace(/([A-Z])/g, ' $1'),
+        items: categoryItems
+          .filter(item => item.hasQuantity && item.hasValidPricing)
+          .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+          .map(item => {
+            const strainSlug = item.name?.toLowerCase()
+              .replace(/[^a-z0-9-]/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '') || 'unknown';
+            
+            const variantSku = item.sku || `${item.id}`;
+            
+            return {
+              id: item.id,
+              name: item.name,
+              sku: item.sku,
+              weight: item.weight,
+              quantity: item.quantity,
+              price: item.base_price || item.sale_price || item.wholesale_price,
+              formattedPrice: `$${(item.base_price || item.sale_price || item.wholesale_price || 0).toFixed(2)}`,
+              tier: item.tier,
+              brand: item.brand,
+              description: item.description,
+              status: item.status,
+              category: item.category,
+              // COA Link
+              coaLink: `https://gold-standard-cbd.com/coa/${strainSlug}`,
+              // Media Download Link
+              mediaDownloadLink: `https://gold-standard-cbd.com/media/download/${variantSku}`,
+              // Live Store Order Link
+              storeOrderLink: item.shopifyId 
+                ? `https://gold-standard-cbd.com/products/${item.shopifyId}`
+                : `https://gold-standard-cbd.com/search?q=${encodeURIComponent(item.name || '')}`,
+              // Internal links
+              hasMedia: !!item.images,
+              mediaUrl: item.images ? `/api/media/item-images/${item.id}` : null,
+              downloadLink: `/api/items/${item.id}/download-media`,
+              editLink: `/api/items/${item.id}`,
+              images: item.images || []
+            };
+          })
+      })).filter(category => category.items.length > 0);
+
+      // Generate HTML version
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Standard Management - Price Sheet</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #D4AF37, #228B22); color: white; padding: 30px; text-align: center; border-radius: 12px; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { margin: 10px 0 0 0; font-size: 1.1em; opacity: 0.9; }
+        .category { background: white; margin-bottom: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+        .category-header { background: linear-gradient(45deg, #D4AF37, #B8860B); color: white; padding: 20px; font-size: 1.3em; font-weight: bold; }
+        .items-grid { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .item-card { border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s ease; }
+        .item-card:hover { border-color: #D4AF37; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2); }
+        .item-name { font-weight: bold; font-size: 1.1em; color: #2c3e50; margin-bottom: 10px; }
+        .item-details { font-size: 0.9em; color: #6c757d; margin-bottom: 15px; }
+        .item-price { font-size: 1.3em; font-weight: bold; color: #228B22; margin-bottom: 15px; }
+        .item-links { display: flex; flex-wrap: wrap; gap: 8px; }
+        .link-btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.85em; font-weight: 500; transition: all 0.2s; }
+        .coa-link { background: #e3f2fd; color: #1976d2; }
+        .coa-link:hover { background: #1976d2; color: white; }
+        .order-link { background: #e8f5e8; color: #2e7d32; }
+        .order-link:hover { background: #2e7d32; color: white; }
+        .media-link { background: #fff3e0; color: #f57c00; }
+        .media-link:hover { background: #f57c00; color: white; }
+        .footer { text-align: center; margin-top: 40px; padding: 20px; color: #6c757d; font-size: 0.9em; }
+        .stats { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
+        .stat-item { padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .stat-number { font-size: 1.5em; font-weight: bold; color: #D4AF37; }
+        .stat-label { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
+        @media (max-width: 768px) {
+            .items-grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gold Standard Management</h1>
+        <p>Premium Cannabis Products - Live Price Sheet</p>
+        <p>Generated: ${new Date().toLocaleString()}</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">${priceSheetData.reduce((sum, cat) => sum + cat.items.length, 0)}</div>
+                <div class="stat-label">Available Products</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${priceSheetData.length}</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${priceSheetData.reduce((sum, cat) => sum + cat.items.reduce((s, item) => s + (item.quantity || 0), 0), 0)}</div>
+                <div class="stat-label">Total Units</div>
+            </div>
+        </div>
+    </div>
+
+    ${priceSheetData.map(category => `
+        <div class="category">
+            <div class="category-header">
+                ${category.displayName} (${category.items.length} items)
+            </div>
+            <div class="items-grid">
+                ${category.items.map(item => `
+                    <div class="item-card">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-details">
+                            SKU: ${item.sku || 'N/A'} | Weight: ${item.weight || 'N/A'} | Qty: ${item.quantity || 0}<br>
+                            Brand: ${item.brand || 'Unknown'} | Tier: ${item.tier || 'Standard'}
+                        </div>
+                        <div class="item-price">${item.formattedPrice}</div>
+                        <div class="item-links">
+                            <a href="${item.coaLink}" class="link-btn coa-link" target="_blank">COA Certificate</a>
+                            <a href="${item.storeOrderLink}" class="link-btn order-link" target="_blank">Order Now</a>
+                            <a href="${item.mediaDownloadLink}" class="link-btn media-link" target="_blank">Download Media</a>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('')}
+
+    <div class="footer">
+        <p><strong>Gold Standard Management</strong> - Professional Cannabis Inventory System</p>
+        <p>All prices are current as of generation time. Contact us for bulk pricing and custom orders.</p>
+    </div>
+</body>
+</html>`;
+
+      res.json({
+        success: true,
+        data: {
+          categories: priceSheetData,
+          html: htmlContent,
+          summary: {
+            totalProducts: priceSheetData.reduce((sum, cat) => sum + cat.items.length, 0),
+            totalCategories: priceSheetData.length,
+            totalUnits: priceSheetData.reduce((sum, cat) => sum + cat.items.reduce((s, item) => s + (item.quantity || 0), 0), 0),
+            generatedAt: new Date().toISOString()
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error generating modern price sheet:', error);
+      res.status(500).json({ error: 'Failed to generate price sheet' });
     }
   });
 
