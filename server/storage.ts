@@ -252,9 +252,9 @@ export class MemStorage implements IStorage {
     const newAffiliate: Affiliate = {
       ...affiliate,
       id,
-      totalEarnings: 0,
-      totalSales: 0,
-      pendingPayout: 0,
+      totalEarnings: "0",
+      totalSales: "0", 
+      pendingPayout: "0",
       createdAt: now,
       updatedAt: now
     };
@@ -1534,19 +1534,7 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getRecentSales(limit: number = 20): Promise<Sale[]> {
-    try {
-      const sales = await db.select()
-        .from(sales)
-        .orderBy(desc(sales.orderDate))
-        .limit(limit);
-      
-      return sales;
-    } catch (error) {
-      console.error("Error fetching recent sales:", error);
-      return [];
-    }
-  }
+
   
   // Additional item methods for bulk product handling
   async getItemBySku(sku: string): Promise<Item | undefined> {
@@ -2936,13 +2924,7 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  async getRecentSales(limit: number = 50): Promise<Sale[]> {
-    return await db
-      .select()
-      .from(sales)
-      .orderBy(desc(sales.createdAt))
-      .limit(limit);
-  }
+
   
   // Analytics methods
   async getSalesReport(params: ReportParams): Promise<SalesReport> {
