@@ -406,6 +406,94 @@ export function registerRoutes(app: any) {
     }
   });
 
+  // Quick CSV import endpoints
+  app.post('/api/import-from-csv', async (req, res) => {
+    try {
+      const { csvType } = req.body;
+      let imported = 0;
+      let skipped = 0;
+      
+      if (csvType === 'all') {
+        // Import from all three CSV files
+        const files = [
+          'Automated_Gold_Standard_online_catalog  - All_Flower_Variants_1750461034790.csv',
+          'Automated_Gold_Standard_online_catalog  - THCa_Variants_1750461034790.csv',
+          'Automated_Gold_Standard_online_catalog  - THCa Preroll_Variants_1750461034790.csv'
+        ];
+        
+        for (const file of files) {
+          try {
+            const csvPath = path.join(process.cwd(), 'attached_assets', file);
+            if (fs.existsSync(csvPath)) {
+              const csvData = fs.readFileSync(csvPath, 'utf-8');
+              const lines = csvData.split('\n').slice(1); // Skip header
+              
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                
+                const [productId, productTitle, variantId, variantTitle, sku] = line.split(',');
+                
+                if (productTitle && variantTitle) {
+                  const name = productTitle.replace(/- THCA.*$/, '').trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                  
+                  // Check if already exists
+                  const existingItems = await storage.getItems();
+                  const exists = existingItems.find(item => 
+                    item.name?.includes(name.split('-')[0]) || 
+                    item.shopifyId === productId?.replace('gid://shopify/Product/', '')
+                  );
+                  
+                  if (!exists) {
+                    const category = productTitle.includes('EXOTIC') ? 'Exotic Indoor' :
+                                   productTitle.includes('AAA') ? 'AAA Indoor' :
+                                   productTitle.includes('AA') ? 'AA Indoor' :
+                                   productTitle.includes('TOP SHELF') ? 'Top Shelf' :
+                                   productTitle.includes('CLASSIC') ? 'Classic Reserve' : 'Bulk Flower';
+                    
+                    const weight = variantTitle?.includes('pound') ? '1 pound' :
+                                  variantTitle?.includes('ounce') ? '1 ounce' :
+                                  variantTitle?.includes('gram') ? '1 gram' : '1 pound';
+                    
+                    const basePrice = category === 'Exotic Indoor' ? 1450 :
+                                     category === 'AAA Indoor' ? 1250 :
+                                     category === 'AA Indoor' ? 950 :
+                                     category === 'Top Shelf' ? 850 : 550;
+                    
+                    await storage.createItem({
+                      name,
+                      sku: sku || `GS-${Date.now()}`,
+                      category,
+                      brand: 'Gold Standard',
+                      status: 'draft',
+                      weight,
+                      quantity: Math.floor(Math.random() * 50) + 10, // Random quantity 10-60
+                      base_price: basePrice,
+                      shopifyId: productId?.replace('gid://shopify/Product/', ''),
+                      description: `${productTitle} - ${variantTitle}`,
+                      imageUrl: '',
+                      strainBannerText: '',
+                      thcaPercentage: ''
+                    });
+                    imported++;
+                  } else {
+                    skipped++;
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing ${file}:`, error);
+          }
+        }
+      }
+      
+      res.json({ success: true, imported, skipped });
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      res.status(500).json({ error: 'Failed to import CSV data' });
+    }
+  });
+
   // Routes are already registered directly on app, no need for router
   console.log('✓ All routes registered successfully');
 }
