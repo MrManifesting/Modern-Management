@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, RefreshCw, Package } from 'lucide-react';
+import { Download, RefreshCw, Package, Play, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface MenuTabItem {
@@ -27,6 +27,7 @@ interface SyncSummary {
 
 export function MenuSyncPanel() {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isTriggering, setIsTriggering] = useState(false);
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['/api/csv-sync/summary'],
@@ -36,6 +37,12 @@ export function MenuSyncPanel() {
   const { data: menuItems, isLoading: itemsLoading, refetch } = useQuery({
     queryKey: ['/api/csv-sync/menu-tab-updated'],
     queryFn: () => apiRequest('/api/csv-sync/menu-tab-updated')
+  });
+
+  const { data: schedulerStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['/api/csv-sync/scheduler/status'],
+    queryFn: () => apiRequest('/api/csv-sync/scheduler/status'),
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   const handleDownloadCSV = async () => {
@@ -58,9 +65,28 @@ export function MenuSyncPanel() {
     }
   };
 
+  const handleTriggerSync = async () => {
+    setIsTriggering(true);
+    try {
+      const response = await fetch('/api/csv-sync/scheduler/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        // Refresh data after sync
+        refetch();
+      }
+    } catch (error) {
+      console.error('Manual sync failed:', error);
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
   const summaryData = summary?.data as SyncSummary;
   const itemsData = menuItems?.data as MenuTabItem[];
   const availableItems = itemsData?.filter(item => item.amount > 0) || [];
+  const schedulerData = schedulerStatus?.data as { isRunning: boolean; syncIntervalMinutes: number; nextSyncTime?: string };
 
   return (
     <div className="space-y-6 p-6">
@@ -68,7 +94,7 @@ export function MenuSyncPanel() {
         <div>
           <h1 className="text-2xl font-bold text-gold-600">Menu Inventory Sync</h1>
           <p className="text-muted-foreground">
-            Synchronized quantities from All Flower Variants to Menu Tab
+            Synchronized quantities from All Flower Variants to Menu Tab with COA links, media downloads, and store ordering
           </p>
         </div>
         <div className="flex gap-2">
@@ -76,12 +102,44 @@ export function MenuSyncPanel() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          <Button variant="outline" onClick={handleTriggerSync} disabled={isTriggering}>
+            <Play className="h-4 w-4 mr-2" />
+            {isTriggering ? 'Syncing...' : 'Sync Now'}
+          </Button>
           <Button onClick={handleDownloadCSV} disabled={isDownloading}>
             <Download className="h-4 w-4 mr-2" />
             {isDownloading ? 'Downloading...' : 'Download CSV'}
           </Button>
         </div>
       </div>
+
+      {/* Scheduler Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-gold-600" />
+            Automatic Sync Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              <div className={`h-3 w-3 rounded-full ${schedulerData?.isRunning ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="font-medium">
+                Status: {schedulerData?.isRunning ? 'Running' : 'Stopped'}
+              </span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Interval: {schedulerData?.syncIntervalMinutes || 30} minutes
+            </div>
+            {schedulerData?.nextSyncTime && (
+              <div className="text-sm text-muted-foreground">
+                Next sync: {new Date(schedulerData.nextSyncTime).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
