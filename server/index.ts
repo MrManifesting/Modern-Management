@@ -135,7 +135,6 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
   }
   
   // Setup cleanup handler for graceful shutdown
-  const storage = new MinimalStorage();
   
   const cleanup = () => {
     log("Server shutting down, cleaning up resources...", "server-shutdown");
