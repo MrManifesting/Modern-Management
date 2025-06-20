@@ -143,7 +143,9 @@ export function registerRoutes(app: any) {
   app.get('/api/items', async (req: Request, res: Response) => {
     try {
       const allItems = await storage.getItems();
+      console.log('Raw items from storage:', allItems.length);
       const authenticItems = filterAuthenticItems(allItems);
+      console.log('Authentic items after filtering:', authenticItems.length);
       const sortedItems = sortItemsByPriority(authenticItems);
       
       res.json(sortedItems);
@@ -180,7 +182,7 @@ export function registerRoutes(app: any) {
   });
 
   // Get single item
-  router.get('/api/items/:id', async (req, res) => {
+  app.get('/api/items/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.getItem(id);
