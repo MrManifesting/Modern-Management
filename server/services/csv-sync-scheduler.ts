@@ -5,7 +5,7 @@ export class CSVSyncScheduler {
   private csvSync: CSVInventorySync;
   private syncIntervalMinutes: number;
 
-  constructor(syncIntervalMinutes: number = 30) {
+  constructor(syncIntervalMinutes: number = 1) {
     this.csvSync = new CSVInventorySync();
     this.syncIntervalMinutes = syncIntervalMinutes;
   }
