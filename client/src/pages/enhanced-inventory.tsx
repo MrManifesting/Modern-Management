@@ -46,12 +46,13 @@ export default function EnhancedInventory() {
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: rawItems, isLoading, refetch } = useQuery<EnhancedItem[]>({
+  const { data: response, isLoading, refetch } = useQuery<{items: EnhancedItem[], stats: any}>({
     queryKey: ['/api/inventory/enhanced'],
   });
 
   // Sort items to show available quantity items at the top, then draft items with quantity
-  const items = rawItems ? [...rawItems].sort((a, b) => {
+  const rawItems = response?.items || [];
+  const items = Array.isArray(rawItems) ? [...rawItems].sort((a, b) => {
     // First priority: Active items with quantity > 0
     if (a.status === 'active' && a.quantity > 0 && (b.status !== 'active' || b.quantity <= 0)) return -1;
     if (b.status === 'active' && b.quantity > 0 && (a.status !== 'active' || a.quantity <= 0)) return 1;
