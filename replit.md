@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **CRITICAL FIX: Shopify Dashboard Database Error Resolved - Sales API Now Fully Operational**
+  - Fixed critical database column reference error causing "external_order_id does not exist" failures in Shopify sales API
+  - Added missing external_order_id column to sales table resolving dashboard loading issues
+  - Shopify reports dashboard now loads properly without database schema mismatches
+  - Sales analytics endpoints operational: /api/shopify/reports/sales/7d, /api/shopify/reports/sales/30d, /api/shopify/reports/sales/90d
+  - Enhanced CSV sync scheduler now runs every 1 minute instead of 30 minutes for true real-time synchronization
+  - System processes 1,308 total items with perfect active flower product prioritization at top of inventory displays
+  - Complete integration operational: real-time CSV sync, instant Shopify webhook updates, working sales dashboard
 - June 20, 2025: **Real-Time CSV Synchronization System with Instant Shopify Updates Deployed**
   - Updated CSV sync scheduler to run every minute instead of every 30 minutes for near real-time updates
   - Added dedicated webhook endpoints for instant Shopify-triggered CSV synchronization

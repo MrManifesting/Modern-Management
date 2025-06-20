@@ -81,7 +81,7 @@ export function DepartmentPriorities() {
     queryFn: async () => {
       try {
         const response = await apiRequestSimple('/api/shopify/reports/sales/7d');
-        return response.periodSales || [];
+        return response.data?.sales || [];
       } catch (error) {
         console.error("Error fetching Shopify orders:", error);
         return [];
