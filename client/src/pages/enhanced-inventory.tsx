@@ -44,6 +44,7 @@ export default function EnhancedInventory() {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<EnhancedItem[]>([]);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [showCSVImport, setShowCSVImport] = useState(false);
   const { toast } = useToast();
 
   const { data: response, isLoading, refetch } = useQuery<{items: EnhancedItem[], stats: any}>({
