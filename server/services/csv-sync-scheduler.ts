@@ -83,4 +83,4 @@ export class CSVSyncScheduler {
 }
 
 // Global instance
-export const csvSyncScheduler = new CSVSyncScheduler(30); // Default: sync every 30 minutes
+export const csvSyncScheduler = new CSVSyncScheduler(1); // Default: sync every minute for real-time updates

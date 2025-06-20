@@ -3052,5 +3052,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify webhook for instant CSV sync updates
+  app.post("/api/shopify/webhooks/inventory_levels/csv-sync", async (req: Request, res: Response) => {
+    try {
+      console.log('[csv-sync-webhook] Shopify inventory update received, triggering instant CSV sync');
+      
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      await csvSyncScheduler.performSync();
+      
+      res.json({ success: true, message: 'CSV sync triggered by Shopify inventory update' });
+    } catch (error) {
+      console.error('[csv-sync-webhook] Error processing Shopify inventory webhook:', error);
+      res.status(500).json({ error: 'Failed to process inventory webhook' });
+    }
+  });
+
+  app.post("/api/shopify/webhooks/products/csv-sync", async (req: Request, res: Response) => {
+    try {
+      console.log('[csv-sync-webhook] Shopify product update received, triggering instant CSV sync');
+      
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      await csvSyncScheduler.performSync();
+      
+      res.json({ success: true, message: 'CSV sync triggered by Shopify product update' });
+    } catch (error) {
+      console.error('[csv-sync-webhook] Error processing Shopify product webhook:', error);
+      res.status(500).json({ error: 'Failed to process product webhook' });
+    }
+  });
+
   return server;
 }
