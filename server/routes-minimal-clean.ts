@@ -1,8 +1,8 @@
 // Essential API endpoints for Gold-Standard_Management system
 import { Router } from 'express';
-import { MinimalStorage } from './storage-minimal.js';
+import { FixedStorage } from './storage-fixed.js';
 
-const storage = new MinimalStorage();
+const storage = new FixedStorage();
 
 // Enhanced inventory filtering for authentic items only
 function filterAuthenticItems(items: any[]) {
@@ -43,10 +43,104 @@ function sortItemsByPriority(items: any[]) {
 }
 
 export function registerRoutes(app: any) {
-  const router = Router();
+  // Enhanced inventory stats
+  app.get('/api/inventory/stats', async (req: Request, res: Response) => {
+    try {
+      const stats = await storage.getInventoryStats();
+      res.json({ stats });
+    } catch (error) {
+      console.error('Error fetching inventory stats:', error);
+      res.status(500).json({ error: 'Failed to fetch inventory stats' });
+    }
+  });
+
+  // Price sheet generation
+  app.get('/api/generate-price-sheet', async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const availableItems = items.filter(item => 
+        item.status === 'available' && 
+        item.quantity > 0 && 
+        (item.basePrice > 0 || item.salePrice > 0 || item.costPrice > 0)
+      );
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Gold Standard Management - Price Sheet</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .header h1 { color: #D4AF37; margin: 0; font-size: 2.5em; }
+            .header p { color: #666; margin: 5px 0; }
+            .category { margin-bottom: 30px; }
+            .category h2 { color: #228B22; border-bottom: 2px solid #D4AF37; padding-bottom: 5px; }
+            .item { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .item-name { font-weight: bold; color: #333; font-size: 1.1em; }
+            .item-details { margin: 5px 0; color: #666; }
+            .price { color: #D4AF37; font-weight: bold; font-size: 1.2em; }
+            .quantity { color: #228B22; font-weight: bold; }
+            .links { margin-top: 10px; }
+            .btn { display: inline-block; padding: 8px 16px; margin: 2px; text-decoration: none; border-radius: 4px; font-size: 0.9em; }
+            .btn-coa { background: #4CAF50; color: white; }
+            .btn-order { background: #D4AF37; color: white; }
+            .btn-media { background: #2196F3; color: white; }
+            @media print { body { background: white; } .btn { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Gold Standard Management</h1>
+            <p>Premium Cannabis Products Price Sheet</p>
+            <p>Generated: ${new Date().toLocaleDateString()}</p>
+          </div>
+
+          <div class="category">
+            <h2>Available Flower Products (${availableItems.length} items)</h2>
+            ${availableItems.map(item => {
+              const price = item.salePrice || item.basePrice || item.costPrice || 0;
+              const strain = item.name.toLowerCase().replace(/\s+/g, '-');
+              return `
+                <div class="item">
+                  <div class="item-name">${item.name}</div>
+                  <div class="item-details">
+                    SKU: ${item.sku || 'N/A'} | 
+                    Brand: ${item.brand || 'Gold Standard'} | 
+                    Category: ${item.category || 'Bulk Flower'}
+                  </div>
+                  <div class="price">$${price.toFixed(2)}</div>
+                  <div class="quantity">In Stock: ${item.quantity || 0} units</div>
+                  <div class="links">
+                    <a href="https://gold-standard-cbd.com/coa/${strain}" class="btn btn-coa" target="_blank">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=${encodeURIComponent(item.name)}" class="btn btn-order" target="_blank">Order Now</a>
+                    <a href="https://gold-standard-cbd.com/media/download/${item.sku || item.id}" class="btn btn-media" target="_blank">Download Media</a>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
+            <p>Contact: jon@goldcbd.com | 541-291-2404</p>
+            <p>Gold Standard Management - Professional Cannabis Inventory System</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error('Error generating price sheet:', error);
+      res.status(500).json({ error: 'Failed to generate price sheet' });
+    }
+  });
 
   // Get all items with enhanced filtering
-  router.get('/api/items', async (req, res) => {
+  app.get('/api/items', async (req: Request, res: Response) => {
     try {
       const allItems = await storage.getItems();
       const authenticItems = filterAuthenticItems(allItems);
@@ -60,7 +154,7 @@ export function registerRoutes(app: any) {
   });
 
   // Enhanced inventory endpoint with authentic item prioritization
-  router.get('/api/inventory/enhanced', async (req, res) => {
+  app.get('/api/inventory/enhanced', async (req: Request, res: Response) => {
     try {
       const allItems = await storage.getItems();
       const authenticItems = filterAuthenticItems(allItems);
