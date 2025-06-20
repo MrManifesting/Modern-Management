@@ -160,6 +160,33 @@ export default function EnhancedInventory() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={async () => {
+              try {
+                const response = await apiRequest('/api/import-from-csv', {
+                  method: 'POST',
+                  body: JSON.stringify({ csvType: 'all' }),
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                toast({
+                  title: "Import Complete",
+                  description: `Imported ${response.imported} new items, skipped ${response.skipped} existing`,
+                });
+                refetch();
+              } catch (error) {
+                toast({
+                  title: "Import Failed", 
+                  description: error.message,
+                  variant: "destructive"
+                });
+              }
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Import Missing Items
+          </Button>
           {bulkSelectMode && (
             <>
               <Button
