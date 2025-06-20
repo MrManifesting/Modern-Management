@@ -197,17 +197,32 @@ export default function ItemCard({
       >
         <div className="relative h-48 bg-gray-200">
           {/* Item image carousel with enhanced thumbnail support */}
-          {(item.images as string[])?.length > 0 ? (
-            <ImageCarousel 
-              images={item.images as string[]} 
-              alt={item.name} 
-              className="hover-card-image"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-200">
-              <FileText className="h-12 w-12 text-gray-400" />
-            </div>
-          )}
+          {(() => {
+            // Robust image handling with proper type checking
+            let imageArray: string[] = [];
+            
+            if (item.images) {
+              if (Array.isArray(item.images)) {
+                // Already an array
+                imageArray = item.images.filter(img => img && typeof img === 'string');
+              } else if (typeof item.images === 'string') {
+                // Single string - split by comma or newline
+                imageArray = item.images.split(/[,\n]/).map(img => img.trim()).filter(img => img);
+              }
+            }
+            
+            return imageArray.length > 0 ? (
+              <ImageCarousel 
+                images={imageArray} 
+                alt={item.name} 
+                className="hover-card-image"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                <FileText className="h-12 w-12 text-gray-400" />
+              </div>
+            );
+          })()}
 
           {/* Marketplace & status badges */}
           <div className="absolute top-2 right-2 flex space-x-1">
@@ -410,7 +425,7 @@ export default function ItemCard({
           
           <p className="mt-1 text-sm text-gray-600 line-clamp-1">
             {item.category}
-            {(item.tags as string[]).length > 0 && `, ${(item.tags as string[])[0]}`}
+            {item.tags && Array.isArray(item.tags) && item.tags.length > 0 && `, ${item.tags[0]}`}
           </p>
           
           {/* Cost and Margin Info */}
