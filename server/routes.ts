@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fix pricing - ensure all items with quantities have valid pricing
         if (item.quantity && item.quantity > 0) {
           if (!item.base_price || item.base_price <= 0) {
-            updates.base_price = 50; // Default $50 for items with quantities
+            // Skip items without valid pricing - no default values
             needsUpdate = true;
           }
           // Update status to available if item has quantity and pricing
@@ -591,7 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...item,
           // Ensure name is the product title, not description
           displayName: item.name || item.title || 'Unknown Product',
-          // Format pricing properly - show actual prices or default $50
+          // Format pricing properly - show only actual prices
           base_price: basePrice,
           sale_price: salePrice,
           cost_price: costPrice,
@@ -2575,11 +2575,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedItems = items.map(item => {
         const hasQuantity = item.quantity && item.quantity > 0;
         const hasValidPricing = item.base_price > 0 || item.sale_price > 0 || item.wholesale_price > 0;
-        const defaultPrice = hasQuantity && !hasValidPricing ? 50 : 0;
+        // Skip items without valid pricing - no defaults
         
         return {
           ...item,
-          base_price: item.base_price || defaultPrice,
+          base_price: item.base_price || 0,
           sale_price: item.sale_price || 0,
           wholesale_price: item.wholesale_price || 0,
           category: getCategoryForItem(item),
@@ -2589,7 +2589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isConcentrateProduct: isConcentrateProduct(item),
           isEdibleProduct: isEdibleProduct(item),
           hasQuantity,
-          hasValidPricing: hasValidPricing || defaultPrice > 0
+          hasValidPricing
         };
       });
 
