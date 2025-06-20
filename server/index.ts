@@ -1,8 +1,7 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
-import routes from './routes-minimal.js';
+import { registerRoutes } from './routes-minimal.js';
 import { setupVite, serveStatic, log } from "./vite";
-// import { getMarketplaceScheduler } from "./services/marketplace-scheduler";
 import { MinimalStorage } from "./storage-minimal.js";
 
 const app = express();
