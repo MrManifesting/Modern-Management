@@ -534,9 +534,9 @@ export const productPerformanceAnalytics = pgTable("product_performance_analytic
   
   // Sales Metrics
   unitsSold: integer("units_sold").default(0),
-  revenue: numeric("revenue", { precision: 10, scale: 2 }).default(0),
-  averageSellingPrice: numeric("average_selling_price", { precision: 8, scale: 2 }).default(0),
-  profitMargin: numeric("profit_margin", { precision: 5, scale: 2 }).default(0),
+  revenue: numeric("revenue", { precision: 10, scale: 2 }).default("0"),
+  averageSellingPrice: numeric("average_selling_price", { precision: 8, scale: 2 }).default("0"),
+  profitMargin: numeric("profit_margin", { precision: 5, scale: 2 }).default("0"),
   
   // Customer Metrics
   uniqueCustomers: integer("unique_customers").default(0),
@@ -544,9 +544,9 @@ export const productPerformanceAnalytics = pgTable("product_performance_analytic
   newCustomers: integer("new_customers").default(0),
   
   // Performance Indicators
-  inventoryTurnover: numeric("inventory_turnover", { precision: 5, scale: 2 }).default(0),
+  inventoryTurnover: numeric("inventory_turnover", { precision: 5, scale: 2 }).default("0"),
   daysToSellOut: integer("days_to_sell_out"),
-  reorderRate: numeric("reorder_rate", { precision: 5, scale: 2 }).default(0),
+  reorderRate: numeric("reorder_rate", { precision: 5, scale: 2 }).default("0"),
   
   // Rankings
   salesRank: integer("sales_rank"),
