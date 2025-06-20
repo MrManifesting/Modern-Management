@@ -1,8 +1,10 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from './routes-minimal.js';
+import { registerRoutes } from './routes-minimal-clean.js';
 import { setupVite, serveStatic, log } from "./vite";
 import { MinimalStorage } from "./storage-minimal.js";
+
+const storage = new MinimalStorage();
 
 const app = express();
 app.use(express.json());
@@ -96,7 +98,8 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
 });
 
 (async () => {
-  app.use(routes);
+  // Register all routes
+  registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
