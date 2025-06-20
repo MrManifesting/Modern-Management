@@ -566,6 +566,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           properCategory = 'bulk';
         }
         
+        // Get thumbnail image URL
+        let thumbnailUrl = null;
+        if (item.images && typeof item.images === 'string') {
+          try {
+            const imageUrls = JSON.parse(item.images);
+            if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+              thumbnailUrl = imageUrls[0];
+            }
+          } catch (e) {
+            // If parsing fails, treat as single URL
+            thumbnailUrl = item.images;
+          }
+        } else if (item.image_url) {
+          thumbnailUrl = item.image_url;
+        }
+
         return {
           ...item,
           // Ensure name is the product title, not description
@@ -576,6 +592,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cost_price: costPrice,
           displayPrice: displayPrice,
           formattedPrice: `$${displayPrice.toFixed(2)}`,
+          // Pricing breakdown for display
+          priceBreakdown: {
+            base: basePrice > 0 ? `$${basePrice.toFixed(2)}` : null,
+            sale: salePrice > 0 ? `$${salePrice.toFixed(2)}` : null,
+            cost: costPrice > 0 ? `$${costPrice.toFixed(2)}` : null,
+            primary: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : null,
+            hasMultiplePrices: (basePrice > 0 ? 1 : 0) + (salePrice > 0 ? 1 : 0) + (costPrice > 0 ? 1 : 0) > 1
+          },
+          // Thumbnail image
+          thumbnailUrl,
+          hasImage: !!thumbnailUrl,
           // Update category based on flower/bulk content
           category: properCategory,
           isFlowerItem: hasFlower,
