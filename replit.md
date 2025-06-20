@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **ENHANCED PRICE SHEET WITH COA, MEDIA DOWNLOAD, AND PURCHASE LINKS - USING FLOWER VARIANTS MAPPING**
+  - Integrated flower variants mapping service with 260 actual Shopify Product IDs from All Flower Variants CSV
+  - Added COA certificate links (https://gold-standard-cbd.com/coa/{strain-slug}) to each item in price sheet
+  - Added media download links (https://gold-standard-cbd.com/media/download/{sku}) for product images and content
+  - Added direct purchase links using actual Product IDs instead of SKU searches for accurate store navigation
+  - Removed accessories section from price sheet as requested to focus on cannabis products only
+  - Fixed item duplication across categories to ensure accurate counting (26 total items without category overlap)
+  - Enhanced HTML styling with professional link buttons for COA, Order Now, and Download Media actions
+  - System now provides complete customer workflow: view catalog → access COA → order directly → download media
 - June 20, 2025: **COMPLETE SHOPIFY INTEGRATION MIGRATION: All mrlisterscurations References Removed - System Now Uses gold-standard-cbd.myshopify.com**
   - Successfully removed all hardcoded mrlisterscurations.myshopify.com references from server/routes.ts Shopify view endpoints
   - Updated both /api/items/:id/shopify-view and /api/items/:id/shopify-store-view to use gold-standard-cbd.myshopify.com
