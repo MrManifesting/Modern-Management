@@ -3001,5 +3001,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Sync Scheduler endpoints
+  app.get("/api/csv-sync/scheduler/status", async (_req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      const status = csvSyncScheduler.getStatus();
+      res.json({ success: true, data: status });
+    } catch (error) {
+      console.error('Error getting scheduler status:', error);
+      res.status(500).json({ error: 'Failed to get scheduler status' });
+    }
+  });
+
+  app.post("/api/csv-sync/scheduler/start", async (req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      const { intervalMinutes } = req.body;
+      
+      if (intervalMinutes && typeof intervalMinutes === 'number') {
+        csvSyncScheduler.setSyncInterval(intervalMinutes);
+      }
+      
+      csvSyncScheduler.start();
+      res.json({ success: true, message: 'CSV sync scheduler started' });
+    } catch (error) {
+      console.error('Error starting scheduler:', error);
+      res.status(500).json({ error: 'Failed to start scheduler' });
+    }
+  });
+
+  app.post("/api/csv-sync/scheduler/stop", async (_req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      csvSyncScheduler.stop();
+      res.json({ success: true, message: 'CSV sync scheduler stopped' });
+    } catch (error) {
+      console.error('Error stopping scheduler:', error);
+      res.status(500).json({ error: 'Failed to stop scheduler' });
+    }
+  });
+
+  app.post("/api/csv-sync/scheduler/trigger", async (_req: Request, res: Response) => {
+    try {
+      const { csvSyncScheduler } = await import('./services/csv-sync-scheduler.js');
+      await csvSyncScheduler.performSync();
+      res.json({ success: true, message: 'Manual sync triggered successfully' });
+    } catch (error) {
+      console.error('Error triggering manual sync:', error);
+      res.status(500).json({ error: 'Failed to trigger manual sync' });
+    }
+  });
+
   return server;
 }

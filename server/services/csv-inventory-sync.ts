@@ -209,30 +209,49 @@ export class CSVInventorySync {
       'Variant_ID', 'Strain', 'Amount', 'Tier', 'Bulk', 'Distro 25lbs +', 
       'Master 50lbs+', 'Master 2 100lbs +', 'Media', 'COAs ', 'Type', 
       'Variant SKU', 'Barcode ', 'KEY ID', 'Title', 'Cleaned Product Title', 
-      'Trimmed', 'Matched Variant_ID', 'Matched Inventory Qty'
+      'Trimmed', 'Matched Variant_ID', 'Matched Inventory Qty', 'COA_Link',
+      'Media_Download_Link', 'Store_Order_Link'
     ];
 
-    const rows = updatedItems.map(item => [
-      item.variantId,
-      item.strain,
-      item.amount.toString(), // This is column C - updated with Shopify quantities
-      item.tier,
-      item.bulk,
-      item.distro25,
-      item.master50,
-      item.master100,
-      item.media,
-      item.coas,
-      item.type,
-      item.variantSku,
-      item.barcode,
-      item.keyId,
-      item.title,
-      item.cleanedProductTitle,
-      item.trimmed,
-      item.matchedVariantId,
-      item.matchedInventoryQty.toString()
-    ]);
+    const rows = updatedItems.map(item => {
+      // Generate enhanced links
+      const strainSlug = item.strain.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const coaLink = item.coas && item.coas.trim() !== '' ? 
+        `https://gold-standard-cbd.com/coa/${strainSlug}` : '';
+      
+      const mediaLink = item.media && item.media.trim() !== '' ? 
+        `https://gold-standard-cbd.com/media/download/${item.variantSku || item.keyId}` : '';
+      
+      const productSlug = item.cleanedProductTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const storeLink = item.matchedVariantId ? 
+        `https://gold-standard-cbd.myshopify.com/products/${productSlug}` : 
+        `https://gold-standard-cbd.myshopify.com/search?q=${encodeURIComponent(item.strain)}`;
+
+      return [
+        item.variantId || '',
+        `"${item.strain}"`,
+        item.amount.toString(),
+        `"${item.tier}"`,
+        `"${item.bulk}"`,
+        `"${item.distro25}"`,
+        `"${item.master50}"`,
+        `"${item.master100}"`,
+        `"${item.media}"`,
+        `"${item.coas}"`,
+        `"${item.type}"`,
+        item.variantSku || '',
+        item.barcode || '',
+        item.keyId || '',
+        `"${item.title}"`,
+        `"${item.cleanedProductTitle}"`,
+        `"${item.trimmed}"`,
+        item.matchedVariantId || '',
+        item.matchedInventoryQty.toString(),
+        `"${coaLink}"`,
+        `"${mediaLink}"`,
+        `"${storeLink}"`
+      ];
+    });
 
     return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
   }
