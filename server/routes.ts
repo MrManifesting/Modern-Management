@@ -514,74 +514,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Filter for meaningful inventory - flower/bulk products with valid quantities
+      // Show ALL items with quantities and valid pricing from authentic inventory
       const filteredItems = items.filter(item => {
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        if (!hasQuantity) return false;
-        
-        const itemName = item.name?.toLowerCase() || '';
-        
-        // Target specific flower/bulk naming patterns
-        const isQualityFlowerProduct = (
-          // THCa flower products
-          (itemName.includes('thca') && itemName.includes('flower')) ||
-          (itemName.includes('thca') && itemName.includes('bulk')) ||
-          // Standard bulk flower products
-          (itemName.includes('bulk') && itemName.includes('flower')) ||
-          // Quality flower terms
-          (itemName.includes('flower') && (
-            itemName.includes('exotic') || 
-            itemName.includes('indoor') || 
-            itemName.includes('top-shelf') ||
-            itemName.includes('mediums') ||
-            itemName.includes('smalls')
-          ))
-        );
-        
-        // Must have strain names (hyphenated product format)
-        const hasStrainName = item.name && 
-                             item.name.includes('-') && 
-                             item.name.length > 20 && // Substantial product names
-                             // Exclude obvious text descriptions
-                             !itemName.includes('like other') &&
-                             !itemName.includes('keep it') &&
-                             !itemName.includes('but it often') &&
-                             !itemName.includes('effects') &&
-                             !itemName.includes('dominance') &&
-                             !itemName.includes('while you') &&
-                             !itemName.includes('means while');
-        
-        return isQualityFlowerProduct && hasStrainName;
+        const hasValidPricing = parseFloat((item.base_price || item.sale_price || 0).toString()) > 0;
+        return hasQuantity && hasValidPricing;
       });
-
-      // Remove duplicates by strain name (keep highest quantity version)
-      const uniqueItems = filteredItems.reduce((acc, item) => {
-        // Extract strain name (first part before quality indicators)
-        const strainName = item.name?.toLowerCase().split('-')[0] || '';
-        
-        const existing = acc.find(existingItem => {
-          const existingStrain = existingItem.name?.toLowerCase().split('-')[0] || '';
-          return existingStrain === strainName && strainName.length > 3;
-        });
-        
-        if (!existing) {
-          acc.push(item);
-        } else {
-          const itemQty = parseInt(item.quantity?.toString() || '0');
-          const existingQty = parseInt(existing.quantity?.toString() || '0');
-          
-          if (itemQty > existingQty) {
-            // Replace with higher quantity version
-            const index = acc.indexOf(existing);
-            acc[index] = item;
-          }
-        }
-        
-        return acc;
-      }, [] as typeof filteredItems);
       
-      // Sort with active inventory at top by highest quantities
-      const sortedItems = uniqueItems.sort((a, b) => {
+      // Sort with highest quantities first to match authentic menu display
+      const sortedItems = filteredItems.sort((a, b) => {
         const aPrice = parseFloat((a.base_price || a.sale_price || a.cost_price || 0).toString());
         const aQty = parseInt((a.quantity || 0).toString());
         const bPrice = parseFloat((b.base_price || b.sale_price || b.cost_price || 0).toString());
