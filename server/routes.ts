@@ -1201,11 +1201,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let shopifyUrl;
       if (item.shopifyId) {
         // Direct link to admin product page
-        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+        shopifyUrl = `https://gold-standard-cbd.myshopify.com/admin/products/${item.shopifyId}`;
       } else {
         // Search for the product
         const searchTerm = item.sku || item.name;
-        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(searchTerm)}`;
+        shopifyUrl = `https://gold-standard-cbd.myshopify.com/admin/products?query=${encodeURIComponent(searchTerm)}`;
       }
       
       res.json({
@@ -1237,11 +1237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let shopifyUrl;
       if (item.shopifyId) {
         // Direct link to Shopify admin product page
-        shopifyUrl = `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+        shopifyUrl = `https://gold-standard-cbd.myshopify.com/admin/products/${item.shopifyId}`;
       } else {
         // Search for the product on Shopify store
         const searchTerm = item.sku || item.name;
-        shopifyUrl = `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
+        shopifyUrl = `https://gold-standard-cbd.myshopify.com/search?q=${encodeURIComponent(searchTerm)}`;
       }
 
       res.json({ success: true, url: shopifyUrl });
