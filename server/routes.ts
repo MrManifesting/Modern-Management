@@ -460,9 +460,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return isQualityFlowerProduct && hasStrainName;
       });
+
+      // Remove duplicates by strain name (keep highest quantity version)
+      const uniqueItems = filteredItems.reduce((acc, item) => {
+        // Extract strain name (first part before quality indicators)
+        const strainName = item.name?.toLowerCase().split('-')[0] || '';
+        
+        const existing = acc.find(existingItem => {
+          const existingStrain = existingItem.name?.toLowerCase().split('-')[0] || '';
+          return existingStrain === strainName && strainName.length > 3;
+        });
+        
+        if (!existing) {
+          acc.push(item);
+        } else {
+          const itemQty = parseInt(item.quantity?.toString() || '0');
+          const existingQty = parseInt(existing.quantity?.toString() || '0');
+          
+          if (itemQty > existingQty) {
+            // Replace with higher quantity version
+            const index = acc.indexOf(existing);
+            acc[index] = item;
+          }
+        }
+        
+        return acc;
+      }, [] as typeof filteredItems);
       
       // Sort with active inventory at top by highest quantities
-      const sortedItems = filteredItems.sort((a, b) => {
+      const sortedItems = uniqueItems.sort((a, b) => {
         const aPrice = parseFloat((a.base_price || a.sale_price || a.cost_price || 0).toString());
         const aQty = parseInt((a.quantity || 0).toString());
         const bPrice = parseFloat((b.base_price || b.sale_price || b.cost_price || 0).toString());
@@ -523,6 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Show actual status from database (don't override)
           actualStatus: item.status,
           displayStatus: item.status === 'active' || item.status === 'available' ? 'Active' : 
+                        (item.status === 'draft' && parseInt((item.quantity || 0).toString()) > 0) ? 'Available' : 
                         item.status === 'draft' ? 'Draft' : 'Archived'
         };
       });
