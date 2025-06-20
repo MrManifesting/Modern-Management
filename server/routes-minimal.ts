@@ -1,5 +1,6 @@
 import express from 'express';
 import { MinimalStorage } from './storage-minimal.js';
+import inventoryActivationRoutes from './routes-inventory-activation.js';
 
 const router = express.Router();
 const storage = new MinimalStorage();
@@ -172,5 +173,8 @@ router.get('/api/shopify/reports/sales/:period', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch sales data' });
   }
 });
+
+// Register inventory activation routes
+router.use('/', inventoryActivationRoutes);
 
 export default router;
