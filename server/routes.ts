@@ -421,84 +421,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Filter and prioritize available inventory items
-      const filteredItems = items.filter(item => {
-        const hasPrice = parseFloat((item.base_price || 0).toString()) > 0;
+      // Remove duplicates by keeping the item with the highest quantity for each product name
+      const deduplicatedItems = Object.values(
+        items.reduce((acc, item) => {
+          const productName = item.name?.toLowerCase().trim() || '';
+          const currentQty = parseInt((item.quantity || 0).toString());
+          
+          if (!productName) return acc;
+          
+          // If we haven't seen this product name, or this item has higher quantity, keep it
+          if (!acc[productName] || currentQty > parseInt((acc[productName].quantity || 0).toString())) {
+            acc[productName] = item;
+          }
+          
+          return acc;
+        }, {} as Record<string, any>)
+      );
+      
+      // Filter for active inventory with pricing
+      const filteredItems = deduplicatedItems.filter(item => {
+        const hasPrice = parseFloat((item.base_price || item.sale_price || item.cost_price || 0).toString()) > 0;
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        const hasImage = item.imageUrl && item.imageUrl.trim() !== '';
         
-        // Keep active/available items with price and quantity
-        if ((item.status === 'active' || item.status === 'available') && hasPrice && hasQuantity) {
-          return true;
-        }
-        
-        // Keep draft items only if they have both price and image
-        if (item.status === 'draft' && hasPrice && hasImage) {
-          return true;
-        }
-        
-        // Remove archived items without both price and image
-        if (item.status === 'archived' && (!hasPrice || !hasImage)) {
-          return false;
-        }
-        
-        return true; // Keep other items for now
+        // Show items with quantity and pricing, prioritize active/available status
+        return hasQuantity && (hasPrice || item.status === 'active' || item.status === 'available');
       });
       
-      // Sort with active flower products at the top
+      // Sort with active inventory at top by highest quantities
       const sortedItems = filteredItems.sort((a, b) => {
-        const aPrice = parseFloat((a.base_price || 0).toString());
+        const aPrice = parseFloat((a.base_price || a.sale_price || a.cost_price || 0).toString());
         const aQty = parseInt((a.quantity || 0).toString());
-        const bPrice = parseFloat((b.base_price || 0).toString());
+        const bPrice = parseFloat((b.base_price || b.sale_price || b.cost_price || 0).toString());
         const bQty = parseInt((b.quantity || 0).toString());
         
-        const aIsAvailable = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
-        const bIsAvailable = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
+        const aIsActive = (a.status === 'active' || a.status === 'available') && aPrice > 0 && aQty > 0;
+        const bIsActive = (b.status === 'active' || b.status === 'available') && bPrice > 0 && bQty > 0;
         
-        const aIsFlower = a.category?.toLowerCase().includes('flower') || a.name?.toLowerCase().includes('flower');
-        const bIsFlower = b.category?.toLowerCase().includes('flower') || b.name?.toLowerCase().includes('flower');
-        
-        const aIsDraftWithQty = a.status === 'draft' && aQty > 0;
-        const bIsDraftWithQty = b.status === 'draft' && bQty > 0;
-        
-        // Priority 1: Active flower items (highest quantity first)
-        if (aIsAvailable && aIsFlower && !(bIsAvailable && bIsFlower)) return -1;
-        if (!(aIsAvailable && aIsFlower) && bIsAvailable && bIsFlower) return 1;
-        if (aIsAvailable && aIsFlower && bIsAvailable && bIsFlower) {
+        // Priority 1: Active items with pricing (highest quantity first)
+        if (aIsActive && !bIsActive) return -1;
+        if (!aIsActive && bIsActive) return 1;
+        if (aIsActive && bIsActive) {
           return bQty - aQty; // Highest quantity first
         }
         
-        // Priority 2: Active non-flower items (highest quantity first)
-        if (aIsAvailable && !aIsFlower && !(bIsAvailable && !bIsFlower)) return -1;
-        if (!(aIsAvailable && !aIsFlower) && bIsAvailable && !bIsFlower) return 1;
-        if (aIsAvailable && !aIsFlower && bIsAvailable && !bIsFlower) {
-          return bQty - aQty; // Highest quantity first
-        }
-        
-        // Priority 3: Draft flower items with quantity (highest quantity first)
-        if (aIsDraftWithQty && aIsFlower && !(bIsDraftWithQty && bIsFlower)) return -1;
-        if (!(aIsDraftWithQty && aIsFlower) && bIsDraftWithQty && bIsFlower) return 1;
-        if (aIsDraftWithQty && aIsFlower && bIsDraftWithQty && bIsFlower) {
-          return bQty - aQty; // Highest quantity first
-        }
-        
-        // Priority 4: Draft non-flower items with quantity (highest quantity first)
-        if (aIsDraftWithQty && !aIsFlower && !(bIsDraftWithQty && !bIsFlower)) return -1;
-        if (!(aIsDraftWithQty && !aIsFlower) && bIsDraftWithQty && !bIsFlower) return 1;
-        if (aIsDraftWithQty && !aIsFlower && bIsDraftWithQty && !bIsFlower) {
-          return bQty - aQty; // Highest quantity first
-        }
-        
-        // Priority 5: Other items - newest first
-        if (a.createdAt && b.createdAt) {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        
-        return b.id - a.id;
+        // Priority 2: Items with quantity but no active status (highest quantity first)
+        return bQty - aQty;
       });
       
-      log(`Enhanced inventory: ${sortedItems.length} items (${filteredItems.length - items.length} cleaned)`, 'inventory');
-      res.json(sortedItems);
+      // Ensure we display proper product names (not descriptions) and fix pricing
+      const enhancedItems = sortedItems.map(item => {
+        const basePrice = parseFloat((item.base_price || 0).toString());
+        const salePrice = parseFloat((item.sale_price || 0).toString());
+        const costPrice = parseFloat((item.cost_price || 0).toString());
+        
+        // Use the highest available price
+        const displayPrice = salePrice > 0 ? salePrice : (basePrice > 0 ? basePrice : costPrice);
+        
+        return {
+          ...item,
+          // Ensure name is the product title, not description
+          displayName: item.name || item.title || 'Unknown Product',
+          // Format pricing properly - show actual prices from database
+          base_price: basePrice,
+          sale_price: salePrice,
+          cost_price: costPrice,
+          displayPrice: displayPrice,
+          formattedPrice: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : 'No Price',
+          // Show actual status from database (don't override)
+          actualStatus: item.status,
+          displayStatus: item.status === 'active' || item.status === 'available' ? 'Active' : 
+                        item.status === 'draft' ? 'Draft' : 'Archived'
+        };
+      });
+      
+      log(`Enhanced inventory: ${enhancedItems.length} items (${items.length - enhancedItems.length} duplicates removed)`, 'inventory');
+      res.json(enhancedItems);
     } catch (error) {
       console.error("Error fetching enhanced inventory:", error);
       res.status(500).json({ error: "Failed to fetch inventory" });
