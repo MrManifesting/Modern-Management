@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **Real-Time CSV Synchronization System with Instant Shopify Updates Deployed**
+  - Updated CSV sync scheduler to run every minute instead of every 30 minutes for near real-time updates
+  - Added dedicated webhook endpoints for instant Shopify-triggered CSV synchronization
+  - Created /api/shopify/webhooks/inventory_levels/csv-sync and /api/shopify/webhooks/products/csv-sync endpoints
+  - Enhanced CSV output with three new link columns: COA_Link, Media_Download_Link, Store_Order_Link
+  - COA links point to gold-standard-cbd.com/coa/{strain-slug} for certificate access
+  - Media download links provide gold-standard-cbd.com/media/download/{variant-sku} for reposting content
+  - Store order links direct to actual Shopify product pages for immediate customer purchasing
+  - System now processes 260 flower variants and 42 menu items with 12 active items (323 total lbs available)
+  - Created comprehensive Shopify Flow configuration document for instant webhook integration
+  - Automatic sync scheduler operational with 1-minute intervals and manual trigger capabilities
+  - Enhanced Menu Sync Panel interface with real-time scheduler status monitoring
 - June 18, 2025: **Fixed TypeScript Compilation Issues for Clean Deployment - All Critical Errors Resolved**
   - Resolved "Constants declared in server/routes.ts causing assignment to readonly variable" error by changing catalogHtml from const to let
   - Fixed database field name mismatches throughout routes.ts (basePrice → base_price, salePrice → sale_price, etc.)
