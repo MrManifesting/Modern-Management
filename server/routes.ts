@@ -2132,10 +2132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           storeOrderLink: flowerVariantsMappingService.getStoreUrl(item.name, item.sku)
         };
         
+        // Categorize each item only once to avoid duplication
         if (hasBulk && hasFlower) {
           categorizedItems['bulk flower'].push(itemData);
-          categorizedItems.flower.push(itemData); // Also in flower column
-          categorizedItems.bulk.push(itemData);   // Also in bulk column
         } else if (hasFlower) {
           categorizedItems.flower.push(itemData);
         } else if (hasBulk) {
