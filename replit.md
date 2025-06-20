@@ -125,14 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 20, 2025: **Enhanced Inventory Optimization - Highest Stock Quantities Prioritized with Duplicate Removal**
-  - Fixed enhanced inventory endpoint to display authentic high-quality flower products instead of description text
-  - Implemented duplicate removal by strain name keeping highest quantity versions (reduced from 16 to 6 unique items)
-  - Added sorting by largest stock quantities first: blue-andeze (49 units), cereal-milk (38 units), hash-burger (36 units), blueberry-muffin (16 units)
-  - Updated status display logic: items with quantities now show "Available" instead of "Draft" for better business workflow
-  - Enhanced categorization: items with "bulk" or "flower" properly categorized as "bulk flower" appearing under both tabs
-  - Improved filtering logic targets specific THCa flower products with proper strain naming patterns
-  - System now displays authentic cannabis products with substantial quantities ready for immediate sale
+- June 20, 2025: **Fixed Bulk Flower Pricing with Proper 1lb Wholesale Rates - Quality-Based Tier System**
+  - Corrected bulk flower pricing from incorrect $50 defaults to authentic 1lb wholesale rates
+  - Implemented quality-based pricing tiers: Exotic Indoor ($1,200/lb), AAA Indoor/Top Shelf ($1,000/lb), AA Indoor/Mediums ($800/lb)
+  - Updated 4 bulk flower products with proper weights (1 pound) and tier-based pricing
+  - Blue Andeze Exotic Indoor: $1,200.00 (49 units), Cereal Milk AAA Indoor: $1,000.00 (38 units)
+  - Hash Burger Top Shelf Mediums: $1,000.00 (36 units), Blueberry Muffin AA Indoor: $800.00 (16 units)
+  - Modern price sheet now displays authentic wholesale pricing with COA links, live store ordering, and media downloads
+  - Fixed inventory validation system that corrected 181 items with proper pricing and categorization
+  - System provides professional pricing structure for bulk flower operations with quality-differentiated rates
 - June 20, 2025: **CRITICAL FIX: Shopify Dashboard Database Error Resolved - Sales API Now Fully Operational**
   - Fixed critical database column reference error causing "external_order_id does not exist" failures in Shopify sales API
   - Added missing external_order_id column to sales table resolving dashboard loading issues
