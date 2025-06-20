@@ -2577,7 +2577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all items with proper categorization and validation
       const validatedItems = items.map(item => {
         const hasQuantity = item.quantity && item.quantity > 0;
-        const hasValidPricing = item.base_price > 0 || item.sale_price > 0 || item.wholesale_price > 0;
+        const hasValidPricing = (item.base_price && item.base_price > 0) || 
+                                (item.sale_price && item.sale_price > 0) || 
+                                (item.wholesale_price && item.wholesale_price > 0);
         // Skip items without valid pricing - no defaults
         
         return {
