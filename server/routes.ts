@@ -421,10 +421,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Filter for inventory with quantities - no aggressive deduplication
+      // Filter for meaningful inventory items with quantities (prioritize flower/bulk products)
       const filteredItems = items.filter(item => {
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        return hasQuantity;
+        const hasValidName = item.name && item.name.length > 10; // Filter out items with poor data quality
+        const isFlowerOrBulk = item.name?.toLowerCase().includes('flower') || 
+                              item.name?.toLowerCase().includes('bulk') || 
+                              item.name?.toLowerCase().includes('thca');
+        
+        // Prioritize flower/bulk products or items with good data quality
+        return hasQuantity && (isFlowerOrBulk || hasValidName);
       });
       
       // Sort with active inventory at top by highest quantities
@@ -493,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      log(`Enhanced inventory: ${enhancedItems.length} items (${items.length - enhancedItems.length} duplicates removed)`, 'inventory');
+      log(`Enhanced inventory: ${enhancedItems.length} items with quantities available`, 'inventory');
       res.json(enhancedItems);
     } catch (error) {
       console.error("Error fetching enhanced inventory:", error);
