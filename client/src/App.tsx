@@ -30,6 +30,7 @@ import MenuSyncPage from "@/pages/menu-sync";
 
 import MediaManagerPage from "@/pages/media-manager";
 import CustomerAnalytics from "@/pages/CustomerAnalytics";
+import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
 
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
@@ -115,7 +116,7 @@ function Router() {
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
         <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
-        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoring />} />
+        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
 
         <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
@@ -139,7 +140,6 @@ function Router() {
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
-        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoring />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
