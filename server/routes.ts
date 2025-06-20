@@ -20,6 +20,52 @@ import { WebhookSecurity } from './utils/webhook-security.js';
 import { db } from './db';
 import { eq, desc } from 'drizzle-orm';
 
+// Product categorization functions
+function isFlowerProduct(item: any): boolean {
+  const name = (item.name || '').toLowerCase();
+  const category = (item.category || '').toLowerCase();
+  return name.includes('flower') || category.includes('flower') || 
+         (name.includes('thca') && (name.includes('bulk') || name.includes('indoor') || name.includes('exotic')));
+}
+
+function isBulkProduct(item: any): boolean {
+  const name = (item.name || '').toLowerCase();
+  const category = (item.category || '').toLowerCase();
+  return name.includes('bulk') || category.includes('bulk') || 
+         name.includes('pound') || name.includes('lb');
+}
+
+function isPreRollProduct(item: any): boolean {
+  const name = (item.name || '').toLowerCase();
+  const category = (item.category || '').toLowerCase();
+  return name.includes('pre-roll') || name.includes('preroll') || 
+         category.includes('pre-roll') || name.includes('joint');
+}
+
+function isConcentrateProduct(item: any): boolean {
+  const name = (item.name || '').toLowerCase();
+  const category = (item.category || '').toLowerCase();
+  return category.includes('concentrate') || name.includes('wax') || 
+         name.includes('shatter') || name.includes('rosin') || name.includes('live resin');
+}
+
+function isEdibleProduct(item: any): boolean {
+  const name = (item.name || '').toLowerCase();
+  const category = (item.category || '').toLowerCase();
+  return category.includes('edible') || name.includes('gummies') || 
+         name.includes('chocolate') || name.includes('cookie');
+}
+
+function getCategoryForItem(item: any): string {
+  if (isFlowerProduct(item) && isBulkProduct(item)) return 'bulk flower';
+  if (isFlowerProduct(item)) return 'flower';
+  if (isBulkProduct(item)) return 'bulk';
+  if (isPreRollProduct(item)) return 'pre-rolls';
+  if (isConcentrateProduct(item)) return 'concentrates';
+  if (isEdibleProduct(item)) return 'edibles';
+  return item.category || 'other';
+}
+
 // Memory storage for file uploads
 const uploadMemory = multer({ storage: multer.memoryStorage() });
 
