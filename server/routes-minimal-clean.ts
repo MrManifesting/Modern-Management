@@ -234,8 +234,29 @@ export function registerRoutes(app: any) {
       
       const stats = await storage.getStats();
       
+      // Transform items to match frontend interface
+      const enhancedItems = sortedItems.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        sku: item.sku || '',
+        handle: item.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '',
+        imageUrl: item.imageUrl || '',
+        basePrice: (item.base_price || 0).toString(),
+        costPrice: (item.cost_price || 0).toString(),
+        quantity: item.quantity || 0,
+        weight: item.weight || '',
+        brand: item.brand || 'Gold Standard',
+        category: item.category || 'Bulk Flower',
+        status: item.status || 'draft',
+        description: item.description || '',
+        shopifyId: item.shopifyId || null,
+        strainBannerText: item.strainBannerText || '',
+        thcaPercentage: item.thcaPercentage || '',
+        coasLink: `https://gold-standard-cbd.com/coa/${(item.name || '').toLowerCase().replace(/\s+/g, '-')}`
+      }));
+
       res.json({
-        items: sortedItems,
+        items: enhancedItems,
         stats: {
           ...stats,
           availableItems: authenticItems.length,
