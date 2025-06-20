@@ -416,21 +416,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced inventory endpoint - clean Shopify-only data with available items prioritized
+  // Enhanced inventory endpoint - prioritize flower/bulk products with quantities
   app.get("/api/inventory/enhanced", async (req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
       
-      // Filter for meaningful inventory items with quantities (prioritize flower/bulk products)
+      // Filter for meaningful inventory - flower/bulk products with valid quantities
       const filteredItems = items.filter(item => {
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        const hasValidName = item.name && item.name.length > 10; // Filter out items with poor data quality
-        const isFlowerOrBulk = item.name?.toLowerCase().includes('flower') || 
-                              item.name?.toLowerCase().includes('bulk') || 
-                              item.name?.toLowerCase().includes('thca');
+        if (!hasQuantity) return false;
         
-        // Prioritize flower/bulk products or items with good data quality
-        return hasQuantity && (isFlowerOrBulk || hasValidName);
+        const itemName = item.name?.toLowerCase() || '';
+        
+        // Target specific flower/bulk naming patterns
+        const isQualityFlowerProduct = (
+          // THCa flower products
+          (itemName.includes('thca') && itemName.includes('flower')) ||
+          (itemName.includes('thca') && itemName.includes('bulk')) ||
+          // Standard bulk flower products
+          (itemName.includes('bulk') && itemName.includes('flower')) ||
+          // Quality flower terms
+          (itemName.includes('flower') && (
+            itemName.includes('exotic') || 
+            itemName.includes('indoor') || 
+            itemName.includes('top-shelf') ||
+            itemName.includes('mediums') ||
+            itemName.includes('smalls')
+          ))
+        );
+        
+        // Must have strain names (hyphenated product format)
+        const hasStrainName = item.name && 
+                             item.name.includes('-') && 
+                             item.name.length > 20 && // Substantial product names
+                             // Exclude obvious text descriptions
+                             !itemName.includes('like other') &&
+                             !itemName.includes('keep it') &&
+                             !itemName.includes('but it often') &&
+                             !itemName.includes('effects') &&
+                             !itemName.includes('dominance') &&
+                             !itemName.includes('while you') &&
+                             !itemName.includes('means while');
+        
+        return isQualityFlowerProduct && hasStrainName;
       });
       
       // Sort with active inventory at top by highest quantities
