@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **COMPLETE $50 DEFAULT PRICING REMOVAL - AUTHENTIC PRICING ONLY SYSTEM**
+  - Eliminated all $50 default pricing from database by deleting 6 items with artificial pricing
+  - Removed all default pricing logic from price sheet generation and inventory endpoints
+  - Updated enhanced inventory filtering to show only items with authentic pricing (base_price, sale_price, or cost_price > 0)
+  - System now displays 20 items with genuine pricing: Blueberry Muffin ($650-$775), Tropicana Cherry ($550), Frozen Lemons ($600), etc.
+  - No more artificial $50 values anywhere in price sheets, catalogs, or inventory displays
+  - Database confirmed clean: 971 total items, 20 with quantities and authentic pricing only
 - June 20, 2025: **ENHANCED PRICE SHEET WITH COA, MEDIA DOWNLOAD, AND PURCHASE LINKS - USING FLOWER VARIANTS MAPPING**
   - Integrated flower variants mapping service with 260 actual Shopify Product IDs from All Flower Variants CSV
   - Added COA certificate links (https://gold-standard-cbd.com/coa/{strain-slug}) to each item in price sheet

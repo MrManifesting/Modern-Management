@@ -514,11 +514,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const items = await storage.getItems();
       
-      // Show ALL items with quantities and valid pricing from authentic inventory
+      // Show ALL items with quantities - authentic pricing only
       const filteredItems = items.filter(item => {
         const hasQuantity = parseInt(item.quantity?.toString() || '0') > 0;
-        const hasValidPricing = parseFloat((item.base_price || item.sale_price || 0).toString()) > 0;
-        return hasQuantity && hasValidPricing;
+        const basePrice = parseFloat((item.base_price || 0).toString());
+        const salePrice = parseFloat((item.sale_price || 0).toString());
+        const costPrice = parseFloat((item.cost_price || 0).toString());
+        const hasAuthenticPricing = basePrice > 0 || salePrice > 0 || costPrice > 0;
+        return hasQuantity && hasAuthenticPricing;
       });
       
       // Sort with highest quantities first to match authentic menu display
