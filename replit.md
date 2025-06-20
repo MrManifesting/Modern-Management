@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 20, 2025: **Enhanced Inventory Optimization - Highest Stock Quantities Prioritized with Duplicate Removal**
+  - Fixed enhanced inventory endpoint to display authentic high-quality flower products instead of description text
+  - Implemented duplicate removal by strain name keeping highest quantity versions (reduced from 16 to 6 unique items)
+  - Added sorting by largest stock quantities first: blue-andeze (49 units), cereal-milk (38 units), hash-burger (36 units), blueberry-muffin (16 units)
+  - Updated status display logic: items with quantities now show "Available" instead of "Draft" for better business workflow
+  - Enhanced categorization: items with "bulk" or "flower" properly categorized as "bulk flower" appearing under both tabs
+  - Improved filtering logic targets specific THCa flower products with proper strain naming patterns
+  - System now displays authentic cannabis products with substantial quantities ready for immediate sale
 - June 20, 2025: **CRITICAL FIX: Shopify Dashboard Database Error Resolved - Sales API Now Fully Operational**
   - Fixed critical database column reference error causing "external_order_id does not exist" failures in Shopify sales API
   - Added missing external_order_id column to sales table resolving dashboard loading issues
