@@ -253,7 +253,7 @@ export class MemStorage implements IStorage {
       ...affiliate,
       id,
       totalEarnings: "0",
-      totalSales: "0", 
+      totalSales: 0, 
       pendingPayout: "0",
       createdAt: now,
       updatedAt: now
@@ -629,7 +629,7 @@ export class MemStorage implements IStorage {
       name: "Test Affiliate",
       email: "affiliate@example.com",
       code: "TESTAFFILIATE",
-      commissionRate: 0.04, // 4% commission
+      commissionRate: "0.04", // 4% commission
       status: "active",
       paymentDetails: { 
         method: "paypal",
@@ -2924,7 +2924,13 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-
+  async getRecentSales(limit: number = 50): Promise<Sale[]> {
+    return await db
+      .select()
+      .from(sales)
+      .orderBy(desc(sales.createdAt))
+      .limit(limit);
+  }
   
   // Analytics methods
   async getSalesReport(params: ReportParams): Promise<SalesReport> {
