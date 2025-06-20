@@ -125,15 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 20, 2025: **Fixed Bulk Flower Pricing with Proper 1lb Wholesale Rates - Quality-Based Tier System**
-  - Corrected bulk flower pricing from incorrect $50 defaults to authentic 1lb wholesale rates
-  - Implemented quality-based pricing tiers: Exotic Indoor ($1,200/lb), AAA Indoor/Top Shelf ($1,000/lb), AA Indoor/Mediums ($800/lb)
-  - Updated 4 bulk flower products with proper weights (1 pound) and tier-based pricing
-  - Blue Andeze Exotic Indoor: $1,200.00 (49 units), Cereal Milk AAA Indoor: $1,000.00 (38 units)
-  - Hash Burger Top Shelf Mediums: $1,000.00 (36 units), Blueberry Muffin AA Indoor: $800.00 (16 units)
-  - Modern price sheet now displays authentic wholesale pricing with COA links, live store ordering, and media downloads
-  - Fixed inventory validation system that corrected 181 items with proper pricing and categorization
-  - System provides professional pricing structure for bulk flower operations with quality-differentiated rates
+- June 20, 2025: **Complete Authentic Inventory Display - All 26 Strain Products from Live Menu Showing**
+  - Fixed enhanced inventory filtering to display all 26 authentic strain products instead of only 6 items
+  - Removed 344 text description entries that were cluttering the inventory with non-product content
+  - System now shows complete authentic menu with proper quantities: Blueberry Muffin Smalls (135 units), Tropicana Cherry (90 units), Frozen Lemons (81 units)
+  - Enhanced inventory endpoint displays all available strains with tier-based pricing: Classic Reserve ($550-$600), Top Shelf ($575-$850), AA Indoor ($650-$950), AAA Indoor ($1,250-$1,350), Exotic Indoor ($1,450-$1,500)
+  - Products sorted by highest quantities first matching authentic business workflow priorities
+  - Complete THCa percentages and strain information displayed for all 26 products
+  - Fixed bulk flower pricing with proper 1lb wholesale rates based on quality tiers
+  - Modern price sheet integrates all authentic inventory with COA links, live store ordering, and media downloads
+  - System provides comprehensive view of actual available inventory ready for immediate sale
 - June 20, 2025: **CRITICAL FIX: Shopify Dashboard Database Error Resolved - Sales API Now Fully Operational**
   - Fixed critical database column reference error causing "external_order_id does not exist" failures in Shopify sales API
   - Added missing external_order_id column to sales table resolving dashboard loading issues
