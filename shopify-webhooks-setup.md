@@ -1,6 +1,6 @@
 # Complete Shopify Webhook Configuration - Gold-Standard_Management
 
-## Webhook URLs for MrListersCurations Store
+## Webhook URLs for Gold Standard CBD Store
 
 Configure these webhooks in your Shopify Admin → Settings → Notifications → Webhooks:
 
