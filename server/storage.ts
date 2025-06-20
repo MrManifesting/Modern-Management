@@ -5,7 +5,7 @@ import {
   Employee, InsertEmployee, InventoryAction, InsertInventoryAction,
   ProductBreakdown, InsertProductBreakdown, BreakdownTarget, breakdownTargetSchema,
   ItemType, ProcessingStatus, ItemCondition,
-  User, InsertSale,
+  User, InsertUser,
   Affiliate, InsertAffiliate, QrCode, InsertQrCode, 
   AffiliateTransaction, InsertAffiliateTransaction,
   Credential, InsertCredential,

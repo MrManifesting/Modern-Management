@@ -139,6 +139,7 @@ export const orderTransactions = pgTable("order_transactions", {
 ]);
 
 export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
 export type PriceSheet = typeof priceSheet.$inferSelect;
 export type InsertPriceSheet = typeof priceSheet.$inferInsert;
 
