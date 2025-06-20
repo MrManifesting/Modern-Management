@@ -1365,7 +1365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalItems,
           activeItems,
           lowStockItems,
-          totalValue: items.reduce((sum, item) => sum + (parseFloat((item.base_price || 0).toString()) * (item.quantity || 0)), 0)
+          totalValue: items.reduce((sum, item) => sum + (parseFloat((item.basePrice || 0).toString()) * (item.quantity || 0)), 0)
         }
       });
     } catch (error) {
