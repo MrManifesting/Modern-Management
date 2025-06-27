@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequestSimple } from '@/lib/queryClient';
 import { Package, Zap, BarChart3, CheckCircle } from 'lucide-react';
 
 interface InventoryStats {
@@ -61,8 +61,13 @@ export default function InventoryActivationPage() {
   // Bulk activation mutation
   const bulkActivate = useMutation({
     mutationFn: async (data: { itemIds: number[], defaultQuantity: number }) => {
-      const response = await apiRequest('POST', '/api/inventory/bulk-activate', data);
-      return await response.json();
+      return await apiRequestSimple('/api/inventory/bulk-activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
