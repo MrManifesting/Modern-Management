@@ -66,7 +66,7 @@ Format: JSON
 ## Webhook Secret
 Use this webhook secret for HMAC verification:
 ```
-a76e1514ff3410a6293d1288779e74c6633f6c08875e33aed55a5070ca7a71d1
+8c77a8d4deb89d6166edd3f9f48a67e267cd0400c4b93c89c0cca3c82c610e10
 ```
 
 ## What Each Webhook Does
