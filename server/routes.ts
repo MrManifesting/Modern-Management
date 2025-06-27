@@ -954,7 +954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/shopify/analytics", async (req: Request, res: Response) => {
     try {
       // Redirect to Shopify analytics dashboard
-      const storeUrl = process.env.SHOPIFY_STORE_URL || 'mrlisterscurations.myshopify.com';
+      const storeUrl = process.env.SHOPIFY_STORE || 'gold-standard-cbd.myshopify.com';
       const analyticsUrl = `https://${storeUrl}/admin/analytics`;
       
       res.json({ 
@@ -986,7 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timestamp: new Date(Date.now() - 300000).toISOString(),
           operation: "Connection Test",
           status: "success", 
-          details: "Connected to mrlisterscurations.myshopify.com"
+          details: "Connected to gold-standard-cbd.myshopify.com"
         }
       ];
       
@@ -1536,6 +1536,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         error: "Failed to sync menu tab",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // CSV Import endpoint for missing items
+  app.post("/api/import-from-csv", async (req: Request, res: Response) => {
+    try {
+      const { csvType } = req.body;
+      let imported = 0;
+      let skipped = 0;
+      
+      if (csvType === 'all') {
+        // Import from all available CSV files in attached_assets
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        const files = [
+          'Automated_Gold_Standard_online_catalog  - All_Flower_Variants_1750461034790.csv',
+          'Automated_Gold_Standard_online_catalog  - THCa_Variants_1750461034790.csv',
+          'Automated_Gold_Standard_online_catalog  - THCa Preroll_Variants_1750461034790.csv'
+        ];
+        
+        for (const file of files) {
+          try {
+            const csvPath = path.join(process.cwd(), 'attached_assets', file);
+            if (fs.existsSync(csvPath)) {
+              const csvData = fs.readFileSync(csvPath, 'utf-8');
+              const lines = csvData.split('\n').slice(1); // Skip header
+              
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                
+                const [productId, productTitle, variantId, variantTitle, sku] = line.split(',');
+                
+                if (productTitle && variantTitle) {
+                  const name = productTitle.replace(/- THCA.*$/, '').trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                  
+                  // Check if already exists
+                  const existingItems = await storage.getItems();
+                  const exists = existingItems.find(item => 
+                    item.name === name || 
+                    item.sku === sku ||
+                    item.shopifyId === productId
+                  );
+                  
+                  if (!exists) {
+                    await storage.createItem({
+                      name,
+                      sku: sku || `SKU-${Date.now()}`,
+                      shopifyId: productId,
+                      category: 'flower',
+                      status: 'draft',
+                      quantity: 0,
+                      description: `${productTitle} - ${variantTitle}`
+                    });
+                    imported++;
+                  } else {
+                    skipped++;
+                  }
+                }
+              }
+            }
+          } catch (fileError) {
+            console.error(`Error processing file ${file}:`, fileError);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        imported,
+        skipped,
+        total: imported + skipped,
+        message: `Imported ${imported} new items, skipped ${skipped} existing items`
+      });
+    } catch (error) {
+      console.error("Error importing from CSV:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to import from CSV",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
