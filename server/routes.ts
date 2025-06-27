@@ -1622,6 +1622,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify store view endpoint
+  app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      
+      if (item.shopifyId) {
+        // Direct link to admin product page
+        const adminUrl = `https://admin.shopify.com/store/${shopifyDomain.replace('.myshopify.com', '')}/products/${item.shopifyId}`;
+        res.redirect(adminUrl);
+      } else {
+        // Search for the product in admin
+        const searchUrl = `https://admin.shopify.com/store/${shopifyDomain.replace('.myshopify.com', '')}/products?query=${encodeURIComponent(item.sku || item.name)}`;
+        res.redirect(searchUrl);
+      }
+    } catch (error) {
+      console.error("Error redirecting to Shopify:", error);
+      res.status(500).json({ error: "Failed to redirect to Shopify" });
+    }
+  });
+
   // Shopify connection test endpoint
   app.get("/api/shopify/test-connection", async (req: Request, res: Response) => {
     try {
