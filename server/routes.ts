@@ -99,17 +99,29 @@ export function registerRoutes(app: any, storage: any) {
                           (item.cost_price && parseFloat(item.cost_price) > 0);
         return hasQuantity || hasPricing;
       }).map((item: any) => {
-        // Get thumbnail URL
+        // Get thumbnail URL with proper fallbacks
         let thumbnailUrl = null;
         if (item.images && typeof item.images === 'string') {
           try {
             const imageUrls = JSON.parse(item.images);
-            thumbnailUrl = Array.isArray(imageUrls) ? imageUrls[0] : item.images;
+            if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+              thumbnailUrl = imageUrls[0];
+            } else if (typeof imageUrls === 'string') {
+              thumbnailUrl = imageUrls;
+            }
           } catch {
+            // If JSON parse fails, treat as single URL
             thumbnailUrl = item.images;
           }
         } else if (item.image_url) {
           thumbnailUrl = item.image_url;
+        } else if (item.imageUrl) {
+          thumbnailUrl = item.imageUrl;
+        }
+        
+        // Ensure URL is properly formatted
+        if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+          thumbnailUrl = `/uploads/${thumbnailUrl}`;
         }
 
         return {
