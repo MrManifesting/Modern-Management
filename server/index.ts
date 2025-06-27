@@ -70,14 +70,13 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
       log(`Processing line item: ${lineItem.sku} (quantity: ${lineItem.quantity})`, 'webhook-direct');
     }
     
-    // Create sale record with minimal schema
+    // Create sale record with correct schema
     try {
       await storage.createSale({
         orderId: String(orderId),
-        customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
-        customerEmail: order.email || '',
-        total: String(parseFloat(order.total_price) || 0),
-        marketplace: 'shopify'
+        items: order.line_items || [],
+        subtotal: String(parseFloat(order.subtotal_price || order.total_price) || 0),
+        total: String(parseFloat(order.total_price) || 0)
       });
     } catch (saleError) {
       log(`Sale creation failed for order ${orderName}: ${saleError}`, 'webhook-direct');
@@ -93,53 +92,116 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
   }
 });
 
-(async () => {
-  // Register all routes
-  registerRoutes(app, storage);
+// Async startup function with comprehensive error handling
+async function startServer() {
+  try {
+    // Validate required environment variables with fallbacks
+    const requiredEnvVars = {
+      NODE_ENV: process.env.NODE_ENV || 'development',
+      DATABASE_URL: process.env.DATABASE_URL || '',
+      PORT: process.env.PORT || '5000'
+    };
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Log environment configuration
+    log(`Starting server in ${requiredEnvVars.NODE_ENV} mode`, 'startup');
+    
+    if (!requiredEnvVars.DATABASE_URL) {
+      log('Warning: DATABASE_URL not set, using fallback configuration', 'startup');
+    }
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    // Storage is automatically initialized via database connection
+    log('Using existing database connection', 'startup');
 
-  // Add middleware to ensure API routes are handled correctly
-  app.use('/api/*', (req, res, next) => {
-    // If we reach here, the API route wasn't handled by registerRoutes
-    // This means the route doesn't exist
-    res.status(404).json({ error: 'API endpoint not found' });
-  });
+    // Register all routes with error handling
+    try {
+      registerRoutes(app, storage);
+      log('Routes registered successfully', 'startup');
+    } catch (routeError) {
+      log(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, 'startup');
+      throw routeError;
+    }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  const server = app.listen({
-    port,
-    host: "0.0.0.0",
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+    // Global error handler
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      
+      log(`Global error handler: ${status} - ${message}`, 'error');
+      res.status(status).json({ message });
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Add middleware to ensure API routes are handled correctly
+    app.use('/api/*', (req, res, next) => {
+      // If we reach here, the API route wasn't handled by registerRoutes
+      res.status(404).json({ error: 'API endpoint not found' });
+    });
+
+    // Server configuration
+    const port = parseInt(requiredEnvVars.PORT, 10);
+    const server = app.listen({
+      port,
+      host: "0.0.0.0",
+    }, () => {
+      log(`serving on port ${port}`, 'startup');
+    });
+
+    // Handle server startup errors
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${port} is already in use`, 'startup-error');
+      } else {
+        log(`Server startup error: ${error.message}`, 'startup-error');
+      }
+      process.exit(1);
+    });
+
+    // Setup Vite or static serving with error handling
+    try {
+      if (app.get("env") === "development") {
+        await setupVite(app, server);
+        log('Vite development server setup complete', 'startup');
+      } else {
+        serveStatic(app);
+        log('Static file serving setup complete', 'startup');
+      }
+    } catch (viteError) {
+      log(`Vite/Static setup error: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup-error');
+      // Don't exit - server can still serve API routes
+    }
+    
+    // Setup cleanup handler for graceful shutdown
+    const cleanup = () => {
+      log("Server shutting down, cleaning up resources...", "server-shutdown");
+      server.close(() => {
+        log("Server closed successfully", "server-shutdown");
+        process.exit(0);
+      });
+    };
+    
+    // Handle graceful shutdown
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    process.on('uncaughtException', (error) => {
+      log(`Uncaught exception: ${error.message}`, 'startup-error');
+      console.error('Full error:', error);
+      cleanup();
+    });
+    process.on('unhandledRejection', (reason, promise) => {
+      log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
+      console.error('Full rejection:', reason);
+    });
+
+    log('Server startup completed successfully', 'startup');
+    
+  } catch (startupError) {
+    log(`Critical startup failure: ${startupError instanceof Error ? startupError.message : String(startupError)}`, 'startup-error');
+    console.error('Full startup error:', startupError);
+    process.exit(1);
   }
-  
-  // Setup cleanup handler for graceful shutdown
-  
-  const cleanup = () => {
-    log("Server shutting down, cleaning up resources...", "server-shutdown");
-    process.exit(0);
-  };
-  
-  // Handle graceful shutdown
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-})();
+}
+
+// Start the server
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});
