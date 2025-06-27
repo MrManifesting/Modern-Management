@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ExternalLink, Package, DollarSign, Weight, Grid, List, FileSpreadsheet, Eye, Edit, MoreHorizontal } from 'lucide-react';
+import { ExternalLink, Package, DollarSign, Weight, Grid, List, FileSpreadsheet, Eye, Edit, MoreHorizontal, FileUp } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -78,12 +78,15 @@ export default function EnhancedInventory() {
 
   const getShopifyUrl = (item: EnhancedItem) => {
     if (item.shopifyId) {
-      return `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      return `https://admin.shopify.com/store/gold-standard-cbd/products/${item.shopifyId}`;
     }
-    return `https://mrlisterscurations.myshopify.com/search?q=${encodeURIComponent(item.name)}`;
+    return `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name)}`;
   };
 
-  // Removed Google Sheets integration - system syncs from Shopify only
+  const handleViewSheets = (item: EnhancedItem) => {
+    const sheetsUrl = `https://docs.google.com/spreadsheets/d/1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU/edit#gid=0&search=${encodeURIComponent(item.sku || item.name)}`;
+    window.open(sheetsUrl, '_blank');
+  };
 
   const handleEditItem = (itemId: number) => {
     const item = items?.find(i => i.id === itemId);
@@ -202,7 +205,7 @@ export default function EnhancedInventory() {
             variant="outline"
             className="flex items-center gap-2"
           >
-            <ExternalLink className="h-4 w-4" />
+            <FileUp className="h-4 w-4" />
             Import Missing Items
           </Button>
           {bulkSelectMode && (
