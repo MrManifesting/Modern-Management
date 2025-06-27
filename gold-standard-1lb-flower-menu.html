@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Standard CBD - 1 Pound Flower Menu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #D4AF37 0%, #228B22 100%);
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .strain-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .strain-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.3);
+            border-color: #D4AF37;
+        }
+        
+        .strain-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #D4AF37;
+            margin-bottom: 0.5rem;
+            text-transform: capitalize;
+        }
+        
+        .strain-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .quantity {
+            background: linear-gradient(135deg, #228B22, #32CD32);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .tier-badge {
+            background: rgba(212, 175, 55, 0.2);
+            color: #D4AF37;
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            border: 1px solid #D4AF37;
+        }
+        
+        .tier-badge.classic-reserve { background: rgba(100, 149, 237, 0.2); color: #6495ED; border-color: #6495ED; }
+        .tier-badge.top-shelf { background: rgba(255, 215, 0, 0.2); color: #FFD700; border-color: #FFD700; }
+        .tier-badge.aa-indoor { background: rgba(138, 43, 226, 0.2); color: #8A2BE2; border-color: #8A2BE2; }
+        .tier-badge.aaa-indoor { background: rgba(220, 20, 60, 0.2); color: #DC143C; border-color: #DC143C; }
+        .tier-badge.exotic-indoor { background: rgba(255, 20, 147, 0.2); color: #FF1493; border-color: #FF1493; }
+        
+        .price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #32CD32;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .btn-order {
+            background: linear-gradient(135deg, #D4AF37, #B8860B);
+            color: white;
+        }
+        
+        .btn-order:hover {
+            background: linear-gradient(135deg, #B8860B, #DAA520);
+            transform: translateY(-2px);
+        }
+        
+        .btn-coa {
+            background: linear-gradient(135deg, #228B22, #32CD32);
+            color: white;
+        }
+        
+        .btn-coa:hover {
+            background: linear-gradient(135deg, #32CD32, #228B22);
+            transform: translateY(-2px);
+        }
+        
+        .summary {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .summary h2 {
+            color: #D4AF37;
+            margin-bottom: 1rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #D4AF37;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .menu-grid { grid-template-columns: 1fr; }
+            .container { padding: 0 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌿 GOLD STANDARD CBD 🌿</h1>
+        <p>Premium 1 Pound THCa Flower Selection - Available Now</p>
+    </div>
+    
+    <div class="container">
+        <div class="summary">
+            <h2>Current 1 Pound Flower Inventory</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">20+</div>
+                    <div>Strains Available</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">1,000+</div>
+                    <div>Pounds in Stock</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">$425-$1450</div>
+                    <div>Price Range</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">5</div>
+                    <div>Quality Tiers</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="menu-grid">
+            <div class="strain-card">
+                <div class="strain-name">Blueberry Muffin THCa Smalls</div>
+                <div class="strain-details">
+                    <span class="tier-badge aa-indoor">AA Indoor</span>
+                    <span class="quantity">135 lbs</span>
+                </div>
+                <div class="price">$650.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/blueberry-muffin-smalls" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=blueberry+muffin" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Blueberry Muffin THCa Mediums</div>
+                <div class="strain-details">
+                    <span class="tier-badge aa-indoor">AA Indoor</span>
+                    <span class="quantity">99 lbs</span>
+                </div>
+                <div class="price">$775.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/blueberry-muffin-mediums" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=blueberry+muffin" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Blueberry Muffin THCa Exotic</div>
+                <div class="strain-details">
+                    <span class="tier-badge exotic-indoor">Exotic Indoor</span>
+                    <span class="quantity">99 lbs</span>
+                </div>
+                <div class="price">$775.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/blueberry-muffin-exotic" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=blueberry+muffin" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Tropicana Cherry THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">90 lbs</span>
+                </div>
+                <div class="price">$550.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/tropicana-cherry" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=tropicana+cherry" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Frozen Lemons THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">81 lbs</span>
+                </div>
+                <div class="price">$600.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/frozen-lemons" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=frozen+lemons" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Cookies and Cream THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge top-shelf">Top Shelf</span>
+                    <span class="quantity">76 lbs</span>
+                </div>
+                <div class="price">$775.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/cookies-and-cream" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=cookies+cream" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Gush Mintz THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">57 lbs</span>
+                </div>
+                <div class="price">$550.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/gush-mintz" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=gush+mintz" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Sunday Driver THCa Smalls</div>
+                <div class="strain-details">
+                    <span class="tier-badge top-shelf">Top Shelf</span>
+                    <span class="quantity">52 lbs</span>
+                </div>
+                <div class="price">$575.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/sunday-driver-smalls" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=sunday+driver" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Tiger Cake THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">51 lbs</span>
+                </div>
+                <div class="price">$550.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/tiger-cake" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=tiger+cake" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Purple Punch THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">51 lbs</span>
+                </div>
+                <div class="price">$550.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/purple-punch" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=purple+punch" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Blue Nerds THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge aa-indoor">AA Indoor</span>
+                    <span class="quantity">48 lbs</span>
+                </div>
+                <div class="price">$900.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/blue-nerds" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=blue+nerds" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Blue Andeze THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge exotic-indoor">Exotic Indoor</span>
+                    <span class="quantity">48 lbs</span>
+                </div>
+                <div class="price">$1,450.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/blue-andeze" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=blue+andeze" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Italian Ice THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge aa-indoor">AA Indoor</span>
+                    <span class="quantity">47 lbs</span>
+                </div>
+                <div class="price">$950.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/italian-ice" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=italian+ice" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Gary Payton THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge top-shelf">Top Shelf</span>
+                    <span class="quantity">45 lbs</span>
+                </div>
+                <div class="price">$850.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/gary-payton" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=gary+payton" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Gushers THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge top-shelf">Top Shelf</span>
+                    <span class="quantity">44 lbs</span>
+                </div>
+                <div class="price">$850.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/gushers" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=gushers" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Gush Mintz THCa Smalls</div>
+                <div class="strain-details">
+                    <span class="tier-badge classic-reserve">Classic Reserve</span>
+                    <span class="quantity">41 lbs</span>
+                </div>
+                <div class="price">$425.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/gush-mintz-smalls" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=gush+mintz" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+            
+            <div class="strain-card">
+                <div class="strain-name">Cereal Milk THCa</div>
+                <div class="strain-details">
+                    <span class="tier-badge aaa-indoor">AAA Indoor</span>
+                    <span class="quantity">38 lbs</span>
+                </div>
+                <div class="price">$1,300.00</div>
+                <div class="action-buttons">
+                    <a href="https://gold-standard-cbd.com/coa/cereal-milk" class="btn btn-coa">View COA</a>
+                    <a href="https://gold-standard-cbd.myshopify.com/search?q=cereal+milk" class="btn btn-order">Order Now</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🌟 Contact us: jon@goldcbd.com or 541-291-2404 🌟</p>
+            <p>Premium THCa flower available for immediate shipping nationwide</p>
+        </div>
+    </div>
+</body>
+</html>
