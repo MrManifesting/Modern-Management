@@ -1005,7 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/shopify/safety-status", async (req: Request, res: Response) => {
     try {
-      const { getPushStatus } = await import('./services/shopify-integration.js');
+      const { getPushStatus } = await import('./services/shopify.js');
       const pushStatus = await getPushStatus();
       
       res.json({ 
