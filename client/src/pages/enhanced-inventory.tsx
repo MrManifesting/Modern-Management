@@ -163,20 +163,38 @@ export default function EnhancedInventory() {
           <Button
             onClick={async () => {
               try {
-                const response = await apiRequest('/api/import-from-csv', {
-                  method: 'POST',
-                  body: JSON.stringify({ csvType: 'all' }),
-                  headers: { 'Content-Type': 'application/json' }
-                });
-                toast({
-                  title: "Import Complete",
-                  description: `Imported ${response.imported} new items, skipped ${response.skipped} existing`,
-                });
-                refetch();
+                // Create a simple file input for CSV import
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.csv';
+                input.onchange = async (e: any) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/import-from-csv', {
+                      method: 'POST',
+                      body: formData
+                    });
+                    
+                    if (response.ok) {
+                      const data = await response.json();
+                      toast({
+                        title: "Import Complete",
+                        description: `Imported ${data.imported} new items`,
+                      });
+                      refetch();
+                    } else {
+                      throw new Error('Import failed');
+                    }
+                  }
+                };
+                input.click();
               } catch (error) {
                 toast({
                   title: "Import Failed", 
-                  description: error.message,
+                  description: error instanceof Error ? error.message : 'Unknown error',
                   variant: "destructive"
                 });
               }
