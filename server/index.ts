@@ -1,10 +1,10 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from './routes-minimal-clean.js';
+import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from "./vite";
-import { MinimalStorage } from "./storage-minimal.js";
+import { PostgresStorage } from "./storage.js";
 
-const storage = new MinimalStorage();
+const storage = new PostgresStorage();
 
 const app = express();
 app.use(express.json());
