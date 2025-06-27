@@ -1541,6 +1541,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced custom menu generation with Shopify sync
+  app.post("/api/csv-sync/generate-custom-menu", async (req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      
+      const options = req.body || {};
+      const customMenu = await csvSync.generateCustomMenu(options);
+      
+      console.log(`[custom-menu] Generated ${customMenu.format} menu with ${Array.isArray(customMenu.data) ? customMenu.data.length : 'formatted'} items`);
+      
+      res.json({
+        success: true,
+        ...customMenu
+      });
+    } catch (error) {
+      console.error("Error generating custom menu:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate custom menu",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Live menu preview with real-time Shopify data
+  app.get("/api/csv-sync/live-menu-preview", async (req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      
+      const format = req.query.format as string || 'html';
+      const minQuantity = parseInt(req.query.minQuantity as string) || 1;
+      const tiers = req.query.tiers ? (req.query.tiers as string).split(',') : [];
+      
+      const customMenu = await csvSync.generateCustomMenu({
+        format,
+        minQuantity,
+        includeTiers: tiers,
+        includeOutOfStock: false,
+        sortBy: 'quantity',
+        sortOrder: 'desc'
+      });
+      
+      if (format === 'html') {
+        res.setHeader('Content-Type', 'text/html');
+        res.send(customMenu.data);
+      } else if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="live-menu.csv"');
+        res.send(customMenu.data);
+      } else {
+        res.json({
+          success: true,
+          ...customMenu
+        });
+      }
+    } catch (error) {
+      console.error("Error generating live menu preview:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate live menu preview",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.get("/api/csv-sync/download-updated-csv", async (_req: Request, res: Response) => {
     try {
       const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
