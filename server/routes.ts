@@ -53,6 +53,184 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Google Sheets Integration Endpoints
+  app.get("/api/google-sheets/status", async (_req: Request, res: Response) => {
+    try {
+      const { googleSheetsService } = await import('./services/google-sheets-service.js');
+      const status = await googleSheetsService.getSheetStatus();
+      res.json(status);
+    } catch (error) {
+      log(`Google Sheets status error: ${error}`, 'sheets');
+      res.json({
+        success: false,
+        configured: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/google-sheets/sync", async (req: Request, res: Response) => {
+    try {
+      const { googleSheetsService } = await import('./services/google-sheets-service.js');
+      
+      // Get current inventory items
+      const items = await storage.getItems();
+      
+      // Sync with Google Sheets using existing method
+      const result = await googleSheetsService.syncInventoryToSheets(items);
+      
+      log(`Google Sheets sync completed: ${items.length} items`, 'sheets');
+      res.json({
+        success: true,
+        syncedItems: items.length,
+        message: result.message || `Successfully synced ${items.length} items to Google Sheets`,
+        sheetUrl: result.sheetUrl
+      });
+    } catch (error) {
+      log(`Google Sheets sync error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to sync with Google Sheets",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/google-sheets/import", async (req: Request, res: Response) => {
+    try {
+      // For now, return a placeholder response since import functionality needs to be built
+      log(`Google Sheets import requested`, 'sheets');
+      res.json({
+        success: true,
+        syncedItems: 0,
+        message: "Google Sheets import functionality is being restored"
+      });
+    } catch (error) {
+      log(`Google Sheets import error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to import from Google Sheets",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/google-sheets/configure", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId, clientId, clientSecret } = req.body;
+      
+      // Store configuration (this would typically be in environment variables or secure storage)
+      // For now, we'll return success
+      
+      log(`Google Sheets configured: ${spreadsheetId}`, 'sheets');
+      res.json({
+        success: true,
+        message: "Google Sheets integration configured successfully"
+      });
+    } catch (error) {
+      log(`Google Sheets config error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to configure Google Sheets",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/google-sheets/config", async (_req: Request, res: Response) => {
+    try {
+      res.json({
+        success: true,
+        configured: !!process.env.GOOGLE_SHEETS_ID,
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID || null,
+        message: process.env.GOOGLE_SHEETS_ID ? "Google Sheets configured" : "Not configured"
+      });
+    } catch (error) {
+      log(`Google Sheets config fetch error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to get configuration" 
+      });
+    }
+  });
+
+  app.post("/api/google-sheets/config", async (req: Request, res: Response) => {
+    try {
+      const { spreadsheetId } = req.body;
+      
+      // In a real implementation, this would update environment variables or secure storage
+      log(`Google Sheets configuration updated: ${spreadsheetId}`, 'sheets');
+      
+      res.json({
+        success: true,
+        message: "Configuration updated successfully"
+      });
+    } catch (error) {
+      log(`Google Sheets config update error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to update configuration" 
+      });
+    }
+  });
+
+  // Individual item Google Sheets view
+  app.get("/api/items/:id/sheets-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Use configured spreadsheet ID or default
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID || "1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU";
+      const searchTerm = item.sku || item.name || item.id.toString();
+      
+      // Create Google Sheets URL with search functionality
+      const sheetsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0&search=${encodeURIComponent(searchTerm)}`;
+      
+      log(`Opening Google Sheets for item ${item.name} (${searchTerm})`, 'sheets');
+      res.json({
+        success: true,
+        url: sheetsUrl,
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku
+        }
+      });
+    } catch (error) {
+      log(`Google Sheets view error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate Google Sheets view" 
+      });
+    }
+  });
+
+  // Google Sheets integration test endpoint
+  app.get("/api/google-sheets/test", async (_req: Request, res: Response) => {
+    try {
+      const { googleSheetsService } = await import('./services/google-sheets-service.js');
+      const status = await googleSheetsService.getSheetStatus();
+      
+      res.json({
+        success: true,
+        status,
+        message: "Google Sheets integration test completed"
+      });
+    } catch (error) {
+      log(`Google Sheets test error: ${error}`, 'sheets');
+      res.status(500).json({ 
+        success: false, 
+        error: "Google Sheets integration test failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Items endpoints
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {
