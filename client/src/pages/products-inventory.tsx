@@ -164,6 +164,7 @@ const ProductsInventoryPage: React.FC = () => {
   };
 
   const handleItemSelection = (itemId: number) => {
+    if (!Array.isArray(products)) return;
     const item = products.find(p => p.id === itemId);
     if (!item) return;
 
@@ -303,9 +304,10 @@ const ProductsInventoryPage: React.FC = () => {
       console.log("Fetching items with media from API...");
       const res = await apiRequest('GET', '/api/inventory/enhanced');
       const data = await res.json();
-      console.log("Fetched items with media:", data.length);
+      const items = data.items || data || [];
+      console.log("Fetched items with media:", items.length);
       
-      return data.map((item: any) => {
+      return items.map((item: any) => {
         // Parse weight to extract exact standard values - no decimal weights
         const parseWeight = (weightStr: string) => {
           if (!weightStr) return { value: 1, unit: 'pound', display: '1 pound' };
@@ -464,7 +466,7 @@ const ProductsInventoryPage: React.FC = () => {
   );
 
   // Filter products based on search term and category
-  const filteredProducts = products
+  const filteredProducts = (Array.isArray(products) ? products : [])
     .filter((product: Product) => {
       const matchesSearch = 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
