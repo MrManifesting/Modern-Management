@@ -153,7 +153,7 @@ export default function InventoryActivationPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{stats.available}</div>
                 <p className="text-xs text-muted-foreground">
-                  With quantities > 0
+                  With quantities &gt; 0
                 </p>
               </CardContent>
             </Card>
