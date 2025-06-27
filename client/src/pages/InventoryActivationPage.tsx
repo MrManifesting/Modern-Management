@@ -45,7 +45,7 @@ export default function InventoryActivationPage() {
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  const stats: InventoryStats = statsData?.stats || {
+  const stats: InventoryStats = (statsData as any)?.stats || {
     total: 0, available: 0, draft: 0, withPricing: 0, 
     flowers: 0, activationCandidates: 0, totalValue: 0
   };
@@ -56,15 +56,13 @@ export default function InventoryActivationPage() {
     refetchInterval: 30000
   });
 
-  const candidates: ActivationCandidate[] = candidatesData?.candidates || [];
+  const candidates: ActivationCandidate[] = (candidatesData as any)?.candidates || [];
 
   // Bulk activation mutation
   const bulkActivate = useMutation({
     mutationFn: async (data: { itemIds: number[], defaultQuantity: number }) => {
-      return apiRequest('/api/inventory/bulk-activate', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+      const response = await apiRequest('POST', '/api/inventory/bulk-activate', data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
@@ -153,7 +151,7 @@ export default function InventoryActivationPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{stats.available}</div>
                 <p className="text-xs text-muted-foreground">
-                  With quantities &gt; 0
+                  With quantities {'>'} 0
                 </p>
               </CardContent>
             </Card>
@@ -282,7 +280,7 @@ export default function InventoryActivationPage() {
                     <Alert>
                       <CheckCircle className="h-4 w-4" />
                       <AlertDescription>
-                        {bulkActivate.data.message}
+                        {(bulkActivate.data as any)?.message || 'Items activated successfully'}
                       </AlertDescription>
                     </Alert>
                   )}
