@@ -359,6 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single item with proper error handling
   app.get("/api/items/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
