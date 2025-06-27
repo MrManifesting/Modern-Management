@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw, Package, Play, Clock, Settings, Eye, FileText, Globe } from 'lucide-react';
-import { apiRequestSimple } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 
 interface MenuTabItem {
   strain: string;
@@ -45,18 +45,15 @@ export function MenuSyncPanel() {
   const [outputFormat, setOutputFormat] = useState<'json' | 'csv' | 'html'>('html');
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['/api/csv-sync/summary'],
-    queryFn: () => apiRequestSimple('/api/csv-sync/summary')
+    queryKey: ['/api/csv-sync/summary']
   });
 
   const { data: menuItems, isLoading: itemsLoading, refetch } = useQuery({
-    queryKey: ['/api/csv-sync/menu-tab-updated'],
-    queryFn: () => apiRequestSimple('/api/csv-sync/menu-tab-updated')
+    queryKey: ['/api/csv-sync/menu-tab-updated']
   });
 
   const { data: schedulerStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['/api/csv-sync/scheduler/status'],
-    queryFn: () => apiRequestSimple('/api/csv-sync/scheduler/status'),
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
@@ -111,22 +108,24 @@ export function MenuSyncPanel() {
         format: outputFormat
       };
 
-      const response = await apiRequestSimple('/api/csv-sync/generate-custom-menu', {
+      const response = await fetch('/api/csv-sync/generate-custom-menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(options)
       });
+      
+      const result = await response.json();
 
       if (outputFormat === 'html') {
         // Open HTML in new window
         const newWindow = window.open('', '_blank');
         if (newWindow) {
-          newWindow.document.write(response.data);
+          newWindow.document.write(result.data);
           newWindow.document.close();
         }
       } else if (outputFormat === 'csv') {
         // Download CSV file
-        const blob = new Blob([response.data], { type: 'text/csv' });
+        const blob = new Blob([result.data], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -137,7 +136,7 @@ export function MenuSyncPanel() {
         document.body.removeChild(a);
       } else {
         // JSON format - show in console for debugging
-        console.log('Custom Menu JSON:', response.data);
+        console.log('Custom Menu JSON:', result.data);
       }
 
       // Refresh data
@@ -169,10 +168,10 @@ export function MenuSyncPanel() {
     );
   };
 
-  const summaryData = summary?.data as SyncSummary;
-  const itemsData = menuItems?.data as MenuTabItem[];
+  const summaryData = summary as SyncSummary;
+  const itemsData = menuItems as MenuTabItem[];
   const availableItems = itemsData?.filter(item => item.amount > 0) || [];
-  const schedulerData = schedulerStatus?.data as { isRunning: boolean; syncIntervalMinutes: number; nextSyncTime?: string };
+  const schedulerData = schedulerStatus as { isRunning: boolean; syncIntervalMinutes: number; nextSyncTime?: string };
 
   return (
     <div className="space-y-6 p-6">

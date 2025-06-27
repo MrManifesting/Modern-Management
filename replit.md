@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 27, 2025: **ENHANCED SHOPIFY SYNC FOR CUSTOM MENU CREATION - ADVANCED FILTERING AND REAL-TIME GENERATION**
+  - Enhanced CSV inventory sync service with comprehensive custom menu generation capabilities
+  - Added advanced filtering options: quality tiers, quantity ranges, pricing thresholds, and out-of-stock inclusion
+  - Implemented multi-format export system (HTML, CSV, JSON) with professional styling and branding
+  - Created tabbed MenuSyncPanel interface with Overview, Custom Menu, Live Sync, and Current Inventory sections
+  - Added real-time Shopify sync integration with 1-minute interval scheduling and instant webhook triggers
+  - Enhanced HTML menu generation with Gold Standard branding, tier-specific styling, and direct COA links
+  - Integrated live preview functionality and downloadable CSV exports with authenticated Shopify data
+  - Added comprehensive API endpoints: /api/csv-sync/generate-custom-menu and /api/csv-sync/live-menu-preview
+  - System processes 260 flower variants with multiple matching strategies for accurate inventory synchronization
+  - Real-time sync scheduler operational with automatic startup and manual trigger capabilities
 - June 20, 2025: **COMPLETE $50 DEFAULT PRICING REMOVAL - AUTHENTIC PRICING ONLY SYSTEM**
   - Eliminated all $50 default pricing from database by deleting 6 items with artificial pricing
   - Removed all default pricing logic from price sheet generation and inventory endpoints
