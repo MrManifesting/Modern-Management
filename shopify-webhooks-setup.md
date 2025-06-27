@@ -104,7 +104,7 @@ Use this webhook secret for HMAC verification:
 
 ## Setup Instructions
 
-1. Go to your Shopify Admin: admin.shopify.com/store/mrlisterscurations
+1. Go to your Shopify Admin: admin.shopify.com/store/gold-standard-cbd
 2. Navigate to Settings → Notifications
 3. Scroll down to "Webhooks" section
 4. Click "Create webhook" for each of the 9 URLs above

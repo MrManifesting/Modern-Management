@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 27, 2025: **COMPLETE MRLISTERSCURATIONS REMOVAL AND CSV IMPORT FIX - FULL GOLD STANDARD INTEGRATION**
+  - Removed all remaining MrListersCurations references from Shopify analytics and operations endpoints
+  - Fixed CSV import functionality by adding missing /api/import-from-csv endpoint for enhanced inventory page
+  - Updated all Shopify view redirects to use gold-standard-cbd.myshopify.com instead of old store
+  - Fixed webhook documentation to reference Gold Standard CBD store admin portal
+  - Created comprehensive CSV import system that processes attached_assets files for missing items
+  - System now properly imports from All_Flower_Variants, THCa_Variants, and THCa_Preroll CSV exports
+  - All Shopify integration endpoints now correctly point to Gold Standard CBD store
+  - Enhanced inventory CSV import creates draft items preventing accidental activation of untested products
 - June 27, 2025: **ENHANCED SHOPIFY SYNC FOR CUSTOM MENU CREATION - ADVANCED FILTERING AND REAL-TIME GENERATION**
   - Enhanced CSV inventory sync service with comprehensive custom menu generation capabilities
   - Added advanced filtering options: quality tiers, quantity ranges, pricing thresholds, and out-of-stock inclusion

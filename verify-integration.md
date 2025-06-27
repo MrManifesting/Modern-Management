@@ -2,13 +2,13 @@
 
 ## Configured Webhooks Status ✅
 
-Your MrListersCurations store now has 9 active webhooks pointing to:
+Your Gold Standard CBD store now has 9 active webhooks pointing to:
 `https://modern-inventory-and-sales-management-whateversclever.replit.app`
 
 ## How to Verify Integration is Working
 
 ### 1. Check Webhook Status in Shopify Admin
-- Go to admin.shopify.com/store/mrlisterscurations
+- Go to admin.shopify.com/store/gold-standard-cbd
 - Navigate to Settings → Notifications → Webhooks
 - All 9 webhooks should show "Active" status
 - Recent delivery attempts will show success/failure
