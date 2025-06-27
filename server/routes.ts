@@ -1622,6 +1622,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify connection test endpoint
+  app.get("/api/shopify/test-connection", async (req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Shopify access token not configured"
+        });
+      }
+
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/shop.json`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const shopData = await response.json();
+        res.json({
+          success: true,
+          connected: true,
+          store: shopData.shop?.name || shopifyDomain,
+          domain: shopifyDomain
+        });
+      } else {
+        res.status(response.status).json({
+          success: false,
+          connected: false,
+          error: `Connection failed: ${response.status} ${response.statusText}`
+        });
+      }
+    } catch (error) {
+      console.error("Shopify connection test error:", error);
+      res.status(500).json({
+        success: false,
+        connected: false,
+        error: "Failed to test Shopify connection"
+      });
+    }
+  });
+
   // Enhanced custom menu generation with Shopify sync
   app.post("/api/csv-sync/generate-custom-menu", async (req: Request, res: Response) => {
     try {
