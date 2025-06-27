@@ -72,7 +72,7 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     
     // Create sale record with minimal schema
     try {
-      await minimalStorage.createSale({
+      await storage.createSale({
         orderId: String(orderId),
         customerName: `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() || 'Unknown Customer',
         customerEmail: order.email || '',
@@ -95,7 +95,7 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
 
 (async () => {
   // Register all routes
-  registerRoutes(app);
+  registerRoutes(app, storage);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
