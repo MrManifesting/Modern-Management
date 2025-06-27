@@ -64,8 +64,6 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     log(`Order webhook received: ${orderName} (ID: ${orderId})`, 'webhook-direct');
     
     // Process each line item for inventory reduction
-    const minimalStorage = new MinimalStorage();
-    
     for (const lineItem of order.line_items || []) {
       if (!lineItem.sku) continue;
       
