@@ -586,14 +586,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // If parsing fails, treat as single URL
             thumbnailUrl = item.images;
           }
-        } else if (item.image_url) {
-          thumbnailUrl = item.image_url;
+        } else if (item.imageUrl) {
+          thumbnailUrl = item.imageUrl;
         }
 
         return {
           ...item,
           // Ensure name is the product title, not description
-          displayName: item.name || item.title || 'Unknown Product',
+          displayName: item.name || 'Unknown Product',
           // Format pricing properly - show only actual prices
           base_price: basePrice,
           sale_price: salePrice,
