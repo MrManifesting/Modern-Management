@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **POUND VARIANTS PRIORITIZATION SYSTEM DEPLOYED - ALL POUND PRODUCTS FEATURED AT TOP**
+  - Implemented comprehensive pound variant detection in GraphQL API and all inventory endpoints
+  - Added intelligent sorting that prioritizes any product containing "1 pound", "1POUND", "ONE POUND", "one pound", "Pound", "POUND" variants
+  - Updated GraphQL resolvers to feature pound products first in inventory, availableInventory, and shopifyInventory queries
+  - Enhanced main inventory API (/api/items) and enhanced inventory (/api/inventory/enhanced) with pound prioritization
+  - System now displays top pound products: Blueberry Muffin (135 units), Tropicana Cherry (90 units), Frozen Lemons (81 units)
+  - Pound variants appear at very top regardless of other sorting criteria for maximum sales visibility
+  - All inventory views now prioritize pound products for immediate customer and staff recognition
 - June 30, 2025: **COMPLETE CODE CLEANUP AND ROUTE OPTIMIZATION - ALL SYSTEMS FULLY FUNCTIONAL**
   - Systematically cleaned up codebase by removing duplicate and redundant code
   - Removed backup route files (routes-backup.ts) and eliminated duplicate CSV import endpoints
