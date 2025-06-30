@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExternalLink, Package, DollarSign, Eye, FileText, Download, Search, Filter } from 'lucide-react';
 import AdvancedInventoryFilters from '@/components/inventory/advanced-inventory-filters';
+import AdvancedInventorySorting from '@/components/inventory/advanced-inventory-sorting';
 
 interface InventoryItem {
   id: string;
@@ -13,6 +14,9 @@ interface InventoryItem {
   status: string;
   quantity: number;
   weight?: string;
+  description?: string;
+  category?: string;
+  thcaPercentage?: number;
   pricing: {
     displayPrice: number;
     currency: string;
@@ -91,6 +95,12 @@ const GraphQLInventory = () => {
     inStock: false,
     poundVariantsOnly: false
   });
+
+  // Advanced sorting state
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [prioritizePounds, setPrioritizePounds] = useState(true);
+  const [prioritizeNewest, setPrioritizeNewest] = useState(true);
 
   const executeGraphQLQuery = async (query: string) => {
     try {
@@ -331,6 +341,70 @@ const GraphQLInventory = () => {
     return true;
   });
 
+  // Advanced sorting logic
+  const sortedAndFilteredInventory = [...filteredInventory].sort((a, b) => {
+    // Priority 1: Pound variants (if enabled)
+    if (prioritizePounds) {
+      const aIsPound = a.weight?.toLowerCase().includes('pound') || 
+                     a.name?.toLowerCase().includes('pound') ||
+                     a.name?.toLowerCase().includes('1 lb') ||
+                     a.name?.toLowerCase().includes('1lb');
+      const bIsPound = b.weight?.toLowerCase().includes('pound') || 
+                     b.name?.toLowerCase().includes('pound') ||
+                     b.name?.toLowerCase().includes('1 lb') ||
+                     b.name?.toLowerCase().includes('1lb');
+      
+      if (aIsPound && !bIsPound) return -1;
+      if (!aIsPound && bIsPound) return 1;
+    }
+
+    // Priority 2: Newest items (if enabled) - assuming higher IDs = newer
+    if (prioritizeNewest) {
+      const aId = parseInt(a.id);
+      const bId = parseInt(b.id);
+      if (aId !== bId) {
+        return bId - aId; // Newest first (highest ID first)
+      }
+    }
+
+    // Priority 3: Custom sort criteria
+    let comparison = 0;
+    
+    switch (sortBy) {
+      case 'name':
+        comparison = (a.name || '').localeCompare(b.name || '');
+        break;
+      case 'price':
+        comparison = (a.pricing?.displayPrice || 0) - (b.pricing?.displayPrice || 0);
+        break;
+      case 'quantity':
+        comparison = (a.quantity || 0) - (b.quantity || 0);
+        break;
+      case 'weight':
+        comparison = (a.weight || '').localeCompare(b.weight || '');
+        break;
+      case 'thca':
+        comparison = (a.thcaPercentage || 0) - (b.thcaPercentage || 0);
+        break;
+      case 'sku':
+        comparison = (a.sku || '').localeCompare(b.sku || '');
+        break;
+      case 'created':
+        // For created date, use ID as proxy (higher ID = newer)
+        comparison = parseInt(b.id) - parseInt(a.id);
+        break;
+      default:
+        comparison = (a.name || '').localeCompare(b.name || '');
+    }
+
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const handleSortChange = (newSortBy: string, newDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newDirection);
+  };
+
   const InventoryCard = ({ item }: { item: InventoryItem }) => (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -532,23 +606,33 @@ const GraphQLInventory = () => {
             filteredItems={filteredInventory.length}
           />
           
+          <AdvancedInventorySorting
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
+            prioritizePounds={prioritizePounds}
+            onPrioritizePoundsChange={setPrioritizePounds}
+            prioritizeNewest={prioritizeNewest}
+            onPrioritizeNewestChange={setPrioritizeNewest}
+          />
+          
           {loading ? (
             <div className="text-center py-8">
               <p>Loading inventory data...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredInventory.slice(0, 24).map((item) => (
+              {sortedAndFilteredInventory.slice(0, 24).map((item) => (
                 <InventoryCard key={item.id} item={item} />
               ))}
             </div>
           )}
-          {filteredInventory.length > 24 && (
+          {sortedAndFilteredInventory.length > 24 && (
             <p className="text-center text-gray-600">
-              Showing first 24 of {filteredInventory.length} filtered items
+              Showing first 24 of {sortedAndFilteredInventory.length} items (filtered and sorted)
             </p>
           )}
-          {filteredInventory.length === 0 && !loading && (
+          {sortedAndFilteredInventory.length === 0 && !loading && (
             <div className="text-center py-12">
               <Search className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
               <h3 className="mt-4 text-lg font-medium">No items match your filters</h3>

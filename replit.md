@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **ADVANCED INVENTORY FILTERING AND SORTING SYSTEM DEPLOYED WITH POUND VARIANT PRIORITIZATION**
+  - Implemented comprehensive advanced filtering system with 11 filter criteria: search, category, price range, quantity range, THCa range, status, weight, COA availability, media availability, stock status, and pound variants only
+  - Created intelligent sorting system that prioritizes biggest weights (pound variants) and newest items (highest IDs) at the top as requested
+  - Added expandable/collapsible filter interface with active filter count badges and instant filtering results display
+  - Enhanced GraphQL inventory page with dual filtering and sorting components for maximum user control
+  - Pound variant prioritization automatically places all products containing "pound", "1 lb", "1lb" at the very top of inventory displays
+  - Newest item prioritization sorts by highest ID numbers ensuring most recently added products appear first
+  - Advanced sorting supports 7 criteria: product name, price, quantity, weight, THCa percentage, creation date, and SKU
+  - Real-time filtering shows "X of Y items" with instant updates as users adjust search criteria
+  - System maintains user-requested sorting hierarchy: 1) Pound variants first → 2) Newest items first → 3) Custom sort criteria
+  - Enhanced inventory display increased from 12 to 24 items per page with comprehensive empty state handling
+  - Professional filter components use shadcn/UI with sliders, switches, and select dropdowns for intuitive user experience
 - June 30, 2025: **ONE-CLICK PRODUCT MEDIA PACK DOWNLOAD FEATURE FULLY DEPLOYED**
   - Implemented comprehensive One-Click Product Media Pack Download system with instant ZIP file generation
   - Created dedicated media pack endpoint (/api/items/:id/download-media-pack) providing complete product media information
