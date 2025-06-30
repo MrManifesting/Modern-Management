@@ -222,7 +222,7 @@ export function useVoiceAccessibility() {
   }, [getAccessibilityClasses]);
 
   return {
-    settings,
+    settings: { ...settings, updateSettings },
     updateSettings,
     isLoaded,
     speak,

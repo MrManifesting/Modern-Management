@@ -10,7 +10,8 @@ import {
   Package,
   ArrowRightLeft,
   Search,
-  ChevronDown
+  ChevronDown,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -866,7 +867,7 @@ export function VoiceCommand() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-lg border border-primary/20 bg-gradient-to-br from-background to-muted/30">
+    <Card className={`w-full max-w-md shadow-lg border border-primary/20 bg-gradient-to-br from-background to-muted/30 voice-interface ${getAccessibilityClasses()}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
@@ -879,6 +880,25 @@ export function VoiceCommand() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            {/* Settings button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/voice-accessibility-settings')}
+                    className="voice-button"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Voice Accessibility Settings
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             {/* Continuous mode toggle */}
             <div className="flex items-center space-x-2">
               <TooltipProvider>
@@ -887,14 +907,14 @@ export function VoiceCommand() {
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">Continuous</span>
                       <Switch
-                        checked={continuousMode}
-                        onCheckedChange={setContinuousMode}
+                        checked={settings.continuousListening}
+                        onCheckedChange={(checked) => updateSettings({ continuousListening: checked })}
                         className="data-[state=checked]:bg-primary"
                       />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {continuousMode 
+                    {settings.continuousListening
                       ? "Continuous mode: will keep listening after commands" 
                       : "Standard mode: stops after each command"}
                   </TooltipContent>
