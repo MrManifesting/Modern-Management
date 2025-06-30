@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
+import { useVoiceAccessibility } from '@/hooks/use-voice-accessibility';
 import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 
 // Define the types of commands we support
@@ -52,19 +53,22 @@ export function VoiceCommand() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [error, setError] = useState<string | null>(null);
-  const [continuousMode, setContinuousMode] = useState(false);
-  const [voiceFeedback, setVoiceFeedback] = useState(true);
   const recognitionRef = useRef<any>(null);
+  
+  // Use voice accessibility settings
+  const { 
+    settings, 
+    speak, 
+    playConfirmationSound, 
+    getSpeechRecognitionConfig, 
+    provideErrorFeedback,
+    getAccessibilityClasses 
+  } = useVoiceAccessibility();
 
-  // Add voice feedback function
-  const speakFeedback = useCallback((text: string) => {
-    if (voiceFeedback && 'speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-    }
-  }, [voiceFeedback]);
+  // Voice feedback now uses accessibility settings
+  const speakFeedback = useCallback((text: string, priority: 'low' | 'medium' | 'high' = 'medium') => {
+    speak(text, priority);
+  }, [speak]);
 
   // Check browser support
   const isBrowserSupported = useCallback(() => {
