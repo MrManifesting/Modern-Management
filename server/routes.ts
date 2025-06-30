@@ -1456,8 +1456,11 @@ export function registerRoutes(app: any, storage: any) {
             </div>
             
             <div class="menu-grid">
-              ${poundVariants.map(item => `
+              ${poundVariants.map((item, index) => {
+                const isNew = index < Math.ceil(poundVariants.length * 0.1); // Top 10% are marked as NEW
+                return `
                 <div class="menu-item">
+                  ${isNew ? '<div class="new-badge">NEW</div>' : ''}
                   <div class="weight-badge">1 POUND</div>
                   <h3 class="strain-name">${item.name?.replace(/-/g, ' ')}</h3>
                   <div class="details">
@@ -1469,7 +1472,8 @@ export function registerRoutes(app: any, storage: any) {
                     SKU: ${item.sku || 'N/A'} | Category: ${item.category || 'Flower'}
                   </div>
                 </div>
-              `).join('')}
+              `;
+              }).join('')}
             </div>
             
             ${poundVariants.length === 0 ? `
