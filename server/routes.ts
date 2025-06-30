@@ -1,10 +1,5 @@
 import { Request, Response } from "express";
-import { z } from "zod";
-import { createInsertSchema } from "drizzle-zod";
-import { items, sales, inventoryActions, Item } from "@shared/schema";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
 const uploadMemory = multer({ storage: multer.memoryStorage() });
 
@@ -720,59 +715,7 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // CSV import endpoint fix
-  app.post("/api/import-from-csv", uploadMemory.single('file'), async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No CSV file provided" });
-      }
 
-      const csvContent = req.file.buffer.toString('utf8');
-      const lines = csvContent.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        return res.status(400).json({ error: "CSV file must have header and data rows" });
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const imported = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-        const itemData: any = {};
-        
-        headers.forEach((header, index) => {
-          if (values[index]) {
-            if (header.toLowerCase().includes('name') || header.toLowerCase().includes('title')) {
-              itemData.name = values[index];
-            } else if (header.toLowerCase().includes('price')) {
-              itemData.base_price = parseFloat(values[index]) || 0;
-            } else if (header.toLowerCase().includes('quantity')) {
-              itemData.quantity = parseInt(values[index]) || 0;
-            } else if (header.toLowerCase().includes('sku')) {
-              itemData.sku = values[index];
-            }
-          }
-        });
-
-        if (itemData.name) {
-          itemData.status = 'draft';
-          itemData.description = `Imported from CSV - ${itemData.name}`;
-          const newItem = await storage.createItem(itemData);
-          imported.push(newItem);
-        }
-      }
-
-      res.json({
-        success: true,
-        message: `Successfully imported ${imported.length} items`,
-        imported: imported.length
-      });
-    } catch (error) {
-      log(`CSV import error: ${error}`, 'csv-import');
-      res.status(500).json({ error: "Failed to import CSV" });
-    }
-  });
 
   // Missing catalog endpoints
   app.get("/api/live-menu", async (_req: Request, res: Response) => {
