@@ -33,7 +33,7 @@ export function ShopifyImportDashboard() {
     setImportStats(null);
     
     try {
-      const response = await fetch('/api/shopify/sync-inventory', {
+      const response = await fetch('/api/shopify/import-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

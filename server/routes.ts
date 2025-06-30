@@ -920,21 +920,7 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Shopify sync inventory endpoint
-  app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
-    try {
-      // Basic sync status response
-      res.json({
-        success: true,
-        message: "Shopify sync initiated",
-        synced: 0,
-        errors: []
-      });
-    } catch (error) {
-      log(`Shopify sync error: ${error}`, 'shopify-sync');
-      res.status(500).json({ error: "Failed to sync with Shopify" });
-    }
-  });
+
 
 
 
