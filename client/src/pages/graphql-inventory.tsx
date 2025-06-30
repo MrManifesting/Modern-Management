@@ -313,16 +313,15 @@ const GraphQLInventory = () => {
               COA
             </Button>
           )}
-          {item.links.mediaDownload && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(item.links.mediaDownload, '_blank')}
-            >
-              <Download className="w-4 h-4 mr-1" />
-              Media
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
+            onClick={() => window.open(`/api/items/${item.id}/media-pack.zip`, '_blank')}
+          >
+            <Download className="w-4 h-4 mr-1" />
+            Media Pack
+          </Button>
         </div>
 
         {item.weight && (
