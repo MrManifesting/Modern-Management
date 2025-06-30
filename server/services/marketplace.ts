@@ -33,7 +33,7 @@ export class MarketplaceService {
       if (marketplace.marketplaceTypeId === 1 || marketplaceName.includes('shopify')) {
         const credentials = marketplace.credentials as Record<string, string>;
         this.service = new ShopifyService(
-          credentials.shopName || credentials.storeUrl || marketplace.storeUrl || 'mrlisterscurations.myshopify.com', 
+          credentials.shopName || credentials.storeUrl || marketplace.storeUrl || process.env.SHOPIFY_STORE || 'gold-standard-cbd.myshopify.com', 
           credentials.apiKey || credentials.accessToken || marketplace.apiKey || process.env.SHOPIFY_ACCESS_TOKEN || '', 
           credentials.apiSecret || marketplace.apiSecret || process.env.SHOPIFY_SECRET || ''
         );
