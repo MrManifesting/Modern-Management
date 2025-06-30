@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **POUND VARIANTS EXCLUSIVE PRICE SHEETS WITH NEWEST-FIRST PRIORITIZATION DEPLOYED**
+  - Enhanced pound variants detection to capture ALL variations: 1pound, 1 pound, POUND, pound, Pound, one pound, One Pound, ONE POUND, 1LB variants
+  - Updated price sheets to focus exclusively on pound variants with newest items featured at top (newest-first sorting by ID)
+  - Enhanced pound variants menu displays 61 active items with NEW badges for top 10% newest products
+  - Both /api/generate-price-sheet and /api/pound-variants-menu now use comprehensive pound detection patterns
+  - Added visual NEW badges to newest pound variants in stylized Gold Standard CBD menu with professional styling
+  - Price sheets exclude all non-pound products ensuring focus only on wholesale pound inventory
+  - System automatically prioritizes newest pound variants at top of all price sheets and menus
 - June 30, 2025: **COMPREHENSIVE SHOPIFY IMPORT SYSTEM DEPLOYED - ALL 396 PRODUCTS WITH POUND VARIANTS IMPORTED**
   - Fixed critical storage method calls from incorrect `storage.addItem` to proper `storage.createItem` for database integration
   - Enhanced Shopify import system to fetch ALL available products (396 products detected) with comprehensive pagination support
