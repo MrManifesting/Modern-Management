@@ -404,6 +404,183 @@
   padding-bottom: var(--safe-bottom);
 }
 
+/* Voice Accessibility Styles */
+.voice-high-contrast {
+  --voice-primary: #ffffff;
+  --voice-secondary: #000000;
+  --voice-accent: #ffff00;
+  --voice-error: #ff0000;
+  --voice-success: #00ff00;
+}
+
+.voice-high-contrast .voice-interface {
+  background-color: var(--voice-secondary) !important;
+  color: var(--voice-primary) !important;
+  border: 2px solid var(--voice-accent) !important;
+}
+
+.voice-high-contrast .voice-button {
+  background-color: var(--voice-primary) !important;
+  color: var(--voice-secondary) !important;
+  border: 2px solid var(--voice-accent) !important;
+}
+
+.voice-high-contrast .voice-button:hover {
+  background-color: var(--voice-accent) !important;
+  color: var(--voice-secondary) !important;
+}
+
+.voice-large-text .voice-interface {
+  font-size: 1.25rem !important;
+}
+
+.voice-large-text .voice-command-text {
+  font-size: 1.5rem !important;
+  line-height: 1.6 !important;
+}
+
+.voice-large-text .voice-button {
+  font-size: 1.1rem !important;
+  padding: 0.75rem 1.5rem !important;
+}
+
+.voice-visual-feedback .voice-listening {
+  animation: voicePulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+}
+
+.voice-visual-feedback .voice-processing {
+  animation: voiceProcessing 2s linear infinite;
+}
+
+.voice-visual-feedback .voice-success {
+  animation: voiceSuccess 0.6s ease-out;
+}
+
+.voice-visual-feedback .voice-error {
+  animation: voiceError 0.6s ease-out;
+}
+
+@keyframes voicePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes voiceProcessing {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes voiceSuccess {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(34, 197, 94, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes voiceError {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Screen reader support */
+.sr-only-voice {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus indicators for voice commands */
+.voice-interface:focus-visible {
+  outline: 3px solid var(--voice-accent, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Voice command status indicators */
+.voice-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.voice-status-listening {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.voice-status-processing {
+  background-color: rgba(251, 191, 36, 0.1);
+  color: rgb(251, 191, 36);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.voice-status-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: rgb(34, 197, 94);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Voice button accessibility */
+.voice-command-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-command-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.voice-command-button:active::after {
+  width: 300px;
+  height: 300px;
+}
+
 .pl-safe-left {
   padding-left: var(--safe-left);
 }
