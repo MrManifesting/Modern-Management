@@ -1142,6 +1142,124 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Enhanced fuzzy matching Shopify view endpoint
+  app.get("/api/items/:id/shopify-view-enhanced", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken || !item.name) {
+        const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name || item.sku || '')}`;
+        return res.json({ 
+          success: true, 
+          url: fallbackUrl, 
+          found: false,
+          fallback: true,
+          item: {
+            id: item.id,
+            name: item.name,
+            sku: item.sku,
+            shopifyId: item.shopifyId
+          }
+        });
+      }
+
+      try {
+        // Get all products for comprehensive fuzzy matching
+        const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const products = searchData.products || [];
+          
+          // Use fuzzy matching to find best product match
+          const matchResult = findBestShopifyMatch(item.name!, products);
+          
+          if (matchResult.product) {
+            const directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
+            log(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
+            
+            res.json({
+              success: true,
+              url: directProductUrl,
+              found: true,
+              enhanced: true,
+              match: {
+                product: {
+                  id: matchResult.product.id,
+                  title: matchResult.product.title,
+                  handle: matchResult.product.handle
+                },
+                score: matchResult.score,
+                strain: matchResult.strain,
+                type: matchResult.type,
+                tier: matchResult.tier
+              },
+              item: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku,
+                shopifyId: item.shopifyId
+              }
+            });
+          } else {
+            // Fallback to search if no fuzzy match found
+            const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name.split('-')[0])}`;
+            res.json({
+              success: true,
+              url: fallbackUrl,
+              found: false,
+              enhanced: true,
+              fallback: true,
+              item: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku,
+                shopifyId: item.shopifyId
+              }
+            });
+          }
+        } else {
+          const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name.split('-')[0])}`;
+          res.json({ 
+            success: true, 
+            url: fallbackUrl, 
+            found: false,
+            enhanced: true,
+            fallback: true,
+            error: "Failed to fetch Shopify products"
+          });
+        }
+      } catch (error) {
+        log(`Enhanced Shopify view error: ${error}`, 'shopify');
+        const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name?.split('-')[0] || item.sku || '')}`;
+        res.json({ 
+          success: true, 
+          url: fallbackUrl, 
+          found: false,
+          enhanced: true,
+          fallback: true,
+          error: "Connection error"
+        });
+      }
+    } catch (error) {
+      log(`Enhanced Shopify view endpoint error: ${error}`, 'shopify');
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Test fuzzy matching endpoint
   app.get("/api/items/:id/shopify-fuzzy-match", async (req: Request, res: Response) => {
     try {
