@@ -45,6 +45,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         return "Sync Dashboard";
       case "/credentials":
         return "Credential Management";
+      case "/shopify-import":
+        return "Shopify Import";
       default:
         return "Gold-Standard_Management";
     }
