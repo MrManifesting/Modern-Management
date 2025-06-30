@@ -269,7 +269,7 @@ const GraphQLInventory = () => {
             {item.quantity} units
           </Badge>
           {item.shopifyData?.syncStatus === 'synced' && (
-            <Badge variant="success" className="bg-green-100 text-green-800">
+            <Badge variant="default" className="bg-green-100 text-green-800">
               Shopify Synced
             </Badge>
           )}

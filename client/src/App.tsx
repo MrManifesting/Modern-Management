@@ -97,6 +97,7 @@ function Router() {
             </React.Suspense>
           );
         }} />
+        <ProtectedRoute path="/inventory/graphql" component={() => <GraphQLInventory />} />
         <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
         <ProtectedRoute path="/inventory/activation" component={() => {
