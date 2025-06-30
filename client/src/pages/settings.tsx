@@ -252,6 +252,27 @@ const SettingsPage = () => {
                   </div>
                   <Switch defaultChecked />
                 </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 rounded-md bg-primary/10 text-primary">
+                      <Headphones className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Voice Accessibility Settings</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure voice recognition, speech feedback, and accessibility features
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/voice-accessibility-settings">
+                      Configure
+                    </Link>
+                  </Button>
+                </div>
               </div>
 
               <div className="mt-6 bg-muted p-4 rounded-lg">

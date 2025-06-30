@@ -59,6 +59,7 @@ export function VoiceCommand() {
   // Use voice accessibility settings
   const { 
     settings, 
+    updateSettings,
     speak, 
     playConfirmationSound, 
     getSpeechRecognitionConfig, 
@@ -787,7 +788,7 @@ export function VoiceCommand() {
               processTranscript();
               
               // In continuous mode, don't stop listening after command execution
-              if (continuousMode) {
+              if (settings.continuousListening) {
                 setIsListening(true);
                 setTranscript('');
                 setTimeout(() => {
@@ -811,7 +812,7 @@ export function VoiceCommand() {
           // Only completely turn off listening for fatal errors
           if (event.error !== 'no-speech') {
             setIsListening(false);
-          } else if (continuousMode) {
+          } else if (settings.continuousListening) {
             // In continuous mode, try to restart on non-fatal errors
             setTimeout(() => {
               if (isListening && recognitionRef.current) {
@@ -829,7 +830,7 @@ export function VoiceCommand() {
         recognitionRef.current.onend = () => {
           console.log("Speech recognition ended");
           // If we're still supposed to be listening, restart
-          if (isListening && continuousMode) {
+          if (isListening && settings.continuousListening) {
             try {
               setTimeout(() => {
                 if (isListening && recognitionRef.current) {
@@ -851,7 +852,7 @@ export function VoiceCommand() {
         
         toast({
           title: "Voice Commands Activated",
-          description: continuousMode ? 
+          description: settings.continuousListening ? 
             "Continuous listening mode: I'll keep listening for commands" : 
             "Say a command like 'add new item' or 'print barcode'",
         });
@@ -1034,7 +1035,7 @@ export function VoiceCommand() {
       <CardFooter className="pt-0 text-xs text-muted-foreground flex items-center justify-between">
         <span>
           {isListening ? 
-            (continuousMode ? "Continuous listening active" : "Listening for one command") : 
+            (settings.continuousListening ? "Continuous listening active" : "Listening for one command") : 
             "Click Start to begin"
           }
         </span>
