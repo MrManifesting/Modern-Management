@@ -134,6 +134,19 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
   } else if (item.image_url) {
     thumbnailUrl = item.image_url;
     imageUrls.push(item.image_url);
+  } else {
+    // Generate cannabis strain placeholder based on product name
+    const strainName = item.name?.toLowerCase() || '';
+    if (strainName.includes('flower') || strainName.includes('thca') || strainName.includes('cannabis')) {
+      // Use a cannabis leaf SVG placeholder
+      thumbnailUrl = `data:image/svg+xml;base64,${Buffer.from(`
+        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#22c55e"/>
+          <path d="M32 8c-4 0-8 4-8 8s4 8 8 8 8-4 8-8-4-8-8-8zm0 20c-8 0-16 4-16 12s8 12 16 12 16-4 16-12-8-12-16-12z" fill="white"/>
+          <text x="32" y="52" text-anchor="middle" fill="white" font-size="8" font-family="Arial">THCa</text>
+        </svg>
+      `).toString('base64')}`;
+    }
   }
 
   // Ensure URLs are properly formatted
@@ -144,8 +157,8 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
     return url;
   }).filter(Boolean);
 
-  // Format thumbnail URL properly
-  if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+  // Format thumbnail URL properly (skip formatting for data URLs and HTTP URLs)
+  if (thumbnailUrl && !thumbnailUrl.startsWith('http') && !thumbnailUrl.startsWith('data:')) {
     thumbnailUrl = `/uploads/${thumbnailUrl}`;
   }
 
@@ -261,9 +274,20 @@ export const resolvers = {
 
         // Process and combine data
         const processedItems = localItems.map((item: any) => {
-          // Find matching Shopify product
-          const shopifyProduct = shopifyMap.get(item.name?.toLowerCase()) || 
-                                shopifyMap.get(item.sku?.toLowerCase());
+          // Enhanced Shopify product matching - try multiple strategies
+          let shopifyProduct = shopifyMap.get(item.name?.toLowerCase()) || 
+                              shopifyMap.get(item.sku?.toLowerCase());
+          
+          // Try partial name matching if no exact match
+          if (!shopifyProduct && item.name) {
+            const itemNameWords = item.name.toLowerCase().split(/[-\s]+/);
+            for (const [shopifyName, product] of shopifyMap.entries()) {
+              if (itemNameWords.some(word => word.length > 3 && shopifyName.includes(word))) {
+                shopifyProduct = product;
+                break;
+              }
+            }
+          }
           
           // Get live inventory for this product
           const variant = shopifyProduct?.variants?.[0];
