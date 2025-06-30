@@ -1005,36 +1005,72 @@ export function registerRoutes(app: any, storage: any) {
     return match ? parseFloat(match[1]) : null;
   }
 
-  // Shopify inventory sync endpoint
+  // Enhanced Shopify inventory sync endpoint
   app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
     try {
       const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
       const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
       if (!accessToken) {
-        return res.status(400).json({ error: "Shopify access token not configured" });
+        return res.status(400).json({ 
+          success: false, 
+          error: "Shopify access token not configured" 
+        });
       }
 
-      // Get all Shopify products
-      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
+      log(`Starting comprehensive Shopify import from ${shopifyDomain}`, 'shopify-sync');
+
+      // Get ALL Shopify products with pagination
+      let allProducts: any[] = [];
+      let hasNextPage = true;
+      let pageInfo: string | null = null;
+
+      while (hasNextPage) {
+        const url = pageInfo 
+          ? `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&page_info=${pageInfo}&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`
+          : `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`;
+
+        const response = await fetch(url, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          log(`Shopify API error: ${response.status}`, 'shopify-sync');
+          return res.status(500).json({ 
+            success: false, 
+            error: "Failed to fetch Shopify products" 
+          });
         }
-      });
 
-      if (!response.ok) {
-        log(`Shopify API error: ${response.status}`, 'shopify');
-        return res.status(500).json({ error: "Failed to fetch Shopify products" });
+        const data = await response.json();
+        const products = data.products || [];
+        allProducts = allProducts.concat(products);
+
+        // Check for next page
+        const linkHeader = response.headers.get('Link');
+        const nextPageMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
+        
+        if (nextPageMatch) {
+          const nextUrl = new URL(nextPageMatch[1]);
+          pageInfo = nextUrl.searchParams.get('page_info');
+        } else {
+          hasNextPage = false;
+        }
+
+        log(`Fetched ${products.length} products (total: ${allProducts.length})`, 'shopify-sync');
       }
 
-      const data = await response.json();
-      const products = data.products || [];
+      log(`Total Shopify products fetched: ${allProducts.length}`, 'shopify-sync');
+
       let importedCount = 0;
       let updatedCount = 0;
+      let skippedCount = 0;
 
       // Process each Shopify product
-      for (const product of products) {
+      for (const product of allProducts) {
         if (product.variants && product.variants.length > 0) {
           for (const variant of product.variants) {
             // Check if item already exists by SKU or Shopify ID
@@ -1078,16 +1114,22 @@ export function registerRoutes(app: any, storage: any) {
         }
       }
 
-      log(`Shopify sync completed: ${importedCount} imported, ${updatedCount} updated`, 'shopify');
+      log(`Shopify sync completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, 'shopify');
       res.json({
         success: true,
+        message: `Successfully synced ${allProducts.length} Shopify products`,
         imported: importedCount,
         updated: updatedCount,
-        totalProducts: products.length
+        skipped: skippedCount,
+        totalProducts: allProducts.length
       });
     } catch (error) {
       log(`Shopify sync error: ${error}`, 'shopify');
-      res.status(500).json({ error: "Failed to sync Shopify inventory" });
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to sync Shopify inventory",
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
