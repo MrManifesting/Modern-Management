@@ -21,7 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, apiRequestSimple } from '@/lib/queryClient';
 
 // Define the types of commands we support
 type CommandType = 'add' | 'print' | 'transfer' | 'search' | 'navigate' | 'update' | 'delete' | 'count' | 'sync' | 'status';
@@ -52,7 +52,19 @@ export function VoiceCommand() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [voiceFeedback, setVoiceFeedback] = useState(true);
   const recognitionRef = useRef<any>(null);
+
+  // Add voice feedback function
+  const speakFeedback = useCallback((text: string) => {
+    if (voiceFeedback && 'speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+  }, [voiceFeedback]);
 
   // Check browser support
   const isBrowserSupported = useCallback(() => {
@@ -400,6 +412,268 @@ export function VoiceCommand() {
           });
         }
       }
+    },
+    {
+      type: 'update',
+      keywords: ['update quantity', 'set quantity', 'change quantity', 'adjust inventory'],
+      description: 'Update inventory quantities for items',
+      examples: ['update quantity of blue dream to 50', 'set quantity 25 for gorilla glue', 'adjust inventory blueberry muffin to 100'],
+      extractArgs: (transcript) => {
+        const patterns = [
+          /update quantity(?:\s+of)?\s+(.+?)\s+to\s+(\d+)/i,
+          /set quantity\s+(\d+)\s+for\s+(.+)/i,
+          /adjust inventory\s+(.+?)\s+to\s+(\d+)/i,
+          /change quantity\s+(.+?)\s+to\s+(\d+)/i
+        ];
+        
+        for (const pattern of patterns) {
+          const match = transcript.match(pattern);
+          if (match) {
+            if (pattern.source.includes('set quantity')) {
+              return `${match[2]}|${match[1]}`; // quantity|item
+            } else {
+              return `${match[1]}|${match[2]}`; // item|quantity
+            }
+          }
+        }
+        return '';
+      },
+      action: async (transcript, args) => {
+        const [item, quantity] = args.split('|');
+        if (!item || !quantity) {
+          toast({
+            title: "Invalid command",
+            description: "Please specify both item name and quantity",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        try {
+          // Search for the item first
+          const items = await apiRequest('/api/items');
+          const matchingItems = items.filter((i: any) => 
+            i.name?.toLowerCase().includes(item.toLowerCase())
+          );
+
+          if (matchingItems.length === 0) {
+            toast({
+              title: "Item not found",
+              description: `Could not find item "${item}"`,
+              variant: "destructive"
+            });
+            return;
+          }
+
+          // Update the first matching item
+          const targetItem = items[0];
+          await apiRequest(`/api/items/${targetItem.id}`, 'PUT', {
+            ...targetItem,
+            quantity: parseInt(quantity)
+          });
+
+          toast({
+            title: "Quantity updated",
+            description: `Set ${targetItem.name} quantity to ${quantity}`,
+          });
+        } catch (error) {
+          toast({
+            title: "Update failed",
+            description: "Failed to update item quantity",
+            variant: "destructive"
+          });
+        }
+      }
+    },
+    {
+      type: 'count',
+      keywords: ['count items', 'how many', 'total items', 'inventory count'],
+      description: 'Get inventory counts and statistics',
+      examples: ['count items', 'how many blue dream items', 'total items in stock', 'inventory count for flower'],
+      extractArgs: (transcript) => {
+        // Extract search term if specific item mentioned
+        const patterns = [
+          /how many\s+(.+?)\s+items?/i,
+          /inventory count\s+for\s+(.+)/i,
+          /count\s+(.+?)\s+items?/i
+        ];
+        
+        for (const pattern of patterns) {
+          const match = transcript.match(pattern);
+          if (match) {
+            return match[1].trim();
+          }
+        }
+        return '';
+      },
+      action: async (transcript, args) => {
+        try {
+          const response = await apiRequest('/api/stats');
+          const stats = response.data;
+          
+          if (args) {
+            // Count specific items
+            const itemsResponse = await apiRequest('/api/items');
+            const matchingItems = itemsResponse.filter((item: any) =>
+              item.name?.toLowerCase().includes(args.toLowerCase()) ||
+              item.category?.toLowerCase().includes(args.toLowerCase())
+            );
+            
+            const totalQuantity = matchingItems.reduce((sum: number, item: any) => 
+              sum + (item.quantity || 0), 0
+            );
+            
+            toast({
+              title: `${args} inventory count`,
+              description: `Found ${matchingItems.length} items with ${totalQuantity} total units`,
+            });
+          } else {
+            // General inventory count
+            toast({
+              title: "Inventory summary",
+              description: `Total: ${stats.totalItems} items, ${stats.activeItems} active, ${stats.totalQuantity} units in stock`,
+            });
+          }
+        } catch (error) {
+          toast({
+            title: "Count failed",
+            description: "Failed to retrieve inventory count",
+            variant: "destructive"
+          });
+        }
+      }
+    },
+    {
+      type: 'sync',
+      keywords: ['sync shopify', 'sync inventory', 'update from shopify', 'synchronize'],
+      description: 'Synchronize inventory with Shopify store',
+      examples: ['sync shopify', 'sync inventory', 'update from shopify', 'synchronize products'],
+      extractArgs: (transcript) => {
+        if (transcript.toLowerCase().includes('shopify')) return 'shopify';
+        return 'inventory';
+      },
+      action: async (transcript, args) => {
+        try {
+          toast({
+            title: "Starting synchronization",
+            description: "Syncing inventory with Shopify store...",
+          });
+
+          const response = await apiRequest('/api/shopify/sync-inventory', 'POST');
+          
+          if (response.success) {
+            toast({
+              title: "Sync completed",
+              description: `Successfully synchronized ${response.syncedItems || 0} items`,
+            });
+          } else {
+            throw new Error(response.error || 'Sync failed');
+          }
+        } catch (error) {
+          toast({
+            title: "Sync failed",
+            description: "Failed to synchronize with Shopify",
+            variant: "destructive"
+          });
+        }
+      }
+    },
+    {
+      type: 'status',
+      keywords: ['system status', 'health check', 'status report', 'check system'],
+      description: 'Get system health and status information',
+      examples: ['system status', 'health check', 'status report', 'check system health'],
+      extractArgs: (transcript) => '',
+      action: async (transcript, args) => {
+        try {
+          const response = await apiRequest('/api/system/health');
+          
+          if (response.status === 'healthy') {
+            toast({
+              title: "System status: Healthy",
+              description: `Database: ${response.database}, Shopify: ${response.shopify}, Services: ${response.services}`,
+            });
+          } else {
+            toast({
+              title: "System status: Issues detected",
+              description: "Some services may be experiencing problems",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          toast({
+            title: "Status check failed",
+            description: "Unable to retrieve system status",
+            variant: "destructive"
+          });
+        }
+      }
+    },
+    {
+      type: 'delete',
+      keywords: ['delete item', 'remove item', 'archive item'],
+      description: 'Delete or archive inventory items',
+      examples: ['delete item blue dream', 'remove item gorilla glue', 'archive item old product'],
+      extractArgs: (transcript) => {
+        return extractArgsAfterKeyword(transcript, [
+          'delete item', 'remove item', 'archive item'
+        ]);
+      },
+      action: async (transcript, args) => {
+        if (!args) {
+          toast({
+            title: "Invalid command",
+            description: "Please specify which item to delete",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        try {
+          // Search for the item first
+          const response = await apiRequest('/api/items');
+          const items = response.filter((i: any) => 
+            i.name?.toLowerCase().includes(args.toLowerCase())
+          );
+
+          if (items.length === 0) {
+            toast({
+              title: "Item not found",
+              description: `Could not find item "${args}"`,
+              variant: "destructive"
+            });
+            return;
+          }
+
+          if (items.length > 1) {
+            toast({
+              title: "Multiple items found",
+              description: `Found ${items.length} items matching "${args}". Please be more specific.`,
+              variant: "destructive"
+            });
+            navigate(`/inventory?search=${encodeURIComponent(args)}`);
+            return;
+          }
+
+          // Archive the item instead of deleting (safer)
+          const targetItem = items[0];
+          await apiRequest(`/api/items/${targetItem.id}`, 'PUT', {
+            ...targetItem,
+            status: 'archived'
+          });
+
+          toast({
+            title: "Item archived",
+            description: `Successfully archived "${targetItem.name}"`,
+          });
+        } catch (error) {
+          toast({
+            title: "Archive failed",
+            description: "Failed to archive item",
+            variant: "destructive"
+          });
+        }
+      }
     }
   ];
 
@@ -452,8 +726,7 @@ export function VoiceCommand() {
     setTranscript('');
   }, []);
 
-  // Toggle continuous listening mode
-  const [continuousMode, setContinuousMode] = useState<boolean>(false);
+  // Toggle continuous listening mode functionality (already declared above)
   
   // Start/stop listening
   const toggleListening = () => {
