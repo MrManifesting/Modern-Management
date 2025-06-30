@@ -1142,5 +1142,93 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Test fuzzy matching endpoint
+  app.get("/api/items/:id/shopify-fuzzy-match", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken || !item.name) {
+        return res.json({ 
+          success: false, 
+          error: "Missing configuration or item name" 
+        });
+      }
+
+      try {
+        // Get all products with full details including handle and variants
+        const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const products = searchData.products || [];
+          
+          // Use fuzzy matching to find best product match
+          const matchResult = findBestShopifyMatch(item.name!, products);
+          
+          if (matchResult.product) {
+            const directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
+            log(`Fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score}, Handle: ${matchResult.product.handle})`, 'shopify-fuzzy');
+            
+            res.json({
+              success: true,
+              url: directProductUrl,
+              found: true,
+              match: {
+                product: {
+                  id: matchResult.product.id,
+                  title: matchResult.product.title,
+                  handle: matchResult.product.handle
+                },
+                score: matchResult.score,
+                strain: matchResult.strain,
+                type: matchResult.type,
+                tier: matchResult.tier
+              },
+              item: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku,
+                shopifyId: item.shopifyId
+              }
+            });
+          } else {
+            res.json({
+              success: true,
+              found: false,
+              message: "No fuzzy match found above threshold",
+              item: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku,
+                shopifyId: item.shopifyId
+              }
+            });
+          }
+        } else {
+          res.status(500).json({ error: "Failed to fetch Shopify products" });
+        }
+      } catch (error) {
+        log(`Fuzzy match error: ${error}`, 'shopify-fuzzy');
+        res.status(500).json({ error: "Failed to perform fuzzy match" });
+      }
+    } catch (error) {
+      log(`Fuzzy match endpoint error: ${error}`, 'shopify-fuzzy');
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return app;
 }
