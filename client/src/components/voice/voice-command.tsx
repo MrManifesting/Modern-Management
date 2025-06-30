@@ -451,7 +451,7 @@ export function VoiceCommand() {
 
         try {
           // Search for the item first
-          const items = await apiRequest('/api/items');
+          const items = await apiRequestSimple('/api/items');
           const matchingItems = items.filter((i: any) => 
             i.name?.toLowerCase().includes(item.toLowerCase())
           );
@@ -466,10 +466,14 @@ export function VoiceCommand() {
           }
 
           // Update the first matching item
-          const targetItem = items[0];
-          await apiRequest(`/api/items/${targetItem.id}`, 'PUT', {
-            ...targetItem,
-            quantity: parseInt(quantity)
+          const targetItem = matchingItems[0];
+          await apiRequestSimple(`/api/items/${targetItem.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...targetItem,
+              quantity: parseInt(quantity)
+            })
           });
 
           toast({
@@ -508,13 +512,13 @@ export function VoiceCommand() {
       },
       action: async (transcript, args) => {
         try {
-          const response = await apiRequest('/api/stats');
-          const stats = response.data;
+          const statsResponse = await apiRequestSimple('/api/stats');
+          const stats = statsResponse.data;
           
           if (args) {
             // Count specific items
-            const itemsResponse = await apiRequest('/api/items');
-            const matchingItems = itemsResponse.filter((item: any) =>
+            const items = await apiRequestSimple('/api/items');
+            const matchingItems = items.filter((item: any) =>
               item.name?.toLowerCase().includes(args.toLowerCase()) ||
               item.category?.toLowerCase().includes(args.toLowerCase())
             );
@@ -559,7 +563,10 @@ export function VoiceCommand() {
             description: "Syncing inventory with Shopify store...",
           });
 
-          const response = await apiRequest('/api/shopify/sync-inventory', 'POST');
+          const response = await apiRequestSimple('/api/shopify/sync-inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
           
           if (response.success) {
             toast({
@@ -586,7 +593,7 @@ export function VoiceCommand() {
       extractArgs: (transcript) => '',
       action: async (transcript, args) => {
         try {
-          const response = await apiRequest('/api/system/health');
+          const response = await apiRequestSimple('/api/system/health');
           
           if (response.status === 'healthy') {
             toast({
@@ -631,12 +638,12 @@ export function VoiceCommand() {
 
         try {
           // Search for the item first
-          const response = await apiRequest('/api/items');
-          const items = response.filter((i: any) => 
+          const items = await apiRequestSimple('/api/items');
+          const matchingItems = items.filter((i: any) => 
             i.name?.toLowerCase().includes(args.toLowerCase())
           );
 
-          if (items.length === 0) {
+          if (matchingItems.length === 0) {
             toast({
               title: "Item not found",
               description: `Could not find item "${args}"`,
@@ -645,10 +652,10 @@ export function VoiceCommand() {
             return;
           }
 
-          if (items.length > 1) {
+          if (matchingItems.length > 1) {
             toast({
               title: "Multiple items found",
-              description: `Found ${items.length} items matching "${args}". Please be more specific.`,
+              description: `Found ${matchingItems.length} items matching "${args}". Please be more specific.`,
               variant: "destructive"
             });
             navigate(`/inventory?search=${encodeURIComponent(args)}`);
@@ -656,10 +663,14 @@ export function VoiceCommand() {
           }
 
           // Archive the item instead of deleting (safer)
-          const targetItem = items[0];
-          await apiRequest(`/api/items/${targetItem.id}`, 'PUT', {
-            ...targetItem,
-            status: 'archived'
+          const targetItem = matchingItems[0];
+          await apiRequestSimple(`/api/items/${targetItem.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...targetItem,
+              status: 'archived'
+            })
           });
 
           toast({
