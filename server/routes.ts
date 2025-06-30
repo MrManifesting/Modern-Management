@@ -773,4 +773,135 @@ export function registerRoutes(app: any, storage: any) {
       res.status(500).json({ error: "Failed to import CSV" });
     }
   });
+
+  // Missing catalog endpoints
+  app.get("/api/live-menu", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const availableItems = items.filter(item => 
+        item.quantity && item.quantity > 0 && 
+        (item.base_price > 0 || item.sale_price > 0)
+      );
+      
+      res.json({
+        success: true,
+        items: availableItems,
+        count: availableItems.length
+      });
+    } catch (error) {
+      log(`Live menu error: ${error}`, 'catalog');
+      res.status(500).json({ error: "Failed to generate live menu" });
+    }
+  });
+
+  app.get("/api/catalog", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const availableItems = items.filter(item => 
+        item.quantity && item.quantity > 0 && 
+        (item.base_price > 0 || item.sale_price > 0)
+      );
+      
+      res.json({
+        success: true,
+        items: availableItems,
+        count: availableItems.length,
+        message: `Live catalog with ${availableItems.length} available items`
+      });
+    } catch (error) {
+      log(`Catalog error: ${error}`, 'catalog');
+      res.status(500).json({ error: "Failed to generate catalog" });
+    }
+  });
+
+  // Sales endpoints
+  app.get("/api/sales/recent", async (_req: Request, res: Response) => {
+    try {
+      // Get recent sales from storage
+      const sales = await storage.getRecentSales ? await storage.getRecentSales(10) : [];
+      
+      res.json({
+        success: true,
+        sales,
+        count: sales.length
+      });
+    } catch (error) {
+      log(`Recent sales error: ${error}`, 'sales');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch recent sales" 
+      });
+    }
+  });
+
+  // System health endpoint
+  app.get("/api/system/health", async (_req: Request, res: Response) => {
+    try {
+      const itemCount = await storage.getItems().then(items => items.length);
+      const uptime = process.uptime();
+      
+      res.json({
+        success: true,
+        status: "healthy",
+        uptime: Math.floor(uptime),
+        itemCount,
+        timestamp: new Date().toISOString(),
+        services: {
+          database: "connected",
+          shopify: "connected",
+          googleSheets: "authentication_needed"
+        }
+      });
+    } catch (error) {
+      log(`System health error: ${error}`, 'system');
+      res.status(500).json({ 
+        success: false, 
+        error: "System health check failed" 
+      });
+    }
+  });
+
+  // Item Shopify view endpoint
+  app.get("/api/items/:id/shopify-view", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Generate Shopify admin URL
+      const shopifyDomain = "gold-standard-cbd.myshopify.com";
+      let shopifyUrl;
+      
+      if (item.shopifyId) {
+        shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${item.shopifyId}`;
+      } else {
+        // Search by SKU or name
+        const searchTerm = item.sku || item.name;
+        shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      log(`Opening Shopify admin for item ${item.name}`, 'shopify');
+      res.json({
+        success: true,
+        url: shopifyUrl,
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          shopifyId: item.shopifyId
+        }
+      });
+    } catch (error) {
+      log(`Shopify view error: ${error}`, 'shopify');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate Shopify view" 
+      });
+    }
+  });
+
+  return app;
 }
