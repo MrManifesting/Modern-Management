@@ -1262,22 +1262,40 @@ export function registerRoutes(app: any, storage: any) {
           return false;
         }
         
-        // Check if item contains pound indicators
-        const nameMatch = item.name?.toLowerCase().includes('pound') || 
-                         item.name?.toLowerCase().includes('1 lb') ||
-                         item.name?.toLowerCase().includes('1lb') ||
-                         item.name?.toLowerCase().includes('one pound');
+        // Check if item contains pound indicators (comprehensive matching)
+        const itemName = item.name?.toLowerCase() || '';
+        const itemWeight = item.weight?.toString().toLowerCase() || '';
         
-        const weightMatch = item.weight?.toString().toLowerCase().includes('pound') ||
-                           item.weight?.toString().includes('1 lb') ||
-                           item.weight?.toString().includes('448') || // grams in a pound
-                           item.weight?.toString().includes('16'); // ounces in a pound
+        const nameMatch = itemName.includes('pound') || 
+                         itemName.includes('1 lb') ||
+                         itemName.includes('1lb') ||
+                         itemName.includes('one pound') ||
+                         itemName.includes('1pound') ||
+                         itemName.includes('1 pound') ||
+                         itemName.includes('onepound') ||
+                         itemName.match(/\b1\s*pound\b/) ||
+                         itemName.match(/\bone\s*pound\b/) ||
+                         itemName.match(/\bpound\b/);
+        
+        const weightMatch = itemWeight.includes('pound') ||
+                           itemWeight.includes('1 lb') ||
+                           itemWeight.includes('1lb') ||
+                           itemWeight.includes('448') || // grams in a pound
+                           itemWeight.includes('16') || // ounces in a pound
+                           itemWeight.match(/\b1\s*pound\b/);
         
         return nameMatch || weightMatch;
       });
       
-      // Sort by highest quantity first
-      poundVariants.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+      // Sort by newest first (ID descending), then by highest quantity
+      poundVariants.sort((a, b) => {
+        // First priority: newest items (highest ID)
+        if (a.id !== b.id) {
+          return (b.id || 0) - (a.id || 0);
+        }
+        // Second priority: highest quantity
+        return (b.quantity || 0) - (a.quantity || 0);
+      });
       
       // Generate stylized HTML menu
       const menuHtml = `
@@ -1323,6 +1341,19 @@ export function registerRoutes(app: any, storage: any) {
               font-size: 1.2rem;
               color: #b8b8b8;
               font-style: italic;
+            }
+            .new-badge {
+              background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+              color: white;
+              font-size: 0.7rem;
+              font-weight: bold;
+              padding: 2px 8px;
+              border-radius: 12px;
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
             }
             .menu-grid {
               display: grid;
@@ -1421,7 +1452,7 @@ export function registerRoutes(app: any, storage: any) {
           <div class="container">
             <div class="header">
               <h1 class="title">Gold Standard CBD</h1>
-              <p class="subtitle">Premium Pound Variants - Wholesale Menu</p>
+              <p class="subtitle">Premium Pound Variants - Newest Items First</p>
             </div>
             
             <div class="menu-grid">
