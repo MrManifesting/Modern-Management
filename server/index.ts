@@ -3,6 +3,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage.js";
+import { createGraphQLServer, getGraphQLMiddleware } from './graphql/server.js';
+import cors from 'cors';
 
 const app = express();
 app.use(express.json());
@@ -111,6 +113,22 @@ async function startServer() {
 
     // Storage is automatically initialized via database connection
     log('Using existing database connection', 'startup');
+
+    // Initialize GraphQL server
+    try {
+      const graphqlServer = await createGraphQLServer();
+      
+      // Add GraphQL middleware with CORS
+      app.use('/graphql', cors({
+        origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
+        credentials: true
+      }), getGraphQLMiddleware(graphqlServer));
+      
+      log('GraphQL server initialized at /graphql', 'startup');
+    } catch (graphqlError) {
+      log(`GraphQL setup failed: ${graphqlError}`, 'startup');
+      // Continue without GraphQL if it fails
+    }
 
     // Register all routes with error handling
     try {

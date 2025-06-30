@@ -48,6 +48,7 @@ import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
 import CredentialsManagement from "@/pages/credentials-management";
+import GraphQLInventory from "@/pages/graphql-inventory";
 import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
