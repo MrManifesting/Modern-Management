@@ -125,14 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- June 30, 2025: **POUND VARIANTS EXCLUSIVE PRICE SHEETS WITH NEWEST-FIRST PRIORITIZATION DEPLOYED**
-  - Enhanced pound variants detection to capture ALL variations: 1pound, 1 pound, POUND, pound, Pound, one pound, One Pound, ONE POUND, 1LB variants
-  - Updated price sheets to focus exclusively on pound variants with newest items featured at top (newest-first sorting by ID)
-  - Enhanced pound variants menu displays 61 active items with NEW badges for top 10% newest products
-  - Both /api/generate-price-sheet and /api/pound-variants-menu now use comprehensive pound detection patterns
-  - Added visual NEW badges to newest pound variants in stylized Gold Standard CBD menu with professional styling
-  - Price sheets exclude all non-pound products ensuring focus only on wholesale pound inventory
-  - System automatically prioritizes newest pound variants at top of all price sheets and menus
+- June 30, 2025: **ENHANCED PRICE SHEETS WITH FULL E-COMMERCE FUNCTIONALITY - FULL POUND VARIANTS ONLY**
+  - Excluded all 1/2 and 1/4 pound variants as requested - price sheets now show ONLY full pound products
+  - Enhanced strain name extraction to display clean names: "Gush Mintz" instead of "gush-mintz-thca-smalls-classic-reserve"
+  - Added current stock levels with real-time availability indicators (✅ Available: X units in stock)
+  - Implemented BUY NOW buttons linking directly to Gold Standard CBD product pages for immediate ordering
+  - Added COA (Certificate of Analysis) links for each strain: https://gold-standard-cbd.com/coa/{strain-slug}
+  - Included Media Download links for product images and marketing content: https://gold-standard-cbd.com/media/download/{sku}
+  - Price sheets now display current pricing from base_price, sale_price, or cost_price fields with fallback to "Contact for Price"
+  - Both price sheet (/api/generate-price-sheet) and stylized menu (/api/pound-variants-menu) feature complete e-commerce workflow
+  - Menu displays 32 active full pound variants with professional styling and action buttons for ordering, COAs, and media
 - June 30, 2025: **COMPREHENSIVE SHOPIFY IMPORT SYSTEM DEPLOYED - ALL 396 PRODUCTS WITH POUND VARIANTS IMPORTED**
   - Fixed critical storage method calls from incorrect `storage.addItem` to proper `storage.createItem` for database integration
   - Enhanced Shopify import system to fetch ALL available products (396 products detected) with comprehensive pagination support
