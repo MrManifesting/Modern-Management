@@ -24,6 +24,7 @@ import ShopifySyncPage from "@/pages/shopify-sync";
 import ShopifyReportsPage from "@/pages/shopify-reports";
 import ShopifyImportPage from "@/pages/shopify-import";
 import AccessibilityGuide from "@/pages/accessibility-guide";
+import VoiceAccessibilitySettingsPage from "@/pages/voice-accessibility-settings";
 import ProductsInventoryPage from "@/pages/products-inventory";
 import SpecialtyProductsPage from "@/pages/specialty-products";
 import MenuSyncPage from "@/pages/menu-sync";
@@ -125,6 +126,7 @@ function Router() {
         <ProtectedRoute path="/shopify-reports" component={() => <ShopifyReportsPage />} />
         <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
         <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
+        <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
         <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
