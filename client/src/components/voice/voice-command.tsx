@@ -24,7 +24,7 @@ import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 
 // Define the types of commands we support
-type CommandType = 'add' | 'print' | 'transfer' | 'search' | 'navigate';
+type CommandType = 'add' | 'print' | 'transfer' | 'search' | 'navigate' | 'update' | 'delete' | 'count' | 'sync' | 'status';
 
 interface Command {
   type: CommandType;
