@@ -94,7 +94,7 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
   const imageUrls: string[] = [];
   let thumbnailUrl = null;
 
-  // Process local images
+  // Process local images - check multiple image fields
   if (item.images && typeof item.images === 'string') {
     try {
       const localImages = JSON.parse(item.images);
@@ -107,6 +107,17 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
       if (item.images) imageUrls.push(item.images);
     }
   }
+  
+  // Check additional image fields
+  if (item.image_url) {
+    imageUrls.push(item.image_url);
+  }
+  if (item.imageUrl) {
+    imageUrls.push(item.imageUrl);
+  }
+  if (item.thumbnail_url) {
+    imageUrls.push(item.thumbnail_url);
+  }
 
   // Process Shopify images
   if (shopifyProduct?.images) {
@@ -115,8 +126,10 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
     });
   }
 
-  // Set thumbnail
-  if (imageUrls.length > 0) {
+  // Set thumbnail - prioritize Shopify images first, then local images
+  if (shopifyProduct?.images?.[0]?.src) {
+    thumbnailUrl = shopifyProduct.images[0].src;
+  } else if (imageUrls.length > 0) {
     thumbnailUrl = imageUrls[0];
   } else if (item.image_url) {
     thumbnailUrl = item.image_url;
@@ -131,10 +144,15 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
     return url;
   }).filter(Boolean);
 
+  // Format thumbnail URL properly
+  if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+    thumbnailUrl = `/uploads/${thumbnailUrl}`;
+  }
+
   return {
     thumbnailUrl,
     imageUrls: processedUrls,
-    hasImages: processedUrls.length > 0,
+    hasImages: processedUrls.length > 0 || !!thumbnailUrl,
     imageCount: processedUrls.length,
     primaryImage: processedUrls.length > 0 ? {
       url: processedUrls[0],
