@@ -991,6 +991,137 @@ export function registerRoutes(app: any, storage: any) {
     return match ? parseFloat(match[1]) : null;
   }
 
+  // Comprehensive Shopify import endpoint
+  app.post("/api/shopify/import-all", async (_req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Shopify access token not configured" 
+        });
+      }
+
+      log(`Starting comprehensive Shopify import from ${shopifyDomain}`, 'shopify-import');
+
+      // Get ALL Shopify products with pagination
+      let allProducts: any[] = [];
+      let hasNextPage = true;
+      let pageInfo: string | null = null;
+
+      while (hasNextPage) {
+        const url = pageInfo 
+          ? `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&page_info=${pageInfo}&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`
+          : `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`;
+
+        const response = await fetch(url, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          log(`Shopify API error: ${response.status}`, 'shopify-import');
+          return res.status(500).json({ 
+            success: false, 
+            error: "Failed to fetch Shopify products" 
+          });
+        }
+
+        const data = await response.json();
+        const products = data.products || [];
+        allProducts = allProducts.concat(products);
+
+        // Check for next page
+        const linkHeader = response.headers.get('Link');
+        const nextPageMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
+        
+        if (nextPageMatch) {
+          const nextUrl = new URL(nextPageMatch[1]);
+          pageInfo = nextUrl.searchParams.get('page_info');
+        } else {
+          hasNextPage = false;
+        }
+
+        log(`Fetched ${products.length} products (total: ${allProducts.length})`, 'shopify-import');
+      }
+
+      log(`Total Shopify products fetched: ${allProducts.length}`, 'shopify-import');
+
+      let importedCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      // Process each Shopify product
+      for (const product of allProducts) {
+        if (product.variants && product.variants.length > 0) {
+          for (const variant of product.variants) {
+            // Check if item already exists by SKU or Shopify ID
+            const items = await storage.getItems();
+            const existingItem = items.find(item => 
+              item.sku === variant.sku || 
+              item.shopifyId === product.id ||
+              item.name?.toLowerCase().includes(product.title.toLowerCase())
+            );
+
+            const itemData = {
+              name: variant.title || product.title,
+              sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
+              quantity: variant.inventory_quantity || 0,
+              base_price: parseFloat(variant.price) || 0,
+              cost_price: parseFloat(variant.compare_at_price) || 0,
+              category: product.product_type || 'Shopify Import',
+              brand: product.vendor || 'Gold Standard',
+              status: product.status === 'active' && variant.inventory_quantity > 0 ? 'active' : 'draft',
+              shopifyId: product.id,
+              shopifyVariantId: variant.id,
+              weight: variant.weight || null,
+              images: product.images?.map((img: any) => img.src) || [],
+              thca_percentage: extractTHCaPercentage(product.title),
+              description: product.body_html || '',
+              tags: product.tags || ''
+            };
+
+            if (existingItem) {
+              // Update existing item
+              await storage.updateItem(existingItem.id, itemData);
+              updatedCount++;
+              log(`Updated item: ${itemData.name}`, 'shopify-import');
+            } else {
+              // Create new item
+              await storage.addItem(itemData);
+              importedCount++;
+              log(`Imported new item: ${itemData.name}`, 'shopify-import');
+            }
+          }
+        } else {
+          skippedCount++;
+          log(`Skipped product without variants: ${product.title}`, 'shopify-import');
+        }
+      }
+
+      log(`Shopify import completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, 'shopify-import');
+      res.json({
+        success: true,
+        message: `Successfully imported ${allProducts.length} Shopify products`,
+        imported: importedCount,
+        updated: updatedCount,
+        skipped: skippedCount,
+        totalProducts: allProducts.length
+      });
+    } catch (error) {
+      log(`Shopify import error: ${error}`, 'shopify-import');
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to import Shopify inventory",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Enhanced Shopify inventory sync endpoint
   app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
     try {
