@@ -960,15 +960,79 @@ export function registerRoutes(app: any, storage: any) {
             <h1>Gold Standard CBD - Pound Variants Price Sheet</h1>
             <p>Premium Pound Variants - Newest Items First</p>
           </div>
-          ${availableItems.map((item: any) => `
+          ${availableItems.map((item: any) => {
+            // Extract clean strain name
+            const extractStrainName = (name) => {
+              if (!name) return 'Premium Strain';
+              
+              let strainName = name
+                .replace(/-thca.*$/i, '') // Remove -thca and everything after
+                .replace(/-flower.*$/i, '') // Remove -flower and everything after
+                .replace(/-smalls.*$/i, '') // Remove -smalls and everything after
+                .replace(/-classic.*$/i, '') // Remove -classic and everything after
+                .replace(/-top.*$/i, '') // Remove -top and everything after
+                .replace(/-aa.*$/i, '') // Remove -aa and everything after
+                .replace(/-indoor.*$/i, '') // Remove -indoor and everything after
+                .replace(/-outdoor.*$/i, '') // Remove -outdoor and everything after
+                .replace(/-exotic.*$/i, '') // Remove -exotic and everything after
+                .replace(/\b(1\s*pound|pound|1\s*lb|lb)\b/gi, '') // Remove weight references
+                .replace(/-+/g, ' ') // Replace hyphens with spaces
+                .replace(/\s+/g, ' ') // Normalize spaces
+                .trim();
+              
+              return strainName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ') || 'Premium Strain';
+            };
+            
+            const strainName = extractStrainName(item.name);
+            const price = parseFloat(item.sale_price || item.base_price || item.cost_price || 0);
+            
+            // Generate product handle for Shopify URL
+            const generateProductHandle = (name) => {
+              return name.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+                .replace(/\s+/g, '-') // Replace spaces with hyphens
+                .replace(/-+/g, '-') // Remove multiple hyphens
+                .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+            };
+            
+            const productHandle = generateProductHandle(strainName);
+            const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+            const shopifyUrl = item.shopifyId 
+              ? `https://${shopifyDomain.replace('.myshopify.com', '')}.com/products/${productHandle}`
+              : `https://${shopifyDomain.replace('.myshopify.com', '')}.com/search?q=${encodeURIComponent(strainName)}`;
+            
+            // COA and media links
+            const coaLink = `https://gold-standard-cbd.com/coa/${productHandle}`;
+            const mediaLink = `https://gold-standard-cbd.com/media/download/${item.sku || productHandle}`;
+            
+            return `
             <div class="item">
-              <div class="item-name">${item.name || 'Unnamed Item'}</div>
-              <div class="price">$${(item.sale_price || item.base_price || item.cost_price || 0).toFixed(2)}</div>
-              <div class="quantity">Available: ${item.quantity} units</div>
-              ${item.weight ? `<div>Weight: ${item.weight}</div>` : ''}
-              ${item.description ? `<div>${item.description}</div>` : ''}
+              <div class="item-name">${strainName}</div>
+              <div class="price">${price > 0 ? `$${price.toFixed(0)}` : 'Contact for Price'}</div>
+              <div class="quantity">✅ Available: ${item.quantity} units in stock</div>
+              <div>📦 Weight: 1 Pound</div>
+              ${item.thca_percentage ? `<div>🧪 THCa: ${item.thca_percentage}%</div>` : ''}
+              
+              <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="${shopifyUrl}" target="_blank" style="background: #d4af37; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  🛒 BUY NOW
+                </a>
+                <a href="${coaLink}" target="_blank" style="background: #228b22; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
+                  📄 COA
+                </a>
+                <a href="${mediaLink}" target="_blank" style="background: #4169e1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
+                  📱 Media
+                </a>
+              </div>
+              
+              <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                SKU: ${item.sku || 'N/A'} | Updated: ${new Date().toLocaleDateString()}
+              </div>
             </div>
-          `).join('')}
+          `;
+          }).join('')}
         </body>
         </html>
       `;
@@ -1576,6 +1640,24 @@ export function registerRoutes(app: any, storage: any) {
                 const strainName = extractStrainName(item.name);
                 const price = getPrice(item);
                 
+                // Generate links for enhanced functionality
+                const generateProductHandle = (name) => {
+                  return name.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+                    .replace(/\s+/g, '-') // Replace spaces with hyphens
+                    .replace(/-+/g, '-') // Remove multiple hyphens
+                    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+                };
+                
+                const productHandle = generateProductHandle(strainName);
+                const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+                const shopifyUrl = item.shopifyId 
+                  ? `https://${shopifyDomain.replace('.myshopify.com', '')}.com/products/${productHandle}`
+                  : `https://${shopifyDomain.replace('.myshopify.com', '')}.com/search?q=${encodeURIComponent(strainName)}`;
+                
+                const coaLink = `https://gold-standard-cbd.com/coa/${productHandle}`;
+                const mediaLink = `https://gold-standard-cbd.com/media/download/${item.sku || productHandle}`;
+                
                 return `
                 <div class="menu-item">
                   ${isNew ? '<div class="new-badge">NEW</div>' : ''}
@@ -1583,11 +1665,24 @@ export function registerRoutes(app: any, storage: any) {
                   <h3 class="strain-name">${strainName}</h3>
                   <div class="details">
                     <span class="price">${price > 0 ? `$${price.toFixed(0)}` : 'Contact for Price'}</span>
-                    <span class="quantity">${item.quantity} Available</span>
+                    <span class="quantity">✅ ${item.quantity} Available</span>
                   </div>
-                  ${item.thca_percentage ? `<div class="thca">${item.thca_percentage}% THCa</div>` : ''}
-                  <div style="margin-top: 15px; font-size: 0.9rem; color: #ccc;">
-                    SKU: ${item.sku || 'N/A'} | Quality: ${item.category || 'Premium'}
+                  ${item.thca_percentage ? `<div class="thca">🧪 ${item.thca_percentage}% THCa</div>` : ''}
+                  
+                  <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <a href="${shopifyUrl}" target="_blank" style="background: linear-gradient(45deg, #d4af37, #ffd700); color: #000; padding: 10px 8px; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; font-size: 0.8rem; border: 2px solid #d4af37;">
+                      🛒 BUY NOW
+                    </a>
+                    <a href="${coaLink}" target="_blank" style="background: linear-gradient(45deg, #228b22, #32cd32); color: white; padding: 10px 8px; text-decoration: none; border-radius: 8px; text-align: center; font-size: 0.8rem; border: 2px solid #228b22;">
+                      📄 COA
+                    </a>
+                    <a href="${mediaLink}" target="_blank" style="background: linear-gradient(45deg, #4169e1, #6495ed); color: white; padding: 10px 8px; text-decoration: none; border-radius: 8px; text-align: center; font-size: 0.8rem; border: 2px solid #4169e1;">
+                      📱 Media
+                    </a>
+                  </div>
+                  
+                  <div style="margin-top: 15px; font-size: 0.9rem; color: #ccc; text-align: center;">
+                    SKU: ${item.sku || 'N/A'} • Updated: ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               `;
