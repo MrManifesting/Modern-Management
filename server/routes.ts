@@ -387,41 +387,59 @@ export function registerRoutes(app: any, storage: any) {
   });
 
   // Items endpoints
+  // Helper function to parse weight into grams for comparison
+  const parseWeightToGrams = (weight: string): number => {
+    if (!weight) return 0;
+    const weightStr = weight.toString().toLowerCase();
+    
+    // Pound variants (highest priority)
+    if (/(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(weightStr)) {
+      return 448; // 1 pound = 448 grams
+    }
+    
+    // Parse specific weights
+    if (weightStr.includes('pound')) return 448;
+    if (weightStr.includes('lb')) return 448;
+    if (weightStr.includes('oz') || weightStr.includes('ounce')) {
+      const ozMatch = weightStr.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce)/);
+      return ozMatch ? parseFloat(ozMatch[1]) * 28 : 0;
+    }
+    if (weightStr.includes('gram') || weightStr.includes('g')) {
+      const gramMatch = weightStr.match(/(\d+(?:\.\d+)?)\s*(?:gram|g)/);
+      return gramMatch ? parseFloat(gramMatch[1]) : 0;
+    }
+    
+    // Extract any number as grams fallback
+    const numMatch = weightStr.match(/(\d+(?:\.\d+)?)/);
+    return numMatch ? parseFloat(numMatch[1]) : 0;
+  };
+
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
       
-      // Sort with POUND VARIANTS prioritized at the very top
+      // Enhanced sorting: biggest weights + newest items first
       const sortedItems = items.sort((a: any, b: any) => {
-        // Check if item is a pound variant
-        const isPoundVariant = (item: any) => {
-          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
-          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
-        };
+        // Parse weights for comparison
+        const aWeight = parseWeightToGrams(a.weight || a.name || '');
+        const bWeight = parseWeightToGrams(b.weight || b.name || '');
         
-        const aIsPound = isPoundVariant(a);
-        const bIsPound = isPoundVariant(b);
+        // FIRST PRIORITY: Biggest weights first
+        if (aWeight !== bWeight) {
+          return bWeight - aWeight;
+        }
         
-        // FIRST PRIORITY: Pound variants at the very top
-        if (aIsPound && !bIsPound) return -1;
-        if (!aIsPound && bIsPound) return 1;
+        // SECOND PRIORITY: Newest items first (highest ID)
+        const aId = a.id || 0;
+        const bId = b.id || 0;
+        if (aId !== bId) {
+          return bId - aId;
+        }
         
-        // Second priority: flower products with quantities
-        const aHasFlower = (a.name || '').toLowerCase().includes('flower') || 
-                          (a.category || '').toLowerCase().includes('flower');
-        const bHasFlower = (b.name || '').toLowerCase().includes('flower') || 
-                          (b.category || '').toLowerCase().includes('flower');
+        // THIRD PRIORITY: Highest quantities
         const aQuantity = a.quantity || 0;
         const bQuantity = b.quantity || 0;
-        
-        if (aHasFlower && aQuantity > 0 && (!bHasFlower || bQuantity === 0)) return -1;
-        if (bHasFlower && bQuantity > 0 && (!aHasFlower || aQuantity === 0)) return 1;
-        
-        // Then by quantity descending
-        if (aQuantity !== bQuantity) return bQuantity - aQuantity;
-        
-        // Finally by ID descending (newest first)
-        return (b.id || 0) - (a.id || 0);
+        return bQuantity - aQuantity;
       });
 
       log(`Retrieved ${items.length} items with ALL available flower products prioritized at top`, 'inventory');
@@ -474,32 +492,39 @@ export function registerRoutes(app: any, storage: any) {
           ...item,
           thumbnailUrl,
           hasImage: !!thumbnailUrl,
-          displayPrice: parseFloat(item.base_price || item.sale_price || item.cost_price || '0')
+          displayPrice: parseFloat(item.base_price || item.sale_price || item.cost_price || '0'),
+          // Ensure proper price field mapping for frontend display
+          basePrice: parseFloat(item.base_price || '0'),
+          salePrice: parseFloat(item.sale_price || '0'),
+          costPrice: parseFloat(item.cost_price || '0'),
+          hasValidPrice: (parseFloat(item.base_price || '0') > 0) || 
+                         (parseFloat(item.sale_price || '0') > 0) || 
+                         (parseFloat(item.cost_price || '0') > 0)
         };
       });
 
-      // Sort enhanced items with POUND VARIANTS at the top
+      // Sort enhanced items: biggest weights + newest items first
       enhancedItems.sort((a: any, b: any) => {
-        // Check if item is a pound variant
-        const isPoundVariant = (item: any) => {
-          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
-          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
-        };
+        // Parse weights for comparison
+        const aWeight = parseWeightToGrams(a.weight || a.name || '');
+        const bWeight = parseWeightToGrams(b.weight || b.name || '');
         
-        const aIsPound = isPoundVariant(a);
-        const bIsPound = isPoundVariant(b);
+        // FIRST PRIORITY: Biggest weights first
+        if (aWeight !== bWeight) {
+          return bWeight - aWeight;
+        }
         
-        // FIRST PRIORITY: Pound variants at the very top
-        if (aIsPound && !bIsPound) return -1;
-        if (!aIsPound && bIsPound) return 1;
+        // SECOND PRIORITY: Newest items first (highest ID)
+        const aId = a.id || 0;
+        const bId = b.id || 0;
+        if (aId !== bId) {
+          return bId - aId;
+        }
         
-        // Second priority: quantity descending
+        // THIRD PRIORITY: Highest quantities
         const aQuantity = a.quantity || 0;
         const bQuantity = b.quantity || 0;
-        if (aQuantity !== bQuantity) return bQuantity - aQuantity;
-        
-        // Finally by ID descending (newest first)
-        return (b.id || 0) - (a.id || 0);
+        return bQuantity - aQuantity;
       });
 
       log(`Enhanced inventory: ${enhancedItems.length} items with POUND VARIANTS PRIORITIZED AT TOP`, 'inventory');
