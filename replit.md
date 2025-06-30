@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **GOLD STANDARD CBD INTEGRATION COMPLETE - VIEW ON SHOPIFY NOW WORKS WITH ACTUAL PRODUCTS**
+  - Fixed "product not found" errors by removing all MrListersCurations references and properly connecting to Gold Standard CBD
+  - Updated marketplace service to use gold-standard-cbd.myshopify.com environment variables instead of hardcoded legacy store
+  - Created intelligent product matching system that finds Gold Standard CBD products by strain name, THCa content, and quality
+  - Enhanced Shopify view endpoints to provide direct product links instead of search fallbacks
+  - Successfully linked local inventory items to actual Gold Standard CBD products with direct admin URLs
+  - Testing confirmed: "blueberry-muffin-thca-smalls-aa-indoor" now correctly opens Gold Standard CBD product (ID: 10122123641119)
+  - System now uses authentic Gold Standard CBD store for all Shopify integration instead of legacy store references
 - June 30, 2025: **THUMBNAIL DISPLAY SYSTEM FULLY OPERATIONAL - SHOPIFY IMAGES NOW SHOWING FOR ALL PRODUCTS**
   - Fixed thumbnail display issues by implementing enhanced Shopify product matching with partial name matching
   - Prioritized Shopify CDN images as primary thumbnail source for authentic product representation
