@@ -875,10 +875,41 @@ export function registerRoutes(app: any, storage: any) {
   app.get("/api/generate-price-sheet", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
-      const availableItems = items.filter((item: any) => 
-        item.quantity > 0 && 
-        (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
-      );
+      
+      // Filter for active pound variants only
+      const poundVariants = items.filter((item: any) => {
+        // Must have quantity and pricing
+        if (!item.quantity || item.quantity <= 0 || 
+            !(item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)) {
+          return false;
+        }
+        
+        // Comprehensive pound variant detection
+        const itemName = item.name?.toLowerCase() || '';
+        const itemWeight = item.weight?.toString().toLowerCase() || '';
+        
+        const poundVariations = [
+          '1pound', '1 pound', 'pound', 'one pound', 'onepound',
+          '1lb', '1 lb', 'lb', 'lbs',
+          '1POUND', '1 POUND', 'POUND', 'ONE POUND', 'ONEPOUND',
+          '1LB', '1 LB', 'LB', 'LBS'
+        ];
+        
+        const nameMatch = poundVariations.some(variation => 
+          itemName.includes(variation.toLowerCase()) || 
+          itemName.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
+        );
+        
+        const weightMatch = poundVariations.some(variation => 
+          itemWeight.includes(variation.toLowerCase()) || 
+          itemWeight.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
+        ) || itemWeight.includes('448') || itemWeight.includes('16');
+        
+        return nameMatch || weightMatch;
+      });
+      
+      // Sort by newest first (highest ID)
+      const availableItems = poundVariants.sort((a, b) => (b.id || 0) - (a.id || 0));
 
       const catalogHtml = `
         <!DOCTYPE html>
@@ -896,8 +927,8 @@ export function registerRoutes(app: any, storage: any) {
         </head>
         <body>
           <div class="header">
-            <h1>Gold Standard CBD - Current Inventory</h1>
-            <p>Premium Cannabis Products Available Now</p>
+            <h1>Gold Standard CBD - Pound Variants Price Sheet</h1>
+            <p>Premium Pound Variants - Newest Items First</p>
           </div>
           ${availableItems.map((item: any) => `
             <div class="item">
@@ -1262,27 +1293,28 @@ export function registerRoutes(app: any, storage: any) {
           return false;
         }
         
-        // Check if item contains pound indicators (comprehensive matching)
+        // Comprehensive pound variant detection - all possible variations
         const itemName = item.name?.toLowerCase() || '';
         const itemWeight = item.weight?.toString().toLowerCase() || '';
         
-        const nameMatch = itemName.includes('pound') || 
-                         itemName.includes('1 lb') ||
-                         itemName.includes('1lb') ||
-                         itemName.includes('one pound') ||
-                         itemName.includes('1pound') ||
-                         itemName.includes('1 pound') ||
-                         itemName.includes('onepound') ||
-                         itemName.match(/\b1\s*pound\b/) ||
-                         itemName.match(/\bone\s*pound\b/) ||
-                         itemName.match(/\bpound\b/);
+        // All pound variations as requested (case insensitive covers all variations)
+        const poundVariations = [
+          '1pound', '1 pound', 'pound', 'one pound', 'onepound',
+          '1lb', '1 lb', 'lb', 'lbs',
+          // Explicit uppercase variations for thorough matching
+          '1POUND', '1 POUND', 'POUND', 'ONE POUND', 'ONEPOUND',
+          '1LB', '1 LB', 'LB', 'LBS'
+        ];
         
-        const weightMatch = itemWeight.includes('pound') ||
-                           itemWeight.includes('1 lb') ||
-                           itemWeight.includes('1lb') ||
-                           itemWeight.includes('448') || // grams in a pound
-                           itemWeight.includes('16') || // ounces in a pound
-                           itemWeight.match(/\b1\s*pound\b/);
+        const nameMatch = poundVariations.some(variation => 
+          itemName.includes(variation) || 
+          itemName.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
+        );
+        
+        const weightMatch = poundVariations.some(variation => 
+          itemWeight.includes(variation) || 
+          itemWeight.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
+        ) || itemWeight.includes('448') || itemWeight.includes('16'); // grams/ounces in a pound
         
         return nameMatch || weightMatch;
       });
