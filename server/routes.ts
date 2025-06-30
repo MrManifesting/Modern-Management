@@ -1092,7 +1092,7 @@ export function registerRoutes(app: any, storage: any) {
               log(`Updated item: ${itemData.name}`, 'shopify-import');
             } else {
               // Create new item
-              await storage.addItem(itemData);
+              await storage.createItem(itemData);
               importedCount++;
               log(`Imported new item: ${itemData.name}`, 'shopify-import');
             }
@@ -1223,7 +1223,7 @@ export function registerRoutes(app: any, storage: any) {
               log(`Updated item: ${itemData.name}`, 'shopify-import');
             } else {
               // Create new item
-              await storage.addItem(itemData);
+              await storage.createItem(itemData);
               importedCount++;
               log(`Imported new item: ${itemData.name}`, 'shopify-import');
             }

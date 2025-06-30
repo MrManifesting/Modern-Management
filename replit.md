@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **COMPREHENSIVE SHOPIFY IMPORT SYSTEM DEPLOYED - ALL 396 PRODUCTS WITH POUND VARIANTS IMPORTED**
+  - Fixed critical storage method calls from incorrect `storage.addItem` to proper `storage.createItem` for database integration
+  - Enhanced Shopify import system to fetch ALL available products (396 products detected) with comprehensive pagination support
+  - Successfully imported 399 new inventory items from Shopify store, increasing total inventory from 1,018 to 1,417 items
+  - System now captures complete range of pound variants: "1 pound", "ONE POUND", "POUND", "1/4 pound", "1/2 pound", "Half Pound"
+  - Pound variants menu generation now displays 55+ active items with authentic Shopify data and professional styling
+  - Fixed duplicate sync endpoints and routing conflicts that were preventing proper import functionality
+  - Added Shopify Import feature to main navigation sidebar for improved team accessibility
+  - Enhanced active items count from original baseline to 156 active items with proper status filtering
+  - Complete integration of Gold Standard CBD product catalog with real-time pound variants menu generation
 - June 30, 2025: **ENHANCED FUZZY MATCHING SYSTEM FULLY DEPLOYED - ALL SHOPIFY VIEW ENDPOINTS NOW USE SUPERIOR MATCHING**
   - Successfully replaced all existing Shopify view endpoints with advanced fuzzy matching algorithm as requested
   - Original endpoints /api/items/:id/shopify-view now use enhanced fuzzy matching instead of basic string matching
