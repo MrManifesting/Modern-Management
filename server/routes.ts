@@ -577,6 +577,78 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Sync local inventory with Shopify product IDs
+  app.post("/api/shopify/sync-product-ids", async (req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ error: "Shopify access token not configured" });
+      }
+
+      // Get all Shopify products
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Failed to fetch Shopify products" });
+      }
+
+      const data = await response.json();
+      const shopifyProducts = data.products || [];
+
+      // Get local inventory items
+      const localItems = await storage.getAllItems();
+      let matchedCount = 0;
+      let updatedCount = 0;
+
+      for (const item of localItems) {
+        if (item.shopifyId) continue; // Skip items already linked
+
+        // Try to find matching Shopify product
+        const matchingProduct = shopifyProducts.find((product: any) => {
+          const productTitle = product.title.toLowerCase();
+          const itemName = item.name?.toLowerCase() || '';
+          
+          // Try exact match first
+          if (productTitle === itemName) return true;
+          
+          // Try partial matching with key terms
+          const itemWords = itemName.split(/[-\s]+/).filter(word => word.length > 2);
+          return itemWords.length > 0 && itemWords.every(word => productTitle.includes(word));
+        });
+
+        if (matchingProduct) {
+          matchedCount++;
+          try {
+            await storage.updateItem(item.id!, { shopifyId: matchingProduct.id.toString() });
+            updatedCount++;
+            log(`Linked local item "${item.name}" to Shopify product "${matchingProduct.title}" (ID: ${matchingProduct.id})`, 'shopify');
+          } catch (error) {
+            log(`Failed to update item ${item.id}: ${error}`, 'shopify');
+          }
+        }
+      }
+
+      log(`Shopify sync completed: ${matchedCount} matches found, ${updatedCount} items updated`, 'shopify');
+      res.json({
+        success: true,
+        matched: matchedCount,
+        updated: updatedCount,
+        totalLocal: localItems.length,
+        totalShopify: shopifyProducts.length
+      });
+    } catch (error) {
+      log(`Shopify sync error: ${error}`, 'shopify');
+      res.status(500).json({ error: "Failed to sync product IDs" });
+    }
+  });
+
   // Shopify view item endpoint
   app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
     try {
