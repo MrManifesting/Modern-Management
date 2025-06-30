@@ -319,7 +319,7 @@ export const resolvers = {
             syncStatus: 'synced'
           } : null,
           availability: calculateAvailability(item),
-          lastUpdated: item.updated_at || item.created_at || new Date().toISOString()
+          lastUpdated: item.updatedAt || item.createdAt || new Date().toISOString()
         };
       } catch (error) {
         log(`Single item fetch error: ${error}`, 'error');

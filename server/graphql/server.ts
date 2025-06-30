@@ -33,8 +33,9 @@ export function getGraphQLMiddleware(server: ApolloServer) {
   return expressMiddleware(server, {
     context: async ({ req }) => {
       // Add any context you need here
+      const session = req.session as any;
       return {
-        user: req.session?.userId || null,
+        user: session?.userId || null,
         headers: req.headers,
         timestamp: new Date().toISOString()
       };
