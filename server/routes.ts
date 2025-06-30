@@ -318,8 +318,22 @@ export function registerRoutes(app: any, storage: any) {
     try {
       const items = await storage.getItems();
       
-      // Sort with flower products with quantities at top
+      // Sort with POUND VARIANTS prioritized at the very top
       const sortedItems = items.sort((a: any, b: any) => {
+        // Check if item is a pound variant
+        const isPoundVariant = (item: any) => {
+          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
+          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
+        };
+        
+        const aIsPound = isPoundVariant(a);
+        const bIsPound = isPoundVariant(b);
+        
+        // FIRST PRIORITY: Pound variants at the very top
+        if (aIsPound && !bIsPound) return -1;
+        if (!aIsPound && bIsPound) return 1;
+        
+        // Second priority: flower products with quantities
         const aHasFlower = (a.name || '').toLowerCase().includes('flower') || 
                           (a.category || '').toLowerCase().includes('flower');
         const bHasFlower = (b.name || '').toLowerCase().includes('flower') || 
@@ -327,7 +341,6 @@ export function registerRoutes(app: any, storage: any) {
         const aQuantity = a.quantity || 0;
         const bQuantity = b.quantity || 0;
         
-        // Priority: flower items with quantities first
         if (aHasFlower && aQuantity > 0 && (!bHasFlower || bQuantity === 0)) return -1;
         if (bHasFlower && bQuantity > 0 && (!aHasFlower || aQuantity === 0)) return 1;
         
@@ -392,7 +405,31 @@ export function registerRoutes(app: any, storage: any) {
         };
       });
 
-      log(`Enhanced inventory: ${enhancedItems.length} items with quantities available`, 'inventory');
+      // Sort enhanced items with POUND VARIANTS at the top
+      enhancedItems.sort((a: any, b: any) => {
+        // Check if item is a pound variant
+        const isPoundVariant = (item: any) => {
+          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
+          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
+        };
+        
+        const aIsPound = isPoundVariant(a);
+        const bIsPound = isPoundVariant(b);
+        
+        // FIRST PRIORITY: Pound variants at the very top
+        if (aIsPound && !bIsPound) return -1;
+        if (!aIsPound && bIsPound) return 1;
+        
+        // Second priority: quantity descending
+        const aQuantity = a.quantity || 0;
+        const bQuantity = b.quantity || 0;
+        if (aQuantity !== bQuantity) return bQuantity - aQuantity;
+        
+        // Finally by ID descending (newest first)
+        return (b.id || 0) - (a.id || 0);
+      });
+
+      log(`Enhanced inventory: ${enhancedItems.length} items with POUND VARIANTS PRIORITIZED AT TOP`, 'inventory');
       res.json(enhancedItems);
     } catch (error) {
       log(`Enhanced inventory error: ${error}`, 'inventory');
