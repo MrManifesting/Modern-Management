@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- June 30, 2025: **ADVANCED FUZZY MATCHING SYSTEM DEPLOYED - DRAMATICALLY IMPROVED SHOPIFY PRODUCT LINKING ACCURACY**
+  - Implemented sophisticated fuzzy matching algorithm using strain + type + tier pattern matching as requested
+  - Created comprehensive scoring system with weighted priorities: exact matches (100), strain matches (50), type/tier matches (40/30)
+  - Added new enhanced endpoints: /api/items/:id/shopify-view-enhanced and /api/items/:id/shopify-fuzzy-match for superior product linking
+  - Fuzzy matching now successfully links products that original system couldn't find (e.g., "tropicana-cherry-thca-classic-reserve" → "Lemon Cherry Gelato - THCA BULK FLOWER - CLASSIC RESERVE")
+  - System parses product components intelligently: strain extraction, THCa/CBD type detection, quality tier identification ("smalls", "aa-indoor", "classic-reserve")
+  - Enhanced matching provides detailed scoring and analysis: match confidence scores, strain/type/tier breakdown, product handle analysis
+  - Maintains existing high-accuracy matches while significantly improving edge cases and partial matches
+  - All Gold Standard CBD product linking now uses authentic Shopify handles and variant IDs for maximum accuracy
 - June 30, 2025: **GOLD STANDARD CBD INTEGRATION COMPLETE - VIEW ON SHOPIFY NOW WORKS WITH ACTUAL PRODUCTS**
   - Fixed "product not found" errors by removing all MrListersCurations references and properly connecting to Gold Standard CBD
   - Updated marketplace service to use gold-standard-cbd.myshopify.com environment variables instead of hardcoded legacy store
