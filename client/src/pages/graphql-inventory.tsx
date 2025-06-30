@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, Package, DollarSign, Eye, FileText, Download } from 'lucide-react';
+import { ExternalLink, Package, DollarSign, Eye, FileText, Download, Search, Filter } from 'lucide-react';
+import AdvancedInventoryFilters from '@/components/inventory/advanced-inventory-filters';
 
 interface InventoryItem {
   id: string;
@@ -75,6 +76,21 @@ const GraphQLInventory = () => {
   const [shopifyInventory, setShopifyInventory] = useState<ShopifyInventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Advanced filtering state
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    category: "",
+    priceRange: [0, 2000] as [number, number],
+    quantityRange: [0, 500] as [number, number],
+    thcaRange: [0, 35] as [number, number],
+    status: "",
+    weight: "",
+    hasCOA: false,
+    hasMedia: false,
+    inStock: false,
+    poundVariantsOnly: false
+  });
 
   const executeGraphQLQuery = async (query: string) => {
     try {
@@ -242,6 +258,78 @@ const GraphQLInventory = () => {
   useEffect(() => {
     fetchInventory();
   }, []);
+
+  // Advanced filtering logic
+  const filteredInventory = inventory.filter(item => {
+    // Search term filter
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const matchesSearch = 
+        item.name?.toLowerCase().includes(searchLower) ||
+        item.sku?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    // Category filter
+    if (filters.category && item.category?.toLowerCase() !== filters.category.toLowerCase()) {
+      return false;
+    }
+
+    // Price range filter
+    const itemPrice = item.pricing.displayPrice || 0;
+    if (itemPrice < filters.priceRange[0] || itemPrice > filters.priceRange[1]) {
+      return false;
+    }
+
+    // Quantity range filter
+    if (item.quantity < filters.quantityRange[0] || item.quantity > filters.quantityRange[1]) {
+      return false;
+    }
+
+    // THCa range filter (if available)
+    if (item.thcaPercentage !== undefined) {
+      if (item.thcaPercentage < filters.thcaRange[0] || item.thcaPercentage > filters.thcaRange[1]) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (filters.status && item.status !== filters.status) {
+      return false;
+    }
+
+    // Weight filter
+    if (filters.weight && item.weight?.toLowerCase() !== filters.weight.toLowerCase()) {
+      return false;
+    }
+
+    // In stock filter
+    if (filters.inStock && !item.availability?.inStock) {
+      return false;
+    }
+
+    // Pound variants only filter
+    if (filters.poundVariantsOnly) {
+      const isPoundVariant = item.weight?.toLowerCase().includes('pound') || 
+                            item.name?.toLowerCase().includes('pound') ||
+                            item.name?.toLowerCase().includes('1 lb') ||
+                            item.name?.toLowerCase().includes('1lb');
+      if (!isPoundVariant) return false;
+    }
+
+    // Has media filter
+    if (filters.hasMedia && !item.media?.thumbnailUrl) {
+      return false;
+    }
+
+    // Has COA filter
+    if (filters.hasCOA && !item.links?.coaCertificate) {
+      return false;
+    }
+
+    return true;
+  });
 
   const InventoryCard = ({ item }: { item: InventoryItem }) => (
     <Card className="h-full">
@@ -437,21 +525,37 @@ const GraphQLInventory = () => {
         )}
 
         <TabsContent value="inventory" className="space-y-6">
+          <AdvancedInventoryFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalItems={inventory.length}
+            filteredItems={filteredInventory.length}
+          />
+          
           {loading ? (
             <div className="text-center py-8">
               <p>Loading inventory data...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {inventory.slice(0, 12).map((item) => (
+              {filteredInventory.slice(0, 24).map((item) => (
                 <InventoryCard key={item.id} item={item} />
               ))}
             </div>
           )}
-          {inventory.length > 12 && (
+          {filteredInventory.length > 24 && (
             <p className="text-center text-gray-600">
-              Showing first 12 of {inventory.length} items
+              Showing first 24 of {filteredInventory.length} filtered items
             </p>
+          )}
+          {filteredInventory.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <Search className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+              <h3 className="mt-4 text-lg font-medium">No items match your filters</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Try adjusting your search criteria or clearing some filters.
+              </p>
+            </div>
           )}
         </TabsContent>
 
