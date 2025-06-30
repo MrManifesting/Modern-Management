@@ -8,6 +8,79 @@ const log = (message: string, context: string = 'general') => {
   console.log(`${new Date().toLocaleTimeString()} [${context}] ${message}`);
 };
 
+// Fuzzy matching utility for Shopify products using handle, title, and variant analysis
+function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
+  const itemParts = localItemName.toLowerCase().split('-');
+  const strain = itemParts[0] || ''; // "blueberry"
+  const type = itemParts.find(part => part.includes('thca') || part.includes('flower')) || 'thca';
+  const tier = itemParts.slice(1).join('-'); // "muffin-thca-smalls-aa-indoor"
+  
+  // Calculate fuzzy match score for handle, title, and variants
+  const calculateFuzzyScore = (product: any) => {
+    const handle = (product.handle || '').toLowerCase();
+    const title = product.title.toLowerCase();
+    let score = 0;
+    
+    // Handle format: strain-type-tier (e.g., "blueberry-muffin-thca-smalls-aa-indoor")
+    if (handle) {
+      const handleParts = handle.split('-');
+      
+      // Strain match (highest weight)
+      if (handleParts.some(part => part.includes(strain))) score += 50;
+      
+      // Type match (medium weight)  
+      if (handle.includes(type)) score += 30;
+      
+      // Tier/quality matches (lower weight each)
+      itemParts.forEach(part => {
+        if (part.length > 2 && handle.includes(part)) score += 10;
+      });
+    }
+    
+    // Title matching as backup
+    if (title.includes(strain)) score += 40;
+    if (title.includes('thca')) score += 20;
+    
+    // Quality descriptors matching
+    const qualityTerms = ['smalls', 'aa', 'indoor', 'outdoor', 'exotic', 'top shelf', 'classic', 'reserve'];
+    qualityTerms.forEach(term => {
+      if (tier.includes(term) && (handle.includes(term) || title.includes(term))) {
+        score += 15;
+      }
+    });
+    
+    // Check variants for additional matching
+    if (product.variants && Array.isArray(product.variants)) {
+      product.variants.forEach((variant: any) => {
+        if (variant.sku && variant.sku.toLowerCase().includes(strain)) score += 20;
+        if (variant.title && variant.title.toLowerCase().includes(strain)) score += 15;
+      });
+    }
+    
+    return score;
+  };
+  
+  // Find best match using fuzzy scoring
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  shopifyProducts.forEach((product: any) => {
+    const score = calculateFuzzyScore(product);
+    if (score > bestScore && score >= 50) { // Minimum threshold
+      bestScore = score;
+      bestMatch = product;
+    }
+  });
+  
+  return {
+    product: bestMatch,
+    score: bestScore,
+    strain,
+    type,
+    tier
+  };
+}
+
 export function registerRoutes(app: any, storage: any) {
   // Health check
   app.get("/api/health", (_req: Request, res: Response) => {
