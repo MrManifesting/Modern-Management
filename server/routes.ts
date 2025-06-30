@@ -998,6 +998,319 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Helper function to extract THCa percentage from product titles
+  function extractTHCaPercentage(title: string): number | null {
+    if (!title) return null;
+    const match = title.match(/(\d+(?:\.\d+)?)\s*%?\s*thca?/i);
+    return match ? parseFloat(match[1]) : null;
+  }
+
+  // Shopify inventory sync endpoint
+  app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ error: "Shopify access token not configured" });
+      }
+
+      // Get all Shopify products
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        log(`Shopify API error: ${response.status}`, 'shopify');
+        return res.status(500).json({ error: "Failed to fetch Shopify products" });
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
+      let importedCount = 0;
+      let updatedCount = 0;
+
+      // Process each Shopify product
+      for (const product of products) {
+        if (product.variants && product.variants.length > 0) {
+          for (const variant of product.variants) {
+            // Check if item already exists by SKU or Shopify ID
+            const items = await storage.getItems();
+            const existingItem = items.find(item => 
+              item.sku === variant.sku || 
+              item.shopifyId === product.id ||
+              item.name?.toLowerCase().includes(product.title.toLowerCase())
+            );
+
+            const itemData = {
+              name: variant.title || product.title,
+              sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
+              quantity: variant.inventory_quantity || 0,
+              base_price: parseFloat(variant.price) || 0,
+              cost_price: parseFloat(variant.compare_at_price) || 0,
+              category: product.product_type || 'Shopify Import',
+              brand: product.vendor || 'Gold Standard',
+              status: product.status === 'active' ? 'active' : 'draft',
+              shopifyId: product.id,
+              shopifyVariantId: variant.id,
+              weight: variant.weight || null,
+              images: product.images?.map((img: any) => img.src) || [],
+              thca_percentage: extractTHCaPercentage(product.title),
+              description: product.body_html || '',
+              tags: product.tags || ''
+            };
+
+            if (existingItem) {
+              // Update existing item
+              await storage.updateItem(existingItem.id, itemData);
+              updatedCount++;
+              log(`Updated item: ${itemData.name}`, 'shopify-import');
+            } else {
+              // Create new item
+              await storage.addItem(itemData);
+              importedCount++;
+              log(`Imported new item: ${itemData.name}`, 'shopify-import');
+            }
+          }
+        }
+      }
+
+      log(`Shopify sync completed: ${importedCount} imported, ${updatedCount} updated`, 'shopify');
+      res.json({
+        success: true,
+        imported: importedCount,
+        updated: updatedCount,
+        totalProducts: products.length
+      });
+    } catch (error) {
+      log(`Shopify sync error: ${error}`, 'shopify');
+      res.status(500).json({ error: "Failed to sync Shopify inventory" });
+    }
+  });
+
+  // Stylized pound variants price sheet endpoint
+  app.get("/api/pound-variants-menu", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Filter for active pound variants with available quantities
+      const poundVariants = items.filter(item => {
+        // Check if item is active and has quantity
+        if (item.status !== 'active' || !item.quantity || item.quantity <= 0) {
+          return false;
+        }
+        
+        // Check if item contains pound indicators
+        const nameMatch = item.name?.toLowerCase().includes('pound') || 
+                         item.name?.toLowerCase().includes('1 lb') ||
+                         item.name?.toLowerCase().includes('1lb') ||
+                         item.name?.toLowerCase().includes('one pound');
+        
+        const weightMatch = item.weight?.toString().toLowerCase().includes('pound') ||
+                           item.weight?.toString().includes('1 lb') ||
+                           item.weight?.toString().includes('448') || // grams in a pound
+                           item.weight?.toString().includes('16'); // ounces in a pound
+        
+        return nameMatch || weightMatch;
+      });
+      
+      // Sort by highest quantity first
+      poundVariants.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+      
+      // Generate stylized HTML menu
+      const menuHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Gold Standard CBD - Pound Variants Menu</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Georgia', serif;
+              background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+              color: #f5f5f5;
+              min-height: 100vh;
+              padding: 20px;
+            }
+            .container {
+              max-width: 1200px;
+              margin: 0 auto;
+              background: rgba(255, 255, 255, 0.05);
+              backdrop-filter: blur(10px);
+              border-radius: 20px;
+              padding: 40px;
+              border: 1px solid rgba(212, 175, 55, 0.3);
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 40px;
+              border-bottom: 2px solid #d4af37;
+              padding-bottom: 20px;
+            }
+            .title {
+              font-size: 3rem;
+              background: linear-gradient(45deg, #d4af37, #ffd700);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              margin-bottom: 10px;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            }
+            .subtitle {
+              font-size: 1.2rem;
+              color: #b8b8b8;
+              font-style: italic;
+            }
+            .menu-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+              gap: 20px;
+              margin-top: 30px;
+            }
+            .menu-item {
+              background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+              border-radius: 15px;
+              padding: 25px;
+              border: 1px solid rgba(212, 175, 55, 0.2);
+              transition: all 0.3s ease;
+              position: relative;
+              overflow: hidden;
+            }
+            .menu-item:hover {
+              transform: translateY(-5px);
+              box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
+              border-color: #d4af37;
+            }
+            .menu-item::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 3px;
+              background: linear-gradient(90deg, #d4af37, #ffd700);
+            }
+            .strain-name {
+              font-size: 1.4rem;
+              font-weight: bold;
+              color: #d4af37;
+              margin-bottom: 10px;
+              text-transform: capitalize;
+            }
+            .details {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 15px 0;
+            }
+            .price {
+              font-size: 1.8rem;
+              font-weight: bold;
+              color: #00ff88;
+              text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+            }
+            .quantity {
+              background: rgba(212, 175, 55, 0.2);
+              padding: 5px 15px;
+              border-radius: 20px;
+              font-size: 0.9rem;
+              border: 1px solid #d4af37;
+            }
+            .thca {
+              background: rgba(255, 0, 100, 0.2);
+              padding: 5px 10px;
+              border-radius: 10px;
+              font-size: 0.8rem;
+              color: #ff6b9d;
+              border: 1px solid #ff6b9d;
+            }
+            .weight-badge {
+              position: absolute;
+              top: 15px;
+              right: 15px;
+              background: linear-gradient(45deg, #d4af37, #ffd700);
+              color: #000;
+              padding: 5px 12px;
+              border-radius: 15px;
+              font-weight: bold;
+              font-size: 0.8rem;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid rgba(212, 175, 55, 0.3);
+              color: #888;
+            }
+            .contact-info {
+              margin-top: 20px;
+              font-size: 1.1rem;
+              color: #d4af37;
+            }
+            @media (max-width: 768px) {
+              .menu-grid { grid-template-columns: 1fr; }
+              .title { font-size: 2rem; }
+              .container { padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="title">Gold Standard CBD</h1>
+              <p class="subtitle">Premium Pound Variants - Wholesale Menu</p>
+            </div>
+            
+            <div class="menu-grid">
+              ${poundVariants.map(item => `
+                <div class="menu-item">
+                  <div class="weight-badge">1 POUND</div>
+                  <h3 class="strain-name">${item.name?.replace(/-/g, ' ')}</h3>
+                  <div class="details">
+                    <span class="price">$${(item.base_price || item.sale_price || item.cost_price || 0).toFixed(0)}</span>
+                    <span class="quantity">${item.quantity} Available</span>
+                  </div>
+                  ${item.thca_percentage ? `<div class="thca">${item.thca_percentage}% THCa</div>` : ''}
+                  <div style="margin-top: 15px; font-size: 0.9rem; color: #ccc;">
+                    SKU: ${item.sku || 'N/A'} | Category: ${item.category || 'Flower'}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            
+            ${poundVariants.length === 0 ? `
+              <div style="text-align: center; padding: 60px 20px; color: #888;">
+                <h3>No Active Pound Variants Available</h3>
+                <p>Please check back later or contact us for availability</p>
+              </div>
+            ` : ''}
+            
+            <div class="footer">
+              <div class="contact-info">
+                Contact us: jon@goldcbd.com or 541-291-2404
+              </div>
+              <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+              <p>All prices are wholesale • Minimum order quantities may apply</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuHtml);
+      
+      log(`Generated pound variants menu with ${poundVariants.length} active items`, 'menu');
+    } catch (error) {
+      log(`Pound variants menu error: ${error}`, 'menu');
+      res.status(500).json({ error: "Failed to generate pound variants menu" });
+    }
+  });
+
   // System health endpoint
   app.get("/api/system/health", async (_req: Request, res: Response) => {
     try {
