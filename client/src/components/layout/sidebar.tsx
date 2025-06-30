@@ -177,6 +177,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       icon: <Camera className="h-5 w-5" />,
       path: "/media-manager",
     },
+    {
+      title: "Media Pack Demo",
+      icon: <Package className="h-5 w-5" />,
+      path: "/media-pack-demo",
+      highlight: true,
+    },
 
     {
       title: "Database Cleanup",
