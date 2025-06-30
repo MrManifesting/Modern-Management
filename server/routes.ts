@@ -901,7 +901,7 @@ export function registerRoutes(app: any, storage: any) {
     try {
       const items = await storage.getItems();
       
-      // Filter for active pound variants only
+      // Filter for FULL POUND variants only - exclude 1/2 and 1/4 pound variants
       const poundVariants = items.filter((item: any) => {
         // Must have quantity and pricing
         if (!item.quantity || item.quantity <= 0 || 
@@ -909,28 +909,33 @@ export function registerRoutes(app: any, storage: any) {
           return false;
         }
         
-        // Comprehensive pound variant detection
+        // FULL POUND VARIANTS ONLY - exclude 1/2 and 1/4 pound variants
         const itemName = item.name?.toLowerCase() || '';
         const itemWeight = item.weight?.toString().toLowerCase() || '';
+        const searchText = `${itemName} ${itemWeight}`;
         
-        const poundVariations = [
-          '1pound', '1 pound', 'pound', 'one pound', 'onepound',
-          '1lb', '1 lb', 'lb', 'lbs',
-          '1POUND', '1 POUND', 'POUND', 'ONE POUND', 'ONEPOUND',
-          '1LB', '1 LB', 'LB', 'LBS'
+        // Exclude 1/2 and 1/4 pound variants first
+        const excludePatterns = [
+          /\b(1\/2|half|0\.5)\s*(pound|lb)/i,
+          /\b(1\/4|quarter|0\.25)\s*(pound|lb)/i,
+          /\bhalf\s*pound/i,
+          /\bquarter\s*pound/i
         ];
         
-        const nameMatch = poundVariations.some(variation => 
-          itemName.includes(variation.toLowerCase()) || 
-          itemName.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
-        );
+        const isExcluded = excludePatterns.some(pattern => pattern.test(searchText));
+        if (isExcluded) return false;
         
-        const weightMatch = poundVariations.some(variation => 
-          itemWeight.includes(variation.toLowerCase()) || 
-          itemWeight.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
-        ) || itemWeight.includes('448') || itemWeight.includes('16');
+        // Full pound variations only (1 pound or full pound only)
+        const fullPoundPatterns = [
+          /\b1\s*pound\b/i,
+          /\bone\s*pound\b/i,
+          /\b1\s*lb\b/i,
+          /\bfull\s*pound\b/i,
+          /\b448\s*(gram|g)\b/i, // 1 pound = 448 grams
+          /\b16\s*(oz|ounce)\b/i // 1 pound = 16 ounces
+        ];
         
-        return nameMatch || weightMatch;
+        return fullPoundPatterns.some(pattern => pattern.test(searchText));
       });
       
       // Sort by newest first (highest ID)
@@ -1141,16 +1146,26 @@ export function registerRoutes(app: any, storage: any) {
               tags: product.tags || ''
             };
 
-            if (existingItem) {
-              // Update existing item
-              await storage.updateItem(existingItem.id, itemData);
-              updatedCount++;
-              log(`Updated item: ${itemData.name}`, 'shopify-import');
-            } else {
-              // Create new item
-              await storage.createItem(itemData);
-              importedCount++;
-              log(`Imported new item: ${itemData.name}`, 'shopify-import');
+            try {
+              if (existingItem) {
+                // Update existing item
+                await storage.updateItem(existingItem.id, itemData);
+                updatedCount++;
+                log(`Updated item: ${itemData.name}`, 'shopify-import');
+              } else {
+                // Create new item with duplicate protection
+                await storage.createItem(itemData);
+                importedCount++;
+                log(`Imported new item: ${itemData.name}`, 'shopify-import');
+              }
+            } catch (error) {
+              if (error.message && error.message.includes('duplicate key')) {
+                log(`Skipped duplicate SKU: ${itemData.sku}`, 'shopify-import');
+                skippedCount++;
+              } else {
+                log(`Error processing ${itemData.name}: ${error}`, 'shopify-import');
+                skippedCount++;
+              }
             }
           }
         } else {
@@ -1318,30 +1333,33 @@ export function registerRoutes(app: any, storage: any) {
           return false;
         }
         
-        // Comprehensive pound variant detection - all possible variations
+        // FULL POUND VARIANTS ONLY - exclude 1/2 and 1/4 pound variants
         const itemName = item.name?.toLowerCase() || '';
         const itemWeight = item.weight?.toString().toLowerCase() || '';
+        const searchText = `${itemName} ${itemWeight}`;
         
-        // All pound variations as requested (case insensitive covers all variations)
-        const poundVariations = [
-          '1pound', '1 pound', 'pound', 'one pound', 'onepound',
-          '1lb', '1 lb', 'lb', 'lbs',
-          // Explicit uppercase variations for thorough matching
-          '1POUND', '1 POUND', 'POUND', 'ONE POUND', 'ONEPOUND',
-          '1LB', '1 LB', 'LB', 'LBS'
+        // Exclude 1/2 and 1/4 pound variants first
+        const excludePatterns = [
+          /\b(1\/2|half|0\.5)\s*(pound|lb)/i,
+          /\b(1\/4|quarter|0\.25)\s*(pound|lb)/i,
+          /\bhalf\s*pound/i,
+          /\bquarter\s*pound/i
         ];
         
-        const nameMatch = poundVariations.some(variation => 
-          itemName.includes(variation) || 
-          itemName.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
-        );
+        const isExcluded = excludePatterns.some(pattern => pattern.test(searchText));
+        if (isExcluded) return false;
         
-        const weightMatch = poundVariations.some(variation => 
-          itemWeight.includes(variation) || 
-          itemWeight.match(new RegExp(`\\b${variation.replace(/\s/g, '\\s*')}\\b`, 'i'))
-        ) || itemWeight.includes('448') || itemWeight.includes('16'); // grams/ounces in a pound
+        // Full pound variations only (1 pound or full pound only)
+        const fullPoundPatterns = [
+          /\b1\s*pound\b/i,
+          /\bone\s*pound\b/i,
+          /\b1\s*lb\b/i,
+          /\bfull\s*pound\b/i,
+          /\b448\s*(gram|g)\b/i, // 1 pound = 448 grams
+          /\b16\s*(oz|ounce)\b/i // 1 pound = 16 ounces
+        ];
         
-        return nameMatch || weightMatch;
+        return fullPoundPatterns.some(pattern => pattern.test(searchText));
       });
       
       // Sort by newest first (ID descending), then by highest quantity
@@ -1515,18 +1533,61 @@ export function registerRoutes(app: any, storage: any) {
             <div class="menu-grid">
               ${poundVariants.map((item, index) => {
                 const isNew = index < Math.ceil(poundVariants.length * 0.1); // Top 10% are marked as NEW
+                
+                // Extract clean strain name from item name
+                const extractStrainName = (name) => {
+                  if (!name) return 'Premium Strain';
+                  
+                  // Remove common suffixes and normalize
+                  let strainName = name
+                    .replace(/-thca.*$/i, '') // Remove -thca and everything after
+                    .replace(/-flower.*$/i, '') // Remove -flower and everything after
+                    .replace(/-smalls.*$/i, '') // Remove -smalls and everything after
+                    .replace(/-classic.*$/i, '') // Remove -classic and everything after
+                    .replace(/-top.*$/i, '') // Remove -top and everything after
+                    .replace(/-aa.*$/i, '') // Remove -aa and everything after
+                    .replace(/-indoor.*$/i, '') // Remove -indoor and everything after
+                    .replace(/-outdoor.*$/i, '') // Remove -outdoor and everything after
+                    .replace(/-exotic.*$/i, '') // Remove -exotic and everything after
+                    .replace(/\b(1\s*pound|pound|1\s*lb|lb)\b/gi, '') // Remove weight references
+                    .replace(/-+/g, ' ') // Replace hyphens with spaces
+                    .replace(/\s+/g, ' ') // Normalize spaces
+                    .trim();
+                  
+                  // Capitalize each word properly
+                  return strainName.split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ') || 'Premium Strain';
+                };
+                
+                // Get the best available price
+                const getPrice = (item) => {
+                  const basePrice = parseFloat(item.base_price || 0);
+                  const salePrice = parseFloat(item.sale_price || 0);
+                  const costPrice = parseFloat(item.cost_price || 0);
+                  
+                  // Use sale price if available, then base price, then cost price
+                  if (salePrice > 0) return salePrice;
+                  if (basePrice > 0) return basePrice;
+                  if (costPrice > 0) return costPrice;
+                  return 0;
+                };
+                
+                const strainName = extractStrainName(item.name);
+                const price = getPrice(item);
+                
                 return `
                 <div class="menu-item">
                   ${isNew ? '<div class="new-badge">NEW</div>' : ''}
                   <div class="weight-badge">1 POUND</div>
-                  <h3 class="strain-name">${item.name?.replace(/-/g, ' ')}</h3>
+                  <h3 class="strain-name">${strainName}</h3>
                   <div class="details">
-                    <span class="price">$${(item.base_price || item.sale_price || item.cost_price || 0).toFixed(0)}</span>
+                    <span class="price">${price > 0 ? `$${price.toFixed(0)}` : 'Contact for Price'}</span>
                     <span class="quantity">${item.quantity} Available</span>
                   </div>
                   ${item.thca_percentage ? `<div class="thca">${item.thca_percentage}% THCa</div>` : ''}
                   <div style="margin-top: 15px; font-size: 0.9rem; color: #ccc;">
-                    SKU: ${item.sku || 'N/A'} | Category: ${item.category || 'Flower'}
+                    SKU: ${item.sku || 'N/A'} | Quality: ${item.category || 'Premium'}
                   </div>
                 </div>
               `;
