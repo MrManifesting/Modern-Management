@@ -231,6 +231,93 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Marketplace endpoints
+  app.get("/api/marketplaces", async (_req: Request, res: Response) => {
+    try {
+      // Return default marketplace configurations
+      const marketplaces = [
+        {
+          id: 1,
+          name: "Shopify",
+          type: "shopify",
+          isConnected: true,
+          syncEnabled: true,
+          lastSyncDate: new Date().toISOString(),
+          domain: "gold-standard-cbd.myshopify.com"
+        },
+        {
+          id: 2,
+          name: "Google Sheets",
+          type: "google_sheets",
+          isConnected: false,
+          syncEnabled: false,
+          lastSyncDate: null,
+          spreadsheetId: process.env.GOOGLE_SHEETS_ID || "1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU"
+        }
+      ];
+      
+      res.json(marketplaces);
+    } catch (error) {
+      log(`Marketplace fetch error: ${error}`, 'marketplace');
+      res.status(500).json({ 
+        error: "Failed to fetch marketplaces",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/marketplace/connections", async (_req: Request, res: Response) => {
+    try {
+      const connections = {
+        shopify: {
+          connected: true,
+          store: "gold-standard-cbd.myshopify.com",
+          lastSync: new Date().toISOString()
+        },
+        googleSheets: {
+          connected: false,
+          spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+          lastSync: null
+        }
+      };
+      
+      res.json({ success: true, connections });
+    } catch (error) {
+      log(`Marketplace connections error: ${error}`, 'marketplace');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch marketplace connections" 
+      });
+    }
+  });
+
+  app.get("/api/marketplace/test/:id", async (req: Request, res: Response) => {
+    try {
+      const marketplaceId = parseInt(req.params.id);
+      
+      if (marketplaceId === 1) {
+        // Test Shopify connection
+        const testResult = await fetch(`http://localhost:5000/api/shopify/test-connection`);
+        const shopifyStatus = await testResult.json();
+        res.json(shopifyStatus);
+      } else if (marketplaceId === 2) {
+        // Test Google Sheets connection
+        const testResult = await fetch(`http://localhost:5000/api/google-sheets/status`);
+        const sheetsStatus = await testResult.json();
+        res.json(sheetsStatus);
+      } else {
+        res.status(404).json({ success: false, error: "Marketplace not found" });
+      }
+    } catch (error) {
+      log(`Marketplace test error: ${error}`, 'marketplace');
+      res.status(500).json({ 
+        success: false, 
+        error: "Marketplace test failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Items endpoints
   app.get("/api/items", async (_req: Request, res: Response) => {
     try {

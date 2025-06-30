@@ -65,6 +65,9 @@ export default function MarketplaceList() {
     }
   });
 
+  // Ensure marketplaces is always an array
+  const marketplaceList = Array.isArray(marketplaces) ? marketplaces : [];
+
   // Delete marketplace mutation
   const deleteMarketplaceMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -302,7 +305,7 @@ export default function MarketplaceList() {
       ) : (
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {marketplaces && marketplaces.map((marketplace: any) => {
+            {marketplaceList.map((marketplace: any) => {
               const { icon: Icon, color, name } = 
                 MARKETPLACE_ICONS[marketplace.type as keyof typeof MARKETPLACE_ICONS] || 
                 { icon: Store, color: '#888888', name: 'Unknown' };
