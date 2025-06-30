@@ -277,7 +277,40 @@ export const resolvers = {
           };
         });
 
-        log(`Processed ${processedItems.length} inventory items with Shopify data`);
+        // Sort by priority: 1) Pound variants, 2) active items with pricing, 3) quantity, 4) newest
+        processedItems.sort((a, b) => {
+          // Helper function to check if item is a pound variant
+          const isPoundVariant = (item: any) => {
+            const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
+            return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
+          };
+          
+          const aIsPound = isPoundVariant(a);
+          const bIsPound = isPoundVariant(b);
+          
+          // First priority: pound variants at the top
+          if (aIsPound && !bIsPound) return -1;
+          if (!aIsPound && bIsPound) return 1;
+          
+          // Second priority: active items with pricing
+          const aIsActive = a.status === 'active' && a.pricing.displayPrice > 0;
+          const bIsActive = b.status === 'active' && b.pricing.displayPrice > 0;
+          
+          if (aIsActive && !bIsActive) return -1;
+          if (!aIsActive && bIsActive) return 1;
+          
+          // Third priority: items with quantity
+          if (a.quantity > 0 && b.quantity === 0) return -1;
+          if (a.quantity === 0 && b.quantity > 0) return 1;
+          
+          // Fourth priority: highest quantity first
+          if (a.quantity !== b.quantity) return b.quantity - a.quantity;
+          
+          // Final priority: newest first (highest ID)
+          return parseInt(b.id) - parseInt(a.id);
+        });
+
+        log(`Processed ${processedItems.length} inventory items with Shopify data - POUND VARIANTS PRIORITIZED`);
         return processedItems;
       } catch (error) {
         log(`Inventory fetch error: ${error}`, 'error');
@@ -330,10 +363,30 @@ export const resolvers = {
     availableInventory: async () => {
       try {
         const allInventory = await resolvers.Query.inventory();
-        return allInventory.filter((item: any) => 
+        const availableItems = allInventory.filter((item: any) => 
           item.availability.inStock && 
           item.pricing.displayPrice > 0
         );
+        
+        // Apply same pound prioritization to available inventory
+        availableItems.sort((a, b) => {
+          const isPoundVariant = (item: any) => {
+            const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
+            return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
+          };
+          
+          const aIsPound = isPoundVariant(a);
+          const bIsPound = isPoundVariant(b);
+          
+          // First priority: pound variants at the top
+          if (aIsPound && !bIsPound) return -1;
+          if (!aIsPound && bIsPound) return 1;
+          
+          // Then by quantity
+          return b.quantity - a.quantity;
+        });
+        
+        return availableItems;
       } catch (error) {
         log(`Available inventory fetch error: ${error}`, 'error');
         return [];
