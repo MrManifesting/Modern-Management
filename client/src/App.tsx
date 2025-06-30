@@ -48,6 +48,7 @@ import QrScanPage from "@/pages/qr-scan";
 import AnimationDemo from "@/pages/animation-demo";
 import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
+import MediaPackDemo from "@/pages/media-pack-demo";
 import CredentialsManagement from "@/pages/credentials-management";
 import GraphQLInventory from "@/pages/graphql-inventory";
 import LabelGeneration from "@/pages/label-generation";
@@ -129,6 +130,7 @@ function Router() {
         <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
+        <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
         <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
         <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
 
