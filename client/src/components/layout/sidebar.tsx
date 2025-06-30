@@ -123,6 +123,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           title: "Shopify Reports",
           path: "/shopify-reports",
           className: "inventory-link package-brand",
+        },
+        {
+          title: "Shopify Import",
+          path: "/shopify-import",
+          className: "inventory-link specialty-brand",
         }
       ]
     },
