@@ -659,20 +659,78 @@ export function registerRoutes(app: any, storage: any) {
         return res.status(404).json({ error: "Item not found" });
       }
 
-      const shopifyStore = 'gold-standard-cbd';
-      let url = `https://admin.shopify.com/store/${shopifyStore}/products`;
+      // Try to find matching product in Gold Standard CBD store first
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
-      if (item.shopifyId) {
-        url = `https://admin.shopify.com/store/${shopifyStore}/products/${item.shopifyId}`;
-      } else if (item.sku) {
-        url = `https://admin.shopify.com/store/${shopifyStore}/products?query=sku:${encodeURIComponent(item.sku)}`;
-      } else if (item.name) {
-        // Clean the name for better search results
-        const cleanName = item.name.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
-        url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(cleanName)}`;
+      let directProductUrl = null;
+      
+      if (accessToken && item.name) {
+        try {
+          // Get all products and search locally for better matching
+          const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            const products = searchData.products || [];
+            
+            // Extract strain name from local item
+            const strainName = item.name!.toLowerCase().split('-')[0]; // "blueberry"
+            
+            // Find exact or closest match
+            const matchingProduct = products.find((product: any) => {
+              const productTitle = product.title.toLowerCase();
+              const itemName = item.name!.toLowerCase();
+              
+              // Try exact match first
+              if (productTitle.includes(itemName)) return true;
+              
+              // Try strain name match with THCa and quality descriptors
+              if (productTitle.includes(strainName) && productTitle.includes('thca')) {
+                // Check for quality match (smalls, aa indoor, etc.)
+                const itemQuality = itemName.includes('smalls') ? 'smalls' : itemName.includes('aa') ? 'aa' : '';
+                if (itemQuality && productTitle.includes(itemQuality)) return true;
+                if (productTitle.includes('muffin') && strainName === 'blueberry') return true;
+              }
+              
+              return false;
+            });
+            
+            if (matchingProduct) {
+              directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchingProduct.id}`;
+              log(`Found direct product match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
+            }
+          }
+        } catch (error) {
+          log(`Error searching for product "${item.name}": ${error}`, 'shopify');
+        }
+      }
+      
+      // Fallback to search if no direct match found
+      const shopifyStore = 'gold-standard-cbd';
+      let url = directProductUrl;
+      
+      if (!url) {
+        if (item.name) {
+          // Use the strain name for better search results
+          const strainName = item.name.split('-')[0] || item.name;
+          url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(strainName)}`;
+        } else {
+          url = `https://admin.shopify.com/store/${shopifyStore}/products`;
+        }
       }
 
-      res.json({ success: true, url });
+      res.json({ 
+        success: true, 
+        url,
+        found: !!directProductUrl,
+        searchTerm: item.name?.split('-')[0] || item.name
+      });
     } catch (error) {
       log(`Shopify view error: ${error}`, 'shopify');
       res.status(500).json({ error: "Failed to generate Shopify view URL" });
@@ -923,22 +981,78 @@ export function registerRoutes(app: any, storage: any) {
         return res.status(404).json({ error: "Item not found" });
       }
       
-      // Generate Shopify admin URL
-      const shopifyDomain = "gold-standard-cbd.myshopify.com";
-      let shopifyUrl;
+      // Try to find matching product in Gold Standard CBD store first
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
-      if (item.shopifyId) {
-        shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${item.shopifyId}`;
-      } else {
-        // Search by SKU or name
-        const searchTerm = item.sku || item.name;
-        shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(searchTerm)}`;
+      let directProductUrl = null;
+      
+      if (accessToken && item.name) {
+        try {
+          // Get all products and search locally for better matching
+          const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            const products = searchData.products || [];
+            
+            // Extract strain name from local item
+            const strainName = item.name!.toLowerCase().split('-')[0]; // "blueberry"
+            
+            // Find exact or closest match
+            const matchingProduct = products.find((product: any) => {
+              const productTitle = product.title.toLowerCase();
+              const itemName = item.name!.toLowerCase();
+              
+              // Try exact match first
+              if (productTitle.includes(itemName)) return true;
+              
+              // Try strain name match with THCa and quality descriptors
+              if (productTitle.includes(strainName) && productTitle.includes('thca')) {
+                // Check for quality match (smalls, aa indoor, etc.)
+                const itemQuality = itemName.includes('smalls') ? 'smalls' : itemName.includes('aa') ? 'aa' : '';
+                if (itemQuality && productTitle.includes(itemQuality)) return true;
+                if (productTitle.includes('muffin') && strainName === 'blueberry') return true;
+              }
+              
+              return false;
+            });
+            
+            if (matchingProduct) {
+              directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchingProduct.id}`;
+              log(`Found direct product match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
+            }
+          }
+        } catch (error) {
+          log(`Error searching for product "${item.name}": ${error}`, 'shopify');
+        }
       }
       
-      log(`Opening Shopify admin for item ${item.name}`, 'shopify');
+      // Fallback to search if no direct match found
+      let shopifyUrl = directProductUrl;
+      
+      if (!shopifyUrl) {
+        if (item.shopifyId) {
+          shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${item.shopifyId}`;
+        } else if (item.name) {
+          // Use the strain name for better search results
+          const strainName = item.name.split('-')[0] || item.name;
+          shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(strainName)}`;
+        } else {
+          shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products`;
+        }
+      }
+      
+      log(`Shopify view for "${item.name}": ${directProductUrl ? 'Direct match found' : 'Using search fallback'}`, 'shopify');
       res.json({
         success: true,
         url: shopifyUrl,
+        found: !!directProductUrl,
         item: {
           id: item.id,
           name: item.name,
