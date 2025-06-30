@@ -776,7 +776,7 @@ export function registerRoutes(app: any, storage: any) {
             
             if (matchingProduct) {
               directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchingProduct.id}`;
-              log(`Found direct product match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
+              log(`Enhanced fuzzy match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
             }
           }
         } catch (error) {
@@ -1098,7 +1098,7 @@ export function registerRoutes(app: any, storage: any) {
             
             if (matchingProduct) {
               directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchingProduct.id}`;
-              log(`Found direct product match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
+              log(`Enhanced fuzzy match for "${item.name}": ${matchingProduct.title} (ID: ${matchingProduct.id})`, 'shopify');
             }
           }
         } catch (error) {
