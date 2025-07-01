@@ -82,9 +82,9 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
 
   const getShopifyUrl = (item: any) => {
     if (item.shopifyId) {
-      return `https://mrlisterscurations.myshopify.com/admin/products/${item.shopifyId}`;
+      return `https://gold-standard-cbd.myshopify.com/admin/products/${item.shopifyId}`;
     }
-    return `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
+    return `https://gold-standard-cbd.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
   };
 
   // Parse weight from item name if weight field is null or invalid
