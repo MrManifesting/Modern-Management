@@ -216,7 +216,7 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Weight:</span>
-                  <p className="font-medium">{item.weight || 'Not specified'}</p>
+                  <p className="font-medium">{getDisplayWeight(item)}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Status:</span>
