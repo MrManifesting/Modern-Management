@@ -69,7 +69,7 @@ import SimpleOAuthPage from "@/pages/simple-oauth";
 import AuthDirectPage from "@/pages/auth-direct";
 import ManualAuthPage from "@/pages/manual-auth";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
-import EnhancedInventory from "@/pages/enhanced-inventory";
+
 import NotFound from "@/pages/not-found";
 
 // Onboarding components

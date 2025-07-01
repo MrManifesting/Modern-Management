@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **SYSTEM CLEANUP - REMOVED NON-FUNCTIONAL COMPONENTS AND STREAMLINED NAVIGATION**
+  - Removed inventory activation system that was causing 404 errors and confusing user experience
+  - Deleted InventoryActivationPage component and all associated routes (/inventory/activation)
+  - Removed Enhanced Inventory view (/inventory) as it was reported empty and unnecessary
+  - Cleaned up sidebar navigation by removing non-functional Enhanced Inventory link
+  - Updated Dashboard inventory button to properly redirect to working Products Inventory (/products-inventory)
+  - Streamlined navigation structure focusing on functional components only
+  - System now maintains clean, working navigation without dead links or error-prone components
 - July 1, 2025: **CRITICAL JSX COMPILATION ERRORS RESOLVED AND FILE STRUCTURE OPTIMIZED**
   - Fixed critical JSX compilation errors in THCa flower inventory component that were preventing proper React compilation
   - Resolved multiple parent element JSX structure issues by consolidating component return statements
