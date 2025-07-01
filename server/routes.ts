@@ -1189,6 +1189,26 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  app.get("/api/menu", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const availableItems = items.filter(item => 
+        item.quantity && item.quantity > 0 && 
+        (item.base_price > 0 || item.sale_price > 0)
+      );
+      
+      res.json({
+        success: true,
+        items: availableItems,
+        count: availableItems.length,
+        message: `Menu with ${availableItems.length} available items`
+      });
+    } catch (error) {
+      log(`Menu error: ${error}`, 'catalog');
+      res.status(500).json({ error: "Failed to generate menu" });
+    }
+  });
+
   app.get("/api/catalog", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
