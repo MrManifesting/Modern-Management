@@ -31,35 +31,25 @@ async function startServer() {
       res.sendFile(path.join(__dirname, '../dist/public/index.html'));
     });
   } else {
-    // Development: integrate with Vite dev server
-    try {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      });
-
-      app.use(vite.ssrFixStacktrace);
-      app.use(vite.middlewares);
-
-      console.log('[startup] Vite dev server integrated successfully');
-    } catch (error) {
-      console.error('[startup] Failed to setup Vite dev server:', error);
-      // Fallback to serving the built client files
-      app.use(express.static(path.join(__dirname, '../client')));
-      app.get('*', (req, res) => {
+    // Development: serve static files from client directory
+    console.log('[startup] Setting up development file serving');
+    app.use(express.static(path.join(__dirname, '../client')));
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
         res.sendFile(path.join(__dirname, '../client/index.html'));
-      });
-    }
+      }
+    });
+    console.log('[startup] Development static file serving configured');
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`[startup] Starting server in ${process.env.NODE_ENV || 'development'} mode`);
     console.log(`[startup] Using existing database connection`);
     console.log(`[graphql] GraphQL server started successfully`);
     console.log(`[startup] GraphQL server initialized at /graphql`);
     console.log(`[startup] Routes registered successfully`);
     console.log(`[startup] serving on port ${PORT}`);
-    console.log(`[startup] Frontend application ready at http://localhost:${PORT}`);
+    console.log(`[startup] Frontend application ready at http://0.0.0.0:${PORT}`);
     console.log(`[startup] Server startup completed successfully`);
   });
 }
