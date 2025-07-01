@@ -1544,10 +1544,93 @@ export function registerRoutes(app: any, storage: any) {
         }
       };
 
-      res.json({
-        success: true,
-        mediaPack: mediaPackInfo
-      });
+      // Generate HTML media pack page
+      const mediaPackHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${strainName} - Media Pack</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #d4af37; padding-bottom: 20px; }
+            .strain-name { font-size: 2.5rem; color: #d4af37; margin: 0; font-weight: bold; }
+            .tier { color: #228b22; font-size: 1.2rem; margin: 10px 0; }
+            .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+            .info-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #d4af37; }
+            .info-label { font-weight: bold; color: #333; margin-bottom: 5px; }
+            .info-value { color: #666; }
+            .download-section { margin-top: 40px; }
+            .download-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+            .download-btn { padding: 15px 20px; text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; transition: transform 0.2s; }
+            .download-btn:hover { transform: translateY(-2px); }
+            .btn-primary { background: linear-gradient(45deg, #d4af37, #ffd700); color: #000; }
+            .btn-success { background: linear-gradient(45deg, #228b22, #32cd32); color: white; }
+            .btn-info { background: linear-gradient(45deg, #4169e1, #6495ed); color: white; }
+            .footer { text-align: center; margin-top: 40px; color: #666; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="strain-name">${strainName}</h1>
+              <div class="tier">${tier}</div>
+              <p>Complete Media Pack & Product Information</p>
+            </div>
+            
+            <div class="info-grid">
+              <div class="info-card">
+                <div class="info-label">Product Name</div>
+                <div class="info-value">${item.name}</div>
+              </div>
+              <div class="info-card">
+                <div class="info-label">SKU</div>
+                <div class="info-value">${item.sku || 'N/A'}</div>
+              </div>
+              <div class="info-card">
+                <div class="info-label">Available Quantity</div>
+                <div class="info-value">${item.quantity || 0} units</div>
+              </div>
+              <div class="info-card">
+                <div class="info-label">Price</div>
+                <div class="info-value">${mediaPackInfo.price > 0 ? `$${mediaPackInfo.price}` : 'Contact for Pricing'}</div>
+              </div>
+              ${item.thca_percentage ? `
+              <div class="info-card">
+                <div class="info-label">THCa Content</div>
+                <div class="info-value">${item.thca_percentage}%</div>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div class="download-section">
+              <h2>Download Options</h2>
+              <div class="download-buttons">
+                <a href="/api/items/${id}/media-pack.zip" class="download-btn btn-primary">
+                  📦 Download Complete Pack
+                </a>
+                <a href="/api/items/${id}/coa" class="download-btn btn-success">
+                  📄 View COA Certificate
+                </a>
+                <a href="/api/items/${id}/shopify-storefront" class="download-btn btn-info">
+                  🛒 View on Storefront
+                </a>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+              <p>Contact: jon@goldcbd.com or 541-291-2404</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(mediaPackHtml);
     } catch (error) {
       log(`Media pack generation error: ${error}`, 'media');
       res.status(500).json({ error: "Failed to generate media pack" });
