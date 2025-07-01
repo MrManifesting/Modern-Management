@@ -1215,7 +1215,7 @@ export function registerRoutes(app: any, storage: any) {
             );
 
             const itemData = {
-              name: variant.title || product.title,
+              name: product.title + (variant.title !== 'Default Title' ? ` (${variant.title})` : ''),
               sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
               quantity: variant.inventory_quantity || 0,
               base_price: parseFloat(variant.price) || 0,
