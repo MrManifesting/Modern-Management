@@ -546,8 +546,18 @@ export const resolvers = {
           return parseInt(b.id) - parseInt(a.id);
         });
 
-        log(`Processed ${processedItems.length} inventory items with Shopify data - POUND VARIANTS PRIORITIZED`);
-        return processedItems;
+        // Filter out items without valid pricing
+        const itemsWithPricing = processedItems.filter((item: any) => {
+          const hasValidPrice = item.pricing.displayPrice > 0 || 
+                               item.sale_price > 0 || 
+                               item.base_price > 0 || 
+                               item.bulk_price > 0 || 
+                               item.cost_price > 0;
+          return hasValidPrice;
+        });
+
+        log(`Processed ${itemsWithPricing.length} inventory items with valid pricing (filtered from ${processedItems.length}) - POUND VARIANTS PRIORITIZED`);
+        return itemsWithPricing;
       } catch (error) {
         log(`Inventory fetch error: ${error}`, 'error');
         return [];
