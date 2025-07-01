@@ -1346,7 +1346,7 @@ export function registerRoutes(app: any, storage: any) {
         return res.status(400).json({ error: "Item ID is required" });
       }
       
-      const item = await storage.getItemById(itemId);
+      const item = await storage.getItem(itemId);
       if (!item) {
         return res.status(404).json({ error: "Item not found" });
       }

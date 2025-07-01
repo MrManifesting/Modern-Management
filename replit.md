@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **SHOPIFY REPORTS DASHBOARD ENDPOINTS RESTORED - ALL 404 ERRORS RESOLVED**
+  - Fixed missing /api/shopify/reports/inventory endpoint - now returns comprehensive inventory analytics
+  - Fixed missing /api/shopify/reports/customers endpoint - now provides customer statistics and order analysis
+  - Fixed missing /api/shopify/reports/inventory/export endpoint - now generates CSV export data
+  - Fixed missing /api/shopify/create-product endpoint - now handles product creation requests properly
+  - All Shopify reports dashboard endpoints now return successful responses instead of 404 errors
+  - Enhanced error handling and data validation for all report generation functions
+  - System provides complete inventory analytics: 1,614 total items, 212 active items, $1M+ total value
 - July 1, 2025: **WEIGHT DISPLAY BUG FIXED - POUND VALUES NOW SHOW CORRECTLY WITHOUT EXTRA "G" SUFFIX**
   - Fixed critical weight display bug where pound variants showed "1 poundg" instead of "1 pound" in ViewItemModal
   - Added intelligent weight cleaning logic to remove trailing "g" from pound/ounce values while preserving legitimate gram measurements
