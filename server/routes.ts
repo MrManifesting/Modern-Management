@@ -948,7 +948,7 @@ export function registerRoutes(app: any, storage: any) {
           // Use enhanced fuzzy matching
           const matchResult = findBestShopifyMatch(item.name!, products);
           
-          if (matchResult.product && matchResult.score >= 60) {
+          if (matchResult.product && matchResult.score >= 80) {
             // Generate storefront URL
             storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
             log(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
@@ -1013,7 +1013,7 @@ export function registerRoutes(app: any, storage: any) {
             // Use enhanced fuzzy matching
             const matchResult = findBestShopifyMatch(item.name!, products);
             
-            if (matchResult.product) {
+            if (matchResult.product && matchResult.score >= 80) {
               directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
               log(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
             }
@@ -2363,7 +2363,7 @@ export function registerRoutes(app: any, storage: any) {
             // Use enhanced fuzzy matching
             const matchResult = findBestShopifyMatch(item.name!, products);
             
-            if (matchResult.product) {
+            if (matchResult.product && matchResult.score >= 80) {
               directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
               log(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
             }
