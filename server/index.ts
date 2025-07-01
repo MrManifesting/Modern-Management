@@ -31,39 +31,15 @@ async function startServer() {
       res.sendFile(path.join(__dirname, '../dist/public/index.html'));
     });
   } else {
-    // Development: use Vite dev server with proper TypeScript support
-    try {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-        root: path.join(__dirname, '../client'),
-        configFile: path.join(__dirname, '../vite.config.ts')
-      });
-      
-      app.use(vite.ssrFixStacktrace);
-      app.use(vite.middlewares);
-      
-      console.log('[startup] Vite dev server with TypeScript support integrated');
-    } catch (error) {
-      console.error('[startup] Vite dev server failed:', error);
-      console.log('[startup] Rebuilding and serving static files...');
-      
-      // Rebuild before serving
-      const { execSync } = await import('child_process');
-      try {
-        execSync('npm run build', { stdio: 'inherit' });
-        console.log('[startup] Build completed successfully');
-      } catch (buildError) {
-        console.error('[startup] Build failed:', buildError);
+    // Development: serve pre-built files for reliability
+    console.log('[startup] Using pre-built static files for development');
+    app.use(express.static(path.join(__dirname, '../dist/public')));
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, '../dist/public/index.html'));
       }
-      
-      app.use(express.static(path.join(__dirname, '../dist/public')));
-      app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-          res.sendFile(path.join(__dirname, '../dist/public/index.html'));
-        }
-      });
-    }
+    });
+    console.log('[startup] Static file serving configured');
   }
 
   app.listen(PORT, '0.0.0.0', () => {
