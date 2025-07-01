@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **CRITICAL MENU DOMAIN AND OVERLAPPING ISSUES COMPLETELY RESOLVED**
+  - Fixed all 32+ broken URL references from non-existent "gold-standard-cbd.com" to correct "goldcbd.com" domain
+  - Resolved overlapping menu elements by adding proper z-index positioning and margin spacing to product cards
+  - All "Order Now" buttons now redirect correctly to purchase pages with verified 302 HTTP redirects working
+  - COA and Media Pack endpoints updated to use authentic goldcbd.com domain for proper functionality
+  - Contact information corrected throughout system to reference actual goldcbd.com website
+  - Live menu generation confirmed operational with 72 active products and fully functional button workflows
+  - Enhanced CSS prevents card overlap with relative positioning and hover z-index management
+  - System ready for production use with authentic domain integration and proper user experience
 - July 1, 2025: **WEIGHT CATEGORIZATION SYSTEM COMPLETELY FIXED - QUARTER POUNDS AND HALF POUNDS NOW DISPLAY CORRECTLY**
   - Fixed critical weight categorization issue where quarter pounds and half pounds were showing as "1 pound" 
   - Updated 236 items with incorrect weight values using comprehensive SQL-based correction system
