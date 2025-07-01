@@ -321,10 +321,17 @@ export const resolvers = {
 
         // Sort by priority: 1) Pound variants, 2) active items with pricing, 3) quantity, 4) newest
         processedItems.sort((a, b) => {
-          // Helper function to check if item is a pound variant
+          // Helper function to check if item is a FULL pound variant (exclude 1/2 and 1/4 pounds)
           const isPoundVariant = (item: any) => {
             const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
-            return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
+            
+            // Exclude fractional pounds first
+            if (/(\b1\/2\s*pound\b|\bhalf\s*pound\b|\b1\/4\s*pound\b|\bquarter\s*pound\b)/i.test(searchText)) {
+              return false;
+            }
+            
+            // Only include full pounds
+            return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bfull\s*pound\b)/i.test(searchText);
           };
           
           const aIsPound = isPoundVariant(a);
