@@ -151,7 +151,7 @@ export const MobileInventoryPage: React.FC = () => {
   const transformedData = transformInventoryData(Array.isArray(inventoryData) ? inventoryData : []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Mobile-optimized header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="container mx-auto px-4 py-3">
@@ -183,12 +183,8 @@ export const MobileInventoryPage: React.FC = () => {
         />
       </div>
 
-      {/* Mobile-optimized floating action button for quick actions */}
-      <div className="fixed bottom-6 right-6 z-20">
-        <button className="w-14 h-14 bg-gold hover:bg-gold/90 rounded-full shadow-lg flex items-center justify-center text-black font-semibold text-xl transition-all duration-200 hover:scale-105 touch-manipulation">
-          +
-        </button>
-      </div>
+      {/* Mobile Navigation */}
+      <MobileNavigation />
     </div>
   );
 };
