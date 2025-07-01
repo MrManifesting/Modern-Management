@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, Package, DollarSign, Eye, FileText, Download, Search, Filter } from 'lucide-react';
+import { ExternalLink, Package, DollarSign, Eye, FileText, Download, Search, Filter, Settings } from 'lucide-react';
 import AdvancedInventoryFilters from '@/components/inventory/advanced-inventory-filters';
 import AdvancedInventorySorting from '@/components/inventory/advanced-inventory-sorting';
 
@@ -469,10 +469,42 @@ const GraphQLInventory = () => {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => window.open(item.links.shopifyAdmin, '_blank')}
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/items/${item.id}/shopify-storefront`);
+                const data = await response.json();
+                if (data.success && data.url) {
+                  window.open(data.url, '_blank');
+                } else {
+                  console.error('Failed to get storefront URL:', data);
+                }
+              } catch (error) {
+                console.error('Error fetching storefront URL:', error);
+              }
+            }}
           >
             <Eye className="w-4 h-4 mr-1" />
             View Live
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/items/${item.id}/shopify-view`);
+                const data = await response.json();
+                if (data.success && data.url) {
+                  window.open(data.url, '_blank');
+                } else {
+                  console.error('Failed to get admin URL:', data);
+                }
+              } catch (error) {
+                console.error('Error fetching admin URL:', error);
+              }
+            }}
+          >
+            <Settings className="w-4 h-4 mr-1" />
+            Admin
           </Button>
           {item.links.coaCertificate && (
             <Button

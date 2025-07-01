@@ -418,16 +418,27 @@ export function registerRoutes(app: any, storage: any) {
     try {
       const items = await storage.getItems();
       
-      // Enhanced sorting: biggest weights + newest items first
+      // Enhanced sorting: FULL pound variants first, then everything else
       const sortedItems = items.sort((a: any, b: any) => {
-        // Parse weights for comparison
-        const aWeight = parseWeightToGrams(a.weight || a.name || '');
-        const bWeight = parseWeightToGrams(b.weight || b.name || '');
+        // Helper function to check if item is a FULL pound variant (exclude 1/2 and 1/4 pounds)
+        const isFullPoundVariant = (item: any) => {
+          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
+          
+          // Exclude fractional pounds first
+          if (/(\b1\/2\s*pound\b|\bhalf\s*pound\b|\b1\/4\s*pound\b|\bquarter\s*pound\b)/i.test(searchText)) {
+            return false;
+          }
+          
+          // Only include full pounds
+          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bfull\s*pound\b)/i.test(searchText);
+        };
         
-        // FIRST PRIORITY: Biggest weights first
-        if (aWeight !== bWeight) {
-          return bWeight - aWeight;
-        }
+        const aIsFullPound = isFullPoundVariant(a);
+        const bIsFullPound = isFullPoundVariant(b);
+        
+        // FIRST PRIORITY: Full pound variants at the very top
+        if (aIsFullPound && !bIsFullPound) return -1;
+        if (!aIsFullPound && bIsFullPound) return 1;
         
         // SECOND PRIORITY: Newest items first (highest ID)
         const aId = a.id || 0;
@@ -442,7 +453,7 @@ export function registerRoutes(app: any, storage: any) {
         return bQuantity - aQuantity;
       });
 
-      log(`Retrieved ${items.length} items with ALL available flower products prioritized at top`, 'inventory');
+      log(`Retrieved ${items.length} items with FULL POUND VARIANTS PRIORITIZED AT TOP`, 'inventory');
       res.json(sortedItems);
     } catch (error) {
       log(`Items fetch error: ${error}`, 'inventory');
