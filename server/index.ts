@@ -31,15 +31,15 @@ async function startServer() {
       res.sendFile(path.join(__dirname, '../dist/public/index.html'));
     });
   } else {
-    // Development: serve static files from client directory
-    console.log('[startup] Setting up development file serving');
-    app.use(express.static(path.join(__dirname, '../client')));
+    // Development: serve built files for reliability
+    console.log('[startup] Serving built files in development mode');
+    app.use(express.static(path.join(__dirname, '../dist/public')));
     app.get('*', (req, res) => {
       if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../client/index.html'));
+        res.sendFile(path.join(__dirname, '../dist/public/index.html'));
       }
     });
-    console.log('[startup] Development static file serving configured');
+    console.log('[startup] Static file serving configured from dist/public');
   }
 
   app.listen(PORT, '0.0.0.0', () => {
