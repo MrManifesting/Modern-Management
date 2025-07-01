@@ -88,7 +88,7 @@ function Router() {
       </div>}>
       <Switch>
         <ProtectedRoute path="/" component={() => <Dashboard />} />
-        <ProtectedRoute path="/inventory" component={() => <EnhancedInventory />} />
+
         <ProtectedRoute path="/inventory/legacy" component={() => <Inventory />} />
         <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/:id" component={() => {
@@ -105,16 +105,7 @@ function Router() {
         <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
         <ProtectedRoute path="/inventory/mobile" component={() => <MobileInventoryPage />} />
-        <ProtectedRoute path="/inventory/activation" component={() => {
-          const InventoryActivationPage = React.lazy(() => import('@/pages/InventoryActivationPage'));
-          return (
-            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>}>
-              <InventoryActivationPage />
-            </React.Suspense>
-          );
-        }} />
+
 
         <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
         <ProtectedRoute path="/marketplace-management" component={() => <MarketplaceManagement />} />

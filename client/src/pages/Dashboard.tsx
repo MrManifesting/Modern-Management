@@ -74,17 +74,17 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Inventory Management</CardTitle>
             <CardDescription>
-              Manage your cannabis inventory with advanced activation system
+              Manage your cannabis inventory and product catalog
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Link href="/inventory-activation">
+            <Link href="/inventory">
               <Button className="w-full bg-gradient-to-r from-yellow-500 to-green-600 hover:from-yellow-600 hover:to-green-700 text-white">
-                Inventory Activation System
+                View Inventory
               </Button>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Activate draft items with proper pricing and quantities. 
+              Access your complete inventory with advanced filtering and search. 
               Currently managing 971 total items with 20 available products.
             </p>
           </CardContent>

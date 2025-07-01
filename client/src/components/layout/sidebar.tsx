@@ -82,11 +82,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       icon: <Package className="h-5 w-5" />,
       path: "/products-inventory",
       subItems: [
-        {
-          title: "Enhanced Inventory",
-          path: "/inventory",
-          className: "inventory-link primary-brand",
-        },
+
         {
           title: "Mobile Inventory",
           path: "/inventory/mobile",
