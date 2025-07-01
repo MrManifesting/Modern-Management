@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **FIXED SHOPIFY VIEW LINKS TO DISPLAY LIVE STOREFRONT INSTEAD OF ADMIN INTERFACE**
+  - Updated GraphQL resolvers to generate storefront URLs (gold-standard-cbd.com/products/) instead of admin URLs
+  - Created new /api/items/:id/shopify-storefront endpoint for direct storefront access
+  - Changed "Admin" button to "View Live" button in GraphQL inventory interface
+  - All Shopify view links now take users to actual product pages customers see instead of admin interface
+  - Shopify view functionality now works correctly for customer-facing product browsing
 - June 30, 2025: **ADVANCED INVENTORY FILTERING AND SORTING SYSTEM DEPLOYED WITH POUND VARIANT PRIORITIZATION**
   - Implemented comprehensive advanced filtering system with 11 filter criteria: search, category, price range, quantity range, THCa range, status, weight, COA availability, media availability, stock status, and pound variants only
   - Created intelligent sorting system that prioritizes biggest weights (pound variants) and newest items (highest IDs) at the top as requested

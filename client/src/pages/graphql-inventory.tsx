@@ -472,7 +472,7 @@ const GraphQLInventory = () => {
             onClick={() => window.open(item.links.shopifyAdmin, '_blank')}
           >
             <Eye className="w-4 h-4 mr-1" />
-            Admin
+            View Live
           </Button>
           {item.links.coaCertificate && (
             <Button
