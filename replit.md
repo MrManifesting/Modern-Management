@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **WEIGHT DISPLAY BUG FIXED - POUND VALUES NOW SHOW CORRECTLY WITHOUT EXTRA "G" SUFFIX**
+  - Fixed critical weight display bug where pound variants showed "1 poundg" instead of "1 pound" in ViewItemModal
+  - Added intelligent weight cleaning logic to remove trailing "g" from pound/ounce values while preserving legitimate gram measurements
+  - Confirmed Zoap item displays correct weight "1 pound" with proper pricing ($850) and active status
+  - Enhanced weight parsing function prevents future display corruptions for all pound variant items
+  - System now displays authentic cannabis weight terminology correctly throughout inventory interface
 - July 1, 2025: **CRITICAL SYSTEM FIXES DEPLOYED - MARKETPLACE CONNECTION, SCANNER, AND STOCK MANAGEMENT FULLY OPERATIONAL**
   - Fixed marketplace test connection endpoint (/api/marketplaces/:id/test) - now working without rate limiting issues
   - Added missing marketplace sync endpoint (/api/marketplaces/:id/sync) for complete marketplace management
