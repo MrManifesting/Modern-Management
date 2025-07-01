@@ -10,10 +10,25 @@ const log = (message: string, context: string = 'general') => {
 
 // Fuzzy matching utility for Shopify products using handle, title, and variant analysis
 function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
-  const itemParts = localItemName.toLowerCase().split('-');
-  const strain = itemParts[0] || ''; // "blueberry"
-  const type = itemParts.find(part => part.includes('thca') || part.includes('flower')) || 'thca';
-  const tier = itemParts.slice(1).join('-'); // "muffin-thca-smalls-aa-indoor"
+  // Parse new format: "Strain Name - THCA BULK FLOWER - TIER (weight)"
+  const cleanName = localItemName.replace(/\s*\([^)]*\)$/, ''); // Remove weight part
+  const parts = cleanName.split(' - ');
+  
+  let strain = '';
+  let type = 'thca';
+  let tier = '';
+  
+  if (parts.length >= 3) {
+    strain = parts[0].toLowerCase().trim(); // "zoap", "gush mintz", etc
+    type = parts[1].toLowerCase().includes('thca') ? 'thca' : 'flower';
+    tier = parts[2].toLowerCase().trim(); // "top shelf", "classic reserve", etc
+  } else {
+    // Fallback to old parsing method
+    const itemParts = localItemName.toLowerCase().split('-');
+    strain = itemParts[0] || '';
+    type = itemParts.find(part => part.includes('thca') || part.includes('flower')) || 'thca';
+    tier = itemParts.slice(1).join('-');
+  }
   
   // Calculate fuzzy match score for handle, title, and variants
   const calculateFuzzyScore = (product: any) => {
@@ -21,39 +36,54 @@ function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
     const title = product.title.toLowerCase();
     let score = 0;
     
-    // Handle format: strain-type-tier (e.g., "blueberry-muffin-thca-smalls-aa-indoor")
-    if (handle) {
-      const handleParts = handle.split('-');
-      
-      // Strain match (highest weight)
-      if (handleParts.some(part => part.includes(strain))) score += 50;
-      
-      // Type match (medium weight)  
-      if (handle.includes(type)) score += 30;
-      
-      // Tier/quality matches (lower weight each)
-      itemParts.forEach(part => {
-        if (part.length > 2 && handle.includes(part)) score += 10;
-      });
-    }
-    
-    // Title matching as backup
-    if (title.includes(strain)) score += 40;
-    if (title.includes('thca')) score += 20;
-    
-    // Quality descriptors matching
-    const qualityTerms = ['smalls', 'aa', 'indoor', 'outdoor', 'exotic', 'top shelf', 'classic', 'reserve'];
-    qualityTerms.forEach(term => {
-      if (tier.includes(term) && (handle.includes(term) || title.includes(term))) {
-        score += 15;
+    // Strain matching (highest priority - 50 points max)
+    const strainWords = strain.split(' ');
+    strainWords.forEach(word => {
+      if (word.length > 2) {
+        if (handle.includes(word)) score += 25;
+        if (title.includes(word)) score += 25;
       }
     });
+    
+    // Exact strain match bonus
+    if (handle.includes(strain.replace(/\s+/g, '-')) || title.includes(strain)) {
+      score += 30;
+    }
+    
+    // Type matching (medium priority - 30 points max)
+    if (handle.includes('thca') || title.includes('thca')) score += 20;
+    if (handle.includes('flower') || title.includes('flower')) score += 10;
+    
+    // Tier matching (high priority for quality - 40 points max)
+    const tierWords = tier.split(' ');
+    tierWords.forEach(word => {
+      if (word.length > 2) {
+        if (handle.includes(word)) score += 10;
+        if (title.includes(word)) score += 10;
+      }
+    });
+    
+    // Exact tier phrase matching
+    if (tier) {
+      const tierNormalized = tier.replace(/\s+/g, '');
+      const handleNormalized = handle.replace(/\s+/g, '');
+      const titleNormalized = title.replace(/\s+/g, '');
+      
+      if (handleNormalized.includes(tierNormalized) || titleNormalized.includes(tierNormalized)) {
+        score += 20;
+      }
+    }
     
     // Check variants for additional matching
     if (product.variants && Array.isArray(product.variants)) {
       product.variants.forEach((variant: any) => {
-        if (variant.sku && variant.sku.toLowerCase().includes(strain)) score += 20;
-        if (variant.title && variant.title.toLowerCase().includes(strain)) score += 15;
+        const strainWords = strain.split(' ');
+        strainWords.forEach(word => {
+          if (word.length > 2) {
+            if (variant.sku && variant.sku.toLowerCase().includes(word)) score += 10;
+            if (variant.title && variant.title.toLowerCase().includes(word)) score += 8;
+          }
+        });
       });
     }
     
@@ -769,7 +799,75 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Shopify view item endpoint
+  // Shopify storefront view endpoint (for customers)
+  app.get("/api/items/:id/shopify-storefront", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Get all Shopify products for fuzzy matching
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ error: "Shopify access token not configured" });
+      }
+
+      let storefrontUrl = null;
+
+      try {
+        // Search for the product using enhanced fuzzy matching
+        const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,variants`, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const products = searchData.products || [];
+          
+          // Use enhanced fuzzy matching
+          const matchResult = findBestShopifyMatch(item.name!, products);
+          
+          if (matchResult.product && matchResult.score >= 60) {
+            // Generate storefront URL
+            storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
+            log(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
+          }
+        }
+      } catch (error) {
+        log(`Error finding storefront product for "${item.name}": ${error}`, 'shopify');
+      }
+      
+      // Fallback to search if no direct match found
+      if (!storefrontUrl && item.name) {
+        // Extract strain name for search
+        const strainParts = item.name.split(' - ');
+        const strainName = strainParts[0] || item.name;
+        const searchTerm = encodeURIComponent(strainName.toLowerCase().replace(/\s+/g, '+'));
+        storefrontUrl = `https://gold-standard-cbd.com/search?q=${searchTerm}`;
+      }
+
+      res.json({ 
+        success: true, 
+        url: storefrontUrl,
+        type: 'storefront',
+        found: storefrontUrl && !storefrontUrl.includes('/search'),
+        searchTerm: item.name?.split(' - ')[0] || item.name
+      });
+    } catch (error) {
+      log(`Shopify storefront view error: ${error}`, 'shopify');
+      res.status(500).json({ error: "Failed to generate Shopify storefront URL" });
+    }
+  });
+
+  // Shopify admin view item endpoint
   app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -1240,6 +1338,90 @@ export function registerRoutes(app: any, storage: any) {
     } catch (error) {
       log(`Product name fix error: ${error}`, 'shopify-fix');
       res.status(500).json({ success: false, error: "Failed to fix product names" });
+    }
+  });
+
+  // COA (Certificate of Analysis) endpoint
+  app.get("/api/items/:id/coa", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Extract strain name for COA URL
+      const strainParts = item.name?.split(' - ') || [];
+      const strainName = strainParts[0] || item.name || 'product';
+      
+      // Convert strain name to URL-friendly slug
+      const strainSlug = strainName
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
+      const coaUrl = `https://gold-standard-cbd.com/coa/${strainSlug}`;
+
+      res.json({
+        success: true,
+        url: coaUrl,
+        strain: strainName,
+        slug: strainSlug
+      });
+    } catch (error) {
+      log(`COA generation error: ${error}`, 'coa');
+      res.status(500).json({ error: "Failed to generate COA URL" });
+    }
+  });
+
+  // Media pack download endpoint
+  app.get("/api/items/:id/media-pack", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Extract strain and product info
+      const strainParts = item.name?.split(' - ') || [];
+      const strainName = strainParts[0] || item.name || 'product';
+      const tier = strainParts[2] || 'Premium';
+      
+      // Generate media pack info
+      const mediaPackInfo = {
+        productName: item.name,
+        strain: strainName,
+        tier: tier,
+        thcaPercentage: item.thca_percentage || null,
+        quantity: item.quantity || 0,
+        price: item.base_price || item.sale_price || item.cost_price || null,
+        images: item.images || [],
+        description: item.description || '',
+        mediaLinks: {
+          productImages: `https://gold-standard-cbd.com/media/download/${item.sku || item.id}`,
+          socialAssets: `https://gold-standard-cbd.com/media/social/${strainName.toLowerCase().replace(/\s+/g, '-')}`,
+          marketingMaterials: `https://gold-standard-cbd.com/media/marketing/${strainName.toLowerCase().replace(/\s+/g, '-')}`,
+          complianceDocuments: `https://gold-standard-cbd.com/compliance/${strainName.toLowerCase().replace(/\s+/g, '-')}`
+        },
+        downloadLinks: {
+          fullPackage: `/api/items/${id}/media-pack.zip`,
+          coa: `/api/items/${id}/coa`,
+          storefront: `/api/items/${id}/shopify-storefront`
+        }
+      };
+
+      res.json({
+        success: true,
+        mediaPack: mediaPackInfo
+      });
+    } catch (error) {
+      log(`Media pack generation error: ${error}`, 'media');
+      res.status(500).json({ error: "Failed to generate media pack" });
     }
   });
 
