@@ -81,7 +81,7 @@ function generateProductLinks(item: any, shopifyProduct?: any) {
   
   return {
     shopifyStore: `https://${storeDomain.replace('.myshopify.com', '.com')}/products/${storeHandle}`,
-    shopifyAdmin: `https://admin.shopify.com/store/gold-standard-cbd/products/${shopifyProduct?.id || '?query=' + encodeURIComponent(item.sku || item.name)}`,
+    shopifyAdmin: `https://${storeDomain.replace('.myshopify.com', '.com')}/products/${storeHandle}`, // Changed to use storefront instead of admin
     googleSheets: `https://docs.google.com/spreadsheets/d/${process.env.GOOGLE_SHEETS_ID || '1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU'}/edit#gid=0&search=${encodeURIComponent(item.sku || item.name)}`,
     coaCertificate: item.name ? `https://gold-standard-cbd.com/coa/${storeHandle}` : null,
     mediaDownload: item.sku ? `https://gold-standard-cbd.com/media/download/${item.sku}` : null,
