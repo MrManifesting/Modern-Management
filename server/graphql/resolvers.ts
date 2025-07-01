@@ -476,6 +476,9 @@ export const resolvers = {
           const variant = shopifyProduct?.variants?.[0];
           const inventoryLevel = variant?.inventory_item_id ? inventoryLevels[variant.inventory_item_id] : null;
 
+          const weightInfo = formatWeight(item, shopifyProduct);
+          const availabilityInfo = calculateAvailability(item, shopifyProduct);
+
           return {
             id: item.id.toString(),
             name: item.name || 'Unnamed Product',
@@ -484,8 +487,9 @@ export const resolvers = {
             category: item.category,
             brand: item.brand,
             status: item.status || 'draft',
-            quantity: Math.max(item.quantity || 0, inventoryLevel?.available || 0),
-            weight: item.weight,
+            quantity: availabilityInfo.quantity,
+            weight: weightInfo.formattedWeight,
+            weightData: weightInfo,
             pricing: calculatePricing(item, shopifyProduct),
             media: processMediaInfo(item, shopifyProduct),
             links: generateProductLinks(item, shopifyProduct),
@@ -497,7 +501,7 @@ export const resolvers = {
               lastSyncDate: new Date().toISOString(),
               syncStatus: 'synced'
             } : null,
-            availability: calculateAvailability(item, inventoryLevel),
+            availability: availabilityInfo,
             lastUpdated: item.updatedAt || item.createdAt || new Date().toISOString()
           };
         });
