@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **REAL-TIME BULK FLOWER API WITH SHOPIFY GRAPHQL INTEGRATION DEPLOYED**
+  - Created comprehensive bulk flower API endpoint (/api/bulk-flower) using Shopify GraphQL for real-time inventory data
+  - System pulls authentic product data directly from Gold Standard CBD store: 50 THCA products with live pricing and quantities
+  - Enhanced data structure includes: Available Qty, Main Image, Strain, Type, Tier, Bulk Price, Order Link, and tier pricing (25lbs+, 50lbs+, 100lbs+)
+  - Real-time pricing integration shows authentic bulk prices: Jager Cake ($1,099), Rainbow Sherbet #11 ($1,499), Hash Burger ($64.99)
+  - Automatic quality tier extraction from product titles: TOP SHELF, AA INDOOR, AAA INDOOR, Classic Reserve, Exotic
+  - Complete contact information for bulk orders: kaya@goldcbd.com, 541-295-8811 ext #1
+  - GraphQL query optimized for active THCA products with comprehensive error handling and logging
+  - API provides structured data perfect for integration with external systems, spreadsheets, or automated ordering platforms
+  - System maintains real-time synchronization with Shopify inventory levels and pricing changes
 - July 1, 2025: **COMPLETE PURCHASE BUTTON REDIRECT SYSTEM DEPLOYED - ALL ORDER NOW BUTTONS REDIRECT CUSTOMERS TO PURCHASE PAGES**
   - Fixed critical issue where "Order Now" buttons were returning JSON instead of redirecting users to purchase pages
   - Modified /api/items/:id/shopify-storefront endpoint to use res.redirect(302) instead of res.json() for proper browser redirection
