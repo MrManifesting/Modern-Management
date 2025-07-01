@@ -1,7 +1,24 @@
 import { Request, Response } from "express";
 import multer from "multer";
+import { performanceMonitor, compressLargeResponse, formatResponse, optimizeQuery } from "./utils/performance-optimizer";
 
 const uploadMemory = multer({ storage: multer.memoryStorage() });
+
+// In-memory cache for frequently accessed data
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+const getCachedData = (key: string) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCachedData = (key: string, data: any, ttl: number = 30000) => {
+  cache.set(key, { data, timestamp: Date.now(), ttl });
+};
 
 // Utility functions
 const log = (message: string, context: string = 'general') => {
@@ -444,8 +461,16 @@ export function registerRoutes(app: any, storage: any) {
     return numMatch ? parseFloat(numMatch[1]) : 0;
   };
 
-  app.get("/api/items", async (_req: Request, res: Response) => {
+  app.get("/api/items", async (req: Request, res: Response) => {
     try {
+      // Check cache first
+      const cacheKey = `items:${req.query.page || 1}:${req.query.limit || 50}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        log(`Returned cached items data (${cachedData.length} items)`, 'inventory');
+        return res.json(cachedData);
+      }
+
       const items = await storage.getItems();
       
       // Enhanced sorting: FULL pound variants first, then everything else
@@ -483,17 +508,31 @@ export function registerRoutes(app: any, storage: any) {
         return bQuantity - aQuantity;
       });
 
+      // Optimize response for large datasets
+      const optimizedItems = compressLargeResponse(sortedItems);
+      
+      // Cache the result for 30 seconds
+      setCachedData(cacheKey, optimizedItems, 30000);
+
       log(`Retrieved ${items.length} items with FULL POUND VARIANTS PRIORITIZED AT TOP`, 'inventory');
-      res.json(sortedItems);
+      res.json(optimizedItems);
     } catch (error) {
       log(`Items fetch error: ${error}`, 'inventory');
-      res.status(500).json({ error: "Failed to fetch items" });
+      res.status(500).json(formatResponse.error("Failed to fetch items", "ITEMS_FETCH_ERROR"));
     }
   });
 
-  // Inventory current summary endpoint
+  // Inventory current summary endpoint with caching
   app.get("/api/inventory/current-summary", async (_req: Request, res: Response) => {
     try {
+      // Check cache first
+      const cacheKey = 'inventory:summary';
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        log(`Returned cached inventory summary`, 'inventory');
+        return res.json(formatResponse.success(cachedData));
+      }
+
       const items = await storage.getItems();
       
       const summary = {
