@@ -160,6 +160,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/reports",
     },
     {
+      title: "Performance Monitor",
+      icon: <Activity className="h-5 w-5" />,
+      path: "/performance-dashboard",
+      highlight: true,
+    },
+    {
       title: "Affiliate Program",
       icon: <Share2 className="h-5 w-5" />,
       path: "/affiliate-dashboard",
