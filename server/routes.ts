@@ -1202,8 +1202,8 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Shopify storefront view endpoint (for customers)
-  app.get("/api/items/:id/shopify-storefront", async (req: Request, res: Response) => {
+  // Shopify storefront view endpoint (for customers)  
+  app.get("/api/items/:id/shopify-storefront-old", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.getItem(id);
