@@ -1769,7 +1769,75 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Item Shopify view endpoint
+  // Item Shopify storefront view endpoint (live customer view)
+  app.get("/api/items/:id/shopify-storefront", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Try to find matching product in Gold Standard CBD store
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      let storefrontUrl = null;
+      
+      if (accessToken && item.name) {
+        try {
+          // Get all products and search for matching product
+          const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            const products = searchData.products || [];
+            
+            // Use enhanced fuzzy matching
+            const matchResult = findBestShopifyMatch(item.name!, products);
+            
+            if (matchResult.product && matchResult.product.handle) {
+              storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
+              log(`Storefront match for "${item.name}": ${matchResult.product.title}`, 'shopify-storefront');
+            }
+          }
+        } catch (error) {
+          log(`Error finding storefront product "${item.name}": ${error}`, 'shopify-storefront');
+        }
+      }
+      
+      // Fallback to store homepage if no specific product found
+      if (!storefrontUrl) {
+        storefrontUrl = 'https://gold-standard-cbd.com/';
+      }
+      
+      res.json({
+        success: true,
+        url: storefrontUrl,
+        type: 'storefront',
+        found: storefrontUrl !== 'https://gold-standard-cbd.com/',
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku
+        }
+      });
+    } catch (error) {
+      log(`Shopify storefront view error: ${error}`, 'shopify-storefront');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate storefront view" 
+      });
+    }
+  });
+
+  // Item Shopify admin view endpoint
   app.get("/api/items/:id/shopify-view", async (req: Request, res: Response) => {
     try {
       const itemId = parseInt(req.params.id);
