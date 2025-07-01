@@ -3916,6 +3916,85 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Bulk flower API endpoint with real-time Shopify GraphQL data
+  app.get('/api/bulk-flower', async (req: Request, res: Response) => {
+    try {
+      const SHOPIFY_ADMIN_API = 'https://gold-standard-cbd.myshopify.com/admin/api/2023-07/graphql.json';
+      const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!SHOPIFY_ACCESS_TOKEN) {
+        return res.status(400).json({ error: "Shopify access token not configured" });
+      }
+
+      const query = `
+        query {
+          products(first: 50, query: "status:active AND title:*THCA*") {
+            nodes {
+              title
+              handle
+              images(first: 1) { nodes { url } }
+              variants(first: 1) { nodes { inventoryQuantity, price } }
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(SHOPIFY_ADMIN_API, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.errors) {
+        throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
+      }
+
+      const items = (data.data.products.nodes || []).map(product => ({
+        "Available Qty": product.variants.nodes[0]?.inventoryQuantity || 0,
+        "Main Image": product.images.nodes[0]?.url || '',
+        "COA Image": "Contact kaya@goldcbd.com for COA",
+        "Strain": product.title.replace(/ - THCA.*$/i, ''),
+        "Type": "THCA Flower",
+        "Tier": (product.title.match(/Top Shelf|AA Indoor|AAA Indoor|Classic Reserve|Exotic/i) || [])[0] || '',
+        "Potency %": "Contact for %",
+        "Bulk Price": `$${product.variants.nodes[0]?.price || "Contact for pricing"}`,
+        "Distro 25lbs+": "Contact for pricing",
+        "Master 50lbs+": "Contact for pricing", 
+        "Master 2 100lbs+": "Contact for pricing",
+        "Order Link": `https://gold-standard-cbd.com/products/${product.handle}`
+      }));
+
+      log(`Bulk flower API: Retrieved ${items.length} THCA products from Shopify`, 'shopify');
+
+      res.json({
+        bulkFlowerInventory: items,
+        contactInfo: {
+          bulkOrders: "kaya@goldcbd.com",
+          phone: "541-295-8811 ext #1",
+          notes: "All THCA bulk flower sales are final - no returns accepted. COAs & letter to law enforcement included in all packages."
+        },
+        timestamp: new Date().toISOString(),
+        totalItems: items.length
+      });
+
+    } catch (error) {
+      log(`Bulk flower API error: ${error}`, 'shopify');
+      res.status(500).json({ 
+        error: "Failed to retrieve bulk flower inventory",
+        details: error.message 
+      });
+    }
+  });
+
   // Book flower menu API using provided JSON structure
   app.get('/api/book-flower-menu', async (req: Request, res: Response) => {
     try {
