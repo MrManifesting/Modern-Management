@@ -524,40 +524,39 @@ export const resolvers = {
           const aIsPound = isPoundVariant(a);
           const bIsPound = isPoundVariant(b);
           
-          // First priority: pound variants at the top
-          if (aIsPound && !bIsPound) return -1;
-          if (!aIsPound && bIsPound) return 1;
+          // Check if items have valid pricing and quantities (available)
+          const aHasValidPrice = a.pricing.displayPrice > 0 || a.sale_price > 0 || a.base_price > 0 || a.bulk_price > 0 || a.cost_price > 0;
+          const bHasValidPrice = b.pricing.displayPrice > 0 || b.sale_price > 0 || b.base_price > 0 || b.bulk_price > 0 || b.cost_price > 0;
           
-          // Second priority: active items with pricing
-          const aIsActive = a.status === 'active' && a.pricing.displayPrice > 0;
-          const bIsActive = b.status === 'active' && b.pricing.displayPrice > 0;
+          const aIsAvailable = aHasValidPrice && a.quantity > 0;
+          const bIsAvailable = bHasValidPrice && b.quantity > 0;
           
-          if (aIsActive && !bIsActive) return -1;
-          if (!aIsActive && bIsActive) return 1;
+          // First priority: available items (with pricing and quantity) at the top
+          if (aIsAvailable && !bIsAvailable) return -1;
+          if (!aIsAvailable && bIsAvailable) return 1;
           
-          // Third priority: items with quantity
-          if (a.quantity > 0 && b.quantity === 0) return -1;
-          if (a.quantity === 0 && b.quantity > 0) return 1;
+          // For available items, sort by newest first (highest ID)
+          if (aIsAvailable && bIsAvailable) {
+            return parseInt(b.id) - parseInt(a.id);
+          }
           
-          // Fourth priority: highest quantity first
-          if (a.quantity !== b.quantity) return b.quantity - a.quantity;
-          
-          // Final priority: newest first (highest ID)
+          // For non-available items, also sort by newest first
           return parseInt(b.id) - parseInt(a.id);
         });
 
-        // Filter out items without valid pricing
-        const itemsWithPricing = processedItems.filter((item: any) => {
+        // Filter to only include items with BOTH valid pricing AND available quantities
+        const activeInventoryItems = processedItems.filter((item: any) => {
           const hasValidPrice = item.pricing.displayPrice > 0 || 
                                item.sale_price > 0 || 
                                item.base_price > 0 || 
                                item.bulk_price > 0 || 
                                item.cost_price > 0;
-          return hasValidPrice;
+          const hasAvailableQuantity = item.quantity > 0;
+          return hasValidPrice && hasAvailableQuantity;
         });
 
-        log(`Processed ${itemsWithPricing.length} inventory items with valid pricing (filtered from ${processedItems.length}) - POUND VARIANTS PRIORITIZED`);
-        return itemsWithPricing;
+        log(`Processed ${activeInventoryItems.length} active inventory items with pricing and quantities (filtered from ${processedItems.length}) - NEWEST ITEMS FIRST`);
+        return activeInventoryItems;
       } catch (error) {
         log(`Inventory fetch error: ${error}`, 'error');
         return [];
@@ -608,31 +607,14 @@ export const resolvers = {
 
     availableInventory: async () => {
       try {
-        const allInventory = await resolvers.Query.inventory();
-        const availableItems = allInventory.filter((item: any) => 
-          item.availability.inStock && 
-          item.pricing.displayPrice > 0
-        );
+        // Get all inventory which already filters for pricing and quantities
+        const activeInventory = await resolvers.Query.inventory();
         
-        // Apply same pound prioritization to available inventory
-        availableItems.sort((a, b) => {
-          const isPoundVariant = (item: any) => {
-            const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
-            return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bpound\b)/i.test(searchText);
-          };
-          
-          const aIsPound = isPoundVariant(a);
-          const bIsPound = isPoundVariant(b);
-          
-          // First priority: pound variants at the top
-          if (aIsPound && !bIsPound) return -1;
-          if (!aIsPound && bIsPound) return 1;
-          
-          // Then by quantity
-          return b.quantity - a.quantity;
-        });
+        // No additional filtering needed since inventory() already filters for both pricing and quantities
+        // Sort by newest first (highest ID)
+        activeInventory.sort((a, b) => parseInt(b.id) - parseInt(a.id));
         
-        return availableItems;
+        return activeInventory;
       } catch (error) {
         log(`Available inventory fetch error: ${error}`, 'error');
         return [];
