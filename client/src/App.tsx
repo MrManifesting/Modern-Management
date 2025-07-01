@@ -126,6 +126,7 @@ function Router() {
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
         <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
+        <ProtectedRoute path="/graphql-inventory" component={() => <GraphQLInventory />} />
         <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
         <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
 

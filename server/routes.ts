@@ -53,19 +53,36 @@ function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
     const title = product.title.toLowerCase();
     let score = 0;
     
-    // Strain matching (highest priority - 50 points max)
+    // Strain matching (highest priority - must match significantly)
     const strainWords = strain.split(' ');
-    strainWords.forEach(word => {
-      if (word.length > 2) {
-        if (handle.includes(word)) score += 25;
-        if (title.includes(word)) score += 25;
-      }
-    });
+    let strainMatchScore = 0;
     
-    // Exact strain match bonus
-    if (handle.includes(strain.replace(/\s+/g, '-')) || title.includes(strain)) {
-      score += 30;
+    // Check for exact strain name match first (very high score)
+    const strainNormalized = strain.replace(/\s+/g, '').toLowerCase();
+    const handleNormalized = handle.replace(/[-\s]/g, '').toLowerCase();
+    const titleNormalized = title.replace(/[-\s]/g, '').toLowerCase();
+    
+    if (handleNormalized.includes(strainNormalized) || titleNormalized.includes(strainNormalized)) {
+      strainMatchScore += 80; // Very high score for exact strain match
+    } else {
+      // Only award points if majority of strain words match
+      let matchedWords = 0;
+      strainWords.forEach(word => {
+        if (word.length > 2) {
+          if (handle.includes(word) || title.includes(word)) {
+            strainMatchScore += 15;
+            matchedWords++;
+          }
+        }
+      });
+      
+      // Require at least 50% of strain words to match
+      if (matchedWords < strainWords.length * 0.5) {
+        strainMatchScore = 0; // No score if less than half the words match
+      }
     }
+    
+    score += strainMatchScore;
     
     // Type matching (medium priority - 30 points max)
     if (handle.includes('thca') || title.includes('thca')) score += 20;
@@ -622,17 +639,37 @@ export function registerRoutes(app: any, storage: any) {
 
       // Sort enhanced items: FULL pound variants first, then everything else
       enhancedItems.sort((a: any, b: any) => {
-        // Helper function to check if item is a FULL pound variant (exclude 1/2 and 1/4 pounds)
+        // Helper function to check if item is a FULL pound variant ONLY (very strict)
         const isFullPoundVariant = (item: any) => {
           const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
           
-          // Exclude fractional pounds first
-          if (/(\b1\/2\s*pound\b|\bhalf\s*pound\b|\b1\/4\s*pound\b|\bquarter\s*pound\b)/i.test(searchText)) {
+          // EXCLUDE anything with grams, ounces, or fractional pounds
+          const excludePatterns = [
+            /\b\d+\s*(gram|grams|g)\b/i,        // Any gram amounts (2 grams, 14 grams, etc.)
+            /\b\d+\s*(oz|ounce|ounces)\b/i,     // Any ounce amounts  
+            /\b(1\/2|half|0\.5)\s*(pound|lb)/i, // Half pounds
+            /\b(1\/4|quarter|0\.25)\s*(pound|lb)/i, // Quarter pounds
+            /\bsmall/i,                         // Small variants
+            /\bmini/i,                          // Mini variants
+            /\bsample/i                         // Sample variants
+          ];
+          
+          // If any exclude pattern matches, it's NOT a full pound
+          if (excludePatterns.some(pattern => pattern.test(searchText))) {
             return false;
           }
           
-          // Only include full pounds
-          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bfull\s*pound\b)/i.test(searchText);
+          // ONLY include explicit full pound patterns
+          const fullPoundPatterns = [
+            /\b1\s*pound\b/i,                   // "1 pound"
+            /\bone\s*pound\b/i,                 // "one pound"  
+            /\b1\s*lb\b/i,                      // "1 lb"
+            /\bfull\s*pound\b/i,                // "full pound"
+            /\(1\s*pound\)/i,                   // "(1 pound)"
+            /\bbulk\s*flower.*1\s*pound/i       // "bulk flower (1 pound)"
+          ];
+          
+          return fullPoundPatterns.some(pattern => pattern.test(searchText));
         };
         
         const aIsFullPound = isFullPoundVariant(a);
