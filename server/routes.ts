@@ -1236,9 +1236,9 @@ export function registerRoutes(app: any, storage: any) {
               ? `https://${shopifyDomain.replace('.myshopify.com', '')}.com/products/${productHandle}`
               : `https://${shopifyDomain.replace('.myshopify.com', '')}.com/search?q=${encodeURIComponent(strainName)}`;
             
-            // COA and media links
-            const coaLink = `https://gold-standard-cbd.com/coa/${productHandle}`;
-            const mediaLink = `https://gold-standard-cbd.com/media/download/${item.sku || productHandle}`;
+            // COA and media links - use internal endpoints
+            const coaLink = `/api/items/${item.id}/coa`;
+            const mediaLink = `/api/items/${item.id}/media-pack`;
             
             return `
             <div class="item">
@@ -1498,12 +1498,8 @@ export function registerRoutes(app: any, storage: any) {
       
       const coaUrl = `https://gold-standard-cbd.com/coa/${strainSlug}`;
 
-      res.json({
-        success: true,
-        url: coaUrl,
-        strain: strainName,
-        slug: strainSlug
-      });
+      // Redirect to the actual COA page
+      res.redirect(coaUrl);
     } catch (error) {
       log(`COA generation error: ${error}`, 'coa');
       res.status(500).json({ error: "Failed to generate COA URL" });
@@ -2172,8 +2168,8 @@ export function registerRoutes(app: any, storage: any) {
                   ? `https://${shopifyDomain.replace('.myshopify.com', '')}.com/products/${productHandle}`
                   : `https://${shopifyDomain.replace('.myshopify.com', '')}.com/search?q=${encodeURIComponent(strainName)}`;
                 
-                const coaLink = `https://gold-standard-cbd.com/coa/${productHandle}`;
-                const mediaLink = `https://gold-standard-cbd.com/media/download/${item.sku || productHandle}`;
+                const coaLink = `/api/items/${item.id}/coa`;
+                const mediaLink = `/api/items/${item.id}/media-pack`;
                 
                 return `
                 <div class="menu-item">
