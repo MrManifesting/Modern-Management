@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **LIVE MENU SYSTEM WITH FUNCTIONAL BUTTONS AND REAL-TIME SHOPIFY SYNC DEPLOYED**
+  - Created comprehensive live menu generator (/api/generate-live-menu) with 75 active products and fully functional buttons
+  - Implemented real-time Shopify price synchronization (/api/shopify/update-pricing) to fix "Update Failed" errors
+  - Added live menu JSON API (/api/live-menu-data) providing working URLs for all product actions
+  - Enhanced menu displays working Order Now, View COA, Media Pack, and Call Now buttons with authentic links
+  - All buttons generate proper URLs: Shopify storefront, COA certificates, media downloads, and phone calls
+  - Menu auto-refreshes every 5 minutes to maintain live inventory data with click tracking analytics
+  - System processes 75 active products with live pricing, stock levels, and real-time inventory value calculation
 - July 1, 2025: **COMPREHENSIVE INVENTORY SYNCHRONIZATION AND JSON INTEGRATION COMPLETE - ALL CRITICAL ISSUES RESOLVED**
   - Fixed weight display bug removing "g" suffix from pound values with intelligent cleaning preserving legitimate gram measurements
   - Implemented comprehensive Shopify inventory synchronization endpoint (/api/shopify/sync-inventory) fixing data discrepancies
