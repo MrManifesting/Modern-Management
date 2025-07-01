@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const http = require('http');
-const { URL } = require('url');
+import http from 'http';
+import { URL } from 'url';
 
 const BASE_URL = 'http://localhost:5000';
 

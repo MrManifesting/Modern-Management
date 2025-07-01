@@ -5372,16 +5372,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Get user conversations
   app.get("/api/ai/conversations", async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).user?.id || null;
-      
-      const result = await storage.db.execute(`
-        SELECT * FROM conversations 
-        WHERE user_id = $1 OR user_id IS NULL
-        ORDER BY last_message_at DESC
-        LIMIT 50
-      `, [userId]);
-
-      res.json(result.rows);
+      // For now, return empty array until proper conversation storage is implemented
+      res.json([]);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
       res.status(500).json({ error: "Failed to fetch conversations" });
