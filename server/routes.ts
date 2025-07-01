@@ -445,20 +445,62 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  app.get("/api/marketplace/test/:id", async (req: Request, res: Response) => {
+  // Marketplace test connection endpoint
+  app.post("/api/marketplaces/:id/test", async (req: Request, res: Response) => {
     try {
       const marketplaceId = parseInt(req.params.id);
       
       if (marketplaceId === 1) {
         // Test Shopify connection
-        const testResult = await fetch(`http://localhost:5000/api/shopify/test-connection`);
-        const shopifyStatus = await testResult.json();
-        res.json(shopifyStatus);
+        const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        
+        if (!accessToken) {
+          return res.json({
+            success: false,
+            connected: false,
+            error: "Shopify access token not configured"
+          });
+        }
+
+        try {
+          const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/shop.json`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            res.json({
+              success: true,
+              connected: true,
+              message: `Connected to ${data.shop?.name || 'Shopify store'}`,
+              store: data.shop?.name || 'Gold Standard',
+              domain: shopifyDomain
+            });
+          } else {
+            res.json({
+              success: false,
+              connected: false,
+              error: `Connection failed: ${response.status} ${response.statusText}`
+            });
+          }
+        } catch (error) {
+          res.json({
+            success: false,
+            connected: false,
+            error: "Failed to test Shopify connection"
+          });
+        }
       } else if (marketplaceId === 2) {
         // Test Google Sheets connection
-        const testResult = await fetch(`http://localhost:5000/api/google-sheets/status`);
-        const sheetsStatus = await testResult.json();
-        res.json(sheetsStatus);
+        res.json({
+          success: false,
+          connected: false,
+          message: "Google Sheets authentication needed"
+        });
       } else {
         res.status(404).json({ success: false, error: "Marketplace not found" });
       }
