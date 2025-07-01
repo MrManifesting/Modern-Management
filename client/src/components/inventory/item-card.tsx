@@ -150,7 +150,7 @@ export default function ItemCard({
       weight: preset.weight,
       weightUnit: preset.unit,
       quantity: preset.quantity,
-      basePrice: calculatePresetPrice(item.basePrice || 0, preset.weight),
+      basePrice: calculatePresetPrice(item.base_price || item.basePrice || 0, preset.weight),
       description: `${preset.weight}${preset.unit} portion of ${item.name}`,
       category: item.category,
       condition: item.condition
@@ -403,21 +403,21 @@ export default function ItemCard({
             <div className="text-right ml-2">
               {/* Main Price Display */}
               <div className="font-semibold text-primary-600">
-                ${typeof item.basePrice === 'string' ? parseFloat(item.basePrice || '0').toFixed(2) : 
-                  typeof item.salePrice === 'string' ? parseFloat(item.salePrice || '0').toFixed(2) : '0.00'}
+                ${typeof (item.base_price || item.basePrice) === 'string' ? parseFloat((item.base_price || item.basePrice) || '0').toFixed(2) : 
+                  typeof (item.sale_price || item.salePrice) === 'string' ? parseFloat((item.sale_price || item.salePrice) || '0').toFixed(2) : '0.00'}
               </div>
               
               {/* Sale Price Indicator */}
-              {item.salePrice && item.basePrice && parseFloat(item.salePrice || '0') < parseFloat(item.basePrice || '0') && (
+              {(item.sale_price || item.salePrice) && (item.base_price || item.basePrice) && parseFloat((item.sale_price || item.salePrice) || '0') < parseFloat((item.base_price || item.basePrice) || '0') && (
                 <div className="text-xs text-red-600 line-through">
-                  ${parseFloat(item.basePrice || '0').toFixed(2)}
+                  ${parseFloat((item.base_price || item.basePrice) || '0').toFixed(2)}
                 </div>
               )}
               
               {/* Wholesale Price */}
-              {item.wholesalePrice && (
+              {(item.wholesale_price || item.wholesalePrice) && (
                 <div className="text-xs text-gray-500">
-                  Wholesale: ${parseFloat(item.wholesalePrice || '0').toFixed(2)}
+                  Wholesale: ${parseFloat((item.wholesale_price || item.wholesalePrice) || '0').toFixed(2)}
                 </div>
               )}
             </div>
@@ -429,12 +429,12 @@ export default function ItemCard({
           </p>
           
           {/* Cost and Margin Info */}
-          {item.costPrice && (
+          {(item.cost_price || item.costPrice) && (
             <div className="mt-2 text-xs text-gray-500 flex justify-between">
-              <span>Cost: ${parseFloat(item.costPrice || '0').toFixed(2)}</span>
-              {item.basePrice && (
+              <span>Cost: ${parseFloat((item.cost_price || item.costPrice) || '0').toFixed(2)}</span>
+              {(item.base_price || item.basePrice) && (
                 <span className="text-green-600">
-                  Margin: {((parseFloat(item.basePrice || '0') - parseFloat(item.costPrice || '0')) / parseFloat(item.basePrice || '1') * 100).toFixed(0)}%
+                  Margin: {((parseFloat((item.base_price || item.basePrice) || '0') - parseFloat((item.cost_price || item.costPrice) || '0')) / parseFloat((item.base_price || item.basePrice) || '1') * 100).toFixed(0)}%
                 </span>
               )}
             </div>
