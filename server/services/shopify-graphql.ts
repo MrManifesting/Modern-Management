@@ -53,11 +53,11 @@ interface ShopifyGraphQLProduct {
     };
   };
   compareAtPriceRange: {
-    minVariantPrice?: {
+    minVariantCompareAtPrice?: {
       amount: string;
       currencyCode: string;
     };
-    maxVariantPrice?: {
+    maxVariantCompareAtPrice?: {
       amount: string;
       currencyCode: string;
     };
@@ -167,11 +167,11 @@ export class ShopifyGraphQLService {
                 }
               }
               compareAtPriceRange {
-                minVariantPrice {
+                minVariantCompareAtPrice {
                   amount
                   currencyCode
                 }
-                maxVariantPrice {
+                maxVariantCompareAtPrice {
                   amount
                   currencyCode
                 }
@@ -270,11 +270,11 @@ export class ShopifyGraphQLService {
             }
           }
           compareAtPriceRange {
-            minVariantPrice {
+            minVariantCompareAtPrice {
               amount
               currencyCode
             }
-            maxVariantPrice {
+            maxVariantCompareAtPrice {
               amount
               currencyCode
             }
@@ -325,8 +325,8 @@ export class ShopifyGraphQLService {
     // Extract pricing information
     const price = parseFloat(shopifyProduct.priceRange.minVariantPrice.amount);
     const maxPrice = parseFloat(shopifyProduct.priceRange.maxVariantPrice.amount);
-    const compareAtPrice = shopifyProduct.compareAtPriceRange.minVariantPrice 
-      ? parseFloat(shopifyProduct.compareAtPriceRange.minVariantPrice.amount)
+    const compareAtPrice = shopifyProduct.compareAtPriceRange.minVariantCompareAtPrice 
+      ? parseFloat(shopifyProduct.compareAtPriceRange.minVariantCompareAtPrice.amount)
       : null;
 
     // Extract weight information
@@ -355,7 +355,7 @@ export class ShopifyGraphQLService {
       discountPercentage: compareAtPrice && compareAtPrice > price 
         ? ((compareAtPrice - price) / compareAtPrice) * 100 
         : null,
-      currency: shopifyProduct.priceRange.minVariantPrice.currencyCode,
+      currency: shopifyProduct.priceRange.minVariantPrice.currencyCode || 'USD',
 
       // Weight data  
       weight,
