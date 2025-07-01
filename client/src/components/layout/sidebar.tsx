@@ -24,7 +24,8 @@ import {
   FileCheck,
   Shield,
   Smartphone,
-  Activity
+  Activity,
+  Bot
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -168,6 +169,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Performance Monitor",
       icon: <Activity className="h-5 w-5" />,
       path: "/performance-dashboard",
+      highlight: true,
+    },
+    {
+      title: "AI Assistant",
+      icon: <Bot className="h-5 w-5" />,
+      path: "/ai-assistant",
       highlight: true,
     },
     {
