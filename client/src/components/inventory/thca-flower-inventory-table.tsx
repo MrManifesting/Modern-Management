@@ -654,13 +654,12 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
 
   // Main component return
   return (
-    <>
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-2xl gold-gradient-text">Premium Products Inventory</CardTitle>
-          <CardDescription>
-            Manage your premium product inventory, pricing tiers, and stock levels
-          </CardDescription>
+    <Card className="shadow-md">
+      <CardHeader>
+        <CardTitle className="text-2xl gold-gradient-text">Premium Products Inventory</CardTitle>
+        <CardDescription>
+          Manage your premium product inventory, pricing tiers, and stock levels
+        </CardDescription>
         <div className="flex flex-col gap-4 mt-4">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -962,7 +961,6 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
         )}
       </CardContent>
     </Card>
-    </>
   );
 };
 

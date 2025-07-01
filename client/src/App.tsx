@@ -8,7 +8,7 @@ import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import MainLayout from "@/components/layout/main-layout";
-import Dashboard from "@/pages/dashboard";
+import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/inventory";
 import Marketplace from "@/pages/marketplace";
 import MarketplaceManagement from "@/pages/marketplace-management";
