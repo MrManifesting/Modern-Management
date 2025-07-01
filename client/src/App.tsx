@@ -1,75 +1,263 @@
-import React from 'react';
+import React, { Suspense } from "react";
+import { Switch, Route } from "wouter";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import { queryClient } from "./lib/queryClient";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
+import MainLayout from "@/components/layout/main-layout";
+import Dashboard from "@/pages/Dashboard";
+import Inventory from "@/pages/inventory";
+import Marketplace from "@/pages/marketplace";
+import MarketplaceManagement from "@/pages/marketplace-management";
+import Scanner from "@/pages/scanner";
+import Sales from "@/pages/sales";
+import Reports from "@/pages/reports";
+import Forecast from "@/pages/forecast";
+import ImageOptimization from "@/pages/image-optimization";
+import Employees from "@/pages/employees";
+import Settings from "@/pages/settings";
+import ShopifySettingsPage from "@/pages/ShopifySettingsPage";
+import ShopifySyncPage from "@/pages/shopify-sync";
+import ShopifyReportsPage from "@/pages/shopify-reports";
+import ShopifyImportPage from "@/pages/shopify-import";
+import AccessibilityGuide from "@/pages/accessibility-guide";
+import VoiceAccessibilitySettingsPage from "@/pages/voice-accessibility-settings";
+import ProductsInventoryPage from "@/pages/products-inventory";
+import SpecialtyProductsPage from "@/pages/specialty-products";
+import MenuSyncPage from "@/pages/menu-sync";
+
+import MediaManagerPage from "@/pages/media-manager";
+import CustomerAnalytics from "@/pages/CustomerAnalytics";
+import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
+import MobileInventoryPage from "@/pages/mobile-inventory";
+import VoiceSearchPage from "@/pages/voice-search";
+
+import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
+import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
+import AiToolsPage from "@/pages/ai/tools";
+import CSVValidatorPage from "@/pages/csv-validator";
+import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
+import GoogleSheetsPage from "@/pages/google-sheets-page";
+import SheetsConfigPage from "@/pages/sheets-config";
+import GoogleAppsScriptAdminPage from "@/pages/google-apps-script-admin";
+import CustomersPage from "@/pages/customers";
+import AuthPage from "@/pages/auth-page-simple";
+import LiveCatalog from "@/pages/LiveCatalog";
+import QrScanPage from "@/pages/qr-scan";
+import AnimationDemo from "@/pages/animation-demo";
+import CheckoutPage from "@/pages/checkout";
+import CredentialsPage from "@/pages/credentials-page";
+import MediaPackDemo from "@/pages/media-pack-demo";
+import CredentialsManagement from "@/pages/credentials-management";
+import GraphQLInventory from "@/pages/graphql-inventory";
+import LabelGeneration from "@/pages/label-generation";
+import SyncDashboard from "@/pages/sync-dashboard";
+import BarcodeScannerPage from "@/pages/barcode-scanner";
+
+import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
+import RealTimeSyncDashboard from "@/pages/real-time-sync-dashboard";
+import ThcaPivotTablesPage from "@/pages/thca-pivot-tables";
+import ThcaInventoryManagerPage from "@/pages/thca-inventory-manager";
+
+import GoogleSheetsAuthConfig from "@/pages/google-sheets-auth-config";
+import GoogleOAuthSetupPage from "@/pages/google-oauth-setup";
+import QuickOAuthSetupPage from "@/pages/quick-oauth-setup";
+import SimpleOAuthPage from "@/pages/simple-oauth";
+import AuthDirectPage from "@/pages/auth-direct";
+import ManualAuthPage from "@/pages/manual-auth";
+import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
+
+import NotFound from "@/pages/not-found";
+
+// Onboarding components
+import { OnboardingTour, WelcomeBanner } from "@/components/onboarding";
+
+function Router() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+        <React.Suspense fallback={<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>}>
+          {/* Dynamically import the leaf loader to avoid circular dependencies */}
+          {(() => {
+            const LeafLoadingPattern = React.lazy(() => import("@/components/ui/leaf-loader").then(module => ({ default: module.LeafLoadingPattern })));
+            return <LeafLoadingPattern message="Loading application..." />;
+          })()}
+        </React.Suspense>
+      </div>}>
+      <Switch>
+        <ProtectedRoute path="/" component={() => <Dashboard />} />
+
+        <ProtectedRoute path="/inventory/legacy" component={() => <Inventory />} />
+        <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
+        <ProtectedRoute path="/inventory/:id" component={() => {
+          const InventoryDetailPage = React.lazy(() => import('@/pages/inventory-detail'));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <InventoryDetailPage />
+            </React.Suspense>
+          );
+        }} />
+        <ProtectedRoute path="/inventory/graphql" component={() => <GraphQLInventory />} />
+        <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
+        <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
+        <ProtectedRoute path="/inventory/mobile" component={() => <MobileInventoryPage />} />
+
+
+        <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
+        <ProtectedRoute path="/marketplace-management" component={() => <MarketplaceManagement />} />
+        <ProtectedRoute path="/scanner" component={() => <Scanner />} />
+        <ProtectedRoute path="/sales" component={() => <Sales />} />
+        <ProtectedRoute path="/reports" component={() => <Reports />} />
+        <ProtectedRoute path="/forecast" component={() => <Forecast />} />
+        <ProtectedRoute path="/image-optimization" component={() => <ImageOptimization />} />
+        <ProtectedRoute path="/employees" component={() => <Employees />} />
+        <ProtectedRoute path="/settings" component={() => <Settings />} />
+        <ProtectedRoute path="/shopify-settings" component={() => <ShopifySettingsPage />} />
+        <ProtectedRoute path="/shopify-sync" component={() => <ShopifySyncPage />} />
+        <ProtectedRoute path="/shopify-reports" component={() => <ShopifyReportsPage />} />
+        <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
+        <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
+        <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
+        <ProtectedRoute path="/voice-search" component={() => <VoiceSearchPage />} />
+        <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
+        <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
+        <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
+        <ProtectedRoute path="/graphql-inventory" component={() => <GraphQLInventory />} />
+        <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
+        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
+
+        <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
+        <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
+        <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
+        <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
+        <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
+        <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
+        <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
+        <ProtectedRoute path="/google-apps-script-admin" component={() => <GoogleAppsScriptAdminPage />} />
+        <ProtectedRoute path="/sheets-mapping-admin" component={() => <SheetsMappingAdmin />} />
+        <ProtectedRoute path="/thca-pivot-tables" component={() => <ThcaPivotTablesPage />} />
+        <ProtectedRoute path="/thca-inventory" component={() => <ThcaInventoryManagerPage />} />
+
+        <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
+        <ProtectedRoute path="/google-oauth-setup" component={() => <GoogleOAuthSetupPage />} />
+        <ProtectedRoute path="/quick-oauth" component={() => <QuickOAuthSetupPage />} />
+        <ProtectedRoute path="/thca-setup" component={() => <SimpleOAuthPage />} />
+        <ProtectedRoute path="/auth-direct" component={() => <AuthDirectPage />} />
+        <ProtectedRoute path="/manual-auth" component={() => <ManualAuthPage />} />
+        <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
+        <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
+        <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
+        <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
+        <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
+        <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
+        <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
+        <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
+        
+        {/* Public Live Catalog - No authentication required */}
+        <Route path="/catalog" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/menu" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/live-menu" component={() => {
+          const ModernLiveCatalog = React.lazy(() => import("@/pages/ModernLiveCatalog"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ModernLiveCatalog />
+            </React.Suspense>
+          );
+        }} />
+        
+        <Route path="/auth" component={() => <AuthPage />} />
+        <Route path="/login-debug" component={() => {
+          const LoginDebug = React.lazy(() => import("@/pages/login-debug"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <LoginDebug />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/direct-login" component={() => {
+          const DirectLogin = React.lazy(() => import("@/pages/direct-login"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <DirectLogin />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/bypass-login" component={() => {
+          const BypassLogin = React.lazy(() => import("@/pages/bypass-login"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <BypassLogin />
+            </React.Suspense>
+          );
+        }} />
+        <Route path="/qr-scan" component={() => <QrScanPage />} />
+        <Route path="/affiliate/:code?" component={() => {
+          const AffiliateQrDemo = React.lazy(() => import("@/pages/affiliate/qr-demo"));
+          return <AffiliateQrDemo />;
+        }} />
+        <Route path="/checkout" component={() => <CheckoutPage />} />
+        <ProtectedRoute path="/credentials" component={() => <CredentialsManagement />} />
+        <Route path="/demo-inventory" component={() => {
+          const DemoInventoryPage = React.lazy(() => import('@/pages/demo-inventory'));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <DemoInventoryPage />
+            </React.Suspense>
+          );
+        }} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-yellow-400 mb-2">
-            Gold Standard Inventory Management
-          </h1>
-          <p className="text-gray-300">
-            Advanced Cannabis Inventory System
-          </p>
-        </header>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-gray-800 rounded-lg p-6 border border-yellow-400/20">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-3">
-              System Status
-            </h2>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Database:</span>
-                <span className="text-green-400">Connected</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shopify:</span>
-                <span className="text-green-400">Connected</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Items:</span>
-                <span className="text-yellow-400">1,614</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gray-800 rounded-lg p-6 border border-yellow-400/20">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-3">
-              Quick Actions
-            </h2>
-            <div className="space-y-3">
-              <button className="w-full bg-yellow-600 hover:bg-yellow-700 text-black font-semibold py-2 px-4 rounded transition">
-                View Inventory
-              </button>
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition">
-                Generate Menu
-              </button>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition">
-                Sync Shopify
-              </button>
-            </div>
-          </div>
-          
-          <div className="bg-gray-800 rounded-lg p-6 border border-yellow-400/20">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-3">
-              Recent Activity
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div className="text-gray-300">
-                ✓ System optimized for 1,614 items
-              </div>
-              <div className="text-gray-300">
-                ✓ Pound variants prioritized
-              </div>
-              <div className="text-gray-300">
-                ✓ Menu buttons functional
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ThemeProvider defaultTheme="light" storageKey="gold-standard-management-theme">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Router />
+            {/* Global application onboarding components - only show one to avoid duplicates */}
+            <OnboardingTour />
+            {/* WelcomeBanner removed to prevent duplicate tours */}
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

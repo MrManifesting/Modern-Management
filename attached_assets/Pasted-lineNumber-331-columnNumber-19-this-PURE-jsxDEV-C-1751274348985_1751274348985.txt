@@ -1,0 +1,211 @@
+lineNumber: 331,
+            columnNumber: 19
+          }, this),
+          /* @__PURE__ */ jsxDEV(CardContent, { className: "pt-6 space-y-4", children: [
+            /* @__PURE__ */ jsxDEV("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxDEV(
+                Button,
+                {
+                  variant: "outline",
+                  size: "sm",
+                  className: "w-full",
+                  onClick: () => testConnection(marketplace),
+                  disabled: isTestingConnection,
+                  children: [
+                    isTestingConnection ? /* @__PURE__ */ jsxDEV(CircularProgress, { size: 16, className: "mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 357,
+                      columnNumber: 23
+                    }, this) : /* @__PURE__ */ jsxDEV(CheckCircle2, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 359,
+                      columnNumber: 23
+                    }, this),
+                    "Test Connection"
+                  ]
+                },
+                void 0,
+                true,
+                {
+                  fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                  lineNumber: 349,
+                  columnNumber: 23
+                },
+                this
+              ),
+              /* @__PURE__ */ jsxDEV(
+                Button,
+                {
+                  variant: marketplace.isConnected ? "destructive" : "outline",
+                  size: "sm",
+                  className: marketplace.isConnected ? "w-full bg-red-900/20 hover:bg-red-800/40 text-red-400" : "w-full",
+                  onClick: () => toggleConnection(marketplace),
+                  children: [
+                    /* @__PURE__ */ jsxDEV(Power, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 370,
+                      columnNumber: 25
+                    }, this),
+                    marketplace.isConnected ? "Disconnect" : "Connect"
+                  ]
+                },
+                void 0,
+                true,
+                {
+                  fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                  lineNumber: 364,
+                  columnNumber: 23
+                },
+                this
+              )
+            ] }, void 0, true, {
+              fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+              lineNumber: 348,
+              columnNumber: 21
+            }, this),
+            marketplace.isConnected && /* @__PURE__ */ jsxDEV("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxDEV(
+                Button,
+                {
+                  variant: "outline",
+                  size: "sm",
+                  className: "w-full",
+                  onClick: () => syncProducts(marketplace),
+                  disabled: isSyncing,
+                  children: [
+                    isSyncing ? /* @__PURE__ */ jsxDEV(CircularProgress, { size: 16, className: "mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 385,
+                      columnNumber: 23
+                    }, this) : /* @__PURE__ */ jsxDEV(RefreshCw, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 387,
+                      columnNumber: 23
+                    }, this),
+                    "Sync Products"
+                  ]
+                },
+                void 0,
+                true,
+                {
+                  fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                  lineNumber: 377,
+                  columnNumber: 25
+                },
+                this
+              ),
+              /* @__PURE__ */ jsxDEV(
+                Button,
+                {
+                  variant: "outline",
+                  size: "sm",
+                  className: marketplace.syncEnabled ? "w-full bg-blue-900/20 hover:bg-blue-800/40 text-blue-400" : "w-full",
+                  onClick: () => toggleSyncEnabled(marketplace),
+                  children: [
+                    /* @__PURE__ */ jsxDEV(Settings, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                      fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                      lineNumber: 401,
+                      columnNumber: 27
+                    }, this),
+                    marketplace.syncEnabled ? "Auto Sync: On" : "Auto Sync: Off"
+                  ]
+                },
+                void 0,
+                true,
+                {
+                  fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                  lineNumber: 392,
+                  columnNumber: 25
+                },
+                this
+              )
+            ] }, void 0, true, {
+              fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+              lineNumber: 376,
+              columnNumber: 19
+            }, this),
+            marketplace.lastSyncDate && /* @__PURE__ */ jsxDEV("div", { className: "flex justify-between items-center pt-2 text-sm", children: [
+              /* @__PURE__ */ jsxDEV("span", { className: "text-gray-400", children: "Last Synced" }, void 0, false, {
+                fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                lineNumber: 409,
+                columnNumber: 25
+              }, this),
+              /* @__PURE__ */ jsxDEV("span", { className: "text-gray-300", children: new Date(marketplace.lastSyncDate).toLocaleString() }, void 0, false, {
+                fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                lineNumber: 410,
+                columnNumber: 25
+              }, this)
+            ] }, void 0, true, {
+              fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+              lineNumber: 408,
+              columnNumber: 19
+            }, this)
+          ] }, void 0, true, {
+            fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+            lineNumber: 347,
+            columnNumber: 19
+          }, this),
+          /* @__PURE__ */ jsxDEV(CardFooter, { className: "border-t border-gray-800 pt-4 flex justify-between", children: [
+            /* @__PURE__ */ jsxDEV(
+              Button,
+              {
+                variant: "ghost",
+                size: "sm",
+                onClick: () => openEditDialog(marketplace),
+                children: [
+                  /* @__PURE__ */ jsxDEV(Settings, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                    fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                    lineNumber: 422,
+                    columnNumber: 23
+                  }, this),
+                  "Edit"
+                ]
+              },
+              void 0,
+              true,
+              {
+                fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                lineNumber: 417,
+                columnNumber: 21
+              },
+              this
+            ),
+            /* @__PURE__ */ jsxDEV(
+              Button,
+              {
+                variant: "ghost",
+                size: "sm",
+                onClick: () => {
+                  setDeleteMarketplace(marketplace);
+                  setIsDeleteDialogOpen(true);
+                },
+                className: "text-red-500 hover:text-red-400",
+                children: [
+                  /* @__PURE__ */ jsxDEV(Trash2, { className: "h-4 w-4 mr-2" }, void 0, false, {
+                    fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                    lineNumber: 435,
+                    columnNumber: 23
+                  }, this),
+                  "Delete"
+                ]
+              },
+              void 0,
+              true,
+              {
+                fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+                lineNumber: 426,
+                columnNumber: 21
+              },
+              this
+            )
+          ] }, void 0, true, {
+            fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+            lineNumber: 416,
+            columnNumber: 19
+          }, this)
+        ] }, marketplace.id, true, {
+          fileName: "/home/runner/workspace/client/src/components/marketplace/marketplace-list.tsx",
+          lineNumber: 330,
+          columnNumber: 15
+        }, this);
+      })', 'marketplaces.map' is undefined)
