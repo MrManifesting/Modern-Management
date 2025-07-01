@@ -299,13 +299,13 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
                   <div>
                     <span className="text-sm text-gray-600">Base Price:</span>
                     <p className="font-semibold text-gray-700">
-                      {formatPrice(item.basePrice)}
+                      {formatPrice(item.base_price || item.basePrice)}
                     </p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Wholesale Price:</span>
                     <p className="font-semibold text-gray-700">
-                      {formatPrice(item.wholesalePrice)}
+                      {formatPrice(item.wholesale_price || item.wholesalePrice)}
                     </p>
                   </div>
                 </div>
