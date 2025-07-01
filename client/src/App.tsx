@@ -107,6 +107,7 @@ function Router() {
         <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
         <ProtectedRoute path="/inventory/mobile" component={() => <MobileInventoryPage />} />
+        <ProtectedRoute path="/inventory/animated" component={() => <AnimatedInventoryPage />} />
 
 
         <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
