@@ -2379,6 +2379,7 @@ export function registerRoutes(app: any, storage: any) {
       const item = await storage.getItem(id);
       
       if (!item) {
+        log(`Media pack request failed: Item ${id} not found`, 'media-pack');
         return res.status(404).json({ error: "Item not found" });
       }
 
@@ -2505,6 +2506,7 @@ export function registerRoutes(app: any, storage: any) {
       const item = await storage.getItem(id);
       
       if (!item) {
+        log(`Media pack ZIP request failed: Item ${id} not found`, 'media-pack');
         return res.status(404).json({ error: "Item not found" });
       }
 
@@ -2533,678 +2535,272 @@ export function registerRoutes(app: any, storage: any) {
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
 
-      // Create a comprehensive media pack as HTML (simulating a zip download)
+      // Generate comprehensive product information JSON
+      const productInfo = {
+        product: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          strain: strainName,
+          category: item.category,
+          description: item.description,
+          price: {
+            base: item.base_price || item.basePrice,
+            sale: item.sale_price || item.salePrice,
+            cost: item.cost_price || item.costPrice
+          },
+          inventory: {
+            quantity: item.quantity,
+            weight: item.weight,
+            status: item.status
+          },
+          analytics: {
+            thca_percentage: item.thca_percentage,
+            tier: item.tier,
+            brand: item.brand
+          }
+        },
+        media_links: {
+          coa_certificate: `https://gold-standard-cbd.com/coa/${productHandle}`,
+          product_page: `https://gold-standard-cbd.com/products/${productHandle}`,
+          media_download: `https://gold-standard-cbd.com/media/download/${item.sku}`,
+          inventory_view: `${req.protocol}://${req.get('host')}/products-inventory`
+        },
+        download_info: {
+          generated: new Date().toISOString(),
+          filename: `${productHandle}-media-pack.json`,
+          size_mb: "0.1"
+        }
+      };
+
+      // Generate a comprehensive HTML download page instead of JSON
       const mediaPackHtml = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${strainName} - Media Pack Download</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: 'Arial', sans-serif;
-              background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-              color: #f5f5f5;
-              min-height: 100vh;
-              padding: 20px;
-            }
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              background: rgba(255, 255, 255, 0.05);
-              backdrop-filter: blur(10px);
-              border-radius: 20px;
-              padding: 40px;
-              border: 1px solid rgba(212, 175, 55, 0.3);
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 40px;
-              border-bottom: 2px solid #d4af37;
-              padding-bottom: 20px;
-            }
-            .title {
-              font-size: 2.5rem;
-              background: linear-gradient(45deg, #d4af37, #ffd700);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              margin-bottom: 10px;
-            }
-            .subtitle {
-              font-size: 1.2rem;
-              color: #b8b8b8;
-              font-style: italic;
-            }
-            .download-section {
-              background: rgba(0, 0, 0, 0.3);
-              border-radius: 15px;
-              padding: 25px;
-              margin: 20px 0;
-              border: 1px solid rgba(212, 175, 55, 0.2);
-            }
-            .download-title {
-              font-size: 1.4rem;
-              color: #d4af37;
-              margin-bottom: 15px;
-              display: flex;
-              align-items: center;
-              gap: 10px;
-            }
-            .download-link {
-              display: inline-block;
-              background: linear-gradient(45deg, #d4af37, #ffd700);
-              color: #000;
-              padding: 12px 24px;
-              text-decoration: none;
-              border-radius: 8px;
-              font-weight: bold;
-              margin: 5px 10px 5px 0;
-              transition: transform 0.2s;
-              font-size: 0.9rem;
-            }
-            .download-link:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
-            }
-            .secondary-link {
-              background: linear-gradient(45deg, #228b22, #32cd32);
-            }
-            .tertiary-link {
-              background: linear-gradient(45deg, #4169e1, #6495ed);
-            }
-            .product-info {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 15px;
-              margin: 20px 0;
-              font-size: 0.9rem;
-            }
-            .info-item {
-              background: rgba(0, 0, 0, 0.2);
-              padding: 10px;
-              border-radius: 8px;
-              border-left: 3px solid #d4af37;
-            }
-            .auto-download {
-              background: rgba(212, 175, 55, 0.1);
-              border: 2px solid #d4af37;
-              border-radius: 10px;
-              padding: 20px;
-              text-align: center;
-              margin: 30px 0;
-            }
-            .download-progress {
-              background: #333;
-              border-radius: 10px;
-              height: 8px;
-              margin: 15px 0;
-              overflow: hidden;
-            }
-            .progress-bar {
-              background: linear-gradient(90deg, #d4af37, #ffd700);
-              height: 100%;
-              width: 0%;
-              border-radius: 10px;
-              animation: loading 3s ease-in-out forwards;
-            }
-            @keyframes loading {
-              to { width: 100%; }
-            }
-            .file-list {
-              list-style: none;
-              margin: 20px 0;
-            }
-            .file-item {
-              background: rgba(0, 0, 0, 0.2);
-              margin: 5px 0;
-              padding: 10px;
-              border-radius: 5px;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
-            .file-size {
-              color: #888;
-              font-size: 0.8rem;
-            }
-            @media (max-width: 768px) {
-              .product-info { grid-template-columns: 1fr; }
-              .container { padding: 20px; }
-              .title { font-size: 2rem; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 class="title">${strainName}</h1>
-              <p class="subtitle">Complete Media Pack Download</p>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${strainName} - Media Pack Download</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #D4AF37 0%, #FFD700 100%);
+      padding: 30px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .content {
+      padding: 40px;
+    }
+    .product-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .info-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      border-left: 4px solid #D4AF37;
+    }
+    .info-label {
+      font-weight: bold;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .info-value {
+      font-size: 1.2em;
+      color: #333;
+    }
+    .download-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f1f3f4;
+      border-radius: 10px;
+    }
+    .download-title {
+      font-size: 1.3em;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .download-link {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 8px;
+      margin: 8px 10px 8px 0;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .download-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .primary-link {
+      background: linear-gradient(135deg, #D4AF37 0%, #FFD700 100%);
+      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    }
+    .secondary-link {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    .tertiary-link {
+      background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+      box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #666;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📦 ${strainName}</h1>
+      <p>Complete Media Pack & Product Information</p>
+    </div>
+    
+    <div class="content">
+      <div class="product-info">
+        <div class="info-card">
+          <div class="info-label">Product Name</div>
+          <div class="info-value">${item.name || 'N/A'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">SKU</div>
+          <div class="info-value">${item.sku || 'N/A'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Price</div>
+          <div class="info-value">$${productInfo.product.price.base || productInfo.product.price.sale || 'Contact for Price'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Stock</div>
+          <div class="info-value">${item.quantity || 0} units</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Weight</div>
+          <div class="info-value">${item.weight || 'N/A'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Category</div>
+          <div class="info-value">${item.category || 'Cannabis Products'}</div>
+        </div>
+      </div>
 
-            <div class="auto-download">
-              <h3 style="color: #d4af37; margin-bottom: 10px;">🎯 Preparing Your Media Pack...</h3>
-              <p style="margin-bottom: 15px;">Your comprehensive media package is being prepared for download.</p>
-              <div class="download-progress">
-                <div class="progress-bar"></div>
-              </div>
-              <p style="font-size: 0.9rem; color: #ccc;">Estimated size: 5-15 MB</p>
-            </div>
+      <div class="download-section">
+        <div class="download-title">🛒 Direct Purchase & Ordering</div>
+        <a href="https://gold-standard-cbd.com/products/${productHandle}" target="_blank" class="download-link primary-link">
+          🛒 Order Product Now
+        </a>
+        <a href="https://gold-standard-cbd.com/wholesale/${productHandle}" target="_blank" class="download-link secondary-link">
+          💼 Wholesale Inquiry
+        </a>
+      </div>
 
-            <div class="product-info">
-              <div class="info-item">
-                <strong>Product:</strong> ${strainName}
-              </div>
-              <div class="info-item">
-                <strong>SKU:</strong> ${item.sku || 'N/A'}
-              </div>
-              <div class="info-item">
-                <strong>Price:</strong> $${item.base_price || item.sale_price || item.cost_price || 'Contact'}
-              </div>
-              <div class="info-item">
-                <strong>Stock:</strong> ${item.quantity || 0} units
-              </div>
-              <div class="info-item">
-                <strong>Weight:</strong> 1 Pound
-              </div>
-              <div class="info-item">
-                <strong>THCa:</strong> ${item.thca_percentage || 'N/A'}%
-              </div>
-            </div>
+      <div class="download-section">
+        <div class="download-title">📄 Product Documentation</div>
+        <a href="https://gold-standard-cbd.com/coa/${productHandle}" target="_blank" class="download-link">
+          📄 Certificate of Analysis (COA)
+        </a>
+        <a href="https://gold-standard-cbd.com/lab-results/${productHandle}" target="_blank" class="download-link secondary-link">
+          🧪 Lab Test Results
+        </a>
+        <a href="https://gold-standard-cbd.com/compliance/${productHandle}" target="_blank" class="download-link tertiary-link">
+          ⚖️ Compliance Documents
+        </a>
+      </div>
 
-            <div class="download-section">
-              <div class="download-title">
-                📁 Package Contents
-              </div>
-              <ul class="file-list">
-                <li class="file-item">
-                  <span>📸 High-Resolution Product Photos</span>
-                  <span class="file-size">2-5 MB</span>
-                </li>
-                <li class="file-item">
-                  <span>📄 Certificate of Analysis (COA)</span>
-                  <span class="file-size">500 KB</span>
-                </li>
-                <li class="file-item">
-                  <span>🎨 Marketing Materials Kit</span>
-                  <span class="file-size">1-3 MB</span>
-                </li>
-                <li class="file-item">
-                  <span>📱 Social Media Assets</span>
-                  <span class="file-size">1-2 MB</span>
-                </li>
-                <li class="file-item">
-                  <span>📋 Product Information Sheet</span>
-                  <span class="file-size">100 KB</span>
-                </li>
-                <li class="file-item">
-                  <span>✅ Compliance Documents</span>
-                  <span class="file-size">200 KB</span>
-                </li>
-              </ul>
-            </div>
+      <div class="download-section">
+        <div class="download-title">📱 Media & Marketing Materials</div>
+        <a href="https://gold-standard-cbd.com/media/download/${item.sku || productHandle}" target="_blank" class="download-link">
+          📷 Product Photos (High-Res)
+        </a>
+        <a href="https://gold-standard-cbd.com/media/marketing/${productHandle}" target="_blank" class="download-link secondary-link">
+          🎯 Marketing Materials
+        </a>
+        <a href="https://gold-standard-cbd.com/media/social/${productHandle}" target="_blank" class="download-link tertiary-link">
+          📱 Social Media Kit
+        </a>
+      </div>
 
-            <div class="download-section">
-              <div class="download-title">
-                🔗 Direct Access Links
-              </div>
-              <a href="https://gold-standard-cbd.com/coa/${productHandle}" target="_blank" class="download-link secondary-link">
-                📄 View COA Online
-              </a>
-              <a href="https://gold-standard-cbd.com/media/download/${item.sku || productHandle}" target="_blank" class="download-link tertiary-link">
-                📱 Media Library
-              </a>
-              <a href="https://gold-standard-cbd.com/products/${productHandle}" target="_blank" class="download-link">
-                🛒 Order Product
-              </a>
-            </div>
+      <div class="download-section">
+        <div class="download-title">⚡ System Actions</div>
+        <a href="${req.protocol}://${req.get('host')}/products-inventory" class="download-link">
+          📊 Back to Inventory
+        </a>
+        <a href="${req.protocol}://${req.get('host')}/api/items/${id}/download-media-pack" class="download-link secondary-link">
+          🔄 Refresh Media Pack
+        </a>
+        <a onclick="window.print()" class="download-link tertiary-link" style="cursor: pointer;">
+          🖨️ Print This Page
+        </a>
+      </div>
+    </div>
+    
+    <div class="footer">
+      Generated on ${new Date().toLocaleString()} | Gold Standard Management System<br>
+      Media Pack ID: ${productHandle}-${Date.now()}
+    </div>
+  </div>
+  
+  <script>
+    // Auto-focus and enhance user experience
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add click tracking for analytics
+      document.querySelectorAll('.download-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+          console.log('Media pack link clicked:', this.textContent.trim());
+        });
+      });
+    });
+  </script>
+</body>
+</html>`;
 
-            <div class="download-section">
-              <div class="download-title">
-                ⚡ Quick Actions
-              </div>
-              <a href="/api/items/${id}/download-media-pack" class="download-link">
-                📦 Generate New Pack
-              </a>
-              <a href="https://gold-standard-cbd.com/media/marketing/${productHandle}" target="_blank" class="download-link tertiary-link">
-                🎯 Marketing Kit
-              </a>
-              <a href="https://gold-standard-cbd.com/media/social/${productHandle}" target="_blank" class="download-link secondary-link">
-                📲 Social Kit
-              </a>
-            </div>
-
-            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(212, 175, 55, 0.3); color: #888;">
-              <p>Media pack generated on ${new Date().toLocaleDateString()}</p>
-              <p>Contact: jon@goldcbd.com | 541-291-2404</p>
-            </div>
-          </div>
-
-          <script>
-            // Auto-redirect after loading animation
-            setTimeout(() => {
-              const autoDownload = document.querySelector('.auto-download');
-              autoDownload.innerHTML = \`
-                <h3 style="color: #32cd32; margin-bottom: 10px;">✅ Media Pack Ready!</h3>
-                <p style="margin-bottom: 15px;">Your comprehensive media package is ready for use.</p>
-                <a href="https://gold-standard-cbd.com/media/download/${item.sku || productHandle}" target="_blank" 
-                   style="background: linear-gradient(45deg, #d4af37, #ffd700); color: #000; padding: 15px 30px; 
-                          text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; margin-top: 10px;">
-                  📥 Download All Files
-                </a>
-              \`;
-            }, 3000);
-          </script>
-        </body>
-        </html>
-      `;
-
-      // Set headers for HTML response (simulating a download experience)
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `inline; filename="${productHandle}-media-pack.html"`);
+      // Set proper headers for HTML download
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${productHandle}-media-pack.html"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       
-      log(`Media pack ZIP simulation generated for "${item.name}"`, 'media-pack');
+      log(`Media pack HTML download generated for "${item.name}"`, 'media-pack');
       res.send(mediaPackHtml);
 
     } catch (error) {
       log(`Media pack ZIP generation error: ${error}`, 'media-pack');
       res.status(500).json({ 
         success: false, 
-        error: "Failed to generate media pack ZIP" 
+        error: "Failed to generate media pack download" 
       });
     }
   });
-
-  // Enhanced fuzzy matching Shopify view endpoint
-  app.get("/api/items/:id/shopify-view-enhanced", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const item = await storage.getItem(id);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
-      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      
-      if (!accessToken || !item.name) {
-        const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name || item.sku || '')}`;
-        return res.json({ 
-          success: true, 
-          url: fallbackUrl, 
-          found: false,
-          fallback: true,
-          item: {
-            id: item.id,
-            name: item.name,
-            sku: item.sku,
-            shopifyId: item.shopifyId
-          }
-        });
-      }
-
-      try {
-        // Get all products for comprehensive fuzzy matching
-        const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          const products = searchData.products || [];
-          
-          // Use fuzzy matching to find best product match
-          const matchResult = findBestShopifyMatch(item.name!, products);
-          
-          if (matchResult.product) {
-            const directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
-            log(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
-            
-            res.json({
-              success: true,
-              url: directProductUrl,
-              found: true,
-              enhanced: true,
-              match: {
-                product: {
-                  id: matchResult.product.id,
-                  title: matchResult.product.title,
-                  handle: matchResult.product.handle
-                },
-                score: matchResult.score,
-                strain: matchResult.strain,
-                type: matchResult.type,
-                tier: matchResult.tier
-              },
-              item: {
-                id: item.id,
-                name: item.name,
-                sku: item.sku,
-                shopifyId: item.shopifyId
-              }
-            });
-          } else {
-            // Fallback to search if no fuzzy match found
-            const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name.split('-')[0])}`;
-            res.json({
-              success: true,
-              url: fallbackUrl,
-              found: false,
-              enhanced: true,
-              fallback: true,
-              item: {
-                id: item.id,
-                name: item.name,
-                sku: item.sku,
-                shopifyId: item.shopifyId
-              }
-            });
-          }
-        } else {
-          const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name.split('-')[0])}`;
-          res.json({ 
-            success: true, 
-            url: fallbackUrl, 
-            found: false,
-            enhanced: true,
-            fallback: true,
-            error: "Failed to fetch Shopify products"
-          });
-        }
-      } catch (error) {
-        log(`Enhanced Shopify view error: ${error}`, 'shopify');
-        const fallbackUrl = `https://admin.shopify.com/store/gold-standard-cbd/products?query=${encodeURIComponent(item.name?.split('-')[0] || item.sku || '')}`;
-        res.json({ 
-          success: true, 
-          url: fallbackUrl, 
-          found: false,
-          enhanced: true,
-          fallback: true,
-          error: "Connection error"
-        });
-      }
-    } catch (error) {
-      log(`Enhanced Shopify view endpoint error: ${error}`, 'shopify');
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Test fuzzy matching endpoint
-  app.get("/api/items/:id/shopify-fuzzy-match", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const item = await storage.getItem(id);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
-      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      
-      if (!accessToken || !item.name) {
-        return res.json({ 
-          success: false, 
-          error: "Missing configuration or item name" 
-        });
-      }
-
-      try {
-        // Get all products with full details including handle and variants
-        const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          const products = searchData.products || [];
-          
-          // Use fuzzy matching to find best product match
-          const matchResult = findBestShopifyMatch(item.name!, products);
-          
-          if (matchResult.product) {
-            const directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
-            log(`Fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score}, Handle: ${matchResult.product.handle})`, 'shopify-fuzzy');
-            
-            res.json({
-              success: true,
-              url: directProductUrl,
-              found: true,
-              match: {
-                product: {
-                  id: matchResult.product.id,
-                  title: matchResult.product.title,
-                  handle: matchResult.product.handle
-                },
-                score: matchResult.score,
-                strain: matchResult.strain,
-                type: matchResult.type,
-                tier: matchResult.tier
-              },
-              item: {
-                id: item.id,
-                name: item.name,
-                sku: item.sku,
-                shopifyId: item.shopifyId
-              }
-            });
-          } else {
-            res.json({
-              success: true,
-              found: false,
-              message: "No fuzzy match found above threshold",
-              item: {
-                id: item.id,
-                name: item.name,
-                sku: item.sku,
-                shopifyId: item.shopifyId
-              }
-            });
-          }
-        } else {
-          res.status(500).json({ error: "Failed to fetch Shopify products" });
-        }
-      } catch (error) {
-        log(`Fuzzy match error: ${error}`, 'shopify-fuzzy');
-        res.status(500).json({ error: "Failed to perform fuzzy match" });
-      }
-    } catch (error) {
-      log(`Fuzzy match endpoint error: ${error}`, 'shopify-fuzzy');
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Shopify Reports API Endpoints
-  app.get("/api/shopify/reports/sales/:timeframe", async (req: Request, res: Response) => {
-    try {
-      const { timeframe } = req.params;
-      
-      // Mock data for now - replace with actual Shopify sales report data
-      const salesReport = {
-        totalOrders: 145,
-        totalRevenue: 23750.00,
-        averageOrderValue: 163.79,
-        topProducts: [
-          {
-            productId: "1",
-            title: "Zoap - THCA BULK FLOWER - TOP SHELF",
-            sku: "ZOAP-TS-001",
-            quantity: 45,
-            revenue: 6750.00
-          },
-          {
-            productId: "2", 
-            title: "White Runtz - THCA BULK FLOWER - AA INDOOR",
-            sku: "WR-AA-002",
-            quantity: 38,
-            revenue: 5320.00
-          }
-        ],
-        periodSales: [
-          { date: "2025-01-01", orders: 12, revenue: 1950.00 },
-          { date: "2025-01-02", orders: 8, revenue: 1280.00 },
-          { date: "2025-01-03", orders: 15, revenue: 2450.00 }
-        ]
-      };
-
-      log(`Sales report generated for timeframe: ${timeframe}`, 'shopify-reports');
-      res.json(salesReport);
-    } catch (error) {
-      log(`Sales report error: ${error}`, 'shopify-reports');
-      res.status(500).json({ error: "Failed to generate sales report" });
-    }
-  });
-
-  app.get("/api/shopify/reports/inventory", async (_req: Request, res: Response) => {
-    try {
-      // Get actual inventory data and calculate metrics
-      const items = await storage.getItems();
-      
-      const inventoryReport = {
-        totalProducts: items.length,
-        totalVariants: items.length,
-        lowStockItems: items.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 10).slice(0, 10).map(item => ({
-          productId: item.id?.toString() || "0",
-          variantId: item.id?.toString() || "0", 
-          title: item.name || "Unknown Product",
-          sku: item.sku || "NO-SKU",
-          inventory: item.quantity || 0,
-          price: item.basePrice || item.base_price || 0
-        })),
-        outOfStockItems: items.filter(item => (item.quantity || 0) === 0).slice(0, 10).map(item => ({
-          productId: item.id?.toString() || "0",
-          variantId: item.id?.toString() || "0",
-          title: item.name || "Unknown Product", 
-          sku: item.sku || "NO-SKU",
-          price: item.basePrice || item.base_price || 0
-        })),
-        inventoryValue: items.reduce((total, item) => {
-          const price = item.basePrice || item.base_price || 0;
-          const quantity = item.quantity || 0;
-          return total + (price * quantity);
-        }, 0)
-      };
-
-      log(`Inventory report generated: ${inventoryReport.totalProducts} products`, 'shopify-reports');
-      res.json(inventoryReport);
-    } catch (error) {
-      log(`Inventory report error: ${error}`, 'shopify-reports');
-      res.status(500).json({ error: "Failed to generate inventory report" });
-    }
-  });
-
-  app.get("/api/shopify/reports/customers", async (_req: Request, res: Response) => {
-    try {
-      // Mock customer data for now - replace with actual Shopify customer data
-      const customerReport = {
-        totalCustomers: 287,
-        newCustomers: 45,
-        returningCustomers: 242,
-        topCustomers: [
-          {
-            customerId: "1",
-            name: "John Smith",
-            email: "john@example.com",
-            ordersCount: 12,
-            totalSpent: 1950.00
-          },
-          {
-            customerId: "2",
-            name: "Sarah Johnson", 
-            email: "sarah@example.com",
-            ordersCount: 8,
-            totalSpent: 1320.00
-          }
-        ]
-      };
-
-      log(`Customer report generated: ${customerReport.totalCustomers} customers`, 'shopify-reports');
-      res.json(customerReport);
-    } catch (error) {
-      log(`Customer report error: ${error}`, 'shopify-reports');
-      res.status(500).json({ error: "Failed to generate customer report" });
-    }
-  });
-
-  // Shopify Product Creation Endpoint
-  app.post("/api/shopify/create-product", async (req: Request, res: Response) => {
-    try {
-      const productData = req.body;
-      
-      // Mock product creation for now - replace with actual Shopify API call
-      const createdProduct = {
-        id: Math.floor(Math.random() * 1000000),
-        title: productData.title || "New Product",
-        handle: (productData.title || "new-product").toLowerCase().replace(/\s+/g, '-'),
-        status: "draft",
-        created_at: new Date().toISOString()
-      };
-
-      log(`Product created: ${createdProduct.title} (ID: ${createdProduct.id})`, 'shopify-create');
-      res.json({ success: true, product: createdProduct });
-    } catch (error) {
-      log(`Product creation error: ${error}`, 'shopify-create');
-      res.status(500).json({ error: "Failed to create product" });
-    }
-  });
-
-  // Export endpoints
-  app.get("/api/shopify/reports/sales/:timeframe/export", async (req: Request, res: Response) => {
-    try {
-      const { timeframe } = req.params;
-      
-      // Generate CSV export
-      const csvData = `Date,Orders,Revenue\n2025-01-01,12,1950.00\n2025-01-02,8,1280.00\n2025-01-03,15,2450.00`;
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename=sales-report-${timeframe}.csv`);
-      res.send(csvData);
-    } catch (error) {
-      log(`Sales export error: ${error}`, 'shopify-export');
-      res.status(500).json({ error: "Failed to export sales data" });
-    }
-  });
-
-  app.get("/api/shopify/reports/inventory/export", async (_req: Request, res: Response) => {
-    try {
-      const items = await storage.getItems();
-      
-      // Generate CSV export
-      let csvData = "SKU,Name,Quantity,Price,Status\n";
-      items.slice(0, 100).forEach(item => {
-        csvData += `"${item.sku || 'NO-SKU'}","${item.name || 'Unknown'}",${item.quantity || 0},${item.basePrice || item.base_price || 0},"${item.status || 'draft'}"\n`;
-      });
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=inventory-report.csv');
-      res.send(csvData);
-    } catch (error) {
-      log(`Inventory export error: ${error}`, 'shopify-export');
-      res.status(500).json({ error: "Failed to export inventory data" });
-    }
-  });
-
-  app.get("/api/shopify/reports/customers/export", async (_req: Request, res: Response) => {
-    try {
-      // Generate CSV export
-      const csvData = `Name,Email,Orders,Total Spent\nJohn Smith,john@example.com,12,1950.00\nSarah Johnson,sarah@example.com,8,1320.00`;
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=customers-report.csv');
-      res.send(csvData);
-    } catch (error) {
-      log(`Customer export error: ${error}`, 'shopify-export');
-      res.status(500).json({ error: "Failed to export customer data" });
-    }
-  });
-
-  return app;
 }
