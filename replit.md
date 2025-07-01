@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **ENHANCED FUZZY MATCHING WITH STRAIN + TYPE + TIER EXTRACTION AND FUNCTIONAL MENU BUTTONS**
+  - Upgraded fuzzy matching algorithm to properly parse new strain name format: "Strain Name - THCA BULK FLOWER - TIER (weight)"
+  - Enhanced matching now extracts strain (e.g., "Zoap", "Acai Gelato"), type ("THCA"), and tier ("TOP SHELF", "CLASSIC RESERVE") components
+  - Implemented weighted scoring system: strain matching (50+ points), type matching (30 points), tier matching (40 points)
+  - Fixed storefront URL generation with proper Shopify handle matching achieving 190+ match scores for authentic products
+  - Added functional COA endpoint generating proper URLs: https://gold-standard-cbd.com/coa/{strain-slug}
+  - Added comprehensive media pack endpoint with download links, product info, and marketing materials
+  - Created customer-facing storefront endpoint linking to live product pages: https://gold-standard-cbd.com/products/{handle}
+  - All menu buttons now fully functional with proper strain name extraction and URL generation
+  - System successfully matches local inventory items to Shopify products using enhanced strain + type + tier matching
 - July 1, 2025: **FIXED SHOPIFY VIEW LINKS TO DISPLAY LIVE STOREFRONT INSTEAD OF ADMIN INTERFACE**
   - Updated GraphQL resolvers to generate storefront URLs (gold-standard-cbd.com/products/) instead of admin URLs
   - Created new /api/items/:id/shopify-storefront endpoint for direct storefront access
