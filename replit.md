@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 1, 2025: **STRICT ACTIVE INVENTORY FILTERING IMPLEMENTED - ONLY ITEMS WITH PRICING AND QUANTITIES DISPLAYED**
+  - Enhanced inventory filtering to strictly require BOTH valid pricing AND available quantities for active inventory
+  - Updated GraphQL resolvers to filter out items without pricing (displayPrice, sale_price, base_price, bulk_price, or cost_price > 0)
+  - Modified sorting logic to prioritize newest items first (highest ID) among available inventory
+  - Active inventory now shows only 228 items from 1626 total that meet both pricing and quantity requirements
+  - System ensures no items appear without valid pricing data, preventing NaN values and empty pricing displays
+  - Available inventory automatically filtered for authentic sellable products only
+  - Sorting prioritizes newest available items at top of inventory displays for better business workflow
 - July 1, 2025: **CRITICAL MENU DOMAIN AND OVERLAPPING ISSUES COMPLETELY RESOLVED**
   - Fixed all 32+ broken URL references from non-existent "gold-standard-cbd.com" to correct "goldcbd.com" domain
   - Resolved overlapping menu elements by adding proper z-index positioning and margin spacing to product cards
