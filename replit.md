@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **COMPREHENSIVE INVENTORY SYNCHRONIZATION AND JSON INTEGRATION COMPLETE - ALL CRITICAL ISSUES RESOLVED**
+  - Fixed weight display bug removing "g" suffix from pound values with intelligent cleaning preserving legitimate gram measurements
+  - Implemented comprehensive Shopify inventory synchronization endpoint (/api/shopify/sync-inventory) fixing data discrepancies
+  - Created book flower menu API (/api/book-flower-menu) returning 69 THCA flower items in JSON format matching provided structure
+  - Added Google Sheets bulk flower endpoint (/api/bulk-flower-sheets) with exact header format: Available Qty, Main Image, COA Image, Strain, Type, Tier, Potency %, Bulk Price, Distro 25lbs+, Master 50lbs+, Master 2 100lbs+, Order Link
+  - Enhanced data extraction functions for strain names, THCA percentages, and quality tiers from product names
+  - Book flower menu includes 69 active THCA items with COA links, media downloads, and Gold Standard contact information
+  - Google Sheets format processes 671 bulk flower items ready for spreadsheet import with proper pricing and ordering links
+  - System now provides complete data workflow: internal inventory → Shopify sync → JSON export → Google Sheets format
 - July 1, 2025: **MOBILE INVENTORY INTERFACE FULLY OPERATIONAL - HTTP 404 ERRORS RESOLVED**
   - Fixed critical mobile inventory endpoint routing conflict causing 404 errors and database NaN parsing issues
   - Added optimized /api/items/mobile endpoint returning 50 highest-stock items for mobile performance
