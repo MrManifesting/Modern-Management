@@ -2990,7 +2990,7 @@ export function registerRoutes(app: any, storage: any) {
             const matchResult = findBestShopifyMatch(item.name!, products);
             
             if (matchResult.product && matchResult.product.handle) {
-              storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
+              storefrontUrl = `https://gold-standard-cbd.myshopify.com/products/${matchResult.product.handle}`;
               log(`Storefront match for "${item.name}": ${matchResult.product.title}`, 'shopify-storefront');
             }
           }
@@ -3001,7 +3001,7 @@ export function registerRoutes(app: any, storage: any) {
       
       // Fallback to store homepage if no specific product found
       if (!storefrontUrl) {
-        storefrontUrl = 'https://gold-standard-cbd.com/';
+        storefrontUrl = 'https://gold-standard-cbd.myshopify.com/';
       }
       
       // Perform actual redirect instead of returning JSON
@@ -4033,11 +4033,11 @@ export function registerRoutes(app: any, storage: any) {
                 tier: extractTier(item.name),
                 price: formatPriceForMenu(item.base_price || item.sale_price || item.cost_price),
                 sku: item.sku || "",
-                coaLink: `https://gold-standard-cbd.com/coa/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                coaLink: `https://gold-standard-cbd.myshopify.com/pages/coa-${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
                 coaFreeTime: "Business hours: 541-295-8811 ext #1",
-                productMediaDownloadLink: item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`,
-                imageSource: item.image_url || `https://gold-standard-cbd.com/products/${item.sku}.jpg`,
-                onlineStoreUrl: `https://gold-standard-cbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                productMediaDownloadLink: item.image_url || `https://gold-standard-cbd.myshopify.com/admin/products/${item.shopify_id || ''}`,
+                imageSource: item.image_url || `https://gold-standard-cbd.myshopify.com/products/${item.sku || ''}`,
+                onlineStoreUrl: `https://gold-standard-cbd.myshopify.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
                 status: "ACTIVE",
                 availableForSale: true,
                 genetics: "Contact for genetics",
