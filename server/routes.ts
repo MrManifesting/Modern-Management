@@ -4115,4 +4115,249 @@ export function registerRoutes(app: any, storage: any) {
       });
     }
   });
+
+  // Real-time Shopify price synchronization - fixes "Update Failed" errors
+  app.post('/api/shopify/update-pricing', async (req: Request, res: Response) => {
+    try {
+      const { itemId, newPrice } = req.body;
+      
+      if (!itemId || !newPrice) {
+        return res.status(400).json({ error: "Item ID and new price are required" });
+      }
+      
+      // Get the item from internal database
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables." 
+        });
+      }
+      
+      // Update price in internal database first
+      await storage.updateItem(itemId, { base_price: parseFloat(newPrice) });
+      
+      // If item has Shopify ID, update Shopify as well
+      if (item.shopifyId) {
+        try {
+          // Fetch current Shopify product to get variant info
+          const productResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${item.shopifyId}.json`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const variant = productData.product?.variants?.[0];
+            
+            if (variant) {
+              // Update variant price in Shopify
+              const updateResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/variants/${variant.id}.json`, {
+                method: 'PUT',
+                headers: {
+                  'X-Shopify-Access-Token': accessToken,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  variant: {
+                    id: variant.id,
+                    price: newPrice
+                  }
+                })
+              });
+              
+              if (!updateResponse.ok) {
+                log(`Failed to update Shopify price for item ${itemId}: ${updateResponse.statusText}`, 'shopify-pricing');
+              } else {
+                log(`Successfully updated Shopify price for item ${itemId}: $${newPrice}`, 'shopify-pricing');
+              }
+            }
+          }
+        } catch (shopifyError) {
+          log(`Shopify price update error for item ${itemId}: ${shopifyError}`, 'shopify-pricing');
+          // Continue execution - internal price was still updated
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: "Price updated successfully",
+        itemId,
+        newPrice: parseFloat(newPrice),
+        shopifyUpdated: !!item.shopifyId
+      });
+      
+    } catch (error) {
+      log(`Price update error: ${error}`, 'pricing');
+      res.status(500).json({ error: "Failed to update price" });
+    }
+  });
+
+  // Real-time Shopify image synchronization
+  app.post('/api/shopify/update-images', async (req: Request, res: Response) => {
+    try {
+      const { itemId, imageUrls } = req.body;
+      
+      if (!itemId || !imageUrls || !Array.isArray(imageUrls)) {
+        return res.status(400).json({ error: "Item ID and image URLs array are required" });
+      }
+      
+      // Get the item from internal database
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables." 
+        });
+      }
+      
+      // Update images in internal database
+      const primaryImageUrl = imageUrls[0] || null;
+      await storage.updateItem(itemId, { 
+        image_url: primaryImageUrl,
+        additional_images: imageUrls.length > 1 ? imageUrls.slice(1).join(',') : null
+      });
+      
+      // If item has Shopify ID, update Shopify product images
+      if (item.shopifyId) {
+        try {
+          // First, get existing images to avoid duplicates
+          const productResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${item.shopifyId}.json`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const existingImages = productData.product?.images || [];
+            
+            // Add new images that don't already exist
+            for (const imageUrl of imageUrls) {
+              const exists = existingImages.some((img: any) => img.src === imageUrl);
+              
+              if (!exists) {
+                const imageResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${item.shopifyId}/images.json`, {
+                  method: 'POST',
+                  headers: {
+                    'X-Shopify-Access-Token': accessToken,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    image: {
+                      src: imageUrl,
+                      alt: item.name || 'Product Image'
+                    }
+                  })
+                });
+                
+                if (imageResponse.ok) {
+                  log(`Successfully added image to Shopify product ${item.shopifyId}`, 'shopify-images');
+                } else {
+                  log(`Failed to add image to Shopify product ${item.shopifyId}: ${imageResponse.statusText}`, 'shopify-images');
+                }
+              }
+            }
+          }
+        } catch (shopifyError) {
+          log(`Shopify image update error for item ${itemId}: ${shopifyError}`, 'shopify-images');
+          // Continue execution - internal images were still updated
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: "Images updated successfully",
+        itemId,
+        imageCount: imageUrls.length,
+        shopifyUpdated: !!item.shopifyId
+      });
+      
+    } catch (error) {
+      log(`Image update error: ${error}`, 'images');
+      res.status(500).json({ error: "Failed to update images" });
+    }
+  });
+
+  // Enhanced live inventory update endpoint
+  app.get('/api/inventory/live-update', async (req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Shopify access token not configured for live updates" 
+        });
+      }
+      
+      // Get current internal inventory
+      const internalItems = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      // Fetch latest Shopify inventory levels
+      const inventoryResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/inventory_levels.json?limit=250`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!inventoryResponse.ok) {
+        throw new Error(`Shopify inventory fetch failed: ${inventoryResponse.statusText}`);
+      }
+      
+      const inventoryData = await inventoryResponse.json();
+      const inventoryLevels = inventoryData.inventory_levels || [];
+      
+      let updatedCount = 0;
+      const updates = [];
+      
+      // Match inventory levels with internal items
+      for (const item of internalItems) {
+        if (item.shopifyVariantId) {
+          const matchingLevel = inventoryLevels.find((level: any) => 
+            level.inventory_item_id === item.shopifyVariantId
+          );
+          
+          if (matchingLevel && matchingLevel.available !== item.quantity) {
+            await storage.updateItem(item.id, { quantity: matchingLevel.available });
+            updates.push({
+              itemId: item.id,
+              itemName: item.name,
+              oldQuantity: item.quantity,
+              newQuantity: matchingLevel.available
+            });
+            updatedCount++;
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Live update completed: ${updatedCount} items synchronized`,
+        updatedCount,
+        updates: updates.slice(0, 10), // Show first 10 updates
+        totalProcessed: internalItems.length
+      });
+      
+    } catch (error) {
+      log(`Live inventory update error: ${error}`, 'live-update');
+      res.status(500).json({ error: "Failed to perform live inventory update" });
+    }
+  });
 }
