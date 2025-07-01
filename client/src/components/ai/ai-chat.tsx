@@ -40,26 +40,37 @@ export function AiChat() {
   // Check AI status
   const { data: aiStatus } = useQuery({
     queryKey: ['/api/ai/status'],
-    queryFn: () => apiRequest('GET', '/api/ai/status'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/ai/status');
+      return response as { configured: boolean; model: string; features: string[] };
+    },
   });
 
   // Get conversations list
   const { data: conversations = [] } = useQuery({
     queryKey: ['/api/ai/conversations'],
-    queryFn: () => apiRequest('GET', '/api/ai/conversations'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/ai/conversations');
+      return response as Conversation[];
+    },
   });
 
   // Get current conversation with messages
   const { data: currentConversation } = useQuery({
     queryKey: ['/api/ai/conversations', currentConversationId],
-    queryFn: () => apiRequest('GET', `/api/ai/conversations/${currentConversationId}`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/ai/conversations/${currentConversationId}`);
+      return response as Conversation;
+    },
     enabled: !!currentConversationId,
   });
 
   // Create new conversation mutation
   const createConversationMutation = useMutation({
-    mutationFn: (data: { title: string }) =>
-      apiRequest('POST', '/api/ai/conversations', data),
+    mutationFn: async (data: { title: string }) => {
+      const response = await apiRequest('POST', '/api/ai/conversations', data);
+      return response as Conversation;
+    },
     onSuccess: (newConversation) => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai/conversations'] });
       setCurrentConversationId(newConversation.id);
@@ -79,10 +90,12 @@ export function AiChat() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: (data: { conversationId: number; content: string }) =>
-      apiRequest('POST', `/api/ai/conversations/${data.conversationId}/messages`, {
+    mutationFn: async (data: { conversationId: number; content: string }) => {
+      const response = await apiRequest('POST', `/api/ai/conversations/${data.conversationId}/messages`, {
         content: data.content,
-      }),
+      });
+      return response as { userMessage: Message; assistantMessage: Message };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/ai/conversations', currentConversationId] 
