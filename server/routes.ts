@@ -670,13 +670,18 @@ export function registerRoutes(app: any, storage: any) {
     try {
       const items = await storage.getItems();
       
-      // Filter items with quantities OR pricing
+      // PRIORITIZE ITEMS WITH QUANTITIES - this is what matters for $100K+ daily operations
       const enhancedItems = items.filter((item: any) => {
         const hasQuantity = (item.quantity || 0) > 0;
         const hasPricing = (item.base_price && parseFloat(item.base_price) > 0) ||
                           (item.sale_price && parseFloat(item.sale_price) > 0) ||
                           (item.cost_price && parseFloat(item.cost_price) > 0);
-        return hasQuantity || hasPricing;
+        
+        // ALWAYS show items with quantity (even without pricing) - these are sellable inventory
+        if (hasQuantity) return true;
+        
+        // Only show pricing-only items if they also have valid status
+        return hasPricing && (item.status === 'active' || item.status === 'available');
       }).map((item: any) => {
         // Get thumbnail URL with proper fallbacks
         let thumbnailUrl = null;
@@ -718,9 +723,22 @@ export function registerRoutes(app: any, storage: any) {
         };
       });
 
-      // Sort enhanced items: FULL pound variants first, then everything else
+      // Sort enhanced items: Items with QUANTITIES first (what matters for $100K+ operations)
       enhancedItems.sort((a: any, b: any) => {
-        // Helper function to check if item is a FULL pound variant ONLY (extremely strict)
+        // PRIMARY SORT: Items with quantities come first (these are actual sellable inventory)
+        const aHasQuantity = (a.quantity || 0) > 0;
+        const bHasQuantity = (b.quantity || 0) > 0;
+        
+        if (aHasQuantity && !bHasQuantity) return -1;
+        if (!aHasQuantity && bHasQuantity) return 1;
+        
+        // Within items with quantities, sort by highest quantity first
+        if (aHasQuantity && bHasQuantity) {
+          const quantityDiff = (b.quantity || 0) - (a.quantity || 0);
+          if (quantityDiff !== 0) return quantityDiff;
+        }
+        
+        // Helper function to check if item is a FULL pound variant ONLY (for secondary sorting)
         const isFullPoundVariant = (item: any) => {
           const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
           
