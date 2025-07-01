@@ -1111,6 +1111,117 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Fix existing items with proper product names from Shopify
+  app.post("/api/shopify/fix-product-names", async (req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ success: false, error: "Shopify access token not configured" });
+      }
+
+      log('Starting product name fix from Shopify store', 'shopify-fix');
+
+      // Get all Shopify products
+      let allProducts: any[] = [];
+      let hasNextPage = true;
+      let pageInfo: string | null = null;
+
+      while (hasNextPage) {
+        const url = pageInfo 
+          ? `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&page_info=${pageInfo}&fields=id,title,variants`
+          : `https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`;
+
+        const response = await fetch(url, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          return res.status(500).json({ 
+            success: false, 
+            error: "Failed to fetch Shopify products" 
+          });
+        }
+
+        const data = await response.json();
+        const products = data.products || [];
+        allProducts = allProducts.concat(products);
+
+        // Check for next page
+        const linkHeader = response.headers.get('Link');
+        const nextPageMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
+        
+        if (nextPageMatch) {
+          const nextUrl = new URL(nextPageMatch[1]);
+          pageInfo = nextUrl.searchParams.get('page_info');
+        } else {
+          hasNextPage = false;
+        }
+      }
+
+      log(`Fetched ${allProducts.length} Shopify products for name fixing`, 'shopify-fix');
+
+      // Get existing items with generic names
+      const items = await storage.getItems();
+      const genericItems = items.filter(item => 
+        item.name && ['1 pound', '1 Pound', 'ONE POUND', '1/2 pound', '1/4 pound', 'Half Pound', 'Quarter Pound'].includes(item.name)
+      );
+
+      log(`Found ${genericItems.length} items with generic names to fix`, 'shopify-fix');
+
+      let fixedCount = 0;
+      let skippedCount = 0;
+
+      // Fix each generic item
+      for (const item of genericItems) {
+        if (item.shopifyId) {
+          // Find the corresponding Shopify product
+          const shopifyProduct = allProducts.find(p => p.id === item.shopifyId);
+          if (shopifyProduct) {
+            // Find the specific variant
+            const variant = shopifyProduct.variants?.find((v: any) => v.id === item.shopifyVariantId);
+            if (variant) {
+              const newName = shopifyProduct.title + (variant.title !== 'Default Title' ? ` (${variant.title})` : '');
+              
+              // Update the item with proper name
+              await storage.updateItem(item.id, { 
+                name: newName,
+                description: shopifyProduct.body_html || item.description
+              });
+              
+              fixedCount++;
+              log(`Fixed item ${item.id}: "${item.name}" → "${newName}"`, 'shopify-fix');
+            } else {
+              skippedCount++;
+            }
+          } else {
+            skippedCount++;
+          }
+        } else {
+          skippedCount++;
+        }
+      }
+
+      log(`Product name fix complete: ${fixedCount} fixed, ${skippedCount} skipped`, 'shopify-fix');
+      
+      res.json({
+        success: true,
+        message: `Fixed ${fixedCount} product names, ${skippedCount} items skipped`,
+        fixedCount,
+        skippedCount,
+        totalProcessed: genericItems.length
+      });
+
+    } catch (error) {
+      log(`Product name fix error: ${error}`, 'shopify-fix');
+      res.status(500).json({ success: false, error: "Failed to fix product names" });
+    }
+  });
+
   // Sales endpoints
   app.get("/api/sales/recent", async (_req: Request, res: Response) => {
     try {
