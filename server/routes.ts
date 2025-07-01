@@ -1365,6 +1365,118 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Add new endpoint to specifically sync pricing from Shopify
+  app.post("/api/shopify/sync-pricing", async (_req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Shopify access token not configured" 
+        });
+      }
+
+      log(`Starting pricing update from Shopify`, 'shopify-pricing');
+
+      // Get existing items that have Shopify IDs
+      const existingItems = await storage.getAllItems();
+      const itemsWithShopifyIds = existingItems.filter((item: any) => 
+        item.shopifyId || item.shopifyVariantId || item.sku?.startsWith('SHOPIFY-')
+      );
+
+      log(`Found ${itemsWithShopifyIds.length} items linked to Shopify`, 'shopify-pricing');
+
+      let updatedCount = 0;
+      let errorCount = 0;
+
+      // Process items in batches
+      for (const item of itemsWithShopifyIds) {
+        try {
+          // Extract product ID from SKU or use shopifyId
+          let productId = item.shopifyId;
+          let variantId = item.shopifyVariantId;
+          
+          if (!productId && item.sku?.startsWith('SHOPIFY-')) {
+            const skuParts = item.sku.split('-');
+            if (skuParts.length >= 3) {
+              productId = skuParts[1];
+              variantId = skuParts[2];
+            }
+          }
+
+          if (!productId) {
+            log(`Skipping item ${item.id}: No product ID found`, 'shopify-pricing');
+            continue;
+          }
+
+          // Fetch current product data from Shopify
+          const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${productId}.json`, {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            log(`Failed to fetch product ${productId}: ${response.status}`, 'shopify-pricing');
+            continue;
+          }
+
+          const data = await response.json();
+          const product = data.product;
+          
+          if (!product || !product.variants || product.variants.length === 0) {
+            log(`No variants found for product ${productId}`, 'shopify-pricing');
+            continue;
+          }
+
+          // Find the specific variant or use the first one
+          let variant = product.variants.find((v: any) => v.id.toString() === variantId?.toString());
+          if (!variant) {
+            variant = product.variants[0]; // Fallback to first variant
+          }
+
+          // Parse prices
+          const variantPrice = parseFloat(variant.price);
+          const compareAtPrice = parseFloat(variant.compare_at_price || '0');
+
+          // Update the item with current Shopify pricing
+          const updateData = {
+            bulk_price: !isNaN(variantPrice) && variantPrice > 0 ? variantPrice : null,
+            sale_price: !isNaN(compareAtPrice) && compareAtPrice > 0 && compareAtPrice < variantPrice ? compareAtPrice : null,
+            quantity: variant.inventory_quantity || item.quantity, // Also sync quantity
+          };
+
+          await storage.updateItem(item.id, updateData);
+          updatedCount++;
+          log(`Updated pricing for item ${item.id}: Bulk=$${updateData.bulk_price || 'N/A'}`, 'shopify-pricing');
+
+        } catch (error) {
+          errorCount++;
+          log(`Error updating item ${item.id}: ${error}`, 'shopify-pricing');
+        }
+      }
+
+      log(`Pricing update completed: ${updatedCount} updated, ${errorCount} errors`, 'shopify-pricing');
+      res.json({
+        success: true,
+        message: `Successfully updated pricing for ${updatedCount} items`,
+        updated: updatedCount,
+        errors: errorCount
+      });
+
+    } catch (error) {
+      log(`Shopify pricing update error: ${error}`, 'shopify-pricing');
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update pricing from Shopify",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Inventory reports
   app.get("/api/shopify/reports/inventory", async (req: Request, res: Response) => {
     try {
@@ -1373,7 +1485,7 @@ export function registerRoutes(app: any, storage: any) {
       
       const totalItems = items.length;
       const totalValue = activeItems.reduce((sum: number, item: any) => 
-        sum + (parseFloat(item.base_price || '0') * parseInt(item.quantity || '0')), 0
+        sum + (parseFloat(item.bulk_price || item.base_price || '0') * parseInt(item.quantity || '0')), 0
       );
       const lowStockItems = activeItems.filter((item: any) => 
         parseInt(item.quantity || '0') < 5
