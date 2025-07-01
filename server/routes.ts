@@ -1178,31 +1178,52 @@ export function registerRoutes(app: any, storage: any) {
 
       // Fix each generic item
       for (const item of genericItems) {
-        if (item.shopifyId) {
+        let shopifyProductId: number | null = null;
+        let shopifyVariantId: number | null = null;
+
+        // Extract IDs from SKU if not directly available
+        if (item.sku && item.sku.startsWith('SHOPIFY-')) {
+          const skuParts = item.sku.split('-');
+          if (skuParts.length >= 3) {
+            shopifyProductId = parseInt(skuParts[1]);
+            shopifyVariantId = parseInt(skuParts[2]);
+          }
+        } else if (item.shopify_id) {
+          shopifyProductId = item.shopify_id;
+          shopifyVariantId = item.shopify_variant_id;
+        }
+
+        if (shopifyProductId) {
           // Find the corresponding Shopify product
-          const shopifyProduct = allProducts.find(p => p.id === item.shopifyId);
+          const shopifyProduct = allProducts.find(p => p.id === shopifyProductId);
+          log(`Looking for product ID ${shopifyProductId}, found: ${shopifyProduct ? shopifyProduct.title : 'NOT FOUND'}`, 'shopify-fix');
           if (shopifyProduct) {
             // Find the specific variant
-            const variant = shopifyProduct.variants?.find((v: any) => v.id === item.shopifyVariantId);
+            const variant = shopifyProduct.variants?.find((v: any) => v.id === shopifyVariantId);
             if (variant) {
               const newName = shopifyProduct.title + (variant.title !== 'Default Title' ? ` (${variant.title})` : '');
               
-              // Update the item with proper name
+              // Update the item with proper name and set the missing IDs
               await storage.updateItem(item.id, { 
                 name: newName,
-                description: shopifyProduct.body_html || item.description
+                description: shopifyProduct.body_html || item.description,
+                shopify_id: shopifyProductId,
+                shopify_variant_id: shopifyVariantId
               });
               
               fixedCount++;
               log(`Fixed item ${item.id}: "${item.name}" → "${newName}"`, 'shopify-fix');
             } else {
               skippedCount++;
+              log(`No variant found for item ${item.id} (variant ID: ${shopifyVariantId})`, 'shopify-fix');
             }
           } else {
             skippedCount++;
+            log(`No product found for item ${item.id} (product ID: ${shopifyProductId})`, 'shopify-fix');
           }
         } else {
           skippedCount++;
+          log(`No Shopify ID extractable for item ${item.id} (SKU: ${item.sku})`, 'shopify-fix');
         }
       }
 
