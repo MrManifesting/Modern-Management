@@ -45,7 +45,7 @@ export function AnimatedInventoryPage() {
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  const products = (inventoryData as any)?.items || [];
+  const products: Product[] = Array.isArray(inventoryData) ? inventoryData : [];
 
   // Filter products based on search and category
   const filteredProducts = products.filter((product: Product) => {
@@ -57,7 +57,7 @@ export function AnimatedInventoryPage() {
   });
 
   // Get categories for filter
-  const categories = ['all', ...new Set(products.map((p: Product) => p.category).filter(Boolean))];
+  const categories = ['all', ...new Set(products.map((p: Product) => p.category).filter(Boolean))] as string[];
 
   // Calculate stats
   const totalProducts = filteredProducts.length;
@@ -232,7 +232,7 @@ export function AnimatedInventoryPage() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
-                  {categories.map((category) => (
+                  {categories.map((category: string) => (
                     <option key={category} value={category}>
                       {category === 'all' ? 'All Categories' : category}
                     </option>
