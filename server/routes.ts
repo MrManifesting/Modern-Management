@@ -3004,17 +3004,8 @@ export function registerRoutes(app: any, storage: any) {
         storefrontUrl = 'https://gold-standard-cbd.com/';
       }
       
-      res.json({
-        success: true,
-        url: storefrontUrl,
-        type: 'storefront',
-        found: storefrontUrl !== 'https://gold-standard-cbd.com/',
-        item: {
-          id: item.id,
-          name: item.name,
-          sku: item.sku
-        }
-      });
+      // Perform actual redirect instead of returning JSON
+      res.redirect(302, storefrontUrl);
     } catch (error) {
       log(`Shopify storefront view error: ${error}`, 'shopify-storefront');
       res.status(500).json({ 
