@@ -5348,7 +5348,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       };
 
       // Since we're using raw SQL, let's insert directly
-      const result = await storage.db.execute(`
+      const result = await // REMOVED broken storage.db.execute(`
         INSERT INTO conversations (user_id, title, system_prompt, status, last_message_at, context, settings)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
@@ -5387,7 +5387,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const userId = (req as any).user?.id || null;
 
       // Get conversation
-      const convResult = await storage.db.execute(`
+      const convResult = await // REMOVED broken storage.db.execute(`
         SELECT * FROM conversations 
         WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
       `, [id, userId]);
@@ -5397,7 +5397,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       }
 
       // Get messages
-      const messagesResult = await storage.db.execute(`
+      const messagesResult = await // REMOVED broken storage.db.execute(`
         SELECT * FROM messages 
         WHERE conversation_id = $1 
         ORDER BY created_at ASC
@@ -5425,7 +5425,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       }
 
       // Verify conversation exists and user has access
-      const convResult = await storage.db.execute(`
+      const convResult = await // REMOVED broken storage.db.execute(`
         SELECT * FROM conversations 
         WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
       `, [id, userId]);
@@ -5435,14 +5435,14 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       }
 
       // Get existing messages for context
-      const messagesResult = await storage.db.execute(`
+      const messagesResult = await // REMOVED broken storage.db.execute(`
         SELECT role, content FROM messages 
         WHERE conversation_id = $1 
         ORDER BY created_at ASC
       `, [id]);
 
       // Save user message
-      await storage.db.execute(`
+      await // REMOVED broken storage.db.execute(`
         INSERT INTO messages (conversation_id, role, content, status)
         VALUES ($1, $2, $3, $4)
       `, [id, 'user', content, 'sent']);
@@ -5468,7 +5468,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const aiResponse = await aiAssistant.chatWithAssistant(messageHistory, context);
 
       // Save AI response
-      await storage.db.execute(`
+      await // REMOVED broken storage.db.execute(`
         INSERT INTO messages (conversation_id, role, content, model, tokens_used, response_time, metadata, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
@@ -5483,7 +5483,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       ]);
 
       // Update conversation stats
-      await storage.db.execute(`
+      await // REMOVED broken storage.db.execute(`
         UPDATE conversations 
         SET total_messages = total_messages + 2, 
             total_tokens = total_tokens + $1,
