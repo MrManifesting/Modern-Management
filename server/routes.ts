@@ -1240,7 +1240,7 @@ export function registerRoutes(app: any, storage: any) {
           
           if (matchResult.product && matchResult.score >= 95) {
             // Generate storefront URL
-            storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
+            storefrontUrl = `https://goldcbd.com/products/${matchResult.product.handle}`;
             log(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
           }
         }
@@ -1254,7 +1254,7 @@ export function registerRoutes(app: any, storage: any) {
         const strainParts = item.name.split(' - ');
         const strainName = strainParts[0] || item.name;
         const searchTerm = encodeURIComponent(strainName.toLowerCase().replace(/\s+/g, '+'));
-        storefrontUrl = `https://gold-standard-cbd.com/search?q=${searchTerm}`;
+        storefrontUrl = `https://goldcbd.com/search?q=${searchTerm}`;
       }
 
       res.json({ 
@@ -2094,7 +2094,7 @@ export function registerRoutes(app: any, storage: any) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
       
-      const coaUrl = `https://gold-standard-cbd.com/coa/${strainSlug}`;
+      const coaUrl = `https://gold-standard-cbd.myshopify.com/pages/coa-${strainSlug}`;
 
       // Redirect to the actual COA page
       res.redirect(coaUrl);
@@ -2130,10 +2130,10 @@ export function registerRoutes(app: any, storage: any) {
         images: item.images || [],
         description: item.description || '',
         mediaLinks: {
-          productImages: `https://gold-standard-cbd.com/media/download/${item.sku || item.id}`,
-          socialAssets: `https://gold-standard-cbd.com/media/social/${strainName.toLowerCase().replace(/\s+/g, '-')}`,
-          marketingMaterials: `https://gold-standard-cbd.com/media/marketing/${strainName.toLowerCase().replace(/\s+/g, '-')}`,
-          complianceDocuments: `https://gold-standard-cbd.com/compliance/${strainName.toLowerCase().replace(/\s+/g, '-')}`
+          productImages: `https://gold-standard-cbd.myshopify.com/admin/products/${item.shopify_id || ''}`,
+          socialAssets: `https://gold-standard-cbd.myshopify.com/admin/content/metaobjects`,
+          marketingMaterials: `https://gold-standard-cbd.myshopify.com/admin/products`,
+          complianceDocuments: `https://gold-standard-cbd.myshopify.com/admin/pages`
         },
         downloadLinks: {
           fullPackage: `/api/items/${id}/media-pack.zip`,
@@ -3147,22 +3147,22 @@ export function registerRoutes(app: any, storage: any) {
           // Product images from multiple sources
           productImages: [],
           // COA (Certificate of Analysis)
-          coa: `https://gold-standard-cbd.com/coa/${productHandle}`,
+          coa: `https://goldcbd.com/coa/${productHandle}`,
           // Marketing media
-          marketingKit: `https://gold-standard-cbd.com/media/marketing/${productHandle}`,
+          marketingKit: `https://goldcbd.com/media/marketing/${productHandle}`,
           // Product media download
-          productMedia: `https://gold-standard-cbd.com/media/download/${item.sku || productHandle}`,
+          productMedia: `https://goldcbd.com/media/download/${item.sku || productHandle}`,
           // Social media kit
-          socialKit: `https://gold-standard-cbd.com/media/social/${productHandle}`,
+          socialKit: `https://goldcbd.com/media/social/${productHandle}`,
           // High-res product photos
-          highResPhotos: `https://gold-standard-cbd.com/media/photos/${productHandle}`,
+          highResPhotos: `https://goldcbd.com/media/photos/${productHandle}`,
           // Compliance documents
-          compliance: `https://gold-standard-cbd.com/compliance/${productHandle}`
+          compliance: `https://goldcbd.com/compliance/${productHandle}`
         },
         shopifyInfo: {
           productUrl: item.shopifyId 
-            ? `https://gold-standard-cbd.com/products/${productHandle}`
-            : `https://gold-standard-cbd.com/search?q=${encodeURIComponent(productHandle)}`,
+            ? `https://goldcbd.com/products/${productHandle}`
+            : `https://goldcbd.com/search?q=${encodeURIComponent(productHandle)}`,
           adminUrl: item.shopifyId 
             ? `https://admin.shopify.com/store/gold-standard-cbd/products/${item.shopifyId}`
             : null
@@ -3283,9 +3283,9 @@ export function registerRoutes(app: any, storage: any) {
           }
         },
         media_links: {
-          coa_certificate: `https://gold-standard-cbd.com/coa/${productHandle}`,
-          product_page: `https://gold-standard-cbd.com/products/${productHandle}`,
-          media_download: `https://gold-standard-cbd.com/media/download/${item.sku}`,
+          coa_certificate: `https://goldcbd.com/coa/${productHandle}`,
+          product_page: `https://goldcbd.com/products/${productHandle}`,
+          media_download: `https://goldcbd.com/media/download/${item.sku}`,
           inventory_view: `${req.protocol}://${req.get('host')}/products-inventory`
         },
         download_info: {
@@ -3441,36 +3441,36 @@ export function registerRoutes(app: any, storage: any) {
 
       <div class="download-section">
         <div class="download-title">🛒 Direct Purchase & Ordering</div>
-        <a href="https://gold-standard-cbd.com/products/${productHandle}" target="_blank" class="download-link primary-link">
+        <a href="https://goldcbd.com/products/${productHandle}" target="_blank" class="download-link primary-link">
           🛒 Order Product Now
         </a>
-        <a href="https://gold-standard-cbd.com/wholesale/${productHandle}" target="_blank" class="download-link secondary-link">
+        <a href="https://goldcbd.com/wholesale/${productHandle}" target="_blank" class="download-link secondary-link">
           💼 Wholesale Inquiry
         </a>
       </div>
 
       <div class="download-section">
         <div class="download-title">📄 Product Documentation</div>
-        <a href="https://gold-standard-cbd.com/coa/${productHandle}" target="_blank" class="download-link">
+        <a href="https://goldcbd.com/coa/${productHandle}" target="_blank" class="download-link">
           📄 Certificate of Analysis (COA)
         </a>
-        <a href="https://gold-standard-cbd.com/lab-results/${productHandle}" target="_blank" class="download-link secondary-link">
+        <a href="https://goldcbd.com/lab-results/${productHandle}" target="_blank" class="download-link secondary-link">
           🧪 Lab Test Results
         </a>
-        <a href="https://gold-standard-cbd.com/compliance/${productHandle}" target="_blank" class="download-link tertiary-link">
+        <a href="https://goldcbd.com/compliance/${productHandle}" target="_blank" class="download-link tertiary-link">
           ⚖️ Compliance Documents
         </a>
       </div>
 
       <div class="download-section">
         <div class="download-title">📱 Media & Marketing Materials</div>
-        <a href="https://gold-standard-cbd.com/media/download/${item.sku || productHandle}" target="_blank" class="download-link">
+        <a href="https://goldcbd.com/media/download/${item.sku || productHandle}" target="_blank" class="download-link">
           📷 Product Photos (High-Res)
         </a>
-        <a href="https://gold-standard-cbd.com/media/marketing/${productHandle}" target="_blank" class="download-link secondary-link">
+        <a href="https://goldcbd.com/media/marketing/${productHandle}" target="_blank" class="download-link secondary-link">
           🎯 Marketing Materials
         </a>
-        <a href="https://gold-standard-cbd.com/media/social/${productHandle}" target="_blank" class="download-link tertiary-link">
+        <a href="https://goldcbd.com/media/social/${productHandle}" target="_blank" class="download-link tertiary-link">
           📱 Social Media Kit
         </a>
       </div>
@@ -3970,7 +3970,7 @@ export function registerRoutes(app: any, storage: any) {
         "Distro 25lbs+": "Contact for pricing",
         "Master 50lbs+": "Contact for pricing", 
         "Master 2 100lbs+": "Contact for pricing",
-        "Order Link": `https://gold-standard-cbd.com/products/${product.handle}`
+        "Order Link": `https://goldcbd.com/products/${product.handle}`
       }));
 
       log(`Bulk flower API: Retrieved ${items.length} THCA products from Shopify`, 'shopify');
@@ -4049,7 +4049,7 @@ export function registerRoutes(app: any, storage: any) {
           contactInfo: {
             bulkOrders: "kaya@goldcbd.com", 
             phone: "541-295-8811 ext #1",
-            website: "https://gold-standard-cbd.com",
+            website: "https://goldcbd.com",
             businessHours: "Contact for current hours"
           },
           importantNotes: [
@@ -4089,8 +4089,8 @@ export function registerRoutes(app: any, storage: any) {
       // Format for your exact Google Sheets headers
       const sheetsData = bulkFlowerItems.map((item: any) => ({
         "Available Qty": item.quantity,
-        "Main Image": item.image_url || `https://gold-standard-cbd.com/products/${item.sku}.jpg`,
-        "COA Image": `https://gold-standard-cbd.com/coa/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        "Main Image": item.image_url || `https://goldcbd.com/products/${item.sku}.jpg`,
+        "COA Image": `https://goldcbd.com/coa/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
         "Strain": extractStrainName(item.name),
         "Type": "THCA Flower",
         "Tier": extractTier(item.name),
@@ -4099,7 +4099,7 @@ export function registerRoutes(app: any, storage: any) {
         "Distro 25lbs+": "Contact for pricing",
         "Master 50lbs+": "Contact for pricing", 
         "Master 2 100lbs+": "Contact for pricing",
-        "Order Link": `https://gold-standard-cbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+        "Order Link": `https://goldcbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       }));
       
       log(`Generated Google Sheets data for ${bulkFlowerItems.length} bulk flower items`, 'sheets-format');
@@ -4564,11 +4564,15 @@ export function registerRoutes(app: any, storage: any) {
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 1rem;
         }
         .product-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 32px rgba(212,175,55,0.3);
             border-color: #D4AF37;
+            z-index: 10;
         }
         .product-image {
             width: 100%;
@@ -4781,7 +4785,7 @@ export function registerRoutes(app: any, storage: any) {
             <h3>Contact Gold Standard CBD</h3>
             <p><strong>📧 Bulk Orders:</strong> kaya@goldcbd.com</p>
             <p><strong>📞 Phone:</strong> <a href="tel:541-295-8811" style="color:#D4AF37;">541-295-8811 ext #1</a></p>
-            <p><strong>🌐 Website:</strong> <a href="https://gold-standard-cbd.com" target="_blank" style="color:#D4AF37;">gold-standard-cbd.com</a></p>
+            <p><strong>🌐 Website:</strong> <a href="https://goldcbd.com" target="_blank" style="color:#D4AF37;">goldcbd.com</a></p>
             <p><strong>⏰ Business Hours:</strong> Contact for current hours</p>
         </div>
     </div>
@@ -4832,7 +4836,7 @@ export function registerRoutes(app: any, storage: any) {
       // Generate storefront URL from strain name
       const strainName = extractStrainName(item.name);
       const productHandle = strainName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const storefrontUrl = `https://gold-standard-cbd.com/products/${productHandle}`;
+      const storefrontUrl = `https://goldcbd.com/products/${productHandle}`;
       
       console.log(`[shopify] Redirecting to storefront: ${storefrontUrl}`);
       return res.redirect(302, storefrontUrl);
@@ -5164,9 +5168,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
           stockLevel: quantity < 5 ? 'low' : quantity < 20 ? 'medium' : 'high',
           urls: {
             shopify: `https://gold-standard-cbd.myshopify.com/products/${productHandle}`,
-            coa: `https://gold-standard-cbd.com/coa/${productHandle}`,
-            media: item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`,
-            order: `https://gold-standard-cbd.com/products/${productHandle}`
+            coa: `https://goldcbd.com/coa/${productHandle}`,
+            media: item.image_url || `https://goldcbd.com/media/download/${item.sku}`,
+            order: `https://goldcbd.com/products/${productHandle}`
           }
         };
       });
@@ -5188,7 +5192,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         contactInfo: {
           email: "kaya@goldcbd.com",
           phone: "541-295-8811 ext #1",
-          website: "https://gold-standard-cbd.com"
+          website: "https://goldcbd.com"
         }
       });
       
