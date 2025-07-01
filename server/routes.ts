@@ -76,6 +76,17 @@ router.get('/api/inventory/enhanced', async (req, res) => {
   }
 });
 
+// Main items endpoint
+router.get('/api/items', async (req, res) => {
+  try {
+    const allItems = await storage.getAllItems();
+    res.json(allItems);
+  } catch (error) {
+    console.error('[items] Error fetching items:', error);
+    res.status(500).json({ error: 'Failed to fetch items' });
+  }
+});
+
 // Menu endpoint
 router.get('/api/menu', async (req, res) => {
   try {
