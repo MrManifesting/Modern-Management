@@ -516,41 +516,50 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
     return "bg-gray-500 text-white";
   };
 
-  // Render mobile card view for products with improved pricing info
+  // Enhanced mobile card view with better touch interactions and layout
   const renderMobileProductCard = (product: THCaFlowerProduct) => (
-    <Card key={product.id} className="mb-4 border-gold/20">
-      <CardHeader className="pb-2">
+    <Card key={product.id} className="mb-4 border-gold/20 shadow-sm hover:shadow-md transition-shadow duration-200">
+      {/* Header with strain name and quick actions */}
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{product.strain}</CardTitle>
-            <div className="flex flex-wrap gap-2 mt-1">
-              <Badge className={getTierBadgeClass(product.tier)}>{product.tier}</Badge>
-              <Badge className={getStrainTypeBadgeClass(product.strainType)}>{product.strainType}</Badge>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg font-semibold truncate">{product.strain}</CardTitle>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <Badge className={getTierBadgeClass(product.tier)} variant="secondary" className="text-xs">
+                {product.tier}
+              </Badge>
+              <Badge className={getStrainTypeBadgeClass(product.strainType)} variant="outline" className="text-xs">
+                {product.strainType}
+              </Badge>
               {product.brand && (
-                <Badge className={getBrandBadgeClass(product.brand)}>{product.brand}</Badge>
+                <Badge className={getBrandBadgeClass(product.brand)} variant="outline" className="text-xs">
+                  {product.brand}
+                </Badge>
               )}
             </div>
           </div>
+          
+          {/* Mobile-optimized action menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-8 w-8 ml-2 shrink-0">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="sr-only">Actions</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onView && onView(product)}>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => onView && onView(product)} className="cursor-pointer">
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit && onEdit(product)}>
+              <DropdownMenuItem onClick={() => onEdit && onEdit(product)} className="cursor-pointer">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Product
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                className="text-red-600"
+                className="text-red-600 cursor-pointer focus:text-red-600"
                 onClick={() => onDelete && product.id && onDelete(product.id)}
               >
                 <Trash className="mr-2 h-4 w-4" />
@@ -560,24 +569,85 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        {/* Package type and size */}
-        <div className="flex items-center gap-2 mb-3">
-          {product.packageType && (
-            <Badge className={getPackageTypeBadgeClass(product.packageType)}>
-              {product.packageType}
-            </Badge>
-          )}
-          {product.packageSize && (
-            <span className="text-sm">{product.packageSize}</span>
-          )}
+      
+      <CardContent className="pt-0 space-y-3">
+        {/* Package info with visual hierarchy */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {product.packageType && (
+              <Badge className={getPackageTypeBadgeClass(product.packageType)} variant="secondary">
+                {product.packageType}
+              </Badge>
+            )}
+            {product.packageSize && (
+              <span className="text-sm font-medium text-muted-foreground">
+                {product.packageSize}
+              </span>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600">
+              ${product.askingPrice?.toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground">Asking Price</div>
+          </div>
         </div>
         
-        {/* Key info grid */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <div>
-            <span className="text-muted-foreground">THC:</span> {product.percentage}
+        {/* Key metrics in optimized mobile grid */}
+        <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 rounded-lg p-3">
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">THC:</span>
+              <span className="font-medium">{product.percentage}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Stock:</span>
+              <span className={`font-medium ${product.quantity > 10 ? 'text-green-600' : product.quantity > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                {product.quantity} units
+              </span>
+            </div>
           </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bulk:</span>
+              <span className="font-medium">${product.bulkPrice?.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">SKU:</span>
+              <span className="font-mono text-xs">{product.sku}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Quick action buttons for mobile */}
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 h-9"
+            onClick={() => onView && onView(product)}
+          >
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
+            View
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 h-9"
+            onClick={() => onEdit && onEdit(product)}
+          >
+            <Edit className="mr-1.5 h-3.5 w-3.5" />
+            Edit
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="px-3 h-9"
+            onClick={() => alert('Quick order functionality coming soon')}
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+          </Button>
+        </div>
           <div>
             <span className="text-muted-foreground">SKU:</span> <span className="font-mono text-xs">{product.sku}</span>
           </div>
@@ -658,28 +728,118 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
               <p className="text-xs text-red-500 mt-1">{voiceError}</p>
             )}
           </div>
-          {/* Primary filters visible on both mobile and desktop */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select value={selectedPackageType} onValueChange={setSelectedPackageType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Package Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {packageTypes.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Brand" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Enhanced mobile-first filters */}
+          <div className="space-y-3">
+            {/* Quick filter chips for mobile */}
+            <div className="flex flex-wrap gap-2 md:hidden">
+              <Button 
+                variant={selectedPackageType === "Bulk Pounds" ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setSelectedPackageType(selectedPackageType === "Bulk Pounds" ? "ALL" : "Bulk Pounds")}
+                className="h-8 text-xs"
+              >
+                Bulk Pounds
+              </Button>
+              <Button 
+                variant={selectedBrand === "Gold Standard" ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setSelectedBrand(selectedBrand === "Gold Standard" ? "ALL" : "Gold Standard")}
+                className="h-8 text-xs"
+              >
+                Gold Standard
+              </Button>
+              <Button 
+                variant={selectedTier.includes("TOP SHELF") ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setSelectedTier(selectedTier.includes("TOP SHELF") ? "ALL" : "TOP SHELF")}
+                className="h-8 text-xs"
+              >
+                Top Shelf
+              </Button>
+              <Button 
+                variant={selectedStrainType === "INDICA" ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setSelectedStrainType(selectedStrainType === "INDICA" ? "ALL" : "INDICA")}
+                className="h-8 text-xs"
+              >
+                Indica
+              </Button>
+            </div>
+            
+            {/* Full filter dropdowns - optimized for mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <Select value={selectedPackageType} onValueChange={setSelectedPackageType}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Package Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {packageTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="cursor-pointer">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand} value={brand} className="cursor-pointer">
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedTier} onValueChange={setSelectedTier}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Quality Tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {qualityTiers.map((tier) => (
+                    <SelectItem key={tier} value={tier} className="cursor-pointer">
+                      {tier}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedStrainType} onValueChange={setSelectedStrainType}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Strain Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {strainTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="cursor-pointer">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Clear filters button */}
+            {(selectedPackageType !== "ALL" || selectedBrand !== "ALL" || selectedTier !== "ALL" || selectedStrainType !== "ALL" || searchTerm) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setSelectedPackageType("ALL");
+                  setSelectedBrand("ALL");
+                  setSelectedTier("ALL");
+                  setSelectedStrainType("ALL");
+                  setSearchTerm("");
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Clear All Filters
+              </Button>
+            )}
+          </div>
           </div>
           
           {/* Secondary filters */}
