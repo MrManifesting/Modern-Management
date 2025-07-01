@@ -491,6 +491,43 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Inventory current summary endpoint
+  app.get("/api/inventory/current-summary", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      const summary = {
+        totalItems: items.length,
+        activeItems: items.filter(item => item.status === 'active').length,
+        draftItems: items.filter(item => item.status === 'draft').length,
+        availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+        itemsWithPricing: items.filter(item => 
+          (item.base_price && parseFloat(item.base_price) > 0) ||
+          (item.sale_price && parseFloat(item.sale_price) > 0) ||
+          (item.cost_price && parseFloat(item.cost_price) > 0)
+        ).length,
+        totalInventoryValue: items.reduce((sum, item) => {
+          const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+          const quantity = parseFloat(item.quantity || '0');
+          return sum + (price * quantity);
+        }, 0),
+        lastUpdated: new Date().toISOString()
+      };
+      
+      res.json({
+        success: true,
+        summary,
+        message: "Current inventory summary"
+      });
+    } catch (error) {
+      log(`Inventory summary error: ${error}`, 'inventory');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to generate inventory summary" 
+      });
+    }
+  });
+
   // Enhanced inventory endpoint
   app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
     try {
@@ -1609,6 +1646,30 @@ export function registerRoutes(app: any, storage: any) {
         success: false,
         error: "Failed to import Shopify inventory",
         message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Shopify credentials endpoint
+  app.get("/api/credentials/shopify", async (_req: Request, res: Response) => {
+    try {
+      const credentials = {
+        hasAccessToken: !!process.env.SHOPIFY_ACCESS_TOKEN,
+        hasSecretKey: !!process.env.SHOPIFY_SECRET_KEY,
+        domain: process.env.SHOPIFY_STORE_DOMAIN || null,
+        configured: !!(process.env.SHOPIFY_ACCESS_TOKEN && process.env.SHOPIFY_STORE_DOMAIN)
+      };
+      
+      res.json({
+        success: true,
+        credentials,
+        message: credentials.configured ? "Shopify credentials configured" : "Shopify credentials incomplete"
+      });
+    } catch (error) {
+      log(`Shopify credentials check error: ${error}`, 'shopify');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to check Shopify credentials" 
       });
     }
   });
