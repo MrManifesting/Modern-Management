@@ -1,3 +1,0 @@
-This file serves as a placeholder for the audio file. In a production environment, this would be a short sound effect file that provides audio feedback when a voice command is recognized.
-
-For implementation, replace this with a properly licensed .mp3 or .wav file that provides a brief, non-intrusive audio cue to let the user know the command was received.
