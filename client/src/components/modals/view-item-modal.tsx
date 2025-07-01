@@ -89,19 +89,13 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
 
   // Parse weight from item name if weight field is null or invalid
   const getDisplayWeight = (item: any) => {
-    // Debug logging to see what weight we're receiving
-    console.log('getDisplayWeight called with item:', item.id, 'name:', item.name, 'weight:', item.weight);
-    
     // If we have a valid weight field, use it
     if (item.weight && item.weight !== 'null' && item.weight.trim() !== '') {
       const cleanWeight = item.weight.trim();
-      console.log('Using weight field:', cleanWeight);
       
-      // Remove any trailing 'g' that might have been accidentally appended
+      // Remove any trailing 'g' that might have been accidentally appended to pound values
       if (cleanWeight.endsWith('g') && !cleanWeight.endsWith('3.5g') && !cleanWeight.endsWith('1g')) {
-        const correctedWeight = cleanWeight.slice(0, -1);
-        console.log('Removed trailing g:', correctedWeight);
-        return correctedWeight;
+        return cleanWeight.slice(0, -1);
       }
       
       return cleanWeight;
