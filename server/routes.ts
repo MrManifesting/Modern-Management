@@ -4360,4 +4360,406 @@ export function registerRoutes(app: any, storage: any) {
       res.status(500).json({ error: "Failed to perform live inventory update" });
     }
   });
+
+  // Generate live functional menu with working buttons and links
+  app.get('/api/generate-live-menu', async (req: Request, res: Response) => {
+    try {
+      log('Generating live functional menu with working links', 'live-menu');
+      
+      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      // Filter for active items with quantities and proper pricing
+      const activeItems = results.filter((item: any) => 
+        item.status === 'active' && 
+        item.quantity > 0 &&
+        (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
+      );
+      
+      // Sort by highest quantities first (business priority)
+      activeItems.sort((a: any, b: any) => {
+        const qtyA = parseInt(a.quantity || '0');
+        const qtyB = parseInt(b.quantity || '0');
+        return qtyB - qtyA;
+      });
+      
+      // Generate functional HTML menu with working buttons
+      const menuHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Standard Live Menu - ${new Date().toLocaleDateString()}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #D4AF37 0%, #228B22 100%);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .header h1 { 
+            font-size: 2.5rem; 
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header p { 
+            font-size: 1.1rem; 
+            opacity: 0.9;
+        }
+        .menu-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .menu-stats {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .product-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(212,175,55,0.3);
+            border-color: #D4AF37;
+        }
+        .product-image {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(45deg, #333, #555);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 0.9rem;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>');
+            background-size: 40px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .product-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #D4AF37;
+        }
+        .product-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+        .detail-label { color: #bbb; }
+        .detail-value { 
+            color: #fff; 
+            font-weight: 500;
+        }
+        .price-display {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #228B22;
+            text-align: center;
+            margin-bottom: 1rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .stock-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .stock-high { background: #228B22; color: white; }
+        .stock-medium { background: #FF8C00; color: white; }
+        .stock-low { background: #DC143C; color: white; }
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .btn {
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #D4AF37, #B8941F);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #B8941F, #D4AF37);
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #228B22, #1E7B1E);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #1E7B1E, #228B22);
+            transform: translateY(-2px);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #D4AF37;
+            color: #D4AF37;
+        }
+        .btn-outline:hover {
+            background: #D4AF37;
+            color: #1a1a1a;
+        }
+        .contact-info {
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        .contact-info h3 {
+            color: #D4AF37;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .product-grid { grid-template-columns: 1fr; }
+            .button-group { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌿 Gold Standard Live Menu</h1>
+        <p>Updated: ${new Date().toLocaleString()} | Live Inventory Data</p>
+    </div>
+    
+    <div class="menu-container">
+        <div class="menu-stats">
+            <h3>📊 Current Inventory Status</h3>
+            <p><strong>${activeItems.length}</strong> products available with live pricing and quantities</p>
+            <p>Total inventory value: <strong>$${activeItems.reduce((sum: number, item: any) => {
+              const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+              const qty = parseInt(item.quantity || '0');
+              return sum + (price * qty);
+            }, 0).toFixed(2)}</strong></p>
+        </div>
+        
+        <div class="product-grid">
+            ${activeItems.map((item: any) => {
+              const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+              const quantity = parseInt(item.quantity || '0');
+              const strainName = extractStrainName(item.name);
+              const tier = extractTier(item.name);
+              const thcaPercent = extractTHCAPercentage(item.description || item.name);
+              
+              // Determine stock level for badge
+              let stockClass = 'stock-high';
+              let stockText = 'In Stock';
+              if (quantity < 5) {
+                stockClass = 'stock-low';
+                stockText = 'Low Stock';
+              } else if (quantity < 20) {
+                stockClass = 'stock-medium';
+                stockText = 'Limited';
+              }
+              
+              // Generate working URLs
+              const productHandle = (item.sku?.toLowerCase() || item.name.toLowerCase()).replace(/[^a-z0-9]/g, '-');
+              const shopifyUrl = `https://gold-standard-cbd.myshopify.com/products/${productHandle}`;
+              const coaUrl = `https://gold-standard-cbd.com/coa/${productHandle}`;
+              const mediaUrl = item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`;
+              
+              return `
+                <div class="product-card">
+                    <div class="product-image">
+                        ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : 'Product Image'}
+                    </div>
+                    
+                    <div class="product-name">${strainName || item.name}</div>
+                    
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">SKU:</span>
+                            <span class="detail-value">${item.sku || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Tier:</span>
+                            <span class="detail-value">${tier || 'Standard'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">THCa:</span>
+                            <span class="detail-value">${thcaPercent || 'Contact'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Weight:</span>
+                            <span class="detail-value">${item.weight || '1 pound'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="price-display">$${price.toFixed(2)}</div>
+                    
+                    <span class="stock-badge ${stockClass}">${stockText} - ${quantity} units</span>
+                    
+                    <div class="button-group">
+                        <a href="${shopifyUrl}" target="_blank" class="btn btn-primary">🛒 Order Now</a>
+                        <a href="${coaUrl}" target="_blank" class="btn btn-secondary">📄 View COA</a>
+                    </div>
+                    
+                    <div class="button-group">
+                        <a href="${mediaUrl}" target="_blank" class="btn btn-outline">📸 Media Pack</a>
+                        <a href="tel:541-295-8811" class="btn btn-outline">📞 Call Now</a>
+                    </div>
+                </div>
+              `;
+            }).join('')}
+        </div>
+        
+        <div class="contact-info">
+            <h3>Contact Gold Standard CBD</h3>
+            <p><strong>📧 Bulk Orders:</strong> kaya@goldcbd.com</p>
+            <p><strong>📞 Phone:</strong> <a href="tel:541-295-8811" style="color:#D4AF37;">541-295-8811 ext #1</a></p>
+            <p><strong>🌐 Website:</strong> <a href="https://gold-standard-cbd.com" target="_blank" style="color:#D4AF37;">gold-standard-cbd.com</a></p>
+            <p><strong>⏰ Business Hours:</strong> Contact for current hours</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh every 5 minutes to keep data live
+        setTimeout(() => {
+            window.location.reload();
+        }, 300000);
+        
+        // Add click tracking for analytics
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                console.log('Button clicked:', e.target.textContent);
+            });
+        });
+    </script>
+</body>
+</html>`;
+      
+      log(`Generated live menu with ${activeItems.length} active products and functional links`, 'live-menu');
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuHtml);
+      
+    } catch (error) {
+      log(`Live menu generation error: ${error}`, 'live-menu');
+      res.status(500).json({ error: 'Failed to generate live menu' });
+    }
+  });
+
+  // API endpoint for live menu data (JSON format for frontend)
+  app.get('/api/live-menu-data', async (req: Request, res: Response) => {
+    try {
+      log('Fetching live menu data for frontend', 'live-menu-data');
+      
+      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      // Filter for active items with quantities and proper pricing
+      const activeItems = results.filter((item: any) => 
+        item.status === 'active' && 
+        item.quantity > 0 &&
+        (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
+      );
+      
+      // Sort by highest quantities first
+      activeItems.sort((a: any, b: any) => {
+        const qtyA = parseInt(a.quantity || '0');
+        const qtyB = parseInt(b.quantity || '0');
+        return qtyB - qtyA;
+      });
+      
+      // Format items with working URLs
+      const menuItems = activeItems.map((item: any) => {
+        const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+        const quantity = parseInt(item.quantity || '0');
+        const productHandle = (item.sku?.toLowerCase() || item.name.toLowerCase()).replace(/[^a-z0-9]/g, '-');
+        
+        return {
+          id: item.id,
+          name: item.name,
+          strainName: extractStrainName(item.name),
+          sku: item.sku,
+          price: price,
+          quantity: quantity,
+          tier: extractTier(item.name),
+          thcaPercentage: extractTHCAPercentage(item.description || item.name),
+          weight: item.weight || '1 pound',
+          imageUrl: item.image_url,
+          stockLevel: quantity < 5 ? 'low' : quantity < 20 ? 'medium' : 'high',
+          urls: {
+            shopify: `https://gold-standard-cbd.myshopify.com/products/${productHandle}`,
+            coa: `https://gold-standard-cbd.com/coa/${productHandle}`,
+            media: item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`,
+            order: `https://gold-standard-cbd.com/products/${productHandle}`
+          }
+        };
+      });
+      
+      // Calculate summary stats
+      const totalValue = menuItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const lowStockCount = menuItems.filter(item => item.stockLevel === 'low').length;
+      
+      res.json({
+        success: true,
+        lastUpdated: new Date().toISOString(),
+        summary: {
+          totalItems: menuItems.length,
+          totalValue: totalValue,
+          lowStockAlerts: lowStockCount,
+          averagePrice: menuItems.length > 0 ? totalValue / menuItems.reduce((sum, item) => sum + item.quantity, 0) : 0
+        },
+        items: menuItems,
+        contactInfo: {
+          email: "kaya@goldcbd.com",
+          phone: "541-295-8811 ext #1",
+          website: "https://gold-standard-cbd.com"
+        }
+      });
+      
+    } catch (error) {
+      log(`Live menu data error: ${error}`, 'live-menu-data');
+      res.status(500).json({ error: 'Failed to fetch live menu data' });
+    }
+  });
 }
