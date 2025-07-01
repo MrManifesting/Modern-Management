@@ -1305,6 +1305,132 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // General sales report endpoint (defaults to 30d) - MUST COME FIRST
+  app.get("/api/shopify/reports/sales", async (req: Request, res: Response) => {
+    try {
+      const sales = await storage.getRecentSales(30);
+      
+      const totalOrders = sales.length;
+      const totalRevenue = sales.reduce((sum: number, sale: any) => sum + (parseFloat(sale.total_price || sale.sale_price || '0')), 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      // Group sales by product for top products
+      const productSales: { [key: string]: any } = {};
+      sales.forEach((sale: any) => {
+        const productKey = sale.item_name || 'Unknown Product';
+        if (!productSales[productKey]) {
+          productSales[productKey] = {
+            productId: sale.item_id?.toString() || 'unknown',
+            title: productKey,
+            sku: sale.sku || 'no-sku',
+            quantity: 0,
+            revenue: 0
+          };
+        }
+        productSales[productKey].quantity += parseInt(sale.quantity || '1');
+        productSales[productKey].revenue += parseFloat(sale.total_price || sale.sale_price || '0');
+      });
+      
+      // Get top products by revenue
+      const topProducts = Object.values(productSales)
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 10);
+      
+      // Group sales by date for period sales  
+      const dailySales: { [key: string]: any } = {};
+      sales.forEach((sale: any) => {
+        const date = sale.sale_date ? new Date(sale.sale_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        if (!dailySales[date]) {
+          dailySales[date] = { date, orders: 0, revenue: 0 };
+        }
+        dailySales[date].orders += 1;
+        dailySales[date].revenue += parseFloat(sale.total_price || sale.sale_price || '0');
+      });
+      
+      const periodSales = Object.values(dailySales).sort((a: any, b: any) => a.date.localeCompare(b.date));
+      
+      res.json({
+        success: true,
+        data: {
+          totalOrders,
+          totalRevenue,
+          averageOrderValue,
+          topProducts,
+          periodSales,
+          timeframe: '30d'
+        }
+      });
+    } catch (error) {
+      log(`Sales report error: ${error}`, 'reports');
+      res.status(500).json({ error: "Failed to generate sales report" });
+    }
+  });
+
+  // Sales reports with specific timeframe support
+  app.get("/api/shopify/reports/sales/:timeframe", async (req: Request, res: Response) => {
+    try {
+      const timeframe = req.params.timeframe;
+      const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : timeframe === '90d' ? 90 : 30;
+      
+      const sales = await storage.getRecentSales(days);
+      
+      // Calculate total metrics
+      const totalOrders = sales.length;
+      const totalRevenue = sales.reduce((sum: number, sale: any) => sum + (parseFloat(sale.total_price || sale.sale_price || '0')), 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      // Group sales by product for top products
+      const productSales: { [key: string]: any } = {};
+      sales.forEach((sale: any) => {
+        const productKey = sale.item_name || 'Unknown Product';
+        if (!productSales[productKey]) {
+          productSales[productKey] = {
+            productId: sale.item_id?.toString() || 'unknown',
+            title: productKey,
+            sku: sale.sku || 'no-sku',
+            quantity: 0,
+            revenue: 0
+          };
+        }
+        productSales[productKey].quantity += parseInt(sale.quantity || '1');
+        productSales[productKey].revenue += parseFloat(sale.total_price || sale.sale_price || '0');
+      });
+      
+      // Get top products by revenue
+      const topProducts = Object.values(productSales)
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 10);
+      
+      // Group sales by date for period sales
+      const dailySales: { [key: string]: any } = {};
+      sales.forEach((sale: any) => {
+        const date = sale.sale_date ? new Date(sale.sale_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        if (!dailySales[date]) {
+          dailySales[date] = { date, orders: 0, revenue: 0 };
+        }
+        dailySales[date].orders += 1;
+        dailySales[date].revenue += parseFloat(sale.total_price || sale.sale_price || '0');
+      });
+      
+      const periodSales = Object.values(dailySales).sort((a: any, b: any) => a.date.localeCompare(b.date));
+      
+      res.json({
+        success: true,
+        data: {
+          totalOrders,
+          totalRevenue,
+          averageOrderValue,
+          topProducts,
+          periodSales,
+          timeframe
+        }
+      });
+    } catch (error) {
+      log(`Sales report error: ${error}`, 'reports');
+      res.status(500).json({ error: "Failed to generate sales report" });
+    }
+  });
+
   // Customer reports
   app.get("/api/shopify/reports/customers", async (req: Request, res: Response) => {
     try {
