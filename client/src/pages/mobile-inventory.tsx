@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import MobileOptimizedInventory from '@/components/inventory/mobile-optimized-inventory';
+import MobileNavigation from '@/components/mobile/mobile-navigation';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

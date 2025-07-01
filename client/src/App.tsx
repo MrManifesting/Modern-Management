@@ -33,6 +33,7 @@ import MediaManagerPage from "@/pages/media-manager";
 import CustomerAnalytics from "@/pages/CustomerAnalytics";
 import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
 import MobileInventoryPage from "@/pages/mobile-inventory";
+import VoiceSearchPage from "@/pages/voice-search";
 
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
@@ -130,6 +131,7 @@ function Router() {
         <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
         <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
         <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
+        <ProtectedRoute path="/voice-search" component={() => <VoiceSearchPage />} />
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
         <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
