@@ -193,9 +193,14 @@ function calculatePricing(item: any, shopifyProduct?: any) {
     return isNaN(parsed) ? 0 : parsed;
   };
 
+  // Parse all pricing tiers
+  const costPrice = safeParseFloat(item.cost_price);
+  const bulkPrice = safeParseFloat(item.bulk_price);
+  const distroPrice = safeParseFloat(item.distro_price); // 25lbs+
+  const masterPrice = safeParseFloat(item.master_price); // 50lbs+
+  const master100Price = safeParseFloat(item.master_100_price); // 100lbs+
   const basePrice = safeParseFloat(item.base_price);
   const salePrice = safeParseFloat(item.sale_price);
-  const costPrice = safeParseFloat(item.cost_price);
   const wholesalePrice = safeParseFloat(item.wholesale_price);
   
   // Get Shopify pricing if available
@@ -204,21 +209,51 @@ function calculatePricing(item: any, shopifyProduct?: any) {
     shopifyPrice = safeParseFloat(shopifyProduct.variants[0].price);
   }
 
-  const displayPrice = salePrice || basePrice || shopifyPrice || costPrice || 0;
-  const originalPrice = basePrice || shopifyPrice || 0;
+  // Priority for display price: sale_price -> bulk_price -> shopify -> base_price -> cost_price
+  const displayPrice = salePrice || bulkPrice || shopifyPrice || basePrice || costPrice || 0;
+  const originalPrice = bulkPrice || basePrice || shopifyPrice || 0;
   const hasDiscount = salePrice > 0 && originalPrice > salePrice;
   const discountPercentage = hasDiscount ? ((originalPrice - salePrice) / originalPrice) * 100 : 0;
 
+  // Create pricing tiers object
+  const pricingTiers = {
+    cost: costPrice > 0 ? costPrice : null,
+    bulk: bulkPrice > 0 ? bulkPrice : null,
+    distro25: distroPrice > 0 ? distroPrice : null,
+    master50: masterPrice > 0 ? masterPrice : null,
+    master100: master100Price > 0 ? master100Price : null
+  };
+
   return {
+    // Legacy pricing fields for compatibility
     basePrice: basePrice > 0 ? basePrice : null,
     salePrice: salePrice > 0 ? salePrice : null,
     costPrice: costPrice > 0 ? costPrice : null,
     wholesalePrice: wholesalePrice > 0 ? wholesalePrice : null,
+    
+    // New pricing tier fields
+    bulkPrice: bulkPrice > 0 ? bulkPrice : null,
+    distroPrice: distroPrice > 0 ? distroPrice : null,
+    masterPrice: masterPrice > 0 ? masterPrice : null,
+    master100Price: master100Price > 0 ? master100Price : null,
+    
+    // Tier pricing object
+    pricingTiers,
+    
+    // Display information
     displayPrice,
     currency: 'USD',
     priceRange: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : 'Contact for Price',
     hasDiscount,
-    discountPercentage: hasDiscount ? discountPercentage : null
+    discountPercentage: hasDiscount ? discountPercentage : null,
+    
+    // Pricing tier summary for UI
+    tierSummary: {
+      hasMultipleTiers: Object.values(pricingTiers).filter(Boolean).length > 1,
+      lowestPrice: Math.min(...Object.values(pricingTiers).filter(Boolean)),
+      highestPrice: Math.max(...Object.values(pricingTiers).filter(Boolean)),
+      availableTiers: Object.keys(pricingTiers).filter(key => pricingTiers[key as keyof typeof pricingTiers] > 0)
+    }
   };
 }
 

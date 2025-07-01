@@ -320,62 +320,124 @@ export default function SimpleItemForm({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="basePrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Base Price</FormLabel>
-                <FormControl>
-                  <Input placeholder="0.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Pricing Tiers</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="costPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost Price</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="salePrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sale Price</FormLabel>
-                <FormControl>
-                  <Input placeholder="0.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="bulkPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bulk Price</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="costPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cost Price</FormLabel>
-                <FormControl>
-                  <Input placeholder="0.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="distroPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Distro 25lbs+</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="wholesalePrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wholesale Price</FormLabel>
-                <FormControl>
-                  <Input placeholder="0.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="masterPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Master 50lbs+</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="master100Price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Master 100lbs+</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="salePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sale Price</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Keep legacy fields for compatibility */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="basePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Price (Legacy)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="wholesalePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wholesale Price (Legacy)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <FormField

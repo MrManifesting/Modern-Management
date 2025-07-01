@@ -1005,6 +1005,22 @@ export const itemFormSchema = z.object({
     if (val === null || val === undefined) return null;
     return typeof val === 'number' ? val.toString() : val;
   }),
+  bulkPrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  distroPrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  masterPrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
+  master100Price: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
+    if (val === null || val === undefined) return null;
+    return typeof val === 'number' ? val.toString() : val;
+  }),
   basePrice: z.union([z.string(), z.number()]).optional().nullable().transform(val => {
     if (val === null || val === undefined) return null;
     return typeof val === 'number' ? val.toString() : val;

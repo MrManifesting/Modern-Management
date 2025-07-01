@@ -252,31 +252,62 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
           {/* Pricing Information */}
           <Card>
             <CardContent className="p-4">
-              <h4 className="font-medium mb-3">Pricing</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <h4 className="font-medium mb-3">Pricing Tiers</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <span className="text-sm text-gray-600">Base Price:</span>
-                  <p className="font-semibold text-green-600">
-                    {formatPrice(item.basePrice)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Sale Price:</span>
-                  <p className="font-semibold text-blue-600">
-                    {formatPrice(item.salePrice)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Cost Price:</span>
-                  <p className="font-semibold text-gray-700">
+                  <span className="text-sm text-gray-600">Cost:</span>
+                  <p className="font-semibold text-red-600">
                     {formatPrice(item.costPrice)}
                   </p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-600">Wholesale Price:</span>
-                  <p className="font-semibold text-purple-600">
-                    {formatPrice(item.wholesalePrice)}
+                  <span className="text-sm text-gray-600">Bulk Price:</span>
+                  <p className="font-semibold text-green-600">
+                    {formatPrice(item.bulkPrice)}
                   </p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Distro 25lbs+:</span>
+                  <p className="font-semibold text-blue-600">
+                    {formatPrice(item.distroPrice)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Master 50lbs+:</span>
+                  <p className="font-semibold text-purple-600">
+                    {formatPrice(item.masterPrice)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Master 100lbs+:</span>
+                  <p className="font-semibold text-indigo-600">
+                    {formatPrice(item.master100Price)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Sale Price:</span>
+                  <p className="font-semibold text-orange-600">
+                    {formatPrice(item.salePrice)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Legacy pricing for compatibility */}
+              <div className="border-t pt-4">
+                <h5 className="text-sm font-medium text-gray-500 mb-2">Legacy Pricing</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-600">Base Price:</span>
+                    <p className="font-semibold text-gray-700">
+                      {formatPrice(item.basePrice)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Wholesale Price:</span>
+                    <p className="font-semibold text-gray-700">
+                      {formatPrice(item.wholesalePrice)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
