@@ -759,7 +759,7 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
                   <SelectValue placeholder="Quality Tier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {qualityTiers.map((tier) => (
+                  {tiers.map((tier) => (
                     <SelectItem key={tier} value={tier} className="cursor-pointer">
                       {tier}
                     </SelectItem>
