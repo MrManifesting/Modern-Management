@@ -91,11 +91,19 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
   const getDisplayWeight = (item: any) => {
     // If we have a valid weight field, use it
     if (item.weight && item.weight !== 'null' && item.weight.trim() !== '') {
-      const cleanWeight = item.weight.trim();
+      let cleanWeight = item.weight.trim();
       
-      // Remove any trailing 'g' that might have been accidentally appended to pound values
-      if (cleanWeight.endsWith('g') && !cleanWeight.endsWith('3.5g') && !cleanWeight.endsWith('1g')) {
-        return cleanWeight.slice(0, -1);
+      // Intelligent weight cleaning to remove trailing "g" from pound/ounce values
+      // but preserve legitimate gram measurements
+      if (cleanWeight.endsWith('g')) {
+        // Keep legitimate gram values
+        if (cleanWeight.endsWith('3.5g') || cleanWeight.endsWith('1g') || cleanWeight.endsWith('7g') || cleanWeight.endsWith('14g') || cleanWeight.endsWith('28g')) {
+          return cleanWeight;
+        }
+        // Remove trailing "g" from pound/ounce values
+        if (cleanWeight.includes('pound') || cleanWeight.includes('ounce')) {
+          cleanWeight = cleanWeight.slice(0, -1).trim();
+        }
       }
       
       return cleanWeight;
