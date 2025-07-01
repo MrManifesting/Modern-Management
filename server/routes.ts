@@ -5313,4 +5313,232 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       res.status(500).json({ error: 'Failed to fetch live menu data' });
     }
   });
+
+  // AI Assistant Routes
+  
+  // Check AI API status
+  app.get("/api/ai/status", async (req: Request, res: Response) => {
+    try {
+      const hasApiKey = !!process.env.OPENAI_API_KEY;
+      res.json({ 
+        configured: hasApiKey,
+        model: "gpt-4o",
+        features: ["chat", "insights", "product-analysis", "descriptions"]
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check AI status" });
+    }
+  });
+
+  // Start new conversation
+  app.post("/api/ai/conversations", async (req: Request, res: Response) => {
+    try {
+      const { title, systemPrompt } = req.body;
+      const userId = (req as any).user?.id || null;
+
+      // Create conversation in database
+      const conversationData = {
+        userId,
+        title: title || "New Conversation",
+        systemPrompt: systemPrompt || null,
+        status: "active" as const,
+        lastMessageAt: new Date(),
+        context: {},
+        settings: {}
+      };
+
+      // Since we're using raw SQL, let's insert directly
+      const result = await storage.db.execute(`
+        INSERT INTO conversations (user_id, title, system_prompt, status, last_message_at, context, settings)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [
+        conversationData.userId,
+        conversationData.title,
+        conversationData.systemPrompt,
+        conversationData.status,
+        conversationData.lastMessageAt,
+        JSON.stringify(conversationData.context),
+        JSON.stringify(conversationData.settings)
+      ]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      res.status(500).json({ error: "Failed to create conversation" });
+    }
+  });
+
+  // Get user conversations
+  app.get("/api/ai/conversations", async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id || null;
+      
+      const result = await storage.db.execute(`
+        SELECT * FROM conversations 
+        WHERE user_id = $1 OR user_id IS NULL
+        ORDER BY last_message_at DESC
+        LIMIT 50
+      `, [userId]);
+
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  // Get conversation with messages
+  app.get("/api/ai/conversations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user?.id || null;
+
+      // Get conversation
+      const convResult = await storage.db.execute(`
+        SELECT * FROM conversations 
+        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
+      `, [id, userId]);
+
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      // Get messages
+      const messagesResult = await storage.db.execute(`
+        SELECT * FROM messages 
+        WHERE conversation_id = $1 
+        ORDER BY created_at ASC
+      `, [id]);
+
+      const conversation = convResult.rows[0];
+      conversation.messages = messagesResult.rows;
+
+      res.json(conversation);
+    } catch (error) {
+      console.error('Failed to fetch conversation:', error);
+      res.status(500).json({ error: "Failed to fetch conversation" });
+    }
+  });
+
+  // Send message to AI assistant
+  app.post("/api/ai/conversations/:id/messages", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      const userId = (req as any).user?.id || null;
+
+      if (!content) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      // Verify conversation exists and user has access
+      const convResult = await storage.db.execute(`
+        SELECT * FROM conversations 
+        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
+      `, [id, userId]);
+
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      // Get existing messages for context
+      const messagesResult = await storage.db.execute(`
+        SELECT role, content FROM messages 
+        WHERE conversation_id = $1 
+        ORDER BY created_at ASC
+      `, [id]);
+
+      // Save user message
+      await storage.db.execute(`
+        INSERT INTO messages (conversation_id, role, content, status)
+        VALUES ($1, $2, $3, $4)
+      `, [id, 'user', content, 'sent']);
+
+      // Prepare conversation context
+      const context = {
+        userId,
+        currentInventoryFocus: [],
+        lastInventoryQuery: content
+      };
+
+      // Build message history for AI
+      const messageHistory = messagesResult.rows.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Add the new user message
+      messageHistory.push({ role: 'user', content });
+
+      // Get AI response
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const aiResponse = await aiAssistant.chatWithAssistant(messageHistory, context);
+
+      // Save AI response
+      await storage.db.execute(`
+        INSERT INTO messages (conversation_id, role, content, model, tokens_used, response_time, metadata, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        id, 
+        'assistant', 
+        aiResponse.response, 
+        'gpt-4o', 
+        aiResponse.tokensUsed, 
+        aiResponse.responseTime,
+        JSON.stringify(aiResponse.metadata),
+        'sent'
+      ]);
+
+      // Update conversation stats
+      await storage.db.execute(`
+        UPDATE conversations 
+        SET total_messages = total_messages + 2, 
+            total_tokens = total_tokens + $1,
+            last_message_at = NOW(),
+            updated_at = NOW()
+        WHERE id = $2
+      `, [aiResponse.tokensUsed, id]);
+
+      res.json({
+        userMessage: { role: 'user', content },
+        assistantMessage: { 
+          role: 'assistant', 
+          content: aiResponse.response,
+          metadata: aiResponse.metadata,
+          tokensUsed: aiResponse.tokensUsed,
+          responseTime: aiResponse.responseTime
+        }
+      });
+
+    } catch (error) {
+      console.error('Failed to process AI message:', error);
+      res.status(500).json({ error: "Failed to process message" });
+    }
+  });
+
+  // Get AI inventory insights
+  app.get("/api/ai/insights", async (req: Request, res: Response) => {
+    try {
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const insights = await aiAssistant.generateInventoryInsights();
+      res.json(insights);
+    } catch (error) {
+      console.error('Failed to generate insights:', error);
+      res.status(500).json({ error: "Failed to generate AI insights" });
+    }
+  });
+
+  // Generate product description
+  app.post("/api/ai/generate-description", async (req: Request, res: Response) => {
+    try {
+      const productData = req.body;
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const description = await aiAssistant.generateProductDescription(productData);
+      res.json({ description });
+    } catch (error) {
+      console.error('Failed to generate description:', error);
+      res.status(500).json({ error: "Failed to generate description" });
+    }
+  });
 }
