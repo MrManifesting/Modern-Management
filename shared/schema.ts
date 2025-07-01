@@ -585,7 +585,11 @@ export const items = pgTable("items", {
   sku: varchar("sku").unique(),
   brand: varchar("brand"),
   cost_price: doublePrecision("cost_price").default(0),
-  base_price: doublePrecision("base_price"),
+  bulk_price: doublePrecision("bulk_price"),
+  distro_price: doublePrecision("distro_price"), // 25lbs+
+  master_price: doublePrecision("master_price"), // 50lbs+
+  master_100_price: doublePrecision("master_100_price"), // 100lbs+
+  base_price: doublePrecision("base_price"), // Keep for compatibility
   sale_price: doublePrecision("sale_price"),
   wholesale_price: doublePrecision("wholesale_price"),
   category: varchar("category").default("general"),
