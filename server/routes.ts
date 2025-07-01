@@ -53,7 +53,7 @@ function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
     const title = product.title.toLowerCase();
     let score = 0;
     
-    // Strain matching (highest priority - must match significantly)
+    // Strain matching (highest priority - MUST match exactly or very closely)
     const strainWords = strain.split(' ');
     let strainMatchScore = 0;
     
@@ -62,23 +62,44 @@ function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
     const handleNormalized = handle.replace(/[-\s]/g, '').toLowerCase();
     const titleNormalized = title.replace(/[-\s]/g, '').toLowerCase();
     
+    // STRICT MATCHING: Require exact strain name match or very close match
     if (handleNormalized.includes(strainNormalized) || titleNormalized.includes(strainNormalized)) {
-      strainMatchScore += 80; // Very high score for exact strain match
+      strainMatchScore += 100; // Very high score for exact strain match
     } else {
-      // Only award points if majority of strain words match
-      let matchedWords = 0;
-      strainWords.forEach(word => {
-        if (word.length > 2) {
-          if (handle.includes(word) || title.includes(word)) {
-            strainMatchScore += 15;
-            matchedWords++;
-          }
+      // Check for close variations (plurals, abbreviations, etc.)
+      const strainVariations = [
+        strain,
+        strain + 's',
+        strain.replace(/\s+/g, ''),
+        strain.replace(/\s+/g, '-')
+      ];
+      
+      let hasCloseMatch = false;
+      strainVariations.forEach(variation => {
+        const varNormalized = variation.replace(/[-\s]/g, '').toLowerCase();
+        if (handleNormalized.includes(varNormalized) || titleNormalized.includes(varNormalized)) {
+          strainMatchScore += 90;
+          hasCloseMatch = true;
         }
       });
       
-      // Require at least 50% of strain words to match
-      if (matchedWords < strainWords.length * 0.5) {
-        strainMatchScore = 0; // No score if less than half the words match
+      // If no close match, require ALL strain words to match (very strict)
+      if (!hasCloseMatch) {
+        let matchedWords = 0;
+        strainWords.forEach(word => {
+          if (word.length > 2) {
+            if (handle.includes(word) || title.includes(word)) {
+              matchedWords++;
+            }
+          }
+        });
+        
+        // ONLY award points if ALL strain words match (100% requirement)
+        if (matchedWords === strainWords.length && strainWords.length > 0) {
+          strainMatchScore += 50; // Lower score for partial word matching
+        } else {
+          strainMatchScore = 0; // No score if any strain word is missing
+        }
       }
     }
     
@@ -639,11 +660,11 @@ export function registerRoutes(app: any, storage: any) {
 
       // Sort enhanced items: FULL pound variants first, then everything else
       enhancedItems.sort((a: any, b: any) => {
-        // Helper function to check if item is a FULL pound variant ONLY (very strict)
+        // Helper function to check if item is a FULL pound variant ONLY (extremely strict)
         const isFullPoundVariant = (item: any) => {
           const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
           
-          // EXCLUDE anything with grams, ounces, or fractional pounds
+          // FIRST - EXCLUDE anything with grams, ounces, or fractional pounds (STRICT)
           const excludePatterns = [
             /\b\d+\s*(gram|grams|g)\b/i,        // Any gram amounts (2 grams, 14 grams, etc.)
             /\b\d+\s*(oz|ounce|ounces)\b/i,     // Any ounce amounts  
@@ -651,24 +672,29 @@ export function registerRoutes(app: any, storage: any) {
             /\b(1\/4|quarter|0\.25)\s*(pound|lb)/i, // Quarter pounds
             /\bsmall/i,                         // Small variants
             /\bmini/i,                          // Mini variants
-            /\bsample/i                         // Sample variants
+            /\bsample/i,                        // Sample variants
+            /\bzapples/i,                       // Zapples products (often fractional)
+            /\bgraham/i,                        // Graham products (often fractional)
+            /\b(2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)\s*(gram|grams|g)\b/i // Specific small gram amounts
           ];
           
-          // If any exclude pattern matches, it's NOT a full pound
+          // If ANY exclude pattern matches, it's absolutely NOT a full pound
           if (excludePatterns.some(pattern => pattern.test(searchText))) {
             return false;
           }
           
-          // ONLY include explicit full pound patterns
+          // SECOND - ONLY include explicit full pound patterns (MUST MATCH)
           const fullPoundPatterns = [
             /\b1\s*pound\b/i,                   // "1 pound"
             /\bone\s*pound\b/i,                 // "one pound"  
             /\b1\s*lb\b/i,                      // "1 lb"
             /\bfull\s*pound\b/i,                // "full pound"
             /\(1\s*pound\)/i,                   // "(1 pound)"
-            /\bbulk\s*flower.*1\s*pound/i       // "bulk flower (1 pound)"
+            /\bbulk\s*flower.*1\s*pound/i,      // "bulk flower (1 pound)"
+            /\bthca\s*bulk\s*flower.*\(1\s*pound\)/i  // "THCA BULK FLOWER (1 pound)"
           ];
           
+          // Must have explicit full pound pattern AND not be excluded
           return fullPoundPatterns.some(pattern => pattern.test(searchText));
         };
         
