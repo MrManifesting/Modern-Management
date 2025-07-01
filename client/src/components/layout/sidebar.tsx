@@ -22,7 +22,8 @@ import {
   QrCode,
   FileSpreadsheet,
   FileCheck,
-  Shield
+  Shield,
+  Smartphone
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -85,6 +86,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           title: "Enhanced Inventory",
           path: "/inventory",
           className: "inventory-link primary-brand",
+        },
+        {
+          title: "Mobile Inventory",
+          path: "/inventory/mobile",
+          className: "inventory-link mobile-brand",
         },
         {
           title: "Products",
