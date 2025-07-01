@@ -3703,4 +3703,294 @@ export function registerRoutes(app: any, storage: any) {
       res.status(500).json({ error: "Failed to fix pound weights" });
     }
   });
+
+  // Helper functions for extracting data from product names and descriptions
+  const extractStrainName = (name: string) => {
+    if (!name) return 'Premium Strain';
+    
+    let strainName = name
+      .replace(/-thca.*$/i, '') // Remove -thca and everything after
+      .replace(/-flower.*$/i, '') // Remove -flower and everything after
+      .replace(/-smalls.*$/i, '') // Remove -smalls and everything after
+      .replace(/-classic.*$/i, '') // Remove -classic and everything after
+      .replace(/-top.*$/i, '') // Remove -top and everything after
+      .replace(/-aa.*$/i, '') // Remove -aa and everything after
+      .replace(/-indoor.*$/i, '') // Remove -indoor and everything after
+      .replace(/-outdoor.*$/i, '') // Remove -outdoor and everything after
+      .replace(/-exotic.*$/i, '') // Remove -exotic and everything after
+      .replace(/\b(1\s*pound|pound|1\s*lb|lb)\b/gi, '') // Remove weight references
+      .replace(/-+/g, ' ') // Replace hyphens with spaces
+      .replace(/\s+/g, ' ') // Normalize spaces
+      .trim();
+    
+    return strainName.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ') || 'Premium Strain';
+  };
+
+  const extractTHCAPercentage = (text: string) => {
+    if (!text) return 'Contact for %';
+    
+    const thcaMatch = text.match(/(\d+\.?\d*)\s*%?\s*thca/i);
+    if (thcaMatch) {
+      return `${thcaMatch[1]}%`;
+    }
+    
+    const percentMatch = text.match(/(\d+\.?\d*)\s*%/);
+    if (percentMatch) {
+      return `${percentMatch[1]}%`;
+    }
+    
+    return 'Contact for %';
+  };
+
+  const extractTier = (name: string) => {
+    if (!name) return 'Standard';
+    
+    const nameLower = name.toLowerCase();
+    if (nameLower.includes('exotic')) return 'Exotic Indoor';
+    if (nameLower.includes('top shelf')) return 'Top Shelf';
+    if (nameLower.includes('aaa')) return 'AAA Indoor';
+    if (nameLower.includes('aa')) return 'AA Indoor';
+    if (nameLower.includes('classic')) return 'Classic Reserve';
+    
+    return 'Standard';
+  };
+
+  const formatPriceForMenu = (price: any) => {
+    if (!price || price === 0) return 'Contact for pricing';
+    
+    const priceNum = parseFloat(String(price));
+    if (isNaN(priceNum) || priceNum <= 0) return 'Contact for pricing';
+    
+    return `$${priceNum.toFixed(2)}`;
+  };
+
+  // Shopify inventory synchronization endpoint - fixes inventory discrepancies
+  app.post('/api/shopify/sync-inventory', async (req: Request, res: Response) => {
+    try {
+      log('Starting comprehensive Shopify inventory synchronization', 'shopify-sync');
+      
+      // Get current internal inventory
+      const internalItems = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables." 
+        });
+      }
+
+      // Fetch all Shopify products with inventory levels
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
+      }
+
+      const shopifyData = await response.json();
+      const shopifyProducts = shopifyData.products || [];
+      
+      const syncResults = {
+        totalProcessed: internalItems.length,
+        totalShopifyProducts: shopifyProducts.length,
+        updated: 0,
+        discrepancies: [],
+        errors: []
+      };
+      
+      // Process each internal item and check against Shopify
+      for (const item of internalItems) {
+        try {
+          // Find matching Shopify product using enhanced fuzzy matching
+          const matchResult = findBestShopifyMatch(item.name || '', shopifyProducts);
+          
+          if (matchResult.product && matchResult.score >= 80) {
+            const shopifyProduct = matchResult.product;
+            const shopifyVariant = shopifyProduct.variants?.[0];
+            
+            if (shopifyVariant) {
+              const internalQuantity = item.quantity || 0;
+              const shopifyQuantity = shopifyVariant.inventory_quantity || 0;
+              
+              // Check for quantity discrepancies
+              if (internalQuantity !== shopifyQuantity) {
+                syncResults.discrepancies.push({
+                  itemId: item.id,
+                  itemName: item.name,
+                  internalQuantity,
+                  shopifyQuantity,
+                  difference: internalQuantity - shopifyQuantity,
+                  shopifyProductId: shopifyProduct.id,
+                  shopifyVariantId: shopifyVariant.id
+                });
+                
+                // Update internal quantity to match Shopify (Shopify is source of truth)
+                await storage.updateItem(item.id, { 
+                  quantity: shopifyQuantity,
+                  shopifyId: shopifyProduct.id.toString(),
+                  shopifyVariantId: shopifyVariant.id.toString()
+                });
+                
+                syncResults.updated++;
+                log(`Updated item ${item.id} quantity: ${internalQuantity} → ${shopifyQuantity}`, 'shopify-sync');
+              }
+            }
+          }
+        } catch (error) {
+          syncResults.errors.push({
+            itemId: item.id,
+            itemName: item.name,
+            error: String(error)
+          });
+        }
+      }
+      
+      log(`Shopify sync completed: ${syncResults.updated} items updated, ${syncResults.discrepancies.length} discrepancies found`, 'shopify-sync');
+      
+      res.json({
+        success: true,
+        message: `Synchronized ${syncResults.updated} items with Shopify. Found ${syncResults.discrepancies.length} quantity discrepancies.`,
+        results: syncResults
+      });
+    } catch (error) {
+      log(`Shopify sync error: ${error}`, 'shopify-sync');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to synchronize with Shopify. Check your SHOPIFY_ACCESS_TOKEN and SHOPIFY_STORE_DOMAIN." 
+      });
+    }
+  });
+
+  // Book flower menu API using provided JSON structure
+  app.get('/api/book-flower-menu', async (req: Request, res: Response) => {
+    try {
+      log('Generating comprehensive book flower menu', 'book-menu');
+      
+      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      // Filter for active THCA bulk flower items with available quantities
+      const thcaFlowerItems = results.filter((item: any) => 
+        item.status === 'active' && 
+        item.quantity > 0 &&
+        (item.name.toLowerCase().includes('thca') || 
+         item.name.toLowerCase().includes('bulk flower') ||
+         item.category?.toLowerCase().includes('flower'))
+      );
+      
+      // Convert internal items to book flower menu format matching your JSON structure
+      const bookFlowerMenu = {
+        bookFlowerMenus: {
+          lastUpdated: new Date().toISOString(),
+          totalProducts: thcaFlowerItems.length,
+          categories: {
+            THCA_Bulk_Flower: {
+              description: "Premium THCA bulk flower in various strains and tiers",
+              products: thcaFlowerItems.map((item: any) => ({
+                id: String(item.id),
+                title: item.name,
+                handle: item.sku?.toLowerCase().replace(/[^a-z0-9]/g, '-') || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                productType: "THCA Flower",
+                vendor: item.brand || "Gold Standard",
+                strainName: extractStrainName(item.name),
+                strainPercentage: extractTHCAPercentage(item.description || item.name),
+                thcaPercentage: extractTHCAPercentage(item.description || item.name),
+                availableQuantity: item.quantity,
+                type: "THCA Flower",
+                tier: extractTier(item.name),
+                price: formatPriceForMenu(item.base_price || item.sale_price || item.cost_price),
+                sku: item.sku || "",
+                coaLink: `https://gold-standard-cbd.com/coa/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                coaFreeTime: "Business hours: 541-295-8811 ext #1",
+                productMediaDownloadLink: item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`,
+                imageSource: item.image_url || `https://gold-standard-cbd.com/products/${item.sku}.jpg`,
+                onlineStoreUrl: `https://gold-standard-cbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                status: "ACTIVE",
+                availableForSale: true,
+                genetics: "Contact for genetics",
+                terpenes: ["Beta-Caryophyllene", "Limonene", "Myrcene"],
+                effects: ["CALM", "FOCUSED", "UPLIFTED"]
+              }))
+            }
+          },
+          contactInfo: {
+            bulkOrders: "kaya@goldcbd.com", 
+            phone: "541-295-8811 ext #1",
+            website: "https://gold-standard-cbd.com",
+            businessHours: "Contact for current hours"
+          },
+          importantNotes: [
+            "All THCA bulk flower sales are final - no returns accepted",
+            "COAs and law enforcement letters included with all packages", 
+            "Shipping costs based on weight and location",
+            "Third-party lab tested products",
+            "Hemp products contain less than 0.3% THC and are federally compliant"
+          ]
+        }
+      };
+      
+      log(`Generated book flower menu with ${thcaFlowerItems.length} THCA flower items`, 'book-menu');
+      
+      res.json(bookFlowerMenu);
+    } catch (error) {
+      log(`Book flower menu error: ${error}`, 'book-menu');
+      res.status(500).json({ error: 'Failed to generate book flower menu' });
+    }
+  });
+
+  // Google Sheets format bulk flower data matching your headers exactly
+  app.get('/api/bulk-flower-sheets', async (req: Request, res: Response) => {
+    try {
+      log('Generating bulk flower data for Google Sheets format', 'sheets-format');
+      
+      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      // Filter for THCA bulk flower items
+      const bulkFlowerItems = results.filter((item: any) => 
+        (item.name.toLowerCase().includes('thca') || 
+         item.name.toLowerCase().includes('bulk flower') ||
+         item.category?.toLowerCase().includes('flower')) &&
+        item.quantity >= 0 // Include items with 0 quantity to show out of stock
+      );
+      
+      // Format for your exact Google Sheets headers
+      const sheetsData = bulkFlowerItems.map((item: any) => ({
+        "Available Qty": item.quantity,
+        "Main Image": item.image_url || `https://gold-standard-cbd.com/products/${item.sku}.jpg`,
+        "COA Image": `https://gold-standard-cbd.com/coa/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        "Strain": extractStrainName(item.name),
+        "Type": "THCA Flower",
+        "Tier": extractTier(item.name),
+        "Potency %": extractTHCAPercentage(item.description || item.name),
+        "Bulk Price": formatPriceForMenu(item.base_price || item.sale_price || item.cost_price),
+        "Distro 25lbs+": "Contact for pricing",
+        "Master 50lbs+": "Contact for pricing", 
+        "Master 2 100lbs+": "Contact for pricing",
+        "Order Link": `https://gold-standard-cbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      }));
+      
+      log(`Generated Google Sheets data for ${bulkFlowerItems.length} bulk flower items`, 'sheets-format');
+      
+      res.json({
+        headers: ["Available Qty", "Main Image", "COA Image", "Strain", "Type", "Tier", "Potency %", "Bulk Price", "Distro 25lbs+", "Master 50lbs+", "Master 2 100lbs+", "Order Link"],
+        data: sheetsData,
+        totalItems: sheetsData.length,
+        contactInfo: {
+          bulkOrders: "kaya@goldcbd.com",
+          phone: "541-295-8811 ext #1"
+        }
+      });
+    } catch (error) {
+      log(`Bulk flower sheets error: ${error}`, 'sheets-format');
+      res.status(500).json({ error: 'Failed to generate bulk flower sheets data' });
+    }
+  });
 }
