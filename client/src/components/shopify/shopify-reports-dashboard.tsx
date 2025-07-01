@@ -541,7 +541,7 @@ export function ShopifyReportsDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {salesData.topProducts.map((product) => (
+                      {salesData?.topProducts?.map((product) => (
                         <TableRow key={product.productId}>
                           <TableCell className="font-medium">{product.title}</TableCell>
                           <TableCell>{product.sku}</TableCell>
@@ -645,7 +645,7 @@ export function ShopifyReportsDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {inventoryData.lowStockItems.map((item) => (
+                        {inventoryData?.lowStockItems?.map((item) => (
                           <TableRow key={item.variantId}>
                             <TableCell className="font-medium">{item.title}</TableCell>
                             <TableCell>{item.sku}</TableCell>
@@ -683,7 +683,7 @@ export function ShopifyReportsDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {inventoryData.outOfStockItems.map((item) => (
+                        {inventoryData?.outOfStockItems?.map((item) => (
                           <TableRow key={item.variantId}>
                             <TableCell className="font-medium">{item.title}</TableCell>
                             <TableCell>{item.sku}</TableCell>
@@ -809,7 +809,7 @@ export function ShopifyReportsDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {customerData.topCustomers.slice(0, 5).map((customer) => (
+                        {customerData?.topCustomers?.slice(0, 5).map((customer) => (
                           <TableRow key={customer.customerId}>
                             <TableCell className="font-medium">{customer.name}</TableCell>
                             <TableCell className="text-right">{customer.ordersCount}</TableCell>
