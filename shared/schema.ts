@@ -341,6 +341,80 @@ export type InsertShopifyProductLookup = typeof shopifyProductLookup.$inferInser
 export type ThcaSheetData = typeof thcaSheetData.$inferSelect;
 export type InsertThcaSheetData = typeof thcaSheetData.$inferInsert;
 
+// AI Assistant Conversations Table
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  title: varchar("title").notNull(),
+  
+  // Conversation metadata
+  model: varchar("model").default("gpt-4o").notNull(),
+  systemPrompt: text("system_prompt"),
+  totalMessages: integer("total_messages").default(0),
+  totalTokens: integer("total_tokens").default(0),
+  
+  // Conversation status
+  status: varchar("status").default("active"), // 'active', 'archived', 'deleted'
+  lastMessageAt: timestamp("last_message_at"),
+  
+  // Context and settings
+  context: jsonb("context"), // Store conversation context like current inventory focus
+  settings: jsonb("settings"), // Store user preferences for this conversation
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_conversations_user_id").on(table.userId),
+  index("idx_conversations_status").on(table.status),
+  index("idx_conversations_last_message").on(table.lastMessageAt),
+]);
+
+// AI Assistant Messages Table
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => conversations.id, { onDelete: 'cascade' }),
+  
+  // Message content
+  role: varchar("role").notNull(), // 'user', 'assistant', 'system'
+  content: text("content").notNull(),
+  
+  // AI response metadata
+  model: varchar("model"),
+  tokensUsed: integer("tokens_used"),
+  responseTime: integer("response_time"), // milliseconds
+  
+  // Message context
+  attachments: jsonb("attachments"), // File attachments, images, etc.
+  metadata: jsonb("metadata"), // Additional context like inventory items referenced
+  
+  // Message status
+  status: varchar("status").default("sent"), // 'sent', 'delivered', 'error'
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_messages_conversation_id").on(table.conversationId),
+  index("idx_messages_role").on(table.role),
+  index("idx_messages_created_at").on(table.createdAt),
+]);
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;
+
+// Zod schemas for validation
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Customer Analytics and Segmentation Tables
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
