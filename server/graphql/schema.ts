@@ -18,12 +18,21 @@ export const typeDefs = gql`
     status: String!
     quantity: Int!
     weight: String
+    weightData: WeightData
     pricing: PricingInfo!
     media: MediaInfo!
     links: ProductLinks!
     shopifyData: ShopifyData
     availability: AvailabilityInfo!
     lastUpdated: String!
+  }
+
+  type WeightData {
+    formattedWeight: String!
+    shopifyWeight: Float
+    shopifyWeightUnit: String
+    weightInGrams: Float
+    localWeight: String
   }
 
   type ShopifyInventoryItem {
@@ -135,6 +144,9 @@ export const typeDefs = gql`
   }
 
   type AvailabilityInfo {
+    quantity: Int!
+    shopifyQuantity: Int
+    localQuantity: Int!
     inStock: Boolean!
     lowStock: Boolean!
     stockLevel: String!

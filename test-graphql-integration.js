@@ -19,30 +19,14 @@ async function testGraphQLIntegration() {
               name
               sku
               weight
-              weightData {
-                formattedWeight
-                shopifyWeight
-                shopifyWeightUnit
-                weightInGrams
-              }
               pricing {
                 displayPrice
                 basePrice
-                salePrice
                 currency
-                hasDiscount
               }
               availability {
-                quantity
-                shopifyQuantity
-                localQuantity
-                stockLevel
                 inStock
-              }
-              shopifyData {
-                productId
-                handle
-                syncStatus
+                stockLevel
               }
             }
           }
