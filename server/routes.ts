@@ -3389,4 +3389,83 @@ export function registerRoutes(app: any, storage: any) {
       });
     }
   });
+
+  // Fix weight data for all pound variants that show incorrect gram weights
+  app.post('/api/items/fix-pound-weights', async (req: Request, res: Response) => {
+    try {
+      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      const updates = [];
+      
+      for (const item of results) {
+        let shouldUpdate = false;
+        let newWeight = '';
+        let newWeightValue = '';
+        let newWeightUnit = '';
+        
+        // Check if name indicates pound but weight shows incorrect data
+        if (item.name && (
+          item.name.toLowerCase().includes('1 pound') ||
+          item.name.toLowerCase().includes('(1 pound)') ||
+          item.name.toLowerCase().includes('one pound') ||
+          item.name.toLowerCase().includes('1pound') ||
+          item.name.toLowerCase().includes('1lb') ||
+          item.name.toLowerCase().includes('1 lb')
+        )) {
+          shouldUpdate = true;
+          newWeight = '1 pound';
+          newWeightValue = '1';
+          newWeightUnit = 'pound';
+        } else if (item.name && (
+          item.name.toLowerCase().includes('1/2 pound') ||
+          item.name.toLowerCase().includes('half pound') ||
+          item.name.toLowerCase().includes('(1/2 pound)') ||
+          item.name.toLowerCase().includes('1/2pound') ||
+          item.name.toLowerCase().includes('0.5 pound')
+        )) {
+          shouldUpdate = true;
+          newWeight = '1/2 pound';
+          newWeightValue = '0.5';
+          newWeightUnit = 'pound';
+        } else if (item.name && (
+          item.name.toLowerCase().includes('1/4 pound') ||
+          item.name.toLowerCase().includes('quarter pound') ||
+          item.name.toLowerCase().includes('(1/4 pound)') ||
+          item.name.toLowerCase().includes('1/4pound') ||
+          item.name.toLowerCase().includes('0.25 pound')
+        )) {
+          shouldUpdate = true;
+          newWeight = '1/4 pound';
+          newWeightValue = '0.25';
+          newWeightUnit = 'pound';
+        }
+        
+        if (shouldUpdate) {
+          // Fix weight data regardless of current value
+          await storage.updateItem(item.id, { 
+            weight: newWeight,
+            weight_value: newWeightValue,
+            weight_unit: newWeightUnit
+          });
+          updates.push({
+            id: item.id,
+            name: item.name,
+            oldWeight: item.weight,
+            newWeight: newWeight
+          });
+        }
+      }
+      
+      log(`Fixed ${updates.length} pound variant weights`, 'fix-weights');
+      
+      res.json({
+        success: true,
+        message: `Fixed ${updates.length} pound variant weights`,
+        updated: updates.slice(0, 10), // Show first 10 for brevity
+        totalFixed: updates.length
+      });
+    } catch (error) {
+      log(`Fix pound weights error: ${error}`, 'fix-weights');
+      res.status(500).json({ error: "Failed to fix pound weights" });
+    }
+  });
 }
