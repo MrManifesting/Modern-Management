@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **MENU BUTTON FUNCTIONALITY COMPLETELY FIXED - ALL COA, BUY NOW, AND MEDIA BUTTONS NOW WORKING**
+  - Fixed broken COA button URLs that were causing "This site can't be reached" errors by redirecting to actual COA pages
+  - Fixed broken MEDIA button URLs by creating professional HTML media pack pages with complete product information
+  - Enhanced BUY NOW button functionality with improved Shopify fuzzy matching (80+ score threshold for accuracy)
+  - COA buttons now properly redirect to gold-standard-cbd.com/coa/{strain-slug} pages
+  - MEDIA buttons now open comprehensive media pack pages with download options, product details, and pricing
+  - All menu buttons tested and confirmed working across pound variants menu and enhanced inventory displays
+  - Stricter fuzzy matching prevents incorrect Shopify product links while maintaining high-quality matches
 - July 1, 2025: **SHOPIFY REPORTS DASHBOARD ERRORS FIXED AND PERFORMANCE OPTIMIZATION DEPLOYED**
   - Fixed critical "Cannot read properties of undefined (reading 'map')" errors in ShopifyReportsDashboard component
   - Added proper null checking with optional chaining (?.map) for all data arrays in reports dashboard
