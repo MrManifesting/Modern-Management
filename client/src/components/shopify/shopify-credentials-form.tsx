@@ -168,7 +168,7 @@ export default function ShopifyCredentialsForm() {
                 <Input
                   id="shopifyStore"
                   name="shopifyStore"
-                  placeholder="mrlisterscurations.myshopify.com"
+                  placeholder="gold-standard-cbd.myshopify.com"
                   value={credentials.shopifyStore}
                   onChange={handleInputChange}
                   className="border-blue-500/30 bg-background focus:border-blue-500 focus:ring-blue-500/50"
@@ -176,9 +176,9 @@ export default function ShopifyCredentialsForm() {
                 <div className="text-xs text-muted-foreground space-y-2">
                   <p>Enter your Shopify store URL. Common formats:</p>
                   <ul className="list-disc pl-4 space-y-0.5">
-                    <li>mrlisterscurations.myshopify.com</li>
-                    <li>https://mrlisterscurations.myshopify.com</li>
-                    <li>https://admin.shopify.com/store/mrlisterscurations</li>
+                    <li>gold-standard-cbd.myshopify.com</li>
+                    <li>https://gold-standard-cbd.myshopify.com</li>
+                    <li>https://admin.shopify.com/store/gold-standard-cbd</li>
                   </ul>
                   {credentials.shopifyStore.includes('curatioins') && (
                     <div className="bg-red-50 border border-red-200 rounded p-2">
