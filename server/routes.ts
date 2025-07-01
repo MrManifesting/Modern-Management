@@ -4601,11 +4601,11 @@ export function registerRoutes(app: any, storage: any) {
                 stockText = 'Limited';
               }
               
-              // Generate working URLs
+              // Generate working URLs - use internal endpoints that redirect properly
               const productHandle = (item.sku?.toLowerCase() || item.name.toLowerCase()).replace(/[^a-z0-9]/g, '-');
-              const shopifyUrl = `https://gold-standard-cbd.myshopify.com/products/${productHandle}`;
-              const coaUrl = `https://gold-standard-cbd.com/coa/${productHandle}`;
-              const mediaUrl = item.image_url || `https://gold-standard-cbd.com/media/download/${item.sku}`;
+              const shopifyUrl = `/api/items/${item.id}/shopify-storefront`;
+              const coaUrl = `/api/items/${item.id}/coa-redirect`;
+              const mediaUrl = `/api/items/${item.id}/media-pack`;
               
               return `
                 <div class="product-card">
@@ -4685,6 +4685,270 @@ export function registerRoutes(app: any, storage: any) {
     } catch (error) {
       log(`Live menu generation error: ${error}`, 'live-menu');
       res.status(500).json({ error: 'Failed to generate live menu' });
+    }
+  });
+
+  // Shopify storefront redirect endpoint
+  app.get('/api/items/:id/shopify-storefront', async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).send(`
+          <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+            <h2>Product Not Found</h2>
+            <p>The requested product could not be found in our inventory.</p>
+            <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+          </body></html>
+        `);
+      }
+      
+      // Generate proper Shopify storefront URL
+      const productHandle = (item.sku?.toLowerCase() || item.name.toLowerCase()).replace(/[^a-z0-9]/g, '-');
+      const shopifyStorefrontUrl = `https://gold-standard-cbd.com/products/${productHandle}`;
+      
+      // Redirect to actual storefront
+      res.redirect(302, shopifyStorefrontUrl);
+    } catch (error) {
+      res.status(500).send(`
+        <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+          <h2>Service Error</h2>
+          <p>Unable to redirect to product page. Please try again later.</p>
+          <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+        </body></html>
+      `);
+    }
+  });
+
+  // COA certificate redirect endpoint
+  app.get('/api/items/:id/coa-redirect', async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).send(`
+          <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+            <h2>COA Not Found</h2>
+            <p>Certificate of Analysis not available for this product.</p>
+            <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+          </body></html>
+        `);
+      }
+      
+      // Create COA page with product information
+      const strainName = extractStrainName(item.name);
+      const thcaPercent = extractTHCAPercentage(item.description || item.name);
+      
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>COA - ${strainName} | Gold Standard CBD</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #D4AF37, #228B22); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+            .coa-content { background: #f9f9f9; padding: 30px; margin: 20px 0; border-radius: 10px; }
+            .product-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+            .info-box { background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #D4AF37; }
+            .contact-box { background: #228B22; color: white; padding: 20px; border-radius: 10px; margin-top: 20px; }
+            a { color: #D4AF37; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏆 Certificate of Analysis</h1>
+            <h2>${strainName}</h2>
+            <p>Gold Standard CBD - Premium THCA Flower</p>
+          </div>
+          
+          <div class="coa-content">
+            <div class="product-info">
+              <div class="info-box">
+                <h3>Product Details</h3>
+                <p><strong>Strain:</strong> ${strainName}</p>
+                <p><strong>SKU:</strong> ${item.sku || 'Contact for SKU'}</p>
+                <p><strong>Weight:</strong> ${item.weight || '1 pound'}</p>
+                <p><strong>THCa Content:</strong> ${thcaPercent || 'Lab tested'}</p>
+              </div>
+              
+              <div class="info-box">
+                <h3>Compliance Information</h3>
+                <p><strong>Status:</strong> Federally Compliant</p>
+                <p><strong>Delta-9 THC:</strong> <0.3%</p>
+                <p><strong>Lab Testing:</strong> Third-party verified</p>
+                <p><strong>Batch Date:</strong> Contact for batch info</p>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <h3>🔬 Laboratory Analysis</h3>
+              <p>Complete COA with detailed cannabinoid profile, terpene analysis, and safety testing available upon request.</p>
+              <p><strong>All products are tested for:</strong></p>
+              <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+                <li>Cannabinoid content verification</li>
+                <li>Pesticide screening</li>
+                <li>Heavy metals testing</li>
+                <li>Microbial contamination</li>
+                <li>Residual solvents</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="contact-box">
+            <h3>📞 Request Full COA & Lab Reports</h3>
+            <p><strong>Email:</strong> <a href="mailto:kaya@goldcbd.com" style="color: white;">kaya@goldcbd.com</a></p>
+            <p><strong>Phone:</strong> <a href="tel:541-295-8811" style="color: white;">541-295-8811 ext #1</a></p>
+            <p><strong>Business Hours:</strong> Contact for current hours</p>
+            <p>Full COA and law enforcement letters included with all bulk orders.</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="/api/generate-live-menu" style="background: #D4AF37; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">← Back to Live Menu</a>
+          </div>
+        </body>
+        </html>
+      `);
+    } catch (error) {
+      res.status(500).send(`
+        <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+          <h2>COA Service Error</h2>
+          <p>Unable to load Certificate of Analysis. Please contact us directly.</p>
+          <p><a href="tel:541-295-8811" style="color: #D4AF37;">Call: 541-295-8811 ext #1</a></p>
+          <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+        </body></html>
+      `);
+    }
+  });
+
+  // Media pack download endpoint
+  app.get('/api/items/:id/media-pack', async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getItem(itemId);
+      
+      if (!item) {
+        return res.status(404).send(`
+          <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+            <h2>Media Pack Not Found</h2>
+            <p>Media pack not available for this product.</p>
+            <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+          </body></html>
+        `);
+      }
+      
+      // Create media pack page
+      const strainName = extractStrainName(item.name);
+      const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+      
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Media Pack - ${strainName} | Gold Standard CBD</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+            .header { background: linear-gradient(135deg, #D4AF37, #228B22); color: white; padding: 30px; border-radius: 15px; text-align: center; }
+            .media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
+            .media-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .download-btn { background: #228B22; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin: 10px 5px; }
+            .download-btn:hover { background: #1E7B1E; }
+            .contact-section { background: #D4AF37; color: white; padding: 25px; border-radius: 12px; margin-top: 20px; text-align: center; }
+            .product-image { width: 100%; height: 200px; background: linear-gradient(45deg, #333, #555); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #888; margin-bottom: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📸 Media Pack</h1>
+            <h2>${strainName}</h2>
+            <p>Professional marketing materials and product assets</p>
+          </div>
+          
+          <div class="media-grid">
+            <div class="media-card">
+              <h3>🖼️ Product Images</h3>
+              <div class="product-image">
+                ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">` : 'High-Resolution Product Photo'}
+              </div>
+              <p>Professional product photography for marketing and advertising use.</p>
+              <a href="${item.image_url || '#'}" class="download-btn" download>Download HD Image</a>
+            </div>
+            
+            <div class="media-card">
+              <h3>📄 Product Information</h3>
+              <ul style="text-align: left;">
+                <li><strong>Strain:</strong> ${strainName}</li>
+                <li><strong>Price:</strong> $${price.toFixed(2)}</li>
+                <li><strong>Weight:</strong> ${item.weight || '1 pound'}</li>
+                <li><strong>SKU:</strong> ${item.sku || 'Contact for SKU'}</li>
+                <li><strong>Status:</strong> ${item.status}</li>
+                <li><strong>Available:</strong> ${item.quantity} units</li>
+              </ul>
+              <a href="data:text/plain;charset=utf-8,${encodeURIComponent(`${strainName} - Gold Standard CBD
+Price: $${price.toFixed(2)}
+Weight: ${item.weight || '1 pound'}
+SKU: ${item.sku || 'Contact for SKU'}
+Available: ${item.quantity} units
+Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" download="${strainName}-info.txt">Download Product Info</a>
+            </div>
+            
+            <div class="media-card">
+              <h3>🏷️ Marketing Materials</h3>
+              <p>Ready-to-use marketing content for social media and advertising.</p>
+              <ul style="text-align: left;">
+                <li>Social media posts templates</li>
+                <li>Product description copy</li>
+                <li>Compliance disclaimers</li>
+                <li>Brand guidelines</li>
+              </ul>
+              <a href="data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html>
+<html><head><title>${strainName} - Marketing Content</title></head>
+<body style="font-family: Arial; padding: 20px;">
+<h1>🌿 ${strainName}</h1>
+<h2>Premium THCA Flower - Gold Standard CBD</h2>
+<p><strong>Price:</strong> $${price.toFixed(2)}</p>
+<p><strong>Available:</strong> ${item.quantity} units in stock</p>
+<h3>Marketing Copy:</h3>
+<p>Experience the finest quality THCA flower with ${strainName} from Gold Standard CBD. Sourced from premium indoor cultivation and third-party lab tested for purity and potency.</p>
+<h3>Key Features:</h3>
+<ul>
+<li>Premium indoor cultivation</li>
+<li>Third-party lab tested</li>
+<li>Federally compliant (<0.3% Delta-9 THC)</li>
+<li>COA available upon request</li>
+<li>Bulk quantities available</li>
+</ul>
+<h3>Contact Information:</h3>
+<p>Email: kaya@goldcbd.com<br>Phone: 541-295-8811 ext #1</p>
+<p><em>Disclaimer: This product has not been evaluated by the FDA. Not for use by minors, pregnant or nursing women.</em></p>
+</body></html>`)}" class="download-btn" download="${strainName}-marketing.html">Download Marketing Kit</a>
+            </div>
+          </div>
+          
+          <div class="contact-section">
+            <h3>📞 Need Custom Media Assets?</h3>
+            <p>Contact us for custom photography, video content, or specialized marketing materials.</p>
+            <p><strong>Email:</strong> <a href="mailto:kaya@goldcbd.com" style="color: white;">kaya@goldcbd.com</a></p>
+            <p><strong>Phone:</strong> <a href="tel:541-295-8811" style="color: white;">541-295-8811 ext #1</a></p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="/api/generate-live-menu" style="background: #D4AF37; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">← Back to Live Menu</a>
+          </div>
+        </body>
+        </html>
+      `);
+    } catch (error) {
+      res.status(500).send(`
+        <html><body style="font-family: Arial; padding: 40px; text-align: center;">
+          <h2>Media Pack Error</h2>
+          <p>Unable to load media pack. Please contact us directly.</p>
+          <p><a href="mailto:kaya@goldcbd.com" style="color: #D4AF37;">Email: kaya@goldcbd.com</a></p>
+          <a href="/" style="color: #D4AF37;">← Back to Menu</a>
+        </body></html>
+      `);
     }
   });
 
