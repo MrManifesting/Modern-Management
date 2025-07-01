@@ -3118,4 +3118,133 @@ export function registerRoutes(app: any, storage: any) {
       });
     }
   });
+
+  // Fix weight data for all items
+  app.post('/api/items/fix-weights', async (req: Request, res: Response) => {
+    try {
+      log('Starting weight data fix for all items', 'weight-fix');
+      
+      // Parse weight from item name
+      const parseWeightFromName = (name: string): string => {
+        if (!name) return 'Not specified';
+        
+        const nameLower = name.toLowerCase();
+        
+        // Check for pound variants in parentheses: "(1 pound)", "(half pound)", etc.
+        const poundMatch = name.match(/\(([^)]*pound[^)]*)\)/i);
+        if (poundMatch) {
+          const weightText = poundMatch[1].trim();
+          if (weightText.includes('1 pound') || weightText === 'pound') {
+            return '1 pound';
+          } else if (weightText.includes('half pound')) {
+            return 'half pound';  
+          } else if (weightText.includes('quarter pound')) {
+            return 'quarter pound';
+          }
+          return weightText;
+        }
+
+        // Check for specific patterns in new format: "Name - TYPE - TIER (weight)"
+        if (nameLower.includes('(1 pound)') || nameLower.includes('(pound)')) {
+          return '1 pound';
+        } else if (nameLower.includes('(half pound)') || nameLower.includes('(0.5 pound)')) {
+          return 'half pound';
+        } else if (nameLower.includes('(quarter pound)') || nameLower.includes('(0.25 pound)')) {
+          return 'quarter pound';
+        }
+
+        // Check for other weight indicators in the name
+        if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
+          return '1 pound';
+        } else if (nameLower.includes('half pound') || nameLower.includes('0.5 pound')) {
+          return 'half pound';
+        } else if (nameLower.includes('quarter pound') || nameLower.includes('0.25 pound')) {
+          return 'quarter pound';
+        } else if (nameLower.includes('ounce')) {
+          return '1 ounce';
+        } else if (nameLower.includes('3.5g') || nameLower.includes('eighth')) {
+          return '3.5g';
+        } else if (nameLower.includes('1g') || nameLower.includes('gram')) {
+          return '1g';
+        }
+
+        return 'Not specified';
+      };
+
+      // Get all items with null or empty weight
+      const items = await storage.getAllItems();
+      const itemsToUpdate = items.filter((item: any) => 
+        !item.weight || item.weight === 'null' || item.weight.trim() === ''
+      );
+
+      log(`Found ${itemsToUpdate.length} items with missing weight data`, 'weight-fix');
+
+      let updatedCount = 0;
+      for (const item of itemsToUpdate) {
+        const newWeight = parseWeightFromName(item.name);
+        if (newWeight !== 'Not specified') {
+          await storage.updateItem(item.id, { weight: newWeight });
+          updatedCount++;
+          log(`Updated item ${item.id}: "${item.name}" -> weight: "${newWeight}"`, 'weight-fix');
+        }
+      }
+
+      log(`Weight fix completed: ${updatedCount} items updated`, 'weight-fix');
+      
+      res.json({
+        success: true,
+        message: `Successfully updated weight data for ${updatedCount} items`,
+        totalChecked: itemsToUpdate.length,
+        updated: updatedCount
+      });
+
+    } catch (error) {
+      log(`Weight fix error: ${error}`, 'weight-fix');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fix weight data" 
+      });
+    }
+  });
+
+  // Fix status for pound variant items (change from draft to active if they have pricing and stock)
+  app.post('/api/items/fix-pound-status', async (req: Request, res: Response) => {
+    try {
+      log('Starting status fix for pound variant items', 'status-fix');
+      
+      const items = await storage.getAllItems();
+      const poundItems = items.filter((item: any) => 
+        item.name && 
+        item.name.toLowerCase().includes('pound') && 
+        item.status === 'draft' &&
+        (item.basePrice > 0 || item.salePrice > 0) &&
+        item.quantity > 0
+      );
+
+      log(`Found ${poundItems.length} pound items ready to activate`, 'status-fix');
+
+      let activatedCount = 0;
+      for (const item of poundItems) {
+        await storage.updateItem(item.id, { status: 'active' });
+        activatedCount++;
+        log(`Activated item ${item.id}: "${item.name}" (${item.quantity} units, $${item.basePrice || item.salePrice})`, 'status-fix');
+      }
+
+      log(`Status fix completed: ${activatedCount} items activated`, 'status-fix');
+      
+      res.json({
+        success: true,
+        message: `Successfully activated ${activatedCount} pound variant items`,
+        totalChecked: poundItems.length,
+        activated: activatedCount
+      });
+
+    } catch (error) {
+      log(`Status fix error: ${error}`, 'status-fix');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fix item status" 
+      });
+    }
+  });
 }
