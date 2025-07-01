@@ -40,6 +40,7 @@ import PerformanceDashboard from "@/pages/performance-dashboard";
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
+import AiAssistantPage from "@/pages/ai-assistant";
 import CSVValidatorPage from "@/pages/csv-validator";
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import GoogleSheetsPage from "@/pages/google-sheets-page";
@@ -137,6 +138,7 @@ function Router() {
         <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
         <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
+        <ProtectedRoute path="/ai-assistant" component={() => <AiAssistantPage />} />
         <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
