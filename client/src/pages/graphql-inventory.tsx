@@ -341,64 +341,73 @@ const GraphQLInventory = () => {
     return true;
   });
 
-  // Advanced sorting logic
-  const sortedAndFilteredInventory = [...filteredInventory].sort((a, b) => {
-    // Priority 1: Pound variants (if enabled)
-    if (prioritizePounds) {
-      const aIsPound = a.weight?.toLowerCase().includes('pound') || 
-                     a.name?.toLowerCase().includes('pound') ||
-                     a.name?.toLowerCase().includes('1 lb') ||
-                     a.name?.toLowerCase().includes('1lb');
-      const bIsPound = b.weight?.toLowerCase().includes('pound') || 
-                     b.name?.toLowerCase().includes('pound') ||
-                     b.name?.toLowerCase().includes('1 lb') ||
-                     b.name?.toLowerCase().includes('1lb');
-      
-      if (aIsPound && !bIsPound) return -1;
-      if (!aIsPound && bIsPound) return 1;
+  // Advanced sorting logic - respect GraphQL backend sorting when prioritization is enabled
+  const sortedAndFilteredInventory = (() => {
+    // If both pound and newest prioritization are enabled, use the GraphQL backend sorting
+    // as it already implements this logic optimally with Shopify integration
+    if (prioritizePounds && prioritizeNewest && sortBy === 'name' && sortDirection === 'asc') {
+      return filteredInventory; // Use GraphQL-sorted data as-is
     }
-
-    // Priority 2: Newest items (if enabled) - assuming higher IDs = newer
-    if (prioritizeNewest) {
-      const aId = parseInt(a.id);
-      const bId = parseInt(b.id);
-      if (aId !== bId) {
-        return bId - aId; // Newest first (highest ID first)
-      }
-    }
-
-    // Priority 3: Custom sort criteria
-    let comparison = 0;
     
-    switch (sortBy) {
-      case 'name':
-        comparison = (a.name || '').localeCompare(b.name || '');
-        break;
-      case 'price':
-        comparison = (a.pricing?.displayPrice || 0) - (b.pricing?.displayPrice || 0);
-        break;
-      case 'quantity':
-        comparison = (a.quantity || 0) - (b.quantity || 0);
-        break;
-      case 'weight':
-        comparison = (a.weight || '').localeCompare(b.weight || '');
-        break;
-      case 'thca':
-        comparison = (a.thcaPercentage || 0) - (b.thcaPercentage || 0);
-        break;
-      case 'sku':
-        comparison = (a.sku || '').localeCompare(b.sku || '');
-        break;
-      case 'created':
-        // For created date, use ID as proxy (higher ID = newer)
-        comparison = parseInt(b.id) - parseInt(a.id);
-        break;
-      default:
-        comparison = (a.name || '').localeCompare(b.name || '');
-    }
+    // Otherwise, apply frontend sorting for custom criteria
+    return [...filteredInventory].sort((a, b) => {
+      // Priority 1: Pound variants (if enabled)
+      if (prioritizePounds) {
+        const aIsPound = a.weight?.toLowerCase().includes('pound') || 
+                       a.name?.toLowerCase().includes('pound') ||
+                       a.name?.toLowerCase().includes('1 lb') ||
+                       a.name?.toLowerCase().includes('1lb');
+        const bIsPound = b.weight?.toLowerCase().includes('pound') || 
+                       b.name?.toLowerCase().includes('pound') ||
+                       b.name?.toLowerCase().includes('1 lb') ||
+                       b.name?.toLowerCase().includes('1lb');
+        
+        if (aIsPound && !bIsPound) return -1;
+        if (!aIsPound && bIsPound) return 1;
+      }
 
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
+      // Priority 2: Newest items (if enabled) - assuming higher IDs = newer
+      if (prioritizeNewest) {
+        const aId = parseInt(a.id);
+        const bId = parseInt(b.id);
+        if (aId !== bId) {
+          return bId - aId; // Newest first (highest ID first)
+        }
+      }
+
+      // Priority 3: Custom sort criteria
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'price':
+          comparison = (a.pricing?.displayPrice || 0) - (b.pricing?.displayPrice || 0);
+          break;
+        case 'quantity':
+          comparison = (a.quantity || 0) - (b.quantity || 0);
+          break;
+        case 'weight':
+          comparison = (a.weight || '').localeCompare(b.weight || '');
+          break;
+        case 'thca':
+          comparison = (a.thcaPercentage || 0) - (b.thcaPercentage || 0);
+          break;
+        case 'sku':
+          comparison = (a.sku || '').localeCompare(b.sku || '');
+          break;
+        case 'created':
+          // For created date, use ID as proxy (higher ID = newer)
+          comparison = parseInt(b.id) - parseInt(a.id);
+          break;
+        default:
+          comparison = (a.name || '').localeCompare(b.name || '');
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  })();
 
   const handleSortChange = (newSortBy: string, newDirection: 'asc' | 'desc') => {
     setSortBy(newSortBy);
