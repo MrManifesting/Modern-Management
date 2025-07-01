@@ -150,7 +150,7 @@ export default function ItemCard({
       weight: preset.weight,
       weightUnit: preset.unit,
       quantity: preset.quantity,
-      basePrice: calculatePresetPrice(item.base_price || item.basePrice || 0, preset.weight),
+      basePrice: calculatePresetPrice(item.base_price || 0, preset.weight),
       description: `${preset.weight}${preset.unit} portion of ${item.name}`,
       category: item.category,
       condition: item.condition
@@ -403,8 +403,8 @@ export default function ItemCard({
             <div className="text-right ml-2">
               {/* Main Price Display */}
               <div className="font-semibold text-primary-600">
-                ${typeof (item.base_price || item.basePrice) === 'string' ? parseFloat((item.base_price || item.basePrice) || '0').toFixed(2) : 
-                  typeof (item.sale_price || item.salePrice) === 'string' ? parseFloat((item.sale_price || item.salePrice) || '0').toFixed(2) : '0.00'}
+                ${typeof item.base_price === 'string' ? parseFloat(item.base_price || '0').toFixed(2) : 
+                  typeof item.sale_price === 'string' ? parseFloat(item.sale_price || '0').toFixed(2) : '0.00'}
               </div>
               
               {/* Sale Price Indicator */}
