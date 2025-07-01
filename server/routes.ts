@@ -151,7 +151,8 @@ function findBestShopifyMatch(localItemName: string, shopifyProducts: any[]) {
   
   shopifyProducts.forEach((product: any) => {
     const score = calculateFuzzyScore(product);
-    if (score > bestScore && score >= 50) { // Minimum threshold
+    // MUCH STRICTER THRESHOLD: Only accept matches with 95+ score to prevent wrong matches
+    if (score > bestScore && score >= 95) { 
       bestScore = score;
       bestMatch = product;
     }
@@ -974,7 +975,7 @@ export function registerRoutes(app: any, storage: any) {
           // Use enhanced fuzzy matching
           const matchResult = findBestShopifyMatch(item.name!, products);
           
-          if (matchResult.product && matchResult.score >= 80) {
+          if (matchResult.product && matchResult.score >= 95) {
             // Generate storefront URL
             storefrontUrl = `https://gold-standard-cbd.com/products/${matchResult.product.handle}`;
             log(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
