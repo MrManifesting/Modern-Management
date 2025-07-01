@@ -1,11 +1,26 @@
 import { storage } from '../storage.js';
+import { shopifyGraphQL } from '../services/shopify-graphql.js';
 
 const log = (message: string, context: string = 'graphql') => {
   console.log(`${new Date().toLocaleTimeString()} [${context}] ${message}`);
 };
 
-// Helper function to get live Shopify data
+// Enhanced function to get live Shopify data using GraphQL
 async function getShopifyProducts() {
+  try {
+    log('Fetching products using Shopify GraphQL API', 'shopify-graphql');
+    const products = await shopifyGraphQL.getAllProducts();
+    log(`Successfully fetched ${products.length} products from Shopify GraphQL`, 'shopify-graphql');
+    return products.map(product => shopifyGraphQL.transformProductData(product));
+  } catch (error) {
+    log(`Shopify GraphQL fetch error: ${error}`, 'shopify-graphql');
+    // Fallback to REST API if GraphQL fails
+    return getShopifyProductsREST();
+  }
+}
+
+// Fallback REST API function (original implementation)
+async function getShopifyProductsREST() {
   try {
     const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -203,17 +218,26 @@ function calculatePricing(item: any, shopifyProduct?: any) {
   const salePrice = safeParseFloat(item.sale_price);
   const wholesalePrice = safeParseFloat(item.wholesale_price);
   
-  // Get Shopify pricing if available
+  // Get authentic Shopify pricing from GraphQL (PRIORITY SOURCE)
   let shopifyPrice = 0;
-  if (shopifyProduct?.variants?.[0]?.price) {
+  let shopifyComparePrice = 0;
+  if (shopifyProduct?.price) {
+    shopifyPrice = safeParseFloat(shopifyProduct.price);
+  }
+  if (shopifyProduct?.compareAtPrice) {
+    shopifyComparePrice = safeParseFloat(shopifyProduct.compareAtPrice);
+  }
+  // Fallback to REST API format
+  if (!shopifyPrice && shopifyProduct?.variants?.[0]?.price) {
     shopifyPrice = safeParseFloat(shopifyProduct.variants[0].price);
   }
 
-  // Priority for display price: sale_price -> bulk_price -> shopify -> base_price -> cost_price
-  const displayPrice = salePrice || bulkPrice || shopifyPrice || basePrice || costPrice || 0;
-  const originalPrice = bulkPrice || basePrice || shopifyPrice || 0;
-  const hasDiscount = salePrice > 0 && originalPrice > salePrice;
-  const discountPercentage = hasDiscount ? ((originalPrice - salePrice) / originalPrice) * 100 : 0;
+  // PRIORITY: Shopify GraphQL data -> local sale price -> bulk price -> base price -> cost price
+  const displayPrice = shopifyPrice || salePrice || bulkPrice || basePrice || costPrice || 0;
+  const originalPrice = shopifyComparePrice || bulkPrice || basePrice || shopifyPrice || 0;
+  const hasDiscount = (shopifyComparePrice && shopifyPrice && shopifyComparePrice > shopifyPrice) || 
+                     (salePrice > 0 && originalPrice > salePrice);
+  const discountPercentage = hasDiscount ? ((originalPrice - displayPrice) / originalPrice) * 100 : 0;
 
   // Create pricing tiers object
   const pricingTiers = {
@@ -257,11 +281,125 @@ function calculatePricing(item: any, shopifyProduct?: any) {
   };
 }
 
-// Helper function to determine availability
-function calculateAvailability(item: any, shopifyInventory?: any) {
-  const quantity = item.quantity || 0;
-  const shopifyQty = shopifyInventory?.available || 0;
-  const actualQuantity = Math.max(quantity, shopifyQty);
+// Helper function to format weight with authentic cannabis terminology
+function formatWeight(item: any, shopifyProduct?: any) {
+  // Prioritize Shopify weight data from GraphQL
+  let weight = 0;
+  let weightUnit = 'grams';
+  
+  if (shopifyProduct?.weight && shopifyProduct?.weightUnit) {
+    weight = shopifyProduct.weight;
+    weightUnit = shopifyProduct.weightUnit.toLowerCase();
+  } else if (shopifyProduct?.weightInGrams) {
+    weight = shopifyProduct.weightInGrams;
+    weightUnit = 'grams';
+  }
+  
+  // Fallback to local weight data
+  if (!weight && item.weight) {
+    const localWeight = String(item.weight).toLowerCase();
+    
+    // Extract numeric value and unit
+    const weightMatch = localWeight.match(/(\d+(?:\.\d+)?)\s*(grams?|g|ounces?|oz|pounds?|lbs?|lb|kilograms?|kg)/i);
+    if (weightMatch) {
+      weight = parseFloat(weightMatch[1]);
+      weightUnit = weightMatch[2].toLowerCase();
+    } else {
+      // Try to parse just the number and infer unit from product name
+      const numMatch = localWeight.match(/(\d+(?:\.\d+)?)/);
+      if (numMatch) {
+        weight = parseFloat(numMatch[1]);
+        // Infer unit from product name/title
+        const titleLower = (item.name || '').toLowerCase();
+        if (titleLower.includes('pound') || titleLower.includes('lb')) {
+          weightUnit = 'pounds';
+        } else if (titleLower.includes('ounce') || titleLower.includes('oz')) {
+          weightUnit = 'ounces';
+        } else if (titleLower.includes('gram') || titleLower.includes('g')) {
+          weightUnit = 'grams';
+        }
+      }
+    }
+  }
+  
+  // Convert to cannabis-friendly display format
+  const formatCannabisWeight = (weight: number, unit: string): string => {
+    switch (unit) {
+      case 'pounds':
+      case 'pound':
+      case 'lbs':
+      case 'lb':
+        if (weight === 1) return '1 pound';
+        if (weight === 0.5) return 'half pound';
+        if (weight === 0.25) return 'quarter pound';
+        return `${weight} pound${weight !== 1 ? 's' : ''}`;
+        
+      case 'ounces':
+      case 'ounce':
+      case 'oz':
+        if (weight === 1) return '1 ounce';
+        if (weight === 0.5) return 'half ounce';
+        if (weight === 0.25) return 'quarter ounce';
+        if (weight === 0.125) return 'eighth';
+        return `${weight} ounce${weight !== 1 ? 's' : ''}`;
+        
+      case 'grams':
+      case 'gram':
+      case 'g':
+        if (weight === 1) return '1 gram';
+        if (weight === 3.5) return 'eighth (3.5g)';
+        if (weight === 7) return 'quarter ounce (7g)';
+        if (weight === 14) return 'half ounce (14g)';
+        if (weight === 28) return 'ounce (28g)';
+        return `${weight}g`;
+        
+      default:
+        return weight > 0 ? `${weight}${unit}` : 'N/A';
+    }
+  };
+  
+  return {
+    originalWeight: item.weight,
+    shopifyWeight: shopifyProduct?.weight,
+    shopifyWeightUnit: shopifyProduct?.weightUnit,
+    formattedWeight: weight > 0 ? formatCannabisWeight(weight, weightUnit) : (item.weight || 'N/A'),
+    numericWeight: weight,
+    weightUnit: weightUnit,
+    weightInGrams: convertToGrams(weight, weightUnit)
+  };
+}
+
+// Helper function to convert weight to grams
+function convertToGrams(weight: number, unit: string): number {
+  switch (unit.toLowerCase()) {
+    case 'grams':
+    case 'gram':
+    case 'g':
+      return weight;
+    case 'ounces':
+    case 'ounce':
+    case 'oz':
+      return weight * 28.3495;
+    case 'pounds':
+    case 'pound':
+    case 'lbs':
+    case 'lb':
+      return weight * 453.592;
+    case 'kilograms':
+    case 'kilogram':
+    case 'kg':
+      return weight * 1000;
+    default:
+      return weight;
+  }
+}
+
+// Helper function to determine availability with Shopify priority
+function calculateAvailability(item: any, shopifyProduct?: any) {
+  // Prioritize Shopify inventory quantity
+  const shopifyQty = shopifyProduct?.inventoryQuantity || 0;
+  const localQty = item.quantity || 0;
+  const actualQuantity = Math.max(shopifyQty, localQty);
   
   const inStock = actualQuantity > 0;
   const lowStock = actualQuantity > 0 && actualQuantity <= 5;
@@ -275,6 +413,9 @@ function calculateAvailability(item: any, shopifyInventory?: any) {
     inStock,
     lowStock,
     stockLevel,
+    quantity: actualQuantity,
+    shopifyQuantity: shopifyQty,
+    localQuantity: localQty,
     restockDate: null,
     preOrderAvailable: false,
     estimatedDelivery: inStock ? '2-3 business days' : null
