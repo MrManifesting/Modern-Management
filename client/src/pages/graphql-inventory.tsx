@@ -503,7 +503,7 @@ const GraphQLInventory = () => {
               }
             }}
           >
-            <Settings className="w-4 h-4 mr-1" />
+            <ExternalLink className="w-4 h-4 mr-1" />
             Admin
           </Button>
           {item.links.coaCertificate && (
