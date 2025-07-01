@@ -525,14 +525,14 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg font-semibold truncate">{product.strain}</CardTitle>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <Badge className={getTierBadgeClass(product.tier)} variant="secondary" className="text-xs">
+              <Badge className={getTierBadgeClass(product.tier)} variant="secondary">
                 {product.tier}
               </Badge>
-              <Badge className={getStrainTypeBadgeClass(product.strainType)} variant="outline" className="text-xs">
+              <Badge className={getStrainTypeBadgeClass(product.strainType)} variant="outline">
                 {product.strainType}
               </Badge>
               {product.brand && (
-                <Badge className={getBrandBadgeClass(product.brand)} variant="outline" className="text-xs">
+                <Badge className={getBrandBadgeClass(product.brand)} variant="outline">
                   {product.brand}
                 </Badge>
               )}
@@ -646,46 +646,6 @@ export const THCaFlowerInventoryTable: React.FC<THCaFlowerInventoryTableProps> =
             onClick={() => alert('Quick order functionality coming soon')}
           >
             <ShoppingCart className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-          <div>
-            <span className="text-muted-foreground">SKU:</span> <span className="font-mono text-xs">{product.sku}</span>
-          </div>
-        </div>
-        
-        {/* Pricing information */}
-        <div className="mt-3 pt-3 border-t border-border">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <div>
-              <span className="text-muted-foreground">Price Paid:</span> {' '}
-              <span className="font-medium">{product.pricePaid ? formatPrice(product.pricePaid) : 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Asking:</span> {' '}
-              <span className="font-medium">{product.askingPrice ? formatPrice(product.askingPrice) : 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Selling:</span> {' '}
-              <span className="font-medium">{formatPrice(product.bulkPrice)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Stock:</span>{' '}
-              <Badge variant={product.amount > 10 ? "default" : "destructive"} className="text-xs">
-                {product.amount} {product.packageType?.includes('Bulk') ? 'lbs' : 'units'}
-              </Badge>
-            </div>
-          </div>
-        </div>
-        
-        {/* Quick action buttons */}
-        <div className="flex gap-2 mt-3">
-          <Button size="sm" variant="outline" className="flex-1" onClick={() => onView && onView(product)}>
-            <Eye className="mr-1.5 h-3.5 w-3.5" />
-            View
-          </Button>
-          <Button size="sm" variant="outline" className="flex-1" onClick={() => onEdit && onEdit(product)}>
-            <Edit className="mr-1.5 h-3.5 w-3.5" />
-            Edit
           </Button>
         </div>
       </CardContent>
