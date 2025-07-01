@@ -186,15 +186,22 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
 
 // Helper function to calculate pricing
 function calculatePricing(item: any, shopifyProduct?: any) {
-  const basePrice = parseFloat(item.base_price || '0');
-  const salePrice = parseFloat(item.sale_price || '0');
-  const costPrice = parseFloat(item.cost_price || '0');
-  const wholesalePrice = parseFloat(item.wholesale_price || '0');
+  // Safely parse price values, avoiding NaN
+  const safeParseFloat = (value: any): number => {
+    if (!value || value === 'null' || value === null || value === undefined) return 0;
+    const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const basePrice = safeParseFloat(item.base_price);
+  const salePrice = safeParseFloat(item.sale_price);
+  const costPrice = safeParseFloat(item.cost_price);
+  const wholesalePrice = safeParseFloat(item.wholesale_price);
   
   // Get Shopify pricing if available
   let shopifyPrice = 0;
   if (shopifyProduct?.variants?.[0]?.price) {
-    shopifyPrice = parseFloat(shopifyProduct.variants[0].price);
+    shopifyPrice = safeParseFloat(shopifyProduct.variants[0].price);
   }
 
   const displayPrice = salePrice || basePrice || shopifyPrice || costPrice || 0;
@@ -209,7 +216,7 @@ function calculatePricing(item: any, shopifyProduct?: any) {
     wholesalePrice: wholesalePrice > 0 ? wholesalePrice : null,
     displayPrice,
     currency: 'USD',
-    priceRange: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : 'Price on request',
+    priceRange: displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : 'Contact for Price',
     hasDiscount,
     discountPercentage: hasDiscount ? discountPercentage : null
   };
