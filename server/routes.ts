@@ -3022,5 +3022,189 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Shopify Reports API Endpoints
+  app.get("/api/shopify/reports/sales/:timeframe", async (req: Request, res: Response) => {
+    try {
+      const { timeframe } = req.params;
+      
+      // Mock data for now - replace with actual Shopify sales report data
+      const salesReport = {
+        totalOrders: 145,
+        totalRevenue: 23750.00,
+        averageOrderValue: 163.79,
+        topProducts: [
+          {
+            productId: "1",
+            title: "Zoap - THCA BULK FLOWER - TOP SHELF",
+            sku: "ZOAP-TS-001",
+            quantity: 45,
+            revenue: 6750.00
+          },
+          {
+            productId: "2", 
+            title: "White Runtz - THCA BULK FLOWER - AA INDOOR",
+            sku: "WR-AA-002",
+            quantity: 38,
+            revenue: 5320.00
+          }
+        ],
+        periodSales: [
+          { date: "2025-01-01", orders: 12, revenue: 1950.00 },
+          { date: "2025-01-02", orders: 8, revenue: 1280.00 },
+          { date: "2025-01-03", orders: 15, revenue: 2450.00 }
+        ]
+      };
+
+      log(`Sales report generated for timeframe: ${timeframe}`, 'shopify-reports');
+      res.json(salesReport);
+    } catch (error) {
+      log(`Sales report error: ${error}`, 'shopify-reports');
+      res.status(500).json({ error: "Failed to generate sales report" });
+    }
+  });
+
+  app.get("/api/shopify/reports/inventory", async (_req: Request, res: Response) => {
+    try {
+      // Get actual inventory data and calculate metrics
+      const items = await storage.getItems();
+      
+      const inventoryReport = {
+        totalProducts: items.length,
+        totalVariants: items.length,
+        lowStockItems: items.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 10).slice(0, 10).map(item => ({
+          productId: item.id?.toString() || "0",
+          variantId: item.id?.toString() || "0", 
+          title: item.name || "Unknown Product",
+          sku: item.sku || "NO-SKU",
+          inventory: item.quantity || 0,
+          price: item.basePrice || item.base_price || 0
+        })),
+        outOfStockItems: items.filter(item => (item.quantity || 0) === 0).slice(0, 10).map(item => ({
+          productId: item.id?.toString() || "0",
+          variantId: item.id?.toString() || "0",
+          title: item.name || "Unknown Product", 
+          sku: item.sku || "NO-SKU",
+          price: item.basePrice || item.base_price || 0
+        })),
+        inventoryValue: items.reduce((total, item) => {
+          const price = item.basePrice || item.base_price || 0;
+          const quantity = item.quantity || 0;
+          return total + (price * quantity);
+        }, 0)
+      };
+
+      log(`Inventory report generated: ${inventoryReport.totalProducts} products`, 'shopify-reports');
+      res.json(inventoryReport);
+    } catch (error) {
+      log(`Inventory report error: ${error}`, 'shopify-reports');
+      res.status(500).json({ error: "Failed to generate inventory report" });
+    }
+  });
+
+  app.get("/api/shopify/reports/customers", async (_req: Request, res: Response) => {
+    try {
+      // Mock customer data for now - replace with actual Shopify customer data
+      const customerReport = {
+        totalCustomers: 287,
+        newCustomers: 45,
+        returningCustomers: 242,
+        topCustomers: [
+          {
+            customerId: "1",
+            name: "John Smith",
+            email: "john@example.com",
+            ordersCount: 12,
+            totalSpent: 1950.00
+          },
+          {
+            customerId: "2",
+            name: "Sarah Johnson", 
+            email: "sarah@example.com",
+            ordersCount: 8,
+            totalSpent: 1320.00
+          }
+        ]
+      };
+
+      log(`Customer report generated: ${customerReport.totalCustomers} customers`, 'shopify-reports');
+      res.json(customerReport);
+    } catch (error) {
+      log(`Customer report error: ${error}`, 'shopify-reports');
+      res.status(500).json({ error: "Failed to generate customer report" });
+    }
+  });
+
+  // Shopify Product Creation Endpoint
+  app.post("/api/shopify/create-product", async (req: Request, res: Response) => {
+    try {
+      const productData = req.body;
+      
+      // Mock product creation for now - replace with actual Shopify API call
+      const createdProduct = {
+        id: Math.floor(Math.random() * 1000000),
+        title: productData.title || "New Product",
+        handle: (productData.title || "new-product").toLowerCase().replace(/\s+/g, '-'),
+        status: "draft",
+        created_at: new Date().toISOString()
+      };
+
+      log(`Product created: ${createdProduct.title} (ID: ${createdProduct.id})`, 'shopify-create');
+      res.json({ success: true, product: createdProduct });
+    } catch (error) {
+      log(`Product creation error: ${error}`, 'shopify-create');
+      res.status(500).json({ error: "Failed to create product" });
+    }
+  });
+
+  // Export endpoints
+  app.get("/api/shopify/reports/sales/:timeframe/export", async (req: Request, res: Response) => {
+    try {
+      const { timeframe } = req.params;
+      
+      // Generate CSV export
+      const csvData = `Date,Orders,Revenue\n2025-01-01,12,1950.00\n2025-01-02,8,1280.00\n2025-01-03,15,2450.00`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=sales-report-${timeframe}.csv`);
+      res.send(csvData);
+    } catch (error) {
+      log(`Sales export error: ${error}`, 'shopify-export');
+      res.status(500).json({ error: "Failed to export sales data" });
+    }
+  });
+
+  app.get("/api/shopify/reports/inventory/export", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      
+      // Generate CSV export
+      let csvData = "SKU,Name,Quantity,Price,Status\n";
+      items.slice(0, 100).forEach(item => {
+        csvData += `"${item.sku || 'NO-SKU'}","${item.name || 'Unknown'}",${item.quantity || 0},${item.basePrice || item.base_price || 0},"${item.status || 'draft'}"\n`;
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=inventory-report.csv');
+      res.send(csvData);
+    } catch (error) {
+      log(`Inventory export error: ${error}`, 'shopify-export');
+      res.status(500).json({ error: "Failed to export inventory data" });
+    }
+  });
+
+  app.get("/api/shopify/reports/customers/export", async (_req: Request, res: Response) => {
+    try {
+      // Generate CSV export
+      const csvData = `Name,Email,Orders,Total Spent\nJohn Smith,john@example.com,12,1950.00\nSarah Johnson,sarah@example.com,8,1320.00`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=customers-report.csv');
+      res.send(csvData);
+    } catch (error) {
+      log(`Customer export error: ${error}`, 'shopify-export');
+      res.status(500).json({ error: "Failed to export customer data" });
+    }
+  });
+
   return app;
 }
