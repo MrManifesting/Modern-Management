@@ -1321,46 +1321,70 @@ export function registerRoutes(app: any, storage: any) {
       let updatedCount = 0;
       let skippedCount = 0;
 
+      // Get all existing items once for efficient lookup
+      const existingItems = await storage.getItems();
+      const existingSkus = new Set(existingItems.map(item => item.sku).filter(Boolean));
+      const existingShopifyIds = new Set(existingItems.map(item => item.shopifyVariantId).filter(Boolean));
+
       // Process each Shopify product
       for (const product of allProducts) {
         if (product.variants && product.variants.length > 0) {
           for (const variant of product.variants) {
-            // Check if item already exists by SKU or Shopify ID
-            const items = await storage.getItems();
-            const existingItem = items.find(item => 
-              item.sku === variant.sku || 
-              item.shopifyId === product.id ||
-              item.name?.toLowerCase().includes(product.title.toLowerCase())
-            );
+            try {
+              // Generate SKU with fallback
+              const generatedSku = variant.sku || `SHOPIFY-${product.id}-${variant.id}`;
+              
+              // Check for duplicates by multiple criteria
+              const existingItem = existingItems.find(item => 
+                item.sku === variant.sku || 
+                item.sku === generatedSku ||
+                (item.shopifyVariantId && item.shopifyVariantId.toString() === variant.id.toString()) ||
+                (item.shopifyId && item.shopifyId.toString() === product.id.toString())
+              );
 
-            const itemData = {
-              name: variant.title || product.title,
-              sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
-              quantity: variant.inventory_quantity || 0,
-              base_price: parseFloat(variant.price) || 0,
-              cost_price: parseFloat(variant.compare_at_price) || 0,
-              category: product.product_type || 'Shopify Import',
-              brand: product.vendor || 'Gold Standard',
-              status: product.status === 'active' ? 'active' : 'draft',
-              shopifyId: product.id,
-              shopifyVariantId: variant.id,
-              weight: variant.weight || null,
-              images: product.images?.map((img: any) => img.src) || [],
-              thca_percentage: extractTHCaPercentage(product.title),
-              description: product.body_html || '',
-              tags: product.tags || ''
-            };
+              // Skip if any form of duplicate exists
+              if (existingItem || existingSkus.has(generatedSku) || 
+                  (variant.sku && existingSkus.has(variant.sku)) ||
+                  existingShopifyIds.has(variant.id.toString())) {
+                skippedCount++;
+                log(`Skipped duplicate: ${generatedSku} (existing item: ${existingItem?.id || 'N/A'})`, 'shopify-import');
+                continue;
+              }
 
-            if (existingItem) {
-              // Update existing item
-              await storage.updateItem(existingItem.id, itemData);
-              updatedCount++;
-              log(`Updated item: ${itemData.name}`, 'shopify-import');
-            } else {
-              // Create new item
-              await storage.createItem(itemData);
-              importedCount++;
-              log(`Imported new item: ${itemData.name}`, 'shopify-import');
+              const itemData = {
+                name: variant.title || product.title,
+                sku: generatedSku,
+                quantity: variant.inventory_quantity || 0,
+                base_price: parseFloat(variant.price) || 0,
+                cost_price: parseFloat(variant.compare_at_price) || 0,
+                category: product.product_type || 'Shopify Import',
+                brand: product.vendor || 'Gold Standard',
+                status: product.status === 'active' ? 'active' : 'draft',
+                shopifyId: product.id,
+                shopifyVariantId: variant.id,
+                weight: variant.weight || null,
+                images: product.images?.map((img: any) => img.src) || [],
+                thca_percentage: extractTHCaPercentage(product.title),
+                description: product.body_html || '',
+                tags: product.tags || ''
+              };
+
+              if (existingItem) {
+                // Update existing item
+                await storage.updateItem(existingItem.id, itemData);
+                updatedCount++;
+                log(`Updated item: ${itemData.name}`, 'shopify-import');
+              } else {
+                // Create new item and track the SKU
+                await storage.createItem(itemData);
+                existingSkus.add(generatedSku);
+                existingShopifyIds.add(variant.id.toString());
+                importedCount++;
+                log(`Imported new item: ${itemData.name}`, 'shopify-import');
+              }
+            } catch (error) {
+              skippedCount++;
+              log(`Error processing variant ${variant.id}: ${error}`, 'shopify-import');
             }
           }
         }
