@@ -34,6 +34,7 @@ import CustomerAnalytics from "@/pages/CustomerAnalytics";
 import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
 import MobileInventoryPage from "@/pages/mobile-inventory";
 import VoiceSearchPage from "@/pages/voice-search";
+import PerformanceDashboard from "@/pages/performance-dashboard";
 
 import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
@@ -129,6 +130,7 @@ function Router() {
         <ProtectedRoute path="/graphql-inventory" component={() => <GraphQLInventory />} />
         <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
         <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
+        <ProtectedRoute path="/performance-dashboard" component={() => <PerformanceDashboard />} />
 
         <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />

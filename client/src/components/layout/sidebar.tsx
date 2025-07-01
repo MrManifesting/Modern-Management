@@ -23,7 +23,8 @@ import {
   FileSpreadsheet,
   FileCheck,
   Shield,
-  Smartphone
+  Smartphone,
+  Activity
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
