@@ -78,7 +78,7 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Link href="/inventory">
+            <Link href="/products-inventory">
               <Button className="w-full bg-gradient-to-r from-yellow-500 to-green-600 hover:from-yellow-600 hover:to-green-700 text-white">
                 View Inventory
               </Button>
