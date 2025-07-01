@@ -235,7 +235,7 @@ ${items
   .filter(i => i.quantity > 0)
   .sort((a, b) => b.quantity - a.quantity)
   .slice(0, 10)
-  .map(item => `- ${item.name}: ${item.quantity} units${item.basePrice ? ` @ $${item.basePrice}` : ''}`)
+  .map(item => `- ${item.name}: ${item.quantity} units${item.base_price ? ` @ $${item.base_price}` : ''}`)
   .join('\n')}
 
 LOW STOCK ITEMS (< 10 units):

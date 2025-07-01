@@ -257,37 +257,37 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
                 <div>
                   <span className="text-sm text-gray-600">Cost:</span>
                   <p className="font-semibold text-red-600">
-                    {formatPrice(item.costPrice)}
+                    {formatPrice(item.cost_price || item.costPrice)}
                   </p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Bulk Price:</span>
                   <p className="font-semibold text-green-600">
-                    {formatPrice(item.bulkPrice)}
+                    {formatPrice(item.bulk_price || item.bulkPrice)}
                   </p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Distro 25lbs+:</span>
                   <p className="font-semibold text-blue-600">
-                    {formatPrice(item.distroPrice)}
+                    {formatPrice(item.distro_price || item.distroPrice)}
                   </p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Master 50lbs+:</span>
                   <p className="font-semibold text-purple-600">
-                    {formatPrice(item.masterPrice)}
+                    {formatPrice(item.master_price || item.masterPrice)}
                   </p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Master 100lbs+:</span>
                   <p className="font-semibold text-indigo-600">
-                    {formatPrice(item.master100Price)}
+                    {formatPrice(item.master_100_price || item.master100Price)}
                   </p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Sale Price:</span>
                   <p className="font-semibold text-orange-600">
-                    {formatPrice(item.salePrice)}
+                    {formatPrice(item.sale_price || item.salePrice)}
                   </p>
                 </div>
               </div>
