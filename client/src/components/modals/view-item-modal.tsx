@@ -87,6 +87,50 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
     return `https://mrlisterscurations.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
   };
 
+  // Parse weight from item name if weight field is null or invalid
+  const getDisplayWeight = (item: any) => {
+    // If we have a valid weight field, use it
+    if (item.weight && item.weight !== 'null' && item.weight.trim() !== '') {
+      return item.weight;
+    }
+
+    // Parse weight from item name for pound variants
+    const name = item.name || '';
+    const nameLower = name.toLowerCase();
+
+    // Check for pound variants in parentheses: "(1 pound)", "(half pound)", etc.
+    const poundMatch = name.match(/\(([^)]*pound[^)]*)\)/i);
+    if (poundMatch) {
+      const weightText = poundMatch[1].trim();
+      if (weightText.includes('1 pound') || weightText === 'pound') {
+        return '1 pound';
+      } else if (weightText.includes('half pound')) {
+        return 'half pound';  
+      } else if (weightText.includes('quarter pound')) {
+        return 'quarter pound';
+      }
+      return weightText; // Return the parsed weight text
+    }
+
+    // Check for other weight indicators in the name
+    if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
+      return '1 pound';
+    } else if (nameLower.includes('half pound') || nameLower.includes('0.5 pound')) {
+      return 'half pound';
+    } else if (nameLower.includes('quarter pound') || nameLower.includes('0.25 pound')) {
+      return 'quarter pound';
+    } else if (nameLower.includes('ounce')) {
+      return '1 ounce';
+    } else if (nameLower.includes('3.5g') || nameLower.includes('eighth')) {
+      return '3.5g (eighth)';
+    } else if (nameLower.includes('1g') || nameLower.includes('gram')) {
+      return '1g';
+    }
+
+    // Fallback to "Not specified" if we can't determine weight
+    return 'Not specified';
+  };
+
   const handleDelete = () => {
     console.log('ViewItemModal handleDelete called for item:', item.id, item.name);
     if (item.id) {
