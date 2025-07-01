@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 1, 2025: **CRITICAL SYSTEM FIXES DEPLOYED - MARKETPLACE CONNECTION, SCANNER, AND STOCK MANAGEMENT FULLY OPERATIONAL**
+  - Fixed marketplace test connection endpoint (/api/marketplaces/:id/test) - now working without rate limiting issues
+  - Added missing marketplace sync endpoint (/api/marketplaces/:id/sync) for complete marketplace management
+  - Implemented stock adjustment functionality (/api/items/:id/adjust-stock) for intake and fulfillment operations
+  - Added comprehensive scanner lookup system (/api/scanner/lookup) for barcode/QR code processing
+  - Fixed missing sales endpoint (/api/sales) preventing dashboard analytics errors
+  - Enhanced Shopify fuzzy matching with stricter 95+ score threshold preventing wrong product matches
+  - All critical functionality verified: Test Connection ✓, Stock Adjustment ✓, Scanner Lookup ✓, Sales Tracking ✓
+  - System now supports complete warehouse operations: scan product → adjust stock → sync to marketplace
 - July 1, 2025: **SHOPIFY REPORTS DASHBOARD ENDPOINTS RESTORED - ALL 404 ERRORS RESOLVED**
   - Fixed missing /api/shopify/reports/inventory endpoint - now returns comprehensive inventory analytics
   - Fixed missing /api/shopify/reports/customers endpoint - now provides customer statistics and order analysis
