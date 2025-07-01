@@ -3152,6 +3152,15 @@ export function registerRoutes(app: any, storage: any) {
         } else if (nameLower.includes('(quarter pound)') || nameLower.includes('(0.25 pound)')) {
           return 'quarter pound';
         }
+        
+        // Additional pattern checking for exact format like "TOP SHELF (1 pound)"
+        if (nameLower.includes(' (1 pound)')) {
+          return '1 pound';
+        } else if (nameLower.includes(' (half pound)')) {
+          return 'half pound';
+        } else if (nameLower.includes(' (quarter pound)')) {
+          return 'quarter pound';
+        }
 
         // Check for other weight indicators in the name
         if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
@@ -3174,14 +3183,21 @@ export function registerRoutes(app: any, storage: any) {
       // Get all items with null or empty weight
       const items = await storage.getAllItems();
       const itemsToUpdate = items.filter((item: any) => 
-        !item.weight || item.weight === 'null' || item.weight.trim() === ''
+        (!item.weight || item.weight === 'null' || item.weight.trim() === '') &&
+        item.name && item.name.toLowerCase().includes('pound')
       );
 
       log(`Found ${itemsToUpdate.length} items with missing weight data`, 'weight-fix');
 
       let updatedCount = 0;
       for (const item of itemsToUpdate) {
-        const newWeight = parseWeightFromName(item.name);
+        let newWeight = parseWeightFromName(item.name);
+        
+        // For pound items that didn't match pattern, default to "1 pound" if the name contains "(1 pound)"
+        if (newWeight === 'Not specified' && item.name.toLowerCase().includes('(1 pound)')) {
+          newWeight = '1 pound';
+        }
+        
         if (newWeight !== 'Not specified') {
           await storage.updateItem(item.id, { weight: newWeight });
           updatedCount++;
