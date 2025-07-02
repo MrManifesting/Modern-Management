@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, RefreshCw, Package, Play, Clock, Settings, Eye, FileText, Globe } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Download, RefreshCw, Package, Play, Clock, Settings, Eye, FileText, Globe, Palette, Upload } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface MenuTabItem {
@@ -30,6 +32,79 @@ interface SyncSummary {
   totalAvailableQuantity: number;
 }
 
+interface MenuTheme {
+  id: string;
+  name: string;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  backgroundImage?: string;
+}
+
+interface CompanyBranding {
+  companyName: string;
+  subtitle: string;
+  contactInfo: {
+    phone: string;
+    email: string;
+    website: string;
+    address: string;
+  };
+  logoUrl: string;
+  description: string;
+  watermark?: string;
+}
+
+const defaultThemes: MenuTheme[] = [
+  {
+    id: 'gold-standard',
+    name: 'Gold Standard Premium',
+    primaryColor: '#D4AF37',
+    secondaryColor: '#228B22',
+    backgroundColor: '#0F0F0F',
+    textColor: '#FFFFFF',
+    accentColor: '#FFD700'
+  },
+  {
+    id: 'emerald-elite',
+    name: 'Emerald Elite',
+    primaryColor: '#50C878',
+    secondaryColor: '#2F4F2F',
+    backgroundColor: '#1A1A1A',
+    textColor: '#F0F0F0',
+    accentColor: '#00FF7F'
+  },
+  {
+    id: 'royal-purple',
+    name: 'Royal Purple',
+    primaryColor: '#7B68EE',
+    secondaryColor: '#4B0082',
+    backgroundColor: '#1C1C1C',
+    textColor: '#FFFFFF',
+    accentColor: '#9370DB'
+  },
+  {
+    id: 'sunset-orange',
+    name: 'Sunset Orange',
+    primaryColor: '#FF8C00',
+    secondaryColor: '#FF4500',
+    backgroundColor: '#2F1B14',
+    textColor: '#FFF8DC',
+    accentColor: '#FFD700'
+  },
+  {
+    id: 'forest-green',
+    name: 'Forest Green',
+    primaryColor: '#228B22',
+    secondaryColor: '#006400',
+    backgroundColor: '#0D1B0D',
+    textColor: '#F0FFF0',
+    accentColor: '#32CD32'
+  }
+];
+
 export function MenuSyncPanel() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isTriggering, setIsTriggering] = useState(false);
@@ -43,6 +118,30 @@ export function MenuSyncPanel() {
   const [sortBy, setSortBy] = useState<'strain' | 'quantity' | 'tier' | 'price'>('quantity');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [outputFormat, setOutputFormat] = useState<'json' | 'csv' | 'html'>('html');
+
+  // Branding and theme state
+  const [selectedTheme, setSelectedTheme] = useState<MenuTheme>(defaultThemes[0]);
+  const [customTheme, setCustomTheme] = useState<MenuTheme>({
+    id: 'custom',
+    name: 'Custom Theme',
+    primaryColor: '#D4AF37',
+    secondaryColor: '#228B22',
+    backgroundColor: '#0F0F0F',
+    textColor: '#FFFFFF',
+    accentColor: '#FFD700'
+  });
+  const [companyBranding, setCompanyBranding] = useState<CompanyBranding>({
+    companyName: 'Gold Standard CBD',
+    subtitle: 'Premium THCA Flower Wholesale',
+    contactInfo: {
+      phone: '541-295-8811',
+      email: 'wholesale@goldcbd.com',
+      website: 'goldcbd.com',
+      address: 'Oregon, USA'
+    },
+    logoUrl: '',
+    description: 'Premium quality THCA flower for wholesale distribution'
+  });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['/api/csv-sync/summary']
@@ -105,7 +204,12 @@ export function MenuSyncPanel() {
         includeOutOfStock,
         sortBy,
         sortOrder,
-        format: outputFormat
+        format: outputFormat,
+        theme: selectedTheme.id === 'custom' ? customTheme : selectedTheme,
+        branding: companyBranding,
+        includeImages: true,
+        includeQrCodes: true,
+        includePricing: true
       };
 
       const response = await fetch('/api/csv-sync/generate-custom-menu', {
@@ -199,9 +303,10 @@ export function MenuSyncPanel() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="custom-menu">Custom Menu</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="live-sync">Live Sync</TabsTrigger>
           <TabsTrigger value="inventory">Current Inventory</TabsTrigger>
         </TabsList>
