@@ -807,7 +807,9 @@ export function registerRoutes(app: any, storage: any) {
           // Check for pound variants
           if (nameLower.includes('quarter pound') || nameLower.includes('1/4 pound')) return 'quarter pound';
           if (nameLower.includes('half pound') || nameLower.includes('1/2 pound')) return 'half pound';
-          if (nameLower.includes('1 pound') || nameLower.includes('one pound') || nameLower.includes('pound')) return '1 pound';
+          // ONLY match specific pound variants - NO generic "pound" match
+          if (nameLower.includes('1 pound') || nameLower.includes('one pound')) return '1 pound';
+          if (nameLower.includes('bulk flower') || nameLower.includes('book flower')) return '1 pound';
           
           // Check for count-based items
           if (nameLower.includes('100 count')) return '100 count';
