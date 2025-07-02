@@ -125,7 +125,7 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- January 2, 2025: **COMPLETE SYSTEM CLEANUP AND AI ASSISTANT DEPLOYMENT WITH WORKING INVENTORY MANAGEMENT**
+- January 2, 2025: **SHOPIFY API-FIRST SYSTEM DEPLOYMENT - CSV EXPORT FUNCTIONALITY REMOVED PER USER REQUEST**
   - Completely removed enhanced inventory system per user request - deleted /api/inventory/enhanced endpoint and enhanced-inventory.tsx page  
   - Fixed critical weight consistency issue where item detail views showed different weights than inventory list
   - Updated ViewItemModal and EditItemModal to use identical weight interpretation logic as standard inventory
@@ -135,11 +135,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - Added bulk query endpoints: /api/shopify/bulk-query/start, /api/shopify/bulk-query/status, /api/shopify/bulk-query/execute
   - Enhanced live menu generation (/api/generate-live-menu) to prioritize real-time bulk query data with fallback to local inventory
   - Created dedicated Bulk Query page (/bulk-query) with real-time progress tracking, status monitoring, and comprehensive results display
+  - **REMOVED ALL CSV EXPORT FUNCTIONALITY** - system now uses direct Shopify API integration only as requested by user
   - **FIXED INVENTORY DISPLAY ISSUE** - updated ProductsInventoryPage to use /api/items endpoint instead of removed enhanced endpoint
   - **DEPLOYED AI ASSISTANT FUNCTIONALITY** - created working conversation system with OpenAI integration for inventory analysis
   - AI assistant configured with cannabis industry expertise for product analysis, inventory optimization, and business insights
   - System now displays 1,626 total items with 275+ active products properly prioritized with pound variants at top
-  - Complete unified inventory system operational with authentic Shopify bulk query data integration and working AI assistance
+  - Complete unified inventory system operational with authentic Shopify API-first integration and working AI assistance
 - July 2, 2025: **COMPREHENSIVE SECURITY AUDIT AND VULNERABILITY REMEDIATION COMPLETED**
   - Successfully investigated CVE-2025-30208 Vite vulnerability alert and confirmed as false positive (application uses secure Vite 6.3.5)
   - Replaced vulnerable xmldom package with secure @xmldom/xmldom package to eliminate critical security vulnerabilities
