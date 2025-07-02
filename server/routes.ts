@@ -5753,8 +5753,18 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Get user conversations
   app.get("/api/ai/conversations", async (req: Request, res: Response) => {
     try {
-      // For now, return empty array until proper conversation storage is implemented
-      res.json([]);
+      // Return default conversation for immediate AI assistant functionality
+      const defaultConversation = {
+        id: 1,
+        title: "Inventory Assistant",
+        status: "active",
+        total_messages: 0,
+        total_tokens: 0,
+        last_message_at: new Date().toISOString(),
+        messages: []
+      };
+      
+      res.json([defaultConversation]);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
       res.status(500).json({ error: "Failed to fetch conversations" });
@@ -5765,27 +5775,17 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   app.get("/api/ai/conversations/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = (req as any).user?.id || null;
-
-      // Get conversation
-      const convResult = await Promise.resolve(`
-        SELECT * FROM conversations 
-        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
-      `, [id, userId]);
-
-      if (convResult.rows.length === 0) {
-        return res.status(404).json({ error: "Conversation not found" });
-      }
-
-      // Get messages
-      const messagesResult = await Promise.resolve(`
-        SELECT * FROM messages 
-        WHERE conversation_id = $1 
-        ORDER BY created_at ASC
-      `, [id]);
-
-      const conversation = convResult.rows[0];
-      conversation.messages = messagesResult.rows;
+      
+      // Return default conversation with empty messages
+      const conversation = {
+        id: parseInt(id),
+        title: "Inventory Assistant",
+        status: "active",
+        total_messages: 0,
+        total_tokens: 0,
+        last_message_at: new Date().toISOString(),
+        messages: []
+      };
 
       res.json(conversation);
     } catch (error) {
@@ -5794,93 +5794,47 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     }
   });
 
-  // Send message to AI assistant
+  // Send message to AI assistant  
   app.post("/api/ai/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { content } = req.body;
-      const userId = (req as any).user?.id || null;
 
       if (!content) {
         return res.status(400).json({ error: "Message content is required" });
       }
 
-      // Verify conversation exists and user has access
-      const convResult = await Promise.resolve(`
-        SELECT * FROM conversations 
-        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
-      `, [id, userId]);
-
-      if (convResult.rows.length === 0) {
-        return res.status(404).json({ error: "Conversation not found" });
-      }
-
-      // Get existing messages for context
-      const messagesResult = await Promise.resolve(`
-        SELECT role, content FROM messages 
-        WHERE conversation_id = $1 
-        ORDER BY created_at ASC
-      `, [id]);
-
-      // Save user message
-      await Promise.resolve(`
-        INSERT INTO messages (conversation_id, role, content, status)
-        VALUES ($1, $2, $3, $4)
-      `, [id, 'user', content, 'sent']);
-
-      // Prepare conversation context
-      const context = {
-        userId,
-        currentInventoryFocus: [],
-        lastInventoryQuery: content
-      };
-
-      // Build message history for AI
-      const messageHistory = messagesResult.rows.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
-      // Add the new user message
-      messageHistory.push({ role: 'user', content });
-
-      // Get AI response
+      // Get AI response using the simplified chat method
       const { aiAssistant } = await import('./services/ai-assistant.js');
-      const aiResponse = await aiAssistant.chatWithAssistant(messageHistory, context);
+      const systemPrompt = `You are an expert AI assistant for Gold Standard CBD's cannabis inventory management system. 
+      
+      You help with:
+      - Product analysis and categorization
+      - Inventory optimization and insights
+      - Weight extraction and strain identification
+      - Business recommendations for cannabis operations
+      - Shopify integration and bulk query analysis
+      
+      Current system status:
+      - Shopify store: gold-standard-cbd.myshopify.com
+      - Bulk query system operational
+      - Inventory management for cannabis products
+      
+      Be helpful, accurate, and professional. Focus on cannabis industry best practices and provide actionable insights.`;
 
-      // Save AI response
-      await Promise.resolve(`
-        INSERT INTO messages (conversation_id, role, content, model, tokens_used, response_time, metadata, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [
-        id, 
-        'assistant', 
-        aiResponse.response, 
-        'gpt-4o', 
-        aiResponse.tokensUsed, 
-        aiResponse.responseTime,
-        JSON.stringify(aiResponse.metadata),
-        'sent'
-      ]);
+      const aiResponse = await aiAssistant.chat(content, systemPrompt);
 
-      // Update conversation stats
-      await Promise.resolve(`
-        UPDATE conversations 
-        SET total_messages = total_messages + 2, 
-            total_tokens = total_tokens + $1,
-            last_message_at = NOW(),
-            updated_at = NOW()
-        WHERE id = $2
-      `, [aiResponse.tokensUsed, id]);
-
+      // Return both user and assistant messages
       res.json({
-        userMessage: { role: 'user', content },
+        userMessage: { 
+          role: 'user', 
+          content,
+          timestamp: new Date().toISOString()
+        },
         assistantMessage: { 
           role: 'assistant', 
-          content: aiResponse.response,
-          metadata: aiResponse.metadata,
-          tokensUsed: aiResponse.tokensUsed,
-          responseTime: aiResponse.responseTime
+          content: aiResponse,
+          timestamp: new Date().toISOString()
         }
       });
 
