@@ -6858,3 +6858,4 @@ expressApp.get('/api/customers/:customerId/tier', async (req, res) => {
     res.status(500).json({ error: 'Failed to get customer tier information' });
   }
 });
+}
