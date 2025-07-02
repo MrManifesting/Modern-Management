@@ -228,13 +228,26 @@ export function registerRoutes(app: any, storage: any) {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // User auth endpoints
+  // User auth endpoints - simplified for development
   app.get("/api/user", (req: Request, res: Response) => {
-    const session = req.session as any;
-    if (!session?.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    res.json({ id: session.userId, authenticated: true });
+    // Simple auth bypass for development - always authenticated
+    res.json({ 
+      id: "dev-user", 
+      authenticated: true,
+      username: "admin",
+      role: "admin"
+    });
+  });
+
+  // Auth status endpoint
+  app.get("/api/auth/status", (req: Request, res: Response) => {
+    res.json({ 
+      authenticated: true,
+      user: { 
+        id: "dev-user", 
+        username: "admin" 
+      }
+    });
   });
 
   // Stats endpoint
