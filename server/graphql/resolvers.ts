@@ -2,6 +2,153 @@ import { storage } from '../storage.js';
 import { shopifyGraphQL } from '../services/shopify-graphql.js';
 import { AccurateWeightExtractor } from '../services/accurate-weight-extractor.js';
 
+// Fuzzy matching function for accurate Shopify product matching
+function findBestFuzzyMatch(item: any, shopifyProducts: any[]) {
+  if (!item.name || !shopifyProducts.length) return null;
+
+  const itemName = item.name.toLowerCase();
+  
+  // Extract strain, type and tier from item name
+  const strain = extractStrain(itemName);
+  const type = extractType(itemName);
+  const tier = extractTier(itemName);
+
+  const calculateFuzzyScore = (product: any) => {
+    const handle = (product.handle || '').toLowerCase();
+    const title = product.title.toLowerCase();
+    let score = 0;
+    
+    // Strain matching (highest priority - MUST match exactly or very closely)
+    const strainWords = strain.split(' ');
+    let strainMatchScore = 0;
+    
+    // Check for exact strain name match first (very high score)
+    const strainNormalized = strain.replace(/\s+/g, '').toLowerCase();
+    const handleNormalized = handle.replace(/[-\s]/g, '').toLowerCase();
+    const titleNormalized = title.replace(/[-\s]/g, '').toLowerCase();
+    
+    // STRICT MATCHING: Require exact strain name match or very close match
+    if (handleNormalized.includes(strainNormalized) || titleNormalized.includes(strainNormalized)) {
+      strainMatchScore += 100; // Very high score for exact strain match
+    } else {
+      // Check for close variations (plurals, abbreviations, etc.)
+      const strainVariations = [
+        strain,
+        strain + 's',
+        strain.replace(/\s+/g, ''),
+        strain.replace(/\s+/g, '-')
+      ];
+      
+      let hasCloseMatch = false;
+      strainVariations.forEach(variation => {
+        const varNormalized = variation.replace(/[-\s]/g, '').toLowerCase();
+        if (handleNormalized.includes(varNormalized) || titleNormalized.includes(varNormalized)) {
+          strainMatchScore += 90;
+          hasCloseMatch = true;
+        }
+      });
+      
+      // If no close match, require ALL strain words to match (very strict)
+      if (!hasCloseMatch) {
+        let matchedWords = 0;
+        strainWords.forEach(word => {
+          if (word.length > 2) {
+            if (handle.includes(word) || title.includes(word)) {
+              matchedWords++;
+            }
+          }
+        });
+        
+        // ONLY award points if ALL strain words match (100% requirement)
+        if (matchedWords === strainWords.length && strainWords.length > 0) {
+          strainMatchScore += 50; // Lower score for partial word matching
+        } else {
+          strainMatchScore = 0; // No score if any strain word is missing
+        }
+      }
+    }
+    
+    score += strainMatchScore;
+    
+    // Type matching (medium priority - 30 points max)
+    if (handle.includes('thca') || title.includes('thca')) score += 20;
+    if (handle.includes('flower') || title.includes('flower')) score += 10;
+    
+    // Tier matching (high priority for quality - 40 points max)
+    const tierWords = tier.split(' ');
+    tierWords.forEach(word => {
+      if (word.length > 2) {
+        if (handle.includes(word)) score += 10;
+        if (title.includes(word)) score += 10;
+      }
+    });
+    
+    // Exact tier phrase matching
+    if (tier) {
+      const tierNormalized = tier.replace(/\s+/g, '');
+      const handleNormalized = handle.replace(/\s+/g, '');
+      const titleNormalized = title.replace(/\s+/g, '');
+      
+      if (handleNormalized.includes(tierNormalized) || titleNormalized.includes(tierNormalized)) {
+        score += 20;
+      }
+    }
+    
+    return score;
+  };
+
+  // Find best match using fuzzy scoring
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  shopifyProducts.forEach((product: any) => {
+    const score = calculateFuzzyScore(product);
+    // MUCH STRICTER THRESHOLD: Only accept matches with 95+ score to prevent wrong matches
+    if (score > bestScore && score >= 95) { 
+      bestScore = score;
+      bestMatch = product;
+    }
+  });
+  
+  return {
+    product: bestMatch,
+    score: bestScore,
+    strain,
+    type,
+    tier
+  };
+}
+
+// Helper functions for extraction
+function extractStrain(name: string): string {
+  // Remove common prefixes/suffixes to get strain name
+  const cleanName = name
+    .replace(/\s*-\s*thca\s+bulk\s+flower.*$/i, '')
+    .replace(/\s*-\s*thca.*$/i, '')
+    .replace(/^\d+\s*(grams?|g)\s*/i, '')
+    .replace(/\s*(preroll|flower|bulk).*$/i, '')
+    .trim();
+  
+  return cleanName || name;
+}
+
+function extractType(name: string): string {
+  if (name.toLowerCase().includes('thca')) return 'thca';
+  if (name.toLowerCase().includes('thcp')) return 'thcp';
+  if (name.toLowerCase().includes('cbd')) return 'cbd';
+  return 'flower';
+}
+
+function extractTier(name: string): string {
+  const nameLower = name.toLowerCase();
+  if (nameLower.includes('exotic')) return 'exotic';
+  if (nameLower.includes('top shelf')) return 'top shelf';
+  if (nameLower.includes('aaa indoor')) return 'aaa indoor';
+  if (nameLower.includes('aa indoor')) return 'aa indoor';
+  if (nameLower.includes('classic reserve')) return 'classic reserve';
+  return '';
+}
+
 const log = (message: string, context: string = 'graphql') => {
   console.log(`${new Date().toLocaleTimeString()} [${context}] ${message}`);
 };
@@ -426,19 +573,30 @@ export const resolvers = {
         
         const inventoryLevels = await getShopifyInventoryLevels(inventoryItemIds);
 
-        // Process and combine data
+        // Process and combine data using fuzzy matching
         const processedItems = localItems.map((item: any) => {
-          // Enhanced Shopify product matching - try multiple strategies
-          let shopifyProduct = shopifyMap.get(item.name?.toLowerCase()) || 
-                              shopifyMap.get(item.sku?.toLowerCase());
+          // Use fuzzy matching to find best Shopify product match
+          const fuzzyMatch = findBestFuzzyMatch(item, shopifyProducts);
+          let shopifyProduct = fuzzyMatch?.product;
           
-          // Try partial name matching if no exact match
-          if (!shopifyProduct && item.name) {
-            const itemNameWords = item.name.toLowerCase().split(/[-\s]+/);
-            for (const [shopifyName, product] of shopifyMap.entries()) {
-              if (itemNameWords.some(word => word.length > 3 && shopifyName.includes(word))) {
-                shopifyProduct = product;
-                break;
+          // Log fuzzy matching results for debugging
+          if (fuzzyMatch && fuzzyMatch.score > 0) {
+            log(`Fuzzy match for "${item.name}": ${shopifyProduct?.title} (score: ${fuzzyMatch.score})`, 'fuzzy-matching');
+          }
+          
+          // Fallback to basic matching if fuzzy match fails
+          if (!shopifyProduct) {
+            shopifyProduct = shopifyMap.get(item.name?.toLowerCase()) || 
+                            shopifyMap.get(item.sku?.toLowerCase());
+            
+            // Try partial name matching as last resort
+            if (!shopifyProduct && item.name) {
+              const itemNameWords = item.name.toLowerCase().split(/[-\s]+/);
+              for (const [shopifyName, product] of shopifyMap.entries()) {
+                if (itemNameWords.some(word => word.length > 3 && shopifyName.includes(word))) {
+                  shopifyProduct = product;
+                  break;
+                }
               }
             }
           }
@@ -454,7 +612,7 @@ export const resolvers = {
             id: item.id.toString(),
             name: item.name || 'Unnamed Product',
             sku: item.sku,
-            description: item.description,
+            description: shopifyProduct?.description || shopifyProduct?.bodyHtml?.replace(/<[^>]*>/g, '').trim() || item.description || '',
             category: item.category,
             brand: item.brand,
             status: item.status || 'draft',
