@@ -1312,24 +1312,47 @@ export function registerRoutes(app: any, storage: any) {
                 .join(' ');
             }
           }
-          // Keep original name if it doesn't match patterns and isn't a simple weight
+          // Extract strain name from complex product names
           else if (!/(^1 pound$|^2 grams$|^half gram$|^1\/2 pound$|^1\/4 pound$)/i.test(item.name.trim())) {
-            strainName = item.name;
+            // Remove technical terms and extract strain name
+            strainName = item.name
+              .replace(/\s*-\s*(THCA|thca).*$/i, '') // Remove everything after "- THCA"
+              .replace(/\s*\(.*\)$/i, '') // Remove weight/tier info in parentheses
+              .replace(/\b(bulk|flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, '')
+              .replace(/[-_]+/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            // Capitalize properly
+            if (strainName) {
+              strainName = strainName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            }
           }
           // For simple weight names, check if we have description with strain info
-          else if (item.description && item.description.includes('Premium')) {
-            const descMatch = item.description.match(/Premium\s+([^-]+)/i);
-            if (descMatch) {
-              strainName = descMatch[1].trim();
+          else if (item.description) {
+            // Extract strain name from description, avoiding quality descriptors
+            const descMatch = item.description.match(/(?:Cannabis|Hemp|THCa)?\s*([A-Za-z\s]+?)(?:\s*-|\s*\(|$)/i);
+            if (descMatch && descMatch[1] && descMatch[1].trim().length > 2) {
+              strainName = descMatch[1].trim()
+                .replace(/\b(premium|quality|cannabis|hemp|thca|flower|strain)\b/gi, '')
+                .trim();
             }
           }
           // If still no good strain name found and it's just a weight, keep fallback
           // These will be sorted to bottom by the new sorting logic
         }
         
-        // Extract proper weight from product name FIRST - NO DEFAULTS TO POUNDS
+        // Extract proper weight - prioritize database weight, then product name analysis
         let extractedWeight = 'Weight not specified';
-        if (item.name) {
+        
+        // PRIORITY 1: Use database weight if available and meaningful
+        if (item.weight && item.weight !== 'Weight not specified' && item.weight.trim() !== '') {
+          extractedWeight = item.weight;
+        }
+        // PRIORITY 2: Extract from product name if no database weight
+        else if (item.name) {
           const nameLower = item.name.toLowerCase();
           
           // Extract gram weights FIRST - highest priority for gram products
@@ -1377,8 +1400,8 @@ export function registerRoutes(app: any, storage: any) {
         
         return {
           ...item,
-          name: strainName || 'Premium Cannabis',
-          display_name: strainName || 'Premium Cannabis',
+          name: strainName || 'Cannabis Product',
+          display_name: strainName || 'Cannabis Product',
           base_price: pricing.base_price,
           sale_price: pricing.sale_price,
           cost_price: pricing.cost_price,

@@ -184,14 +184,14 @@ export default function ComprehensiveMenuPage() {
     if (!name) return 'Unknown Strain';
     
     return name
-      .replace(/\b(thca|bulk|flower|smalls|mediums|indoor|outdoor|exotic|top shelf|classic reserve|aa|aaa)\b/gi, '')
-      .replace(/\b(1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g)\b/gi, '')
+      .replace(/\b(thca|bulk|flower|smalls|mediums|indoor|outdoor|exotic|top shelf|classic reserve|aa|aaa|premium|quality)\b/gi, '')
+      .replace(/\b(1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g|\d+\s*gram|\d+\s*g)\b/gi, '')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ') || 'Premium Strain';
+      .join(' ') || 'Cannabis Strain';
   };
 
   const extractWeight = (name: string): string => {
