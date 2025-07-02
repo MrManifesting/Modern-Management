@@ -743,11 +743,7 @@ export function registerRoutes(app: any, storage: any) {
         shopifyProductMap.set(product.title.toLowerCase(), product);
       });
       
-      // Initialize AI weight extractor once
-      const { AIWeightExtractor } = await import('./services/ai-weight-extractor.js');
-      const weightExtractor = new AIWeightExtractor();
-
-      // PRIORITIZE ITEMS WITH QUANTITIES - this is what matters for $100K+ daily operations
+      // PRIORITIZE ITEMS WITH QUANTITIES - this is what matters for $100K+ daily operations  
       const enhancedItems = items.filter((item: any) => {
         const hasQuantity = (item.quantity || 0) > 0;
         const hasPricing = (item.base_price && parseFloat(item.base_price) > 0) ||
@@ -787,6 +783,7 @@ export function registerRoutes(app: any, storage: any) {
 
         // Get real Shopify data for this item
         let shopifyData = null;
+        let realWeight = item.weight;
         let realPrice = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
         
         // Try to find matching Shopify product
