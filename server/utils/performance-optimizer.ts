@@ -38,7 +38,7 @@ export const cacheConfig = {
 // Response compression for large JSON responses
 export const compressLargeResponse = (data: any): any => {
   if (Array.isArray(data) && data.length > 100) {
-    // For large arrays, only send essential fields
+    // For large arrays, only send essential fields - including weight for accurate cannabis product data
     return data.map(item => ({
       id: item.id,
       name: item.name,
@@ -46,7 +46,8 @@ export const compressLargeResponse = (data: any): any => {
       quantity: item.quantity,
       status: item.status,
       basePrice: item.basePrice || item.base_price,
-      category: item.category
+      category: item.category,
+      weight: item.weight // Essential for cannabis product accuracy
     }));
   }
   return data;
