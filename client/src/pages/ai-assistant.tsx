@@ -1,6 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
-import { AiChat } from '@/components/ai/ai-chat';
+import { SimpleAiChat } from '@/components/ai/simple-ai-chat';
 
 export default function AiAssistantPage() {
   return (
@@ -18,7 +18,7 @@ export default function AiAssistantPage() {
         get insights on stock levels, generate descriptions, and receive business recommendations.
       </p>
 
-      <AiChat />
+      <SimpleAiChat />
     </div>
   );
 }
