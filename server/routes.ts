@@ -996,6 +996,8 @@ export function registerRoutes(app: any, storage: any) {
 
         return {
           ...item,
+          // PRIORITY: Use authentic Shopify product name instead of generic database name
+          name: shopifyData?.title || item.name,
           // Use real weight from Shopify if available, otherwise fallback to local
           weight: realWeight || item.weight || 'Weight not specified',
           thumbnailUrl,
