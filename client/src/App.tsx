@@ -28,7 +28,7 @@ import VoiceAccessibilitySettingsPage from "@/pages/voice-accessibility-settings
 import ProductsInventoryPage from "@/pages/products-inventory";
 import SpecialtyProductsPage from "@/pages/specialty-products";
 import MenuSyncPage from "@/pages/menu-sync";
-import { AnimatedInventoryPage } from "@/pages/AnimatedInventoryPage";
+
 
 import MediaManagerPage from "@/pages/media-manager";
 import CustomerAnalytics from "@/pages/CustomerAnalytics";
@@ -41,7 +41,7 @@ import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
 import AiAssistantPage from "@/pages/ai-assistant";
-import CSVValidatorPage from "@/pages/csv-validator";
+
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import GoogleSheetsPage from "@/pages/google-sheets-page";
 import SheetsConfigPage from "@/pages/sheets-config";
@@ -109,7 +109,7 @@ function Router() {
         <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
         <ProtectedRoute path="/inventory/mobile" component={() => <MobileInventoryPage />} />
-        <ProtectedRoute path="/inventory/animated" component={() => <AnimatedInventoryPage />} />
+
 
 
         <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
@@ -140,7 +140,7 @@ function Router() {
         <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
         <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
         <ProtectedRoute path="/ai-assistant" component={() => <AiAssistantPage />} />
-        <ProtectedRoute path="/csv-validator" component={() => <CSVValidatorPage />} />
+
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
         <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
