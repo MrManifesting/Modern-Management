@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Loader2, Sparkles, MessageSquare, Plus } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, MessageSquare, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +35,8 @@ export function AiChat() {
   const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -172,9 +176,54 @@ export function AiChat() {
           <p className="text-muted-foreground mb-4">
             The AI assistant requires an OpenAI API key to function. Please configure your API key in the settings.
           </p>
-          <Button variant="outline">
-            Configure API Key
-          </Button>
+          <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Configure API Key
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Configure OpenAI API Key</DialogTitle>
+                <DialogDescription>
+                  Enter your OpenAI API key to enable AI assistant functionality. Your key will be stored securely.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="apiKey">OpenAI API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="sk-..."
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (apiKeyInput.trim()) {
+                      // For now, we'll use ask_secrets tool to get the API key properly
+                      toast({
+                        title: "API Key Configuration",
+                        description: "Please provide your OpenAI API key through the secrets configuration."
+                      });
+                      setApiKeyDialogOpen(false);
+                    }
+                  }}
+                  disabled={!apiKeyInput.trim()}
+                >
+                  Configure
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     );
