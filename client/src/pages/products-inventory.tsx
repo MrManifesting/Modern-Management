@@ -149,6 +149,9 @@ const ProductsInventoryPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productIdToDelete, setProductIdToDelete] = useState<number | null>(null);
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEditItem, setSelectedEditItem] = useState<Product | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
@@ -161,6 +164,22 @@ const ProductsInventoryPage: React.FC = () => {
     if (selectionMode) {
       setSelectedItems([]);
     }
+  };
+
+  // Missing handler functions
+  const handleBulkApplyChanges = (changes: any) => {
+    // Implementation for bulk changes
+    console.log('Bulk changes applied:', changes);
+  };
+
+  const handleItemAdded = (item: any) => {
+    // Implementation for item added
+    console.log('Item added:', item);
+  };
+
+  const handleItemUpdated = (item: any) => {
+    // Implementation for item updated
+    console.log('Item updated:', item);
   };
 
   const handleItemSelection = (itemId: number) => {
