@@ -2421,15 +2421,13 @@ const ProductsInventoryPage: React.FC = () => {
                                       Generate QR Code
                                     </DropdownMenuItem>
                                     
-                                    {product.shopifyId && (
-                                      <DropdownMenuItem
-                                        className="flex items-center cursor-pointer"
-                                        onClick={() => handleViewShopifyClick(product.id)}
-                                      >
-                                        <Store className="mr-2 h-4 w-4" />
-                                        View in Shopify
-                                      </DropdownMenuItem>
-                                    )}
+                                    <DropdownMenuItem
+                                      className="flex items-center cursor-pointer"
+                                      onClick={() => handleViewShopifyClick(product.id)}
+                                    >
+                                      <Store className="mr-2 h-4 w-4" />
+                                      View on Shopify
+                                    </DropdownMenuItem>
                                     
                                     <DropdownMenuItem
                                       className="flex items-center cursor-pointer"

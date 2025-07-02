@@ -60,7 +60,7 @@ export default function BulkQueryPage() {
 
   // Mutation to start bulk query
   const startBulkQuery = useMutation({
-    mutationFn: () => apiRequest('/api/shopify/bulk-query/start', { method: 'POST' }),
+    mutationFn: () => apiRequest('POST', '/api/shopify/bulk-query/start'),
     onSuccess: () => {
       setIsExecuting(true);
       setExecutionProgress(25);
@@ -69,7 +69,7 @@ export default function BulkQueryPage() {
 
   // Mutation to execute complete bulk query
   const executeBulkQuery = useMutation({
-    mutationFn: () => apiRequest('/api/shopify/bulk-query/execute', { method: 'POST' }),
+    mutationFn: () => apiRequest('POST', '/api/shopify/bulk-query/execute'),
     onSuccess: (data) => {
       setIsExecuting(false);
       setExecutionProgress(100);
