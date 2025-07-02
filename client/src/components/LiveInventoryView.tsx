@@ -6,15 +6,12 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 interface LiveInventoryUpdate {
-  id: number;
-  name: string;
-  sku: string;
-  localQuantity: number;
-  shopifyQuantity: number;
-  status: string;
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  tier: string;
+  bulk: string;
   needsSync: boolean;
-  shopifyId: string;
-  lastUpdated: string;
 }
 
 interface LiveUpdateResponse {
@@ -30,12 +27,12 @@ export function LiveInventoryView() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: liveData, isLoading, error, refetch } = useQuery({
+  const { data: liveData, isLoading, error, refetch } = useQuery<LiveUpdateResponse>({
     queryKey: ['/api/inventory/live-update'],
     refetchInterval: autoRefresh ? 15000 : false, // Refresh every 15 seconds
     refetchIntervalInBackground: true,
     staleTime: 0,
-    cacheTime: 0
+    gcTime: 0
   });
 
   useEffect(() => {
@@ -163,35 +160,22 @@ export function LiveInventoryView() {
             <div className="space-y-3">
               {itemsNeedingSync.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.itemId}
                   className="flex items-center justify-between p-3 border rounded-lg bg-amber-50"
                 >
                   <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
+                    <div className="font-medium">{item.itemName}</div>
                     <div className="text-sm text-muted-foreground">
-                      SKU: {item.sku} • Status: {item.status}
+                      Tier: {item.tier} • Bulk Price: {item.bulk}
                     </div>
                     <div className="text-sm">
-                      <span className="text-blue-600">Local: {item.localQuantity}</span>
-                      {' → '}
-                      <span className="text-green-600">Shopify: {item.shopifyQuantity}</span>
+                      <span className="text-green-600">Shopify Quantity: {item.quantity} lbs</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSyncQuantity(item.id, item.localQuantity)}
-                    >
-                      Sync to Shopify
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSyncQuantity(item.id, item.shopifyQuantity)}
-                    >
-                      Sync from Shopify
-                    </Button>
+                    <Badge variant={item.needsSync ? "destructive" : "default"}>
+                      {item.needsSync ? "Needs Sync" : "Synced"}
+                    </Badge>
                   </div>
                 </div>
               ))}

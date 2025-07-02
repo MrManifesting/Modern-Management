@@ -4618,107 +4618,37 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Enhanced live inventory update endpoint with real Shopify data
+  // Live inventory update using existing working CSV sync service
   app.get('/api/inventory/live-update', async (req: Request, res: Response) => {
     try {
-      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
-      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      // Use the existing working CSV sync service that already handles real Shopify data
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
       
-      if (!accessToken) {
-        return res.status(400).json({ 
-          error: "Shopify access token not configured for live updates" 
-        });
-      }
+      // Get updated menu items with real Shopify quantities
+      const updatedMenuItems = await csvSync.syncMenuTabWithShopifyQuantities();
+      const summary = await csvSync.getSyncSummary();
       
-      // Get current internal inventory
-      const internalItems = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
-      
-      // Fetch all Shopify products with their variants to get current inventory
-      const productsResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!productsResponse.ok) {
-        throw new Error(`Shopify products fetch failed: ${productsResponse.statusText}`);
-      }
-      
-      const productsData = await productsResponse.json();
-      const products = productsData.products || [];
-      
-      let updatedCount = 0;
-      const updates = [];
-      let matchedItems = 0;
-      
-      // Match internal items with Shopify products and update quantities/pricing
-      for (const item of internalItems) {
-        let matched = false;
-        
-        // Try to match by SKU or product name
-        for (const product of products) {
-          for (const variant of product.variants) {
-            const skuMatch = variant.sku && item.sku && variant.sku === item.sku;
-            const nameMatch = product.title.toLowerCase().includes(item.name.toLowerCase()) ||
-                             item.name.toLowerCase().includes(product.title.toLowerCase());
-            
-            if (skuMatch || nameMatch) {
-              matched = true;
-              matchedItems++;
-              
-              const updateData: any = {};
-              let hasUpdates = false;
-              
-              // Update quantity if different
-              if (variant.inventory_quantity !== null && variant.inventory_quantity !== item.quantity) {
-                updateData.quantity = variant.inventory_quantity;
-                hasUpdates = true;
-              }
-              
-              // Update pricing if we have valid price and current pricing is null/0
-              const variantPrice = parseFloat(variant.price) || 0;
-              if (variantPrice > 0 && (!item.base_price || item.base_price === 0)) {
-                updateData.base_price = variantPrice;
-                hasUpdates = true;
-              }
-              
-              // Update Shopify IDs for future syncing
-              if (!item.shopifyProductId || !item.shopifyVariantId) {
-                updateData.shopifyProductId = product.id;
-                updateData.shopifyVariantId = variant.id;
-                hasUpdates = true;
-              }
-              
-              if (hasUpdates) {
-                await storage.updateItem(item.id, updateData);
-                updates.push({
-                  itemId: item.id,
-                  itemName: item.name,
-                  oldQuantity: item.quantity,
-                  newQuantity: updateData.quantity || item.quantity,
-                  oldPrice: item.base_price,
-                  newPrice: updateData.base_price || item.base_price,
-                  matched: skuMatch ? 'SKU' : 'Name'
-                });
-                updatedCount++;
-              }
-              break;
-            }
-          }
-          if (matched) break;
-        }
-      }
+      // Convert menu items to the format expected by LiveInventoryView
+      const updates = updatedMenuItems
+        .filter(item => item.amount > 0)
+        .slice(0, 10)
+        .map(item => ({
+          itemId: item.variantId,
+          itemName: item.strain,
+          quantity: item.amount,
+          tier: item.tier,
+          bulk: item.bulk,
+          needsSync: false
+        }));
       
       res.json({
         success: true,
-        message: `Live sync completed: ${updatedCount} items updated, ${matchedItems} items matched with Shopify`,
-        updatedCount,
-        matchedItems,
-        updates: updates.slice(0, 10), // Show first 10 updates
-        totalProcessed: internalItems.length,
-        totalShopifyProducts: products.length,
-        timestamp: new Date().toISOString()
+        updates,
+        timestamp: new Date().toISOString(),
+        totalItems: summary.totalItems,
+        needsSync: summary.itemsWithoutQuantity,
+        message: `Live sync completed: ${summary.itemsWithQuantity} items with stock, ${summary.totalAvailableQuantity} total pounds available`
       });
       
     } catch (error) {
