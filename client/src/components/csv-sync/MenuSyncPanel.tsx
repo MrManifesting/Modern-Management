@@ -555,6 +555,334 @@ export function MenuSyncPanel() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="branding" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Company Information */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-gold-600" />
+                    Company Information
+                  </CardTitle>
+                  <CardDescription>
+                    Customize the company details that appear on your menus
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        value={companyBranding.companyName}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          companyName: e.target.value
+                        }))}
+                        placeholder="Your Company Name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="subtitle">Subtitle</Label>
+                      <Input
+                        id="subtitle"
+                        value={companyBranding.subtitle}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          subtitle: e.target.value
+                        }))}
+                        placeholder="Premium Cannabis Wholesale"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={companyBranding.description}
+                      onChange={(e) => setCompanyBranding(prev => ({
+                        ...prev,
+                        description: e.target.value
+                      }))}
+                      placeholder="Brief description of your business"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="logoUrl">Logo URL</Label>
+                    <Input
+                      id="logoUrl"
+                      value={companyBranding.logoUrl}
+                      onChange={(e) => setCompanyBranding(prev => ({
+                        ...prev,
+                        logoUrl: e.target.value
+                      }))}
+                      placeholder="https://your-domain.com/logo.png"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={companyBranding.contactInfo.phone}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, phone: e.target.value }
+                        }))}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        value={companyBranding.contactInfo.email}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, email: e.target.value }
+                        }))}
+                        placeholder="contact@company.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        value={companyBranding.contactInfo.website}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, website: e.target.value }
+                        }))}
+                        placeholder="company.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={companyBranding.contactInfo.address}
+                        onChange={(e) => setCompanyBranding(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, address: e.target.value }
+                        }))}
+                        placeholder="City, State"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Theme Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5 text-gold-600" />
+                    Theme & Colors
+                  </CardTitle>
+                  <CardDescription>
+                    Choose a predefined theme or create a custom color scheme
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                    {defaultThemes.map((theme) => (
+                      <div
+                        key={theme.id}
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedTheme.id === theme.id
+                            ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        }`}
+                        onClick={() => setSelectedTheme(theme)}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: theme.primaryColor }}
+                          />
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: theme.secondaryColor }}
+                          />
+                        </div>
+                        <p className="text-sm font-medium">{theme.name}</p>
+                      </div>
+                    ))}
+                    <div
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedTheme.id === 'custom'
+                          ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedTheme(customTheme)}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: customTheme.primaryColor }}
+                        />
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: customTheme.secondaryColor }}
+                        />
+                      </div>
+                      <p className="text-sm font-medium">Custom</p>
+                    </div>
+                  </div>
+
+                  {selectedTheme.id === 'custom' && (
+                    <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <h4 className="font-medium">Custom Theme Colors</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="primaryColor">Primary Color</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="primaryColor"
+                              type="color"
+                              value={customTheme.primaryColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                primaryColor: e.target.value
+                              }))}
+                              className="w-16 h-10"
+                            />
+                            <Input
+                              value={customTheme.primaryColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                primaryColor: e.target.value
+                              }))}
+                              placeholder="#D4AF37"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="secondaryColor">Secondary Color</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="secondaryColor"
+                              type="color"
+                              value={customTheme.secondaryColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                secondaryColor: e.target.value
+                              }))}
+                              className="w-16 h-10"
+                            />
+                            <Input
+                              value={customTheme.secondaryColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                secondaryColor: e.target.value
+                              }))}
+                              placeholder="#228B22"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="backgroundColor">Background</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="backgroundColor"
+                              type="color"
+                              value={customTheme.backgroundColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                backgroundColor: e.target.value
+                              }))}
+                              className="w-16 h-10"
+                            />
+                            <Input
+                              value={customTheme.backgroundColor}
+                              onChange={(e) => setCustomTheme(prev => ({
+                                ...prev,
+                                backgroundColor: e.target.value
+                              }))}
+                              placeholder="#0F0F0F"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Live Preview */}
+            <div className="lg:col-span-1">
+              <Card className="sticky top-6">
+                <CardHeader>
+                  <CardTitle>Live Preview</CardTitle>
+                  <CardDescription>
+                    See how your branding will look on menus
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div 
+                    className="p-4 rounded-lg min-h-64 relative overflow-hidden"
+                    style={{
+                      backgroundColor: selectedTheme.id === 'custom' ? customTheme.backgroundColor : selectedTheme.backgroundColor,
+                      color: selectedTheme.id === 'custom' ? customTheme.textColor : selectedTheme.textColor
+                    }}
+                  >
+                    <div className="text-center space-y-2">
+                      {companyBranding.logoUrl && (
+                        <img 
+                          src={companyBranding.logoUrl} 
+                          alt="Company Logo"
+                          className="h-12 mx-auto object-contain"
+                        />
+                      )}
+                      <h3 
+                        className="text-xl font-bold"
+                        style={{ 
+                          color: selectedTheme.id === 'custom' ? customTheme.primaryColor : selectedTheme.primaryColor 
+                        }}
+                      >
+                        {companyBranding.companyName}
+                      </h3>
+                      <p 
+                        className="text-sm"
+                        style={{ 
+                          color: selectedTheme.id === 'custom' ? customTheme.secondaryColor : selectedTheme.secondaryColor 
+                        }}
+                      >
+                        {companyBranding.subtitle}
+                      </p>
+                      <div className="mt-4 p-3 rounded border border-opacity-20">
+                        <p className="text-xs opacity-75">Sample Product</p>
+                        <p className="font-medium">Purple Push Pop</p>
+                        <Badge 
+                          className="mt-1"
+                          style={{ 
+                            backgroundColor: selectedTheme.id === 'custom' ? customTheme.accentColor : selectedTheme.accentColor,
+                            color: '#000'
+                          }}
+                        >
+                          $850/lb
+                        </Badge>
+                      </div>
+                      <div className="mt-4 text-xs space-y-1 opacity-75">
+                        <p>{companyBranding.contactInfo.phone}</p>
+                        <p>{companyBranding.contactInfo.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="inventory" className="space-y-6">
           <Card>
             <CardHeader>

@@ -374,88 +374,441 @@ export class CSVInventorySync {
     };
   }
 
-  // Format menu as HTML for display
+  // Format menu as HTML for display with custom branding and themes
   private async formatMenuAsHTML(items: MenuTabItem[], options: any): Promise<string> {
     const timestamp = new Date().toLocaleString();
+    
+    // Extract branding and theme from options
+    const branding = options.branding || {
+      companyName: 'Gold Standard CBD',
+      subtitle: 'Premium THCA Flower Wholesale',
+      contactInfo: {
+        phone: '541-295-8811',
+        email: 'wholesale@goldcbd.com',
+        website: 'goldcbd.com',
+        address: 'Oregon, USA'
+      },
+      logoUrl: '',
+      description: 'Premium quality THCA flower for wholesale distribution'
+    };
+
+    const theme = options.theme || {
+      primaryColor: '#D4AF37',
+      secondaryColor: '#228B22',
+      backgroundColor: '#0F0F0F',
+      textColor: '#FFFFFF',
+      accentColor: '#FFD700'
+    };
     
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gold Standard Cannabis Menu - ${timestamp}</title>
+    <title>${branding.companyName} - Cannabis Menu - ${timestamp}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .logo { color: #D4AF37; font-size: 2.5em; font-weight: bold; }
-        .subtitle { color: #666; margin-top: 10px; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .strain-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .strain-name { font-size: 1.4em; font-weight: bold; color: #333; margin-bottom: 10px; }
-        .tier-badge { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
-        .tier-exotic { background: #ff6b6b; color: white; }
-        .tier-top-shelf { background: #4ecdc4; color: white; }
-        .tier-aaa { background: #45b7d1; color: white; }
-        .tier-aa { background: #96ceb4; color: white; }
-        .tier-classic { background: #ffeaa7; color: #333; }
-        .availability { font-size: 1.2em; font-weight: bold; color: #27ae60; margin-bottom: 15px; }
-        .pricing { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .price-item { text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px; }
-        .price-label { font-size: 0.8em; color: #666; }
-        .price-value { font-weight: bold; color: #2c3e50; }
-        .footer { text-align: center; margin-top: 40px; color: #666; }
-        .coa-link { display: inline-block; margin-top: 10px; padding: 8px 16px; background: #D4AF37; color: white; text-decoration: none; border-radius: 4px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+          font-family: 'Arial', sans-serif; 
+          background: linear-gradient(135deg, ${theme.backgroundColor}dd, ${theme.backgroundColor}ff);
+          color: ${theme.textColor};
+          line-height: 1.6;
+          min-height: 100vh;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header { 
+          text-align: center; 
+          margin-bottom: 40px; 
+          padding: 30px 20px;
+          background: linear-gradient(45deg, ${theme.primaryColor}20, ${theme.secondaryColor}20);
+          border-radius: 15px;
+          backdrop-filter: blur(10px);
+          border: 1px solid ${theme.primaryColor}40;
+        }
+        
+        .logo-container {
+          margin-bottom: 20px;
+        }
+        
+        .logo-image {
+          max-height: 80px;
+          width: auto;
+          margin-bottom: 15px;
+        }
+        
+        .company-name { 
+          color: ${theme.primaryColor}; 
+          font-size: 3em; 
+          font-weight: bold; 
+          margin-bottom: 10px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+          background: linear-gradient(45deg, ${theme.primaryColor}, ${theme.accentColor});
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .subtitle { 
+          color: ${theme.secondaryColor}; 
+          font-size: 1.2em;
+          margin-bottom: 15px;
+          font-weight: 500;
+        }
+        
+        .description {
+          color: ${theme.textColor}bb;
+          font-size: 1em;
+          margin-bottom: 20px;
+        }
+        
+        .contact-info {
+          display: flex;
+          justify-content: center;
+          gap: 30px;
+          flex-wrap: wrap;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid ${theme.primaryColor}40;
+        }
+        
+        .contact-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: ${theme.textColor}dd;
+          font-size: 0.9em;
+        }
+        
+        .contact-icon {
+          width: 16px;
+          height: 16px;
+          background: ${theme.accentColor};
+          border-radius: 50%;
+          display: inline-block;
+        }
+        
+        .stats-bar {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          margin: 30px 0;
+          padding: 20px;
+          background: ${theme.backgroundColor}80;
+          border-radius: 12px;
+          backdrop-filter: blur(5px);
+          border: 1px solid ${theme.primaryColor}30;
+        }
+        
+        .stat-item {
+          text-align: center;
+        }
+        
+        .stat-number {
+          font-size: 2em;
+          font-weight: bold;
+          color: ${theme.accentColor};
+          display: block;
+        }
+        
+        .stat-label {
+          font-size: 0.9em;
+          color: ${theme.textColor}bb;
+        }
+        
+        .menu-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+          gap: 25px; 
+          margin-top: 30px;
+        }
+        
+        .strain-card { 
+          background: linear-gradient(145deg, ${theme.backgroundColor}dd, ${theme.backgroundColor}aa);
+          border-radius: 15px; 
+          padding: 25px; 
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          backdrop-filter: blur(10px);
+          border: 1px solid ${theme.primaryColor}40;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .strain-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, ${theme.primaryColor}, ${theme.accentColor}, ${theme.secondaryColor});
+        }
+        
+        .strain-card:hover { 
+          transform: translateY(-5px); 
+          box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+          border-color: ${theme.primaryColor}80;
+        }
+        
+        .strain-name { 
+          font-size: 1.5em; 
+          font-weight: bold; 
+          color: ${theme.primaryColor}; 
+          margin-bottom: 12px;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .tier-badge { 
+          display: inline-block; 
+          padding: 6px 15px; 
+          border-radius: 20px; 
+          font-size: 0.85em; 
+          font-weight: bold; 
+          margin-bottom: 15px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .tier-exotic { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; }
+        .tier-top-shelf { background: linear-gradient(45deg, ${theme.accentColor}, ${theme.primaryColor}); color: #000; }
+        .tier-aaa { background: linear-gradient(45deg, #45b7d1, #6dd5ed); color: white; }
+        .tier-aa { background: linear-gradient(45deg, #96ceb4, #b8e6d3); color: #333; }
+        .tier-classic { background: linear-gradient(45deg, #ffeaa7, #fdcb6e); color: #333; }
+        
+        .availability { 
+          font-size: 1.3em; 
+          font-weight: bold; 
+          color: ${theme.secondaryColor}; 
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .availability-icon {
+          width: 12px;
+          height: 12px;
+          background: ${theme.secondaryColor};
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+        
+        .pricing { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 12px; 
+          margin-top: 15px;
+        }
+        
+        .price-item { 
+          text-align: center; 
+          padding: 12px; 
+          background: linear-gradient(145deg, ${theme.backgroundColor}bb, ${theme.backgroundColor}88);
+          border-radius: 8px; 
+          border: 1px solid ${theme.primaryColor}30;
+          transition: all 0.2s ease;
+        }
+        
+        .price-item:hover {
+          background: linear-gradient(145deg, ${theme.primaryColor}20, ${theme.secondaryColor}20);
+          border-color: ${theme.primaryColor}60;
+        }
+        
+        .price-label { 
+          font-size: 0.8em; 
+          color: ${theme.textColor}aa; 
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .price-value { 
+          font-weight: bold; 
+          color: ${theme.accentColor}; 
+          font-size: 1.1em;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+          flex-wrap: wrap;
+        }
+        
+        .btn {
+          padding: 8px 16px;
+          border-radius: 6px;
+          text-decoration: none;
+          font-size: 0.9em;
+          font-weight: 600;
+          text-align: center;
+          transition: all 0.2s ease;
+          border: none;
+          cursor: pointer;
+        }
+        
+        .btn-primary {
+          background: linear-gradient(45deg, ${theme.primaryColor}, ${theme.accentColor});
+          color: #000;
+        }
+        
+        .btn-secondary {
+          background: linear-gradient(45deg, ${theme.secondaryColor}, ${theme.secondaryColor}dd);
+          color: white;
+        }
+        
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .footer { 
+          text-align: center; 
+          margin-top: 60px; 
+          padding: 30px;
+          background: linear-gradient(45deg, ${theme.backgroundColor}dd, ${theme.backgroundColor}aa);
+          border-radius: 15px;
+          border: 1px solid ${theme.primaryColor}40;
+        }
+        
+        .footer-logo {
+          font-size: 1.5em;
+          color: ${theme.primaryColor};
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+          .company-name { font-size: 2em; }
+          .menu-grid { grid-template-columns: 1fr; }
+          .contact-info { flex-direction: column; gap: 15px; }
+          .stats-bar { flex-direction: column; gap: 20px; }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">🌿 GOLD STANDARD</div>
-        <div class="subtitle">Premium Cannabis Menu - Updated ${timestamp}</div>
-        <div class="subtitle">${items.length} Strains Available | ${items.reduce((sum, item) => sum + item.amount, 0)} lbs Total</div>
-    </div>
-    
-    <div class="menu-grid">
-        ${items.map(item => {
-          const tierClass = item.tier.toLowerCase().includes('exotic') ? 'tier-exotic' :
-                           item.tier.toLowerCase().includes('top shelf') ? 'tier-top-shelf' :
-                           item.tier.toLowerCase().includes('aaa') ? 'tier-aaa' :
-                           item.tier.toLowerCase().includes('aa') ? 'tier-aa' : 'tier-classic';
-          
-          const strainSlug = item.strain.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          
-          return `
-            <div class="strain-card">
-                <div class="strain-name">${item.strain}</div>
-                <div class="tier-badge ${tierClass}">${item.tier}</div>
-                <div class="availability">${item.amount} lbs available</div>
-                <div class="pricing">
-                    <div class="price-item">
-                        <div class="price-label">Bulk</div>
-                        <div class="price-value">${item.bulk}</div>
-                    </div>
-                    <div class="price-item">
-                        <div class="price-label">Distro 25+</div>
-                        <div class="price-value">${item.distro25}</div>
-                    </div>
-                    <div class="price-item">
-                        <div class="price-label">Master 50+</div>
-                        <div class="price-value">${item.master50}</div>
-                    </div>
-                    <div class="price-item">
-                        <div class="price-label">Master 100+</div>
-                        <div class="price-value">${item.master100}</div>
-                    </div>
-                </div>
-                <a href="https://gold-standard-cbd.com/coa/${strainSlug}" class="coa-link" target="_blank">
-                    📄 View COA
-                </a>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="${branding.companyName} Logo" class="logo-image">` : ''}
             </div>
-          `;
-        }).join('')}
-    </div>
-    
-    <div class="footer">
-        <p>🔄 Live Shopify Sync | 📱 Order: gold-standard-cbd.com | 📧 Contact: orders@gold-standard-cbd.com</p>
-        <p>Generated: ${timestamp} | System: Gold Standard Management</p>
+            <div class="company-name">${branding.companyName}</div>
+            <div class="subtitle">${branding.subtitle}</div>
+            <div class="description">${branding.description}</div>
+            
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>📞 ${branding.contactInfo.phone}</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>✉️ ${branding.contactInfo.email}</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>🌐 ${branding.contactInfo.website}</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>📍 ${branding.contactInfo.address}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-number">${items.length}</span>
+                <span class="stat-label">Available Strains</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${items.reduce((sum, item) => sum + item.amount, 0)}</span>
+                <span class="stat-label">Total Pounds</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${new Set(items.map(item => item.tier)).size}</span>
+                <span class="stat-label">Quality Tiers</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${timestamp.split(',')[0]}</span>
+                <span class="stat-label">Updated</span>
+            </div>
+        </div>
+        
+        <div class="menu-grid">
+            ${items.map(item => {
+              const tierClass = item.tier.toLowerCase().includes('exotic') ? 'tier-exotic' :
+                               item.tier.toLowerCase().includes('top shelf') ? 'tier-top-shelf' :
+                               item.tier.toLowerCase().includes('aaa') ? 'tier-aaa' :
+                               item.tier.toLowerCase().includes('aa') ? 'tier-aa' : 'tier-classic';
+              
+              const strainSlug = item.strain.toLowerCase().replace(/[^a-z0-9]/g, '-');
+              const coaLink = `https://gold-standard-cbd.com/coa/${strainSlug}`;
+              const mediaLink = `https://gold-standard-cbd.com/media/download/${item.variantSku || item.keyId}`;
+              const orderLink = `https://gold-standard-cbd.com/products/${strainSlug}`;
+              
+              return `
+                <div class="strain-card">
+                    <div class="strain-name">${item.strain}</div>
+                    <div class="tier-badge ${tierClass}">${item.tier}</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        ${item.amount} lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">${item.bulk}</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">${item.distro25}</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">${item.master50}</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">${item.master100}</div>
+                        </div>
+                    </div>
+                    ${options.includeImages !== false ? `
+                    <div class="action-buttons">
+                        <a href="${orderLink}" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="${coaLink}" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="${mediaLink}" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:${branding.contactInfo.phone}" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    ` : ''}
+                </div>
+              `;
+            }).join('')}
+        </div>
+        
+        <div class="footer">
+            <div class="footer-logo">${branding.companyName}</div>
+            <p>Generated on ${timestamp}</p>
+            <p>${branding.description}</p>
+            <div style="margin-top: 15px;">
+                <strong>Contact Information:</strong><br>
+                📞 ${branding.contactInfo.phone} | 
+                ✉️ ${branding.contactInfo.email} | 
+                🌐 ${branding.contactInfo.website} | 
+                📍 ${branding.contactInfo.address}
+            </div>
+        </div>
     </div>
 </body>
 </html>`;
