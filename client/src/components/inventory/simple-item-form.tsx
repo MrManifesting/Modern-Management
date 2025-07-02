@@ -2,8 +2,16 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Package } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 import MobilePhotoUpload from "@/components/mobile/mobile-photo-upload";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Form, 
   FormField, 
@@ -35,10 +43,13 @@ const simpleFormSchema = z.object({
   basePrice: z.string().optional(),
   salePrice: z.string().optional(),
   wholesalePrice: z.string().optional(),
+  bulkPrice: z.string().optional(),
+  distroPrice: z.string().optional(),
+  masterPrice: z.string().optional(),
+  master100Price: z.string().optional(),
   category: z.string().default("Bulk Flower"),
   quantity: z.string().default("1"),
   weight: z.string().optional(),
-
   tier: z.string().optional(),
   strainType: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -62,11 +73,11 @@ interface SimpleItemFormProps {
   isEditing?: boolean;
 }
 
-const CATEGORIES = ["Bulk Flower", "Flower", "Edibles", "Concentrates", "Accessories"];
-const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD", "THCA", "THCP", "Golden Nuggets", "Little Trees"];
+const CATEGORIES = ["Bulk Flower", "Flower", "Edibles", "Concentrates", "Accessories", "Add New Category"];
+const STRAIN_TYPES = ["Indica", "Sativa", "Hybrid", "CBD", "THCA", "THCP", "Golden Nuggets", "Little Trees", "Add New Type"];
 const WEIGHT_OPTIONS = ["1 pound", "half pound", "quarter pound", "ounce", "half ounce", "quarter ounce", "eighth", "gram"];
-const VENDORS = ["Gold Standard", "Tree Mason"];
-const TIERS = ["Exotic", "Exotic Indoor", "Top Shelf", "AA Indoor", "AAA Indoor", "Classic Reserve", "Cheap Discount Flower"];
+const VENDORS = ["Gold Standard", "Tree Mason", "Add New Vendor"];
+const TIERS = ["Exotic", "Exotic Indoor", "Top Shelf", "AA Indoor", "AAA Indoor", "Classic Reserve", "Cheap Discount Flower", "Add New Tier"];
 
 export default function SimpleItemForm({
   defaultValues,
@@ -74,6 +85,14 @@ export default function SimpleItemForm({
   isLoading = false,
   isEditing = false
 }: SimpleItemFormProps) {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addDialogType, setAddDialogType] = useState<'category' | 'vendor' | 'tier' | 'type'>('category');
+  const [newItemValue, setNewItemValue] = useState('');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customVendors, setCustomVendors] = useState<string[]>([]);
+  const [customTiers, setCustomTiers] = useState<string[]>([]);
+  const [customTypes, setCustomTypes] = useState<string[]>([]);
+
   const form = useForm<SimpleFormData>({
     resolver: zodResolver(simpleFormSchema),
     defaultValues: {
@@ -82,14 +101,14 @@ export default function SimpleItemForm({
       sku: defaultValues?.sku || "",
       brand: defaultValues?.brand || "Gold Standard",
       status: defaultValues?.status || "draft",
-      costPrice: defaultValues?.cost_price || "",
-      bulkPrice: defaultValues?.bulk_price || "",
-      distroPrice: defaultValues?.distro_price || "",
-      masterPrice: defaultValues?.master_price || "",
-      master100Price: defaultValues?.master_100_price || "",
-      basePrice: defaultValues?.base_price || "",
-      salePrice: defaultValues?.sale_price || "",
-      wholesalePrice: defaultValues?.wholesale_price || "",
+      costPrice: String(defaultValues?.cost_price || ""),
+      bulkPrice: String(defaultValues?.bulk_price || ""),
+      distroPrice: String(defaultValues?.distro_price || ""),
+      masterPrice: String(defaultValues?.master_price || ""),
+      master100Price: String(defaultValues?.master_100_price || ""),
+      basePrice: String(defaultValues?.base_price || ""),
+      salePrice: String(defaultValues?.sale_price || ""),
+      wholesalePrice: String(defaultValues?.wholesale_price || ""),
       category: defaultValues?.category || "Bulk Flower",
       quantity: String(defaultValues?.quantity || 1),
       weight: defaultValues?.weight || "1 pound",
@@ -412,36 +431,7 @@ export default function SimpleItemForm({
             />
           </div>
 
-          {/* Keep legacy fields for compatibility */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="basePrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Base Price (Legacy)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <FormField
-              control={form.control}
-              name="wholesalePrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Wholesale Price (Legacy)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
         </div>
 
         <FormField
