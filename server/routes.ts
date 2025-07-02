@@ -6097,7 +6097,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Customer Tiering System Based on Sales Data
   app.get('/api/customers/tiers', async (req, res) => {
     try {
-      const shopifyDomain = process.env.SHOPIFY_DOMAIN;
+      const shopifyDomain = process.env.SHOPIFY_STORE || process.env.SHOPIFY_DOMAIN;
       const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
       if (!shopifyDomain || !shopifyAccessToken) {
