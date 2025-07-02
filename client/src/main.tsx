@@ -4,7 +4,7 @@ import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="light" storageKey="mr-lister-theme">
+  <ThemeProvider defaultTheme="light" storageKey="gold-standard-management-theme">
     <App />
   </ThemeProvider>
 );
