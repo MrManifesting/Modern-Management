@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, Package, ExternalLink, Trash2, Edit } from "lucide-react";
+import { Eye, Package, ExternalLink, Trash2, Edit, X, ZoomIn } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,6 +33,7 @@ interface ItemImage {
 export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewItemModalProps) {
   const [open, setOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -163,7 +164,7 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50">
         <DialogHeader>
           <DialogTitle>{item.name}</DialogTitle>
           <DialogDescription>
@@ -182,11 +183,14 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {images.map((image, index) => (
                   <div key={index} className="relative">
-                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <div 
+                      className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+                      onClick={() => setEnlargedImage(image.url)}
+                    >
                       <img
                         src={image.url}
                         alt={image.alt || `${item.name} image ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -196,6 +200,9 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
                       />
                       <div className="absolute inset-0 flex items-center justify-center text-gray-400" style={{ display: 'none' }}>
                         <Package className="w-8 h-8" />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all">
+                        <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                     <Badge 
@@ -445,6 +452,33 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
           )}
         </div>
       </DialogContent>
+
+      {/* Full-screen image overlay */}
+      {enlargedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100] cursor-pointer"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <img
+              src={enlargedImage}
+              alt="Enlarged product image"
+              className="max-w-full max-h-full object-contain"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white hover:bg-black hover:bg-opacity-70"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEnlargedImage(null);
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }
