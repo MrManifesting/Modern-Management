@@ -394,8 +394,8 @@ export default function SyncDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {Array.isArray(syncLogs?.logs) ? syncLogs.logs.map((log: SyncLog) => (
-                    <div key={log.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  {Array.isArray(syncLogs?.logs) ? syncLogs.logs.map((log: SyncLog, index: number) => (
+                    <div key={`${log.id}-${index}`} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${getSyncStatusColor(log.status)}`} />
                         <div>
