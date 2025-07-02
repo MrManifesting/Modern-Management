@@ -26,6 +26,30 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
 
   // Convert enhanced item to proper form data with all existing values
   const getFormDefaults = () => {
+    if (!item) {
+      return {
+        name: "",
+        description: "",
+        category: "Bulk Flower",
+        brand: "Gold Standard",
+        weight: "",
+        sku: "",
+        basePrice: "",
+        costPrice: "",
+        salePrice: "",
+        wholesalePrice: "",
+        quantity: 0,
+        status: "draft",
+        vendor: "",
+        tier: "",
+        strainType: "",
+        potency: "",
+        subcategory: "",
+        size: "",
+        retailPrice: "",
+        piecesPerUnit: ""
+      };
+    }
     return {
       name: item.name || "",
       description: item.description || "",
