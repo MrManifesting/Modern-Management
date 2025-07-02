@@ -90,21 +90,13 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/inventory/mobile",
           className: "inventory-link mobile-brand",
         },
-        {
-          title: "Animated Cards",
-          path: "/inventory/animated",
-          className: "inventory-link enhanced-brand",
-        },
+
         {
           title: "Products",
           path: "/products-inventory",
           className: "inventory-link primary-brand",
         },
-        {
-          title: "CSV Validator",
-          path: "/csv-validator",
-          className: "inventory-link specialty-brand",
-        },
+
 
       ]
     },
