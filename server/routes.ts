@@ -20,6 +20,307 @@ const setCachedData = (key: string, data: any, ttl: number = 30000) => {
   cache.set(key, { data, timestamp: Date.now(), ttl });
 };
 
+// HTML generation for comprehensive menu
+const generateComprehensiveMenuHTML = (menu: any) => {
+  const sectionsHTML = menu.sections.map((section: any) => {
+    const itemsHTML = section.items.map((item: any) => `
+      <div class="product-card">
+        <div class="product-image">
+          ${item.image ? `<img src="${item.image}" alt="${item.name}" />` : '<div class="no-image">📸</div>'}
+        </div>
+        <div class="product-info">
+          <h3 class="product-name">${item.name}</h3>
+          ${item.weight ? `<p class="weight">${item.weight}</p>` : ''}
+          ${item.tier ? `<span class="tier-badge">${item.tier}</span>` : ''}
+          ${item.thcaPercentage ? `<span class="thca-badge">THCa: ${item.thcaPercentage}</span>` : ''}
+          <div class="pricing">
+            <span class="price">$${item.price.toFixed(2)}</span>
+            ${item.pricePerGram ? `<span class="price-per-gram">$${item.pricePerGram.toFixed(2)}/g</span>` : ''}
+          </div>
+          <div class="stock-info">
+            <span class="quantity ${item.lowStock ? 'low-stock' : ''}">${item.quantity} in stock</span>
+          </div>
+          <div class="action-buttons">
+            <a href="${item.orderLink}" class="btn order-btn">🛒 Order Now</a>
+            ${item.coaLink ? `<a href="${item.coaLink}" class="btn coa-btn">📋 COA</a>` : ''}
+            ${item.mediaLink ? `<a href="${item.mediaLink}" class="btn media-btn">📱 Media</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <section class="menu-section">
+        <div class="section-header">
+          <h2>${section.title}</h2>
+          <p class="section-description">${section.description}</p>
+          <div class="section-stats">
+            <span>${section.items.length} items</span>
+            <span>${section.totalQuantity} units</span>
+            <span>$${section.totalValue.toFixed(2)} total value</span>
+          </div>
+        </div>
+        <div class="products-grid">
+          ${itemsHTML}
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Gold Standard CBD - Complete Product Menu</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+          color: #ffffff;
+          line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { 
+          text-align: center; 
+          margin-bottom: 40px; 
+          padding: 40px 0;
+          background: linear-gradient(135deg, #d4af37 0%, #228b22 100%);
+          border-radius: 20px;
+          margin-bottom: 40px;
+        }
+        .header h1 { 
+          font-size: 3em; 
+          margin-bottom: 10px; 
+          color: #000;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header .subtitle { 
+          font-size: 1.2em; 
+          color: #333;
+          margin-bottom: 20px;
+        }
+        .summary-stats {
+          display: flex;
+          justify-content: center;
+          gap: 30px;
+          margin-top: 20px;
+        }
+        .stat {
+          background: rgba(255,255,255,0.2);
+          padding: 15px 25px;
+          border-radius: 10px;
+          text-align: center;
+          color: #000;
+        }
+        .stat .number { font-size: 1.5em; font-weight: bold; }
+        .stat .label { font-size: 0.9em; opacity: 0.8; }
+        .menu-section { 
+          margin-bottom: 60px; 
+          background: rgba(255,255,255,0.05);
+          border-radius: 15px;
+          padding: 30px;
+          backdrop-filter: blur(10px);
+        }
+        .section-header { 
+          margin-bottom: 30px; 
+          text-align: center;
+          border-bottom: 2px solid #d4af37;
+          padding-bottom: 20px;
+        }
+        .section-header h2 { 
+          font-size: 2.2em; 
+          color: #d4af37; 
+          margin-bottom: 10px;
+        }
+        .section-description { 
+          font-size: 1.1em; 
+          color: #cccccc; 
+          margin-bottom: 15px;
+        }
+        .section-stats {
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          font-size: 0.9em;
+          color: #888;
+        }
+        .section-stats span {
+          background: rgba(212,175,55,0.2);
+          padding: 5px 15px;
+          border-radius: 20px;
+        }
+        .products-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+          gap: 20px; 
+        }
+        .product-card { 
+          background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+          border-radius: 15px; 
+          padding: 20px; 
+          border: 1px solid #333;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .product-card:hover { 
+          transform: translateY(-5px); 
+          box-shadow: 0 10px 30px rgba(212,175,55,0.3);
+          border-color: #d4af37;
+        }
+        .product-image { 
+          text-align: center; 
+          margin-bottom: 15px; 
+          height: 150px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.05);
+          border-radius: 10px;
+        }
+        .product-image img { 
+          max-width: 100%; 
+          max-height: 100%; 
+          border-radius: 8px; 
+        }
+        .no-image { 
+          font-size: 3em; 
+          color: #666; 
+        }
+        .product-name { 
+          font-size: 1.3em; 
+          margin-bottom: 10px; 
+          color: #d4af37;
+          font-weight: bold;
+        }
+        .weight { 
+          font-size: 1em; 
+          color: #228b22; 
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+        .tier-badge, .thca-badge { 
+          display: inline-block; 
+          background: linear-gradient(45deg, #d4af37, #228b22); 
+          color: #000; 
+          padding: 4px 8px; 
+          border-radius: 12px; 
+          font-size: 0.8em; 
+          margin: 2px;
+          font-weight: bold;
+        }
+        .pricing { 
+          margin: 15px 0; 
+          text-align: center;
+        }
+        .price { 
+          font-size: 1.4em; 
+          font-weight: bold; 
+          color: #d4af37; 
+        }
+        .price-per-gram { 
+          font-size: 0.9em; 
+          color: #888; 
+          margin-left: 10px;
+        }
+        .stock-info { 
+          text-align: center; 
+          margin: 10px 0; 
+        }
+        .quantity { 
+          padding: 5px 10px; 
+          border-radius: 15px; 
+          background: rgba(34,139,34,0.2);
+          color: #228b22;
+          font-weight: bold;
+        }
+        .low-stock { 
+          background: rgba(255,0,0,0.2) !important; 
+          color: #ff6b6b !important; 
+        }
+        .action-buttons { 
+          display: flex; 
+          gap: 8px; 
+          margin-top: 15px;
+          flex-wrap: wrap;
+        }
+        .btn { 
+          flex: 1;
+          padding: 8px 12px; 
+          border-radius: 8px; 
+          text-decoration: none; 
+          text-align: center; 
+          font-weight: bold;
+          font-size: 0.85em;
+          transition: all 0.3s ease;
+          min-width: 70px;
+        }
+        .order-btn { 
+          background: linear-gradient(45deg, #d4af37, #f4d03f); 
+          color: #000; 
+        }
+        .order-btn:hover { 
+          background: linear-gradient(45deg, #f4d03f, #d4af37); 
+          transform: scale(1.05);
+        }
+        .coa-btn { 
+          background: linear-gradient(45deg, #228b22, #32cd32); 
+          color: #fff; 
+        }
+        .coa-btn:hover { 
+          background: linear-gradient(45deg, #32cd32, #228b22); 
+          transform: scale(1.05);
+        }
+        .media-btn { 
+          background: linear-gradient(45deg, #6a5acd, #9370db); 
+          color: #fff; 
+        }
+        .media-btn:hover { 
+          background: linear-gradient(45deg, #9370db, #6a5acd); 
+          transform: scale(1.05);
+        }
+        @media (max-width: 768px) {
+          .header h1 { font-size: 2em; }
+          .products-grid { grid-template-columns: 1fr; }
+          .summary-stats { flex-direction: column; gap: 10px; }
+          .action-buttons { flex-direction: column; }
+          .btn { flex: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🌿 Gold Standard CBD</h1>
+          <p class="subtitle">Premium Cannabis Products Menu</p>
+          <div class="summary-stats">
+            <div class="stat">
+              <div class="number">${menu.summary.totalItems}</div>
+              <div class="label">Total Products</div>
+            </div>
+            <div class="stat">
+              <div class="number">$${menu.summary.totalValue.toFixed(0)}</div>
+              <div class="label">Total Value</div>
+            </div>
+            <div class="stat">
+              <div class="number">${menu.sections.length}</div>
+              <div class="label">Categories</div>
+            </div>
+          </div>
+        </div>
+        ${sectionsHTML}
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+          <p style="color: #888;">Generated on ${new Date(menu.summary.generatedAt).toLocaleString()}</p>
+          <p style="color: #d4af37; margin-top: 10px;">Contact: goldcbd.com | 541-291-2404</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // Function to parse lab results from product export data
 const getLabResultsForStrain = async (strainName: string) => {
   try {
@@ -2617,6 +2918,45 @@ export function registerRoutes(app: any, storage: any) {
 
 
 
+
+  // Comprehensive Stylized Menu Generator
+  app.get("/api/comprehensive-menu", async (_req: Request, res: Response) => {
+    try {
+      const { ComprehensiveMenuGenerator } = await import('./services/comprehensive-menu-generator.ts');
+      const menuGenerator = new ComprehensiveMenuGenerator(storage);
+      
+      const comprehensiveMenu = await menuGenerator.generateStylizedMenu();
+      
+      log(`Generated comprehensive menu with ${comprehensiveMenu.sections.length} sections`, 'comprehensive-menu');
+      
+      res.json({
+        success: true,
+        menu: comprehensiveMenu,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      log(`Comprehensive menu error: ${error}`, 'comprehensive-menu');
+      res.status(500).json({ error: "Failed to generate comprehensive menu" });
+    }
+  });
+
+  // Comprehensive Menu HTML View
+  app.get("/api/comprehensive-menu-html", async (_req: Request, res: Response) => {
+    try {
+      const { ComprehensiveMenuGenerator } = await import('./services/comprehensive-menu-generator.ts');
+      const menuGenerator = new ComprehensiveMenuGenerator(storage);
+      
+      const comprehensiveMenu = await menuGenerator.generateStylizedMenu();
+      
+      const html = generateComprehensiveMenuHTML(comprehensiveMenu);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      log(`Comprehensive menu HTML error: ${error}`, 'comprehensive-menu');
+      res.status(500).json({ error: "Failed to generate comprehensive menu HTML" });
+    }
+  });
 
   // Missing catalog endpoints
   app.get("/api/live-menu", async (_req: Request, res: Response) => {
