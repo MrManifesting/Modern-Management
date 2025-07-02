@@ -46,6 +46,11 @@ export const compressLargeResponse = (data: any): any => {
       quantity: item.quantity,
       status: item.status,
       basePrice: item.basePrice || item.base_price,
+      base_price: item.base_price,
+      sale_price: item.sale_price,
+      cost_price: item.cost_price,
+      salePrice: item.salePrice || item.sale_price,
+      costPrice: item.costPrice || item.cost_price,
       category: item.category,
       weight: item.weight // Essential for cannabis product accuracy
     }));
