@@ -781,9 +781,53 @@ export function registerRoutes(app: any, storage: any) {
           thumbnailUrl = `/uploads/${thumbnailUrl}`;
         }
 
+        // Extract weight directly from product name (as user explained)
+        const extractWeightFromName = (name: string): string => {
+          if (!name) return 'Weight not specified';
+          
+          const nameLower = name.toLowerCase();
+          
+          // Check for gram variants
+          if (nameLower.includes('half gram')) return 'half gram';
+          if (nameLower.includes('1 gram') || nameLower.includes('one gram')) return '1 gram';
+          if (nameLower.includes('2 gram') || nameLower.includes('two gram')) return '2 grams';
+          if (nameLower.includes('3 gram') || nameLower.includes('three gram')) return '3 grams';
+          if (nameLower.includes('4 gram') || nameLower.includes('four gram')) return '4 grams';
+          if (nameLower.includes('5 gram') || nameLower.includes('five gram')) return '5 grams';
+          if (nameLower.includes('7 gram') || nameLower.includes('seven gram')) return '7 grams';
+          if (nameLower.includes('14 gram') || nameLower.includes('fourteen gram')) return '14 grams';
+          if (nameLower.includes('28 gram') || nameLower.includes('twenty eight gram')) return '28 grams';
+          
+          // Check for ounce variants
+          if (nameLower.includes('eighth') || nameLower.includes('1/8')) return 'eighth';
+          if (nameLower.includes('quarter ounce') || nameLower.includes('1/4 ounce')) return 'quarter ounce';
+          if (nameLower.includes('half ounce') || nameLower.includes('1/2 ounce')) return 'half ounce';
+          if (nameLower.includes('1 ounce') || nameLower.includes('one ounce')) return '1 ounce';
+          
+          // Check for pound variants
+          if (nameLower.includes('quarter pound') || nameLower.includes('1/4 pound')) return 'quarter pound';
+          if (nameLower.includes('half pound') || nameLower.includes('1/2 pound')) return 'half pound';
+          if (nameLower.includes('1 pound') || nameLower.includes('one pound') || nameLower.includes('pound')) return '1 pound';
+          
+          // Check for count-based items
+          if (nameLower.includes('100 count')) return '100 count';
+          if (nameLower.includes('50 count')) return '50 count';
+          if (nameLower.includes('25 count')) return '25 count';
+          if (nameLower.includes('10 count')) return '10 count';
+          if (nameLower.includes('5 count')) return '5 count';
+          
+          // Check for flower products (default to appropriate weight)
+          if (nameLower.includes('flower') || nameLower.includes('book flower')) {
+            // Most flower products are pounds unless specified otherwise
+            return nameLower.includes('smalls') || nameLower.includes('small') ? '1 pound (smalls)' : '1 pound';
+          }
+          
+          return 'Weight not specified';
+        };
+
         // Get real Shopify data for this item
         let shopifyData = null;
-        let realWeight = item.weight;
+        let realWeight = extractWeightFromName(item.name) || item.weight;
         let realPrice = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
         
         // Try to find matching Shopify product
