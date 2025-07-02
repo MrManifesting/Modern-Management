@@ -4618,31 +4618,107 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Enhanced live inventory update endpoint
+  // Enhanced live inventory update endpoint with real Shopify data
   app.get('/api/inventory/live-update', async (req: Request, res: Response) => {
     try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Shopify access token not configured for live updates" 
+        });
+      }
+      
       // Get current internal inventory
       const internalItems = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
       
-      // For now, return a successful sync status to fix the UI error
-      // The actual Shopify inventory levels API requires specific setup
-      const itemsWithQuantity = internalItems.filter(item => item.quantity > 0);
-      const itemsWithPricing = internalItems.filter(item => item.base_price && item.base_price > 0);
+      // Fetch all Shopify products with their variants to get current inventory
+      const productsResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!productsResponse.ok) {
+        throw new Error(`Shopify products fetch failed: ${productsResponse.statusText}`);
+      }
+      
+      const productsData = await productsResponse.json();
+      const products = productsData.products || [];
+      
+      let updatedCount = 0;
+      const updates = [];
+      let matchedItems = 0;
+      
+      // Match internal items with Shopify products and update quantities/pricing
+      for (const item of internalItems) {
+        let matched = false;
+        
+        // Try to match by SKU or product name
+        for (const product of products) {
+          for (const variant of product.variants) {
+            const skuMatch = variant.sku && item.sku && variant.sku === item.sku;
+            const nameMatch = product.title.toLowerCase().includes(item.name.toLowerCase()) ||
+                             item.name.toLowerCase().includes(product.title.toLowerCase());
+            
+            if (skuMatch || nameMatch) {
+              matched = true;
+              matchedItems++;
+              
+              const updateData: any = {};
+              let hasUpdates = false;
+              
+              // Update quantity if different
+              if (variant.inventory_quantity !== null && variant.inventory_quantity !== item.quantity) {
+                updateData.quantity = variant.inventory_quantity;
+                hasUpdates = true;
+              }
+              
+              // Update pricing if we have valid price and current pricing is null/0
+              const variantPrice = parseFloat(variant.price) || 0;
+              if (variantPrice > 0 && (!item.base_price || item.base_price === 0)) {
+                updateData.base_price = variantPrice;
+                hasUpdates = true;
+              }
+              
+              // Update Shopify IDs for future syncing
+              if (!item.shopifyProductId || !item.shopifyVariantId) {
+                updateData.shopifyProductId = product.id;
+                updateData.shopifyVariantId = variant.id;
+                hasUpdates = true;
+              }
+              
+              if (hasUpdates) {
+                await storage.updateItem(item.id, updateData);
+                updates.push({
+                  itemId: item.id,
+                  itemName: item.name,
+                  oldQuantity: item.quantity,
+                  newQuantity: updateData.quantity || item.quantity,
+                  oldPrice: item.base_price,
+                  newPrice: updateData.base_price || item.base_price,
+                  matched: skuMatch ? 'SKU' : 'Name'
+                });
+                updatedCount++;
+              }
+              break;
+            }
+          }
+          if (matched) break;
+        }
+      }
       
       res.json({
         success: true,
-        message: `Live sync operational: ${itemsWithQuantity.length} items with stock, ${itemsWithPricing.length} items with pricing`,
-        updatedCount: 0,
-        updates: [],
+        message: `Live sync completed: ${updatedCount} items updated, ${matchedItems} items matched with Shopify`,
+        updatedCount,
+        matchedItems,
+        updates: updates.slice(0, 10), // Show first 10 updates
         totalProcessed: internalItems.length,
-        itemsWithShopifyIds: internalItems.filter(item => item.shopifyVariantId).length,
-        timestamp: new Date().toISOString(),
-        status: {
-          itemsWithStock: itemsWithQuantity.length,
-          itemsWithPricing: itemsWithPricing.length,
-          totalItems: internalItems.length,
-          syncStatus: "Connected to Shopify - Real-time sync ready"
-        }
+        totalShopifyProducts: products.length,
+        timestamp: new Date().toISOString()
       });
       
     } catch (error) {
