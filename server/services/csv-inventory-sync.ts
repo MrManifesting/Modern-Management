@@ -296,6 +296,10 @@ export class CSVInventorySync {
     sortBy?: 'strain' | 'quantity' | 'tier' | 'price';
     sortOrder?: 'asc' | 'desc';
     format?: 'csv' | 'json' | 'html';
+    theme?: string | any;
+    branding?: any;
+    includeImages?: boolean;
+    filterOptions?: any;
   } = {}): Promise<{ data: any; format: string; timestamp: Date }> {
     const {
       includeTiers = [],
@@ -378,8 +382,8 @@ export class CSVInventorySync {
   private async formatMenuAsHTML(items: MenuTabItem[], options: any): Promise<string> {
     const timestamp = new Date().toLocaleString();
     
-    // Extract branding and theme from options
-    const branding = options.branding || {
+    // Extract branding and theme from options with proper defaults
+    const defaultBranding = {
       companyName: 'Gold Standard CBD',
       subtitle: 'Premium THCA Flower Wholesale',
       contactInfo: {
@@ -392,13 +396,84 @@ export class CSVInventorySync {
       description: 'Premium quality THCA flower for wholesale distribution'
     };
 
-    const theme = options.theme || {
-      primaryColor: '#D4AF37',
-      secondaryColor: '#228B22',
-      backgroundColor: '#0F0F0F',
-      textColor: '#FFFFFF',
-      accentColor: '#FFD700'
+    const branding = {
+      ...defaultBranding,
+      ...options.branding,
+      contactInfo: {
+        ...defaultBranding.contactInfo,
+        ...(options.branding?.contactInfo || {})
+      }
     };
+
+    // Define theme colors based on theme name or custom theme object
+    let theme;
+    if (typeof options.theme === 'string') {
+      // Predefined themes
+      switch (options.theme) {
+        case 'professional':
+          theme = {
+            primaryColor: '#2C3E50',
+            secondaryColor: '#3498DB',
+            backgroundColor: '#F8F9FA',
+            textColor: '#2C3E50',
+            accentColor: '#E74C3C'
+          };
+          break;
+        case 'modern':
+          theme = {
+            primaryColor: '#6C63FF',
+            secondaryColor: '#FF6B6B',
+            backgroundColor: '#1A1A2E',
+            textColor: '#FFFFFF',
+            accentColor: '#4ECDC4'
+          };
+          break;
+        case 'cannabis':
+          theme = {
+            primaryColor: '#D4AF37',
+            secondaryColor: '#228B22',
+            backgroundColor: '#0F0F0F',
+            textColor: '#FFFFFF',
+            accentColor: '#FFD700'
+          };
+          break;
+        case 'wholesale':
+          theme = {
+            primaryColor: '#1B4332',
+            secondaryColor: '#40916C',
+            backgroundColor: '#F1FAEE',
+            textColor: '#1B4332',
+            accentColor: '#F77F00'
+          };
+          break;
+        case 'luxury':
+          theme = {
+            primaryColor: '#8B0000',
+            secondaryColor: '#DAA520',
+            backgroundColor: '#000000',
+            textColor: '#FFFFFF',
+            accentColor: '#FFD700'
+          };
+          break;
+        default:
+          theme = {
+            primaryColor: '#D4AF37',
+            secondaryColor: '#228B22',
+            backgroundColor: '#0F0F0F',
+            textColor: '#FFFFFF',
+            accentColor: '#FFD700'
+          };
+      }
+    } else {
+      // Custom theme object
+      theme = options.theme || {
+        primaryColor: '#D4AF37',
+        secondaryColor: '#228B22',
+        backgroundColor: '#0F0F0F',
+        textColor: '#FFFFFF',
+        accentColor: '#FFD700'
+      };
+    }
     
     const html = `
 <!DOCTYPE html>

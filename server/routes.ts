@@ -5584,7 +5584,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       await csvSync.loadMenuTabCSV();
       await csvSync.syncMenuTabWithShopifyQuantities();
       
-      const menuData = await csvSync.generateCustomMenu({
+      const options = {
         format: 'html',
         theme: 'professional',
         branding: {
@@ -5599,7 +5599,10 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
             address: 'Contact for location'
           }
         }
-      });
+      };
+      
+      console.log('Options passed to generateCustomMenu:', JSON.stringify(options, null, 2));
+      const menuData = await csvSync.generateCustomMenu(options);
 
       res.setHeader('Content-Type', 'text/html');
       res.send(menuData.data);
