@@ -1,0 +1,785 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cannabis Cannabis Co - Cannabis Menu - 7/2/2025, 8:35:30 AM</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+          font-family: 'Arial', sans-serif; 
+          background: linear-gradient(135deg, #0F0F0Fdd, #0F0F0Fff);
+          color: #FFFFFF;
+          line-height: 1.6;
+          min-height: 100vh;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header { 
+          text-align: center; 
+          margin-bottom: 40px; 
+          padding: 30px 20px;
+          background: linear-gradient(45deg, #D4AF3720, #228B2220);
+          border-radius: 15px;
+          backdrop-filter: blur(10px);
+          border: 1px solid #D4AF3740;
+        }
+        
+        .logo-container {
+          margin-bottom: 20px;
+        }
+        
+        .logo-image {
+          max-height: 80px;
+          width: auto;
+          margin-bottom: 15px;
+        }
+        
+        .company-name { 
+          color: #D4AF37; 
+          font-size: 3em; 
+          font-weight: bold; 
+          margin-bottom: 10px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+          background: linear-gradient(45deg, #D4AF37, #FFD700);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .subtitle { 
+          color: #228B22; 
+          font-size: 1.2em;
+          margin-bottom: 15px;
+          font-weight: 500;
+        }
+        
+        .description {
+          color: #FFFFFFbb;
+          font-size: 1em;
+          margin-bottom: 20px;
+        }
+        
+        .contact-info {
+          display: flex;
+          justify-content: center;
+          gap: 30px;
+          flex-wrap: wrap;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #D4AF3740;
+        }
+        
+        .contact-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #FFFFFFdd;
+          font-size: 0.9em;
+        }
+        
+        .contact-icon {
+          width: 16px;
+          height: 16px;
+          background: #FFD700;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        
+        .stats-bar {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          margin: 30px 0;
+          padding: 20px;
+          background: #0F0F0F80;
+          border-radius: 12px;
+          backdrop-filter: blur(5px);
+          border: 1px solid #D4AF3730;
+        }
+        
+        .stat-item {
+          text-align: center;
+        }
+        
+        .stat-number {
+          font-size: 2em;
+          font-weight: bold;
+          color: #FFD700;
+          display: block;
+        }
+        
+        .stat-label {
+          font-size: 0.9em;
+          color: #FFFFFFbb;
+        }
+        
+        .menu-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+          gap: 25px; 
+          margin-top: 30px;
+        }
+        
+        .strain-card { 
+          background: linear-gradient(145deg, #0F0F0Fdd, #0F0F0Faa);
+          border-radius: 15px; 
+          padding: 25px; 
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          backdrop-filter: blur(10px);
+          border: 1px solid #D4AF3740;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .strain-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #D4AF37, #FFD700, #228B22);
+        }
+        
+        .strain-card:hover { 
+          transform: translateY(-5px); 
+          box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+          border-color: #D4AF3780;
+        }
+        
+        .strain-name { 
+          font-size: 1.5em; 
+          font-weight: bold; 
+          color: #D4AF37; 
+          margin-bottom: 12px;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .tier-badge { 
+          display: inline-block; 
+          padding: 6px 15px; 
+          border-radius: 20px; 
+          font-size: 0.85em; 
+          font-weight: bold; 
+          margin-bottom: 15px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .tier-exotic { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; }
+        .tier-top-shelf { background: linear-gradient(45deg, #FFD700, #D4AF37); color: #000; }
+        .tier-aaa { background: linear-gradient(45deg, #45b7d1, #6dd5ed); color: white; }
+        .tier-aa { background: linear-gradient(45deg, #96ceb4, #b8e6d3); color: #333; }
+        .tier-classic { background: linear-gradient(45deg, #ffeaa7, #fdcb6e); color: #333; }
+        
+        .availability { 
+          font-size: 1.3em; 
+          font-weight: bold; 
+          color: #228B22; 
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .availability-icon {
+          width: 12px;
+          height: 12px;
+          background: #228B22;
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+        
+        .pricing { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 12px; 
+          margin-top: 15px;
+        }
+        
+        .price-item { 
+          text-align: center; 
+          padding: 12px; 
+          background: linear-gradient(145deg, #0F0F0Fbb, #0F0F0F88);
+          border-radius: 8px; 
+          border: 1px solid #D4AF3730;
+          transition: all 0.2s ease;
+        }
+        
+        .price-item:hover {
+          background: linear-gradient(145deg, #D4AF3720, #228B2220);
+          border-color: #D4AF3760;
+        }
+        
+        .price-label { 
+          font-size: 0.8em; 
+          color: #FFFFFFaa; 
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .price-value { 
+          font-weight: bold; 
+          color: #FFD700; 
+          font-size: 1.1em;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+          flex-wrap: wrap;
+        }
+        
+        .btn {
+          padding: 8px 16px;
+          border-radius: 6px;
+          text-decoration: none;
+          font-size: 0.9em;
+          font-weight: 600;
+          text-align: center;
+          transition: all 0.2s ease;
+          border: none;
+          cursor: pointer;
+        }
+        
+        .btn-primary {
+          background: linear-gradient(45deg, #D4AF37, #FFD700);
+          color: #000;
+        }
+        
+        .btn-secondary {
+          background: linear-gradient(45deg, #228B22, #228B22dd);
+          color: white;
+        }
+        
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .footer { 
+          text-align: center; 
+          margin-top: 60px; 
+          padding: 30px;
+          background: linear-gradient(45deg, #0F0F0Fdd, #0F0F0Faa);
+          border-radius: 15px;
+          border: 1px solid #D4AF3740;
+        }
+        
+        .footer-logo {
+          font-size: 1.5em;
+          color: #D4AF37;
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+          .company-name { font-size: 2em; }
+          .menu-grid { grid-template-columns: 1fr; }
+          .contact-info { flex-direction: column; gap: 15px; }
+          .stats-bar { flex-direction: column; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                
+            </div>
+            <div class="company-name">Cannabis Cannabis Co</div>
+            <div class="subtitle">Custom Cannabis Menu</div>
+            <div class="description">Demonstration of cannabis theme customization</div>
+            
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>📞 541-295-8811</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>✉️ wholesale@goldcbd.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>🌐 goldcbd.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon"></span>
+                    <span>📍 Oregon, USA</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-number">12</span>
+                <span class="stat-label">Available Strains</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">323</span>
+                <span class="stat-label">Total Pounds</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">5</span>
+                <span class="stat-label">Quality Tiers</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">7/2/2025</span>
+                <span class="stat-label">Updated</span>
+            </div>
+        </div>
+        
+        <div class="menu-grid">
+            
+                <div class="strain-card">
+                    <div class="strain-name">Bluenicorn</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        1 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/bluenicorn" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/bluenicorn" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/B-TOP-2904" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Cookies and Cream</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        17 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/cookies-and-cream" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/cookies-and-cream" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/CAC-TOP-2934" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Gelato 41</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        1 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/gelato-41" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/gelato-41" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/G4-TOP-3345" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">GMO</div>
+                    <div class="tier-badge tier-classic">CLASSIC RESERVE</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        32 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$550.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$440.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$385.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$357.50</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/gmo" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/gmo" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/G-CLA-3169" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Hash Burger</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        36 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/hash-burger" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/hash-burger" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/HB-TOP-3401" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Hashburger</div>
+                    <div class="tier-badge tier-aa">AA INDOOR - SMALLS</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        19 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$550.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$440.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$385.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$357.50</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/hashburger" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/hashburger" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/H-AAI-3401" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Jiffy Cake</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        1 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/jiffy-cake" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/jiffy-cake" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/JC-TOP-2511" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Jungle Pie</div>
+                    <div class="tier-badge tier-aa">AA INDOOR</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        7 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$950.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$760.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$665.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$617.50</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/jungle-pie" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/jungle-pie" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/JP-AAI-3442" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Mule Fuel</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        55 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$775.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$620.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$542.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$503.75</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/mule-fuel" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/mule-fuel" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/MF-TOP-3576" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Rainbow Sherbet #11</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF - SMALLS</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        50 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$510.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$408.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$357.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$331.50</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/rainbow-sherbet--11" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/rainbow-sherbet--11" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/RS#-TOP-2957" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Strawberry Cough</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        52 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$725.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$580.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$507.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$471.25</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/strawberry-cough" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/strawberry-cough" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/SC-TOP-2456" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+                <div class="strain-card">
+                    <div class="strain-name">Sunday Driver</div>
+                    <div class="tier-badge tier-top-shelf">TOP SHELF - SMALLS</div>
+                    <div class="availability">
+                        <span class="availability-icon"></span>
+                        52 lbs available
+                    </div>
+                    <div class="pricing">
+                        <div class="price-item">
+                            <div class="price-label">Bulk Price</div>
+                            <div class="price-value">$525.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Distro 25lbs+</div>
+                            <div class="price-value">$420.00</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 50lbs+</div>
+                            <div class="price-value">$367.50</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Master 100lbs+</div>
+                            <div class="price-value">$341.25</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="https://gold-standard-cbd.com/products/sunday-driver" class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                        <a href="https://gold-standard-cbd.com/coa/sunday-driver" class="btn btn-secondary" target="_blank">📄 View COA</a>
+                        <a href="https://gold-standard-cbd.com/media/download/SD-TOP-3077" class="btn btn-secondary" target="_blank">📥 Download Media</a>
+                        <a href="tel:541-295-8811" class="btn btn-secondary">📞 Call</a>
+                    </div>
+                    
+                </div>
+              
+        </div>
+        
+        <div class="footer">
+            <div class="footer-logo">Cannabis Cannabis Co</div>
+            <p>Generated on 7/2/2025, 8:35:30 AM</p>
+            <p>Demonstration of cannabis theme customization</p>
+            <div style="margin-top: 15px;">
+                <strong>Contact Information:</strong><br>
+                📞 541-295-8811 | 
+                ✉️ wholesale@goldcbd.com | 
+                🌐 goldcbd.com | 
+                📍 Oregon, USA
+            </div>
+        </div>
+    </div>
+</body>
+</html>
