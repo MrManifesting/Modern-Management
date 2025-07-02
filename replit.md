@@ -125,15 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- January 2, 2025: **CRITICAL INVENTORY CONSISTENCY FIX - WEIGHT DISPLAY MATCHES BETWEEN INVENTORY LIST AND ITEM DETAIL VIEWS**
-  - Fixed critical consistency issue where inventory list showed correct weights but item detail views showed different weights
-  - Updated ViewItemModal and EditItemModal to use identical weight interpretation logic as enhanced inventory endpoint
+- January 2, 2025: **COMPLETE ENHANCED INVENTORY REMOVAL AND WEIGHT CONSISTENCY FIX**
+  - Completely removed enhanced inventory system per user request - deleted /api/inventory/enhanced endpoint and enhanced-inventory.tsx page
+  - Fixed critical weight consistency issue where item detail views showed different weights than inventory list
+  - Updated ViewItemModal and EditItemModal to use identical weight interpretation logic as standard inventory
   - Database corrected for problematic items: Half Gram (0.5 grams, $8), 2 GRAMS (2 grams, $15) with realistic pricing
-  - Enhanced inventory system now uses consistent weight logic across all views: inventory list, item details, and edit forms
-  - Implemented proper weight interpretation that correctly identifies "Half Gram" as "0.5 grams" and "2 GRAMS" as "2 grams"
+  - System now uses single consistent inventory system through /api/items endpoint with standard ProductsInventoryPage
+  - All weight display logic unified across inventory list, ViewItemModal, and EditItemModal components
   - System ensures pound items display as pounds consistently, gram items display as grams consistently
-  - Fixed critical user experience issue where opening pound variants would incorrectly show gram weights in detail view
-  - All weight display logic now unified across inventory list, ViewItemModal, and EditItemModal components
+  - Removed all enhanced inventory references from codebase - streamlined to single inventory management system
   - Shopify store integration confirmed working with goldcbd.com domain for authentic product data
 - July 2, 2025: **COMPREHENSIVE SECURITY AUDIT AND VULNERABILITY REMEDIATION COMPLETED**
   - Successfully investigated CVE-2025-30208 Vite vulnerability alert and confirmed as false positive (application uses secure Vite 6.3.5)
