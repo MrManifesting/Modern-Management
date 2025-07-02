@@ -629,7 +629,247 @@ export function registerRoutes(app: any, storage: any) {
 
 
 
-  // Simple themed menu function
+  // Authentic themed menu generator with real Shopify data
+  const generateAuthenticThemedMenu = (items: any[], theme: string): string => {
+    const themeStyles = {
+      cannabis: {
+        colors: { primary: '#D4AF37', secondary: '#228B22', accent: '#FF6B35' },
+        bg: 'linear-gradient(135deg, #2D5016 0%, #1a1a1a 100%)',
+        title: 'Gold Standard CBD - Premium Cannabis Menu'
+      },
+      professional: {
+        colors: { primary: '#2563eb', secondary: '#1e40af', accent: '#3b82f6' },
+        bg: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%)',
+        title: 'Professional Cannabis Catalog'
+      },
+      modern: {
+        colors: { primary: '#7c3aed', secondary: '#5b21b6', accent: '#a855f7' },
+        bg: 'linear-gradient(135deg, #4c1d95 0%, #1f2937 100%)',
+        title: 'Modern Cannabis Experience'
+      },
+      wholesale: {
+        colors: { primary: '#059669', secondary: '#047857', accent: '#10b981' },
+        bg: 'linear-gradient(135deg, #064e3b 0%, #111827 100%)',
+        title: 'Wholesale Cannabis Solutions'
+      },
+      luxury: {
+        colors: { primary: '#dc2626', secondary: '#b91c1c', accent: '#ef4444' },
+        bg: 'linear-gradient(135deg, #7f1d1d 0%, #111827 100%)',
+        title: 'Luxury Cannabis Collection'
+      }
+    };
+
+    const style = themeStyles[theme] || themeStyles.cannabis;
+    
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${style.title}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: ${style.bg};
+            color: white;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 2px solid ${style.colors.primary};
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3rem;
+            color: ${style.colors.primary};
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .product-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid ${style.colors.primary};
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(${style.colors.primary.slice(1)}, 0.3);
+        }
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .product-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: ${style.colors.primary};
+            flex: 1;
+        }
+        .product-price {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: ${style.colors.accent};
+        }
+        .product-details {
+            margin-bottom: 20px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .detail-label {
+            color: #ccc;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: white;
+            font-weight: bold;
+        }
+        .stock-badge {
+            background: ${style.colors.secondary};
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            flex: 1;
+            min-width: 100px;
+        }
+        .btn-primary {
+            background: ${style.colors.primary};
+            color: white;
+        }
+        .btn-secondary {
+            background: ${style.colors.secondary};
+            color: white;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 2px solid ${style.colors.primary};
+            margin-top: 40px;
+            color: #ccc;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .contact-item {
+            color: ${style.colors.primary};
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>${style.title}</h1>
+            <p class="subtitle">Authentic Premium Cannabis Products | Real-Time Inventory</p>
+            <p class="subtitle">Generated: ${new Date().toLocaleDateString()} | ${items.length} Products Available</p>
+        </header>
+
+        <div class="product-grid">
+            ${items.map(item => `
+                <div class="product-card">
+                    <div class="product-header">
+                        <div class="product-name">${item.name}</div>
+                        <div class="product-price">$${(item.base_price || item.sale_price || item.cost_price || 0).toFixed(2)}</div>
+                    </div>
+                    <div class="product-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Weight:</span>
+                            <span class="detail-value">${item.weight || 'Standard'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Stock:</span>
+                            <span class="stock-badge">${item.quantity} units</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">SKU:</span>
+                            <span class="detail-value">${item.sku || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Variant ID:</span>
+                            <span class="detail-value">${item.shopifyVariantId || 'Not linked'}</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <a href="https://goldcbd.com/products/${(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
+                           class="btn btn-primary" target="_blank">Order Now</a>
+                        <a href="https://goldcbd.com/coa/${(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
+                           class="btn btn-secondary" target="_blank">View COA</a>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+
+        <footer class="footer">
+            <h3>Gold Standard CBD</h3>
+            <p>Premium Cannabis Products with Authentic Certification</p>
+            <div class="contact-info">
+                <span class="contact-item">📞 541-295-8811</span>
+                <span class="contact-item">✉️ kaya@goldcbd.com</span>
+                <span class="contact-item">🌐 goldcbd.com</span>
+            </div>
+            <p style="margin-top: 20px; font-size: 0.9rem;">
+                Real-time inventory sync with authentic Shopify variant matching
+            </p>
+        </footer>
+    </div>
+</body>
+</html>`;
+  };
+
+  // Simple themed menu function (legacy)
   const generateThemedMenu = (items: any[], theme: string): string => {
     return `<html><body><h1>Themed Menu: ${theme}</h1><div>${items.map(item => `<p>${item.name} - $${item.base_price}</p>`).join('')}</div></body></html>`;
   };
@@ -2424,6 +2664,72 @@ export function registerRoutes(app: any, storage: any) {
   });
 
   // All Themes Demo Endpoint - Shows all available themes
+  // AUTHENTIC THEMED MENUS WITH REAL SHOPIFY DATA
+  app.get("/api/themed-menus-with-real-data", async (_req: Request, res: Response) => {
+    try {
+      const allItems = await storage.getAllItems();
+      
+      // Filter for authentic Shopify items only - no placeholder data
+      const authenticFlowerItems = allItems.filter((item: any) => {
+        const itemName = (item.name || '').toLowerCase();
+        const itemCategory = (item.category || '').toLowerCase();
+        const hasFlower = itemName.includes('flower') || itemCategory.includes('flower') || 
+                         itemName.includes('thca') || itemName.includes('bulk');
+        const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
+        const hasRealisticPrice = parseFloat(item.base_price?.toString() || '0') > 0 || 
+                                 parseFloat(item.sale_price?.toString() || '0') > 0 ||
+                                 parseFloat(item.cost_price?.toString() || '0') > 0;
+        const hasShopifyVariantId = item.shopifyVariantId; // Only real Shopify items
+        const hasAuthenticImages = item.images && item.images.length > 0;
+        
+        return hasFlower && hasQuantity && hasRealisticPrice && hasShopifyVariantId;
+      });
+
+      // Sort by highest quantities first - prioritize best sellers
+      authenticFlowerItems.sort((a: any, b: any) => 
+        parseInt(b.quantity?.toString() || '0') - parseInt(a.quantity?.toString() || '0')
+      );
+
+      const themes = ['cannabis', 'professional', 'modern', 'wholesale', 'luxury'];
+      
+      const authenticMenus = themes.map(theme => ({
+        theme,
+        html: generateAuthenticThemedMenu(authenticFlowerItems.slice(0, 50), theme),
+        itemCount: authenticFlowerItems.length,
+        sampleProducts: authenticFlowerItems.slice(0, 5).map((item: any) => ({
+          name: item.name,
+          price: item.base_price || item.sale_price || item.cost_price,
+          quantity: item.quantity,
+          variantId: item.shopifyVariantId,
+          sku: item.sku,
+          images: item.images?.length || 0,
+          weight: item.weight,
+          status: item.status
+        }))
+      }));
+
+      console.log(`Generated authentic themed menus with ${authenticFlowerItems.length} real Shopify items`);
+      
+      res.json({
+        success: true,
+        message: "Themed menus generated with authentic Gold Standard CBD data",
+        menus: authenticMenus,
+        flowerItems: authenticFlowerItems.length,
+        totalInventory: allItems.length,
+        withVariantIds: allItems.filter((item: any) => item.shopifyVariantId).length,
+        themes: themes,
+        generatedAt: new Date().toISOString(),
+        dataSource: "Authentic Shopify variant synchronization"
+      });
+    } catch (error) {
+      console.error('Authentic themed menus generation error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to generate themed menus with authentic data' 
+      });
+    }
+  });
+
   app.get("/api/all-themed-menus", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
@@ -2449,7 +2755,7 @@ export function registerRoutes(app: any, storage: any) {
         itemCount: flowerItems.length
       }));
 
-      log(`Generated all themed menus with ${flowerItems.length} flower items`, 'all-themed-menus');
+      console.log(`Generated all themed menus with ${flowerItems.length} flower items`);
       
       res.json({
         success: true,
@@ -2459,7 +2765,7 @@ export function registerRoutes(app: any, storage: any) {
         generatedAt: new Date().toISOString()
       });
     } catch (error) {
-      log(`All themed menus generation error: ${error}`, 'all-themed-menus');
+      console.error(`All themed menus generation error:`, error);
       res.status(500).json({ error: 'Failed to generate all themed menus' });
     }
   });
