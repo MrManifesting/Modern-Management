@@ -24,6 +24,11 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Don't render anything if item is null
+  if (!item) {
+    return null;
+  }
+
   // Convert enhanced item to proper form data with all existing values
   const getFormDefaults = () => {
     if (!item) {
@@ -71,6 +76,8 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
   };
 
   const handleSubmit = async (formData: any) => {
+    if (!item?.id) return;
+    
     setIsLoading(true);
     
     try {
@@ -117,7 +124,7 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
           <DialogDescription>
-            Update the details for {item.name}
+            Update the details for {item?.name || 'this item'}
           </DialogDescription>
         </DialogHeader>
         
