@@ -2539,6 +2539,59 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Shopify credentials save endpoint
+  app.post("/api/credentials/shopify", async (req: Request, res: Response) => {
+    try {
+      const { credentials } = req.body;
+      
+      if (!credentials || !credentials.shopifyStore || !credentials.shopifyAccessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required Shopify credentials"
+        });
+      }
+
+      // In a real application, you would save these to a secure credential store
+      // For now, we'll validate them by testing the connection
+      
+      // Clean up store URL
+      let storeUrl = credentials.shopifyStore.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      if (!storeUrl.includes('myshopify.com')) {
+        storeUrl = `${storeUrl}.myshopify.com`;
+      }
+
+      // Test the credentials by making a test API call
+      const testResponse = await fetch(`https://${storeUrl}/admin/api/2023-10/shop.json`, {
+        method: 'GET',
+        headers: {
+          'X-Shopify-Access-Token': credentials.shopifyAccessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!testResponse.ok) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid Shopify credentials: ${testResponse.status} ${testResponse.statusText}`
+        });
+      }
+
+      const shopData = await testResponse.json();
+      
+      res.json({
+        success: true,
+        message: `Successfully validated credentials for ${shopData.shop?.name || storeUrl}`,
+        store: shopData.shop?.name || storeUrl
+      });
+    } catch (error) {
+      log(`Shopify credentials save error: ${error}`, 'shopify');
+      res.status(500).json({
+        success: false,
+        error: "Failed to save Shopify credentials"
+      });
+    }
+  });
+
   // Enhanced Shopify inventory sync endpoint
   app.post("/api/shopify/sync-inventory", async (_req: Request, res: Response) => {
     try {
