@@ -322,7 +322,8 @@ const ProductsInventoryPage: React.FC = () => {
     queryKey: ['/api/items'],
     queryFn: async () => {
       console.log("Fetching items from API...");
-      const items = await apiRequest('GET', '/api/items');
+      const response = await apiRequest('GET', '/api/items');
+      const items = await response.json();
       console.log("Fetched items:", items?.length || 0);
       
       return items.map((item: any) => {
