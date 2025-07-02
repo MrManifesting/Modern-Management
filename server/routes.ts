@@ -6080,6 +6080,235 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       res.status(500).json({ error: "Failed to serve file" });
     }
   });
+
+  // Customer Tiering System Based on Sales Data
+  app.get('/api/customers/tiers', async (req, res) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_DOMAIN;
+      const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!shopifyDomain || !shopifyAccessToken) {
+        return res.status(400).json({ error: 'Shopify credentials not configured' });
+      }
+
+      // Fetch all customers with their orders
+      const query = `
+        query {
+          customers(first: 250) {
+            edges {
+              node {
+                id
+                email
+                firstName
+                lastName
+                displayName
+                phone
+                createdAt
+                updatedAt
+                orders(first: 100) {
+                  edges {
+                    node {
+                      id
+                      totalPriceSet {
+                        shopMoney {
+                          amount
+                          currencyCode
+                        }
+                      }
+                      createdAt
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': shopifyAccessToken,
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      const data = await response.json();
+      
+      if (data.errors) {
+        console.error('Shopify GraphQL errors:', data.errors);
+        return res.status(500).json({ error: 'Failed to fetch customer data from Shopify' });
+      }
+
+      // Define tier thresholds as requested
+      const tierThresholds = [
+        { name: 'Diamond', threshold: 250000, color: '#B9F2FF' },
+        { name: 'Platinum', threshold: 100000, color: '#E5E4E2' },
+        { name: 'Gold', threshold: 50000, color: '#FFD700' },
+        { name: 'Silver', threshold: 25000, color: '#C0C0C0' },
+        { name: 'Bronze', threshold: 5000, color: '#CD7F32' },
+        { name: 'Standard', threshold: 0, color: '#808080' }
+      ];
+
+      // Process customers and calculate total spend
+      const customersWithTiers = data.data.customers.edges.map(({ node: customer }) => {
+        const totalSpent = customer.orders.edges.reduce((total, { node: order }) => {
+          return total + parseFloat(order.totalPriceSet.shopMoney.amount);
+        }, 0);
+
+        // Determine tier
+        const tier = tierThresholds.find(t => totalSpent >= t.threshold) || tierThresholds[tierThresholds.length - 1];
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          displayName: customer.displayName,
+          phone: customer.phone,
+          createdAt: customer.createdAt,
+          updatedAt: customer.updatedAt,
+          totalSpent: totalSpent,
+          orderCount: customer.orders.edges.length,
+          tier: tier.name,
+          tierColor: tier.color,
+          nextTier: tierThresholds.find(t => t.threshold > totalSpent)?.name || null,
+          nextTierAmount: tierThresholds.find(t => t.threshold > totalSpent)?.threshold || null,
+          remainingToNextTier: tierThresholds.find(t => t.threshold > totalSpent) 
+            ? tierThresholds.find(t => t.threshold > totalSpent).threshold - totalSpent 
+            : 0
+        };
+      });
+
+      // Sort by total spent (highest first)
+      customersWithTiers.sort((a, b) => b.totalSpent - a.totalSpent);
+
+      // Calculate tier summary
+      const tierSummary = tierThresholds.map(tier => ({
+        name: tier.name,
+        threshold: tier.threshold,
+        color: tier.color,
+        count: customersWithTiers.filter(c => c.tier === tier.name).length,
+        totalRevenue: customersWithTiers
+          .filter(c => c.tier === tier.name)
+          .reduce((sum, c) => sum + c.totalSpent, 0)
+      }));
+
+      const response_data = {
+        success: true,
+        customers: customersWithTiers,
+        summary: {
+          totalCustomers: customersWithTiers.length,
+          totalRevenue: customersWithTiers.reduce((sum, c) => sum + c.totalSpent, 0),
+          averageSpend: customersWithTiers.length > 0 
+            ? customersWithTiers.reduce((sum, c) => sum + c.totalSpent, 0) / customersWithTiers.length 
+            : 0,
+          tierBreakdown: tierSummary
+        },
+        tiers: tierThresholds
+      };
+
+      res.json(response_data);
+    } catch (error) {
+      console.error('Customer tiering error:', error);
+      res.status(500).json({ error: 'Failed to generate customer tiers' });
+    }
+  });
+
+  // Get individual customer tier info
+  app.get('/api/customers/:customerId/tier', async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const shopifyDomain = process.env.SHOPIFY_DOMAIN;
+      const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!shopifyDomain || !shopifyAccessToken) {
+        return res.status(400).json({ error: 'Shopify credentials not configured' });
+      }
+
+      const query = `
+        query($id: ID!) {
+          customer(id: $id) {
+            id
+            email
+            firstName
+            lastName
+            displayName
+            phone
+            createdAt
+            updatedAt
+            orders(first: 100) {
+              edges {
+                node {
+                  id
+                  totalPriceSet {
+                    shopMoney {
+                      amount
+                      currencyCode
+                    }
+                  }
+                  createdAt
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': shopifyAccessToken,
+        },
+        body: JSON.stringify({ 
+          query,
+          variables: { id: customerId }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.errors || !data.data.customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      const customer = data.data.customer;
+      const totalSpent = customer.orders.edges.reduce((total, { node: order }) => {
+        return total + parseFloat(order.totalPriceSet.shopMoney.amount);
+      }, 0);
+
+      const tierThresholds = [
+        { name: 'Diamond', threshold: 250000, color: '#B9F2FF' },
+        { name: 'Platinum', threshold: 100000, color: '#E5E4E2' },
+        { name: 'Gold', threshold: 50000, color: '#FFD700' },
+        { name: 'Silver', threshold: 25000, color: '#C0C0C0' },
+        { name: 'Bronze', threshold: 5000, color: '#CD7F32' },
+        { name: 'Standard', threshold: 0, color: '#808080' }
+      ];
+
+      const tier = tierThresholds.find(t => totalSpent >= t.threshold) || tierThresholds[tierThresholds.length - 1];
+      const nextTier = tierThresholds.find(t => t.threshold > totalSpent);
+
+      res.json({
+        success: true,
+        customer: {
+          ...customer,
+          totalSpent,
+          orderCount: customer.orders.edges.length,
+          tier: tier.name,
+          tierColor: tier.color,
+          nextTier: nextTier?.name || null,
+          nextTierAmount: nextTier?.threshold || null,
+          remainingToNextTier: nextTier ? nextTier.threshold - totalSpent : 0
+        }
+      });
+    } catch (error) {
+      console.error('Customer tier lookup error:', error);
+      res.status(500).json({ error: 'Failed to get customer tier information' });
+    }
+  });
 }
 
 // Custom menu HTML generation function
@@ -6398,3 +6627,234 @@ function generateCustomMenuHtml(products: any[], theme: any, branding: any, cust
 </html>
   `;
 }
+
+// Additional route handlers  
+function addCustomerTierRoutes(app: any) {
+  // Customer Tiering System Based on Sales Data
+  app.get('/api/customers/tiers', async (req, res) => {
+  try {
+    const shopifyDomain = process.env.SHOPIFY_DOMAIN;
+    const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    
+    if (!shopifyDomain || !shopifyAccessToken) {
+      return res.status(400).json({ error: 'Shopify credentials not configured' });
+    }
+
+    // Fetch all customers with their orders
+    const query = `
+      query {
+        customers(first: 250) {
+          edges {
+            node {
+              id
+              email
+              firstName
+              lastName
+              displayName
+              phone
+              createdAt
+              updatedAt
+              orders(first: 100) {
+                edges {
+                  node {
+                    id
+                    totalPriceSet {
+                      shopMoney {
+                        amount
+                        currencyCode
+                      }
+                    }
+                    createdAt
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': shopifyAccessToken,
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    const data = await response.json();
+    
+    if (data.errors) {
+      console.error('Shopify GraphQL errors:', data.errors);
+      return res.status(500).json({ error: 'Failed to fetch customer data from Shopify' });
+    }
+
+    // Define tier thresholds as requested
+    const tierThresholds = [
+      { name: 'Diamond', threshold: 250000, color: '#B9F2FF' },
+      { name: 'Platinum', threshold: 100000, color: '#E5E4E2' },
+      { name: 'Gold', threshold: 50000, color: '#FFD700' },
+      { name: 'Silver', threshold: 25000, color: '#C0C0C0' },
+      { name: 'Bronze', threshold: 5000, color: '#CD7F32' },
+      { name: 'Standard', threshold: 0, color: '#808080' }
+    ];
+
+    // Process customers and calculate total spend
+    const customersWithTiers = data.data.customers.edges.map(({ node: customer }) => {
+      const totalSpent = customer.orders.edges.reduce((total, { node: order }) => {
+        return total + parseFloat(order.totalPriceSet.shopMoney.amount);
+      }, 0);
+
+      // Determine tier
+      const tier = tierThresholds.find(t => totalSpent >= t.threshold) || tierThresholds[tierThresholds.length - 1];
+
+      return {
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        displayName: customer.displayName,
+        phone: customer.phone,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        totalSpent: totalSpent,
+        orderCount: customer.orders.edges.length,
+        tier: tier.name,
+        tierColor: tier.color,
+        nextTier: tierThresholds.find(t => t.threshold > totalSpent)?.name || null,
+        nextTierAmount: tierThresholds.find(t => t.threshold > totalSpent)?.threshold || null,
+        remainingToNextTier: tierThresholds.find(t => t.threshold > totalSpent) 
+          ? tierThresholds.find(t => t.threshold > totalSpent).threshold - totalSpent 
+          : 0
+      };
+    });
+
+    // Sort by total spent (highest first)
+    customersWithTiers.sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Calculate tier summary
+    const tierSummary = tierThresholds.map(tier => ({
+      name: tier.name,
+      threshold: tier.threshold,
+      color: tier.color,
+      count: customersWithTiers.filter(c => c.tier === tier.name).length,
+      totalRevenue: customersWithTiers
+        .filter(c => c.tier === tier.name)
+        .reduce((sum, c) => sum + c.totalSpent, 0)
+    }));
+
+    const response_data = {
+      success: true,
+      customers: customersWithTiers,
+      summary: {
+        totalCustomers: customersWithTiers.length,
+        totalRevenue: customersWithTiers.reduce((sum, c) => sum + c.totalSpent, 0),
+        averageSpend: customersWithTiers.length > 0 
+          ? customersWithTiers.reduce((sum, c) => sum + c.totalSpent, 0) / customersWithTiers.length 
+          : 0,
+        tierBreakdown: tierSummary
+      },
+      tiers: tierThresholds
+    };
+
+    res.json(response_data);
+  } catch (error) {
+    console.error('Customer tiering error:', error);
+    res.status(500).json({ error: 'Failed to generate customer tiers' });
+  }
+});
+
+// Get individual customer tier info
+expressApp.get('/api/customers/:customerId/tier', async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const shopifyDomain = process.env.SHOPIFY_DOMAIN;
+    const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    
+    if (!shopifyDomain || !shopifyAccessToken) {
+      return res.status(400).json({ error: 'Shopify credentials not configured' });
+    }
+
+    const query = `
+      query($id: ID!) {
+        customer(id: $id) {
+          id
+          email
+          firstName
+          lastName
+          displayName
+          phone
+          createdAt
+          updatedAt
+          orders(first: 100) {
+            edges {
+              node {
+                id
+                totalPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+                createdAt
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': shopifyAccessToken,
+      },
+      body: JSON.stringify({ 
+        query,
+        variables: { id: customerId }
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.errors || !data.data.customer) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    const customer = data.data.customer;
+    const totalSpent = customer.orders.edges.reduce((total, { node: order }) => {
+      return total + parseFloat(order.totalPriceSet.shopMoney.amount);
+    }, 0);
+
+    const tierThresholds = [
+      { name: 'Diamond', threshold: 250000, color: '#B9F2FF' },
+      { name: 'Platinum', threshold: 100000, color: '#E5E4E2' },
+      { name: 'Gold', threshold: 50000, color: '#FFD700' },
+      { name: 'Silver', threshold: 25000, color: '#C0C0C0' },
+      { name: 'Bronze', threshold: 5000, color: '#CD7F32' },
+      { name: 'Standard', threshold: 0, color: '#808080' }
+    ];
+
+    const tier = tierThresholds.find(t => totalSpent >= t.threshold) || tierThresholds[tierThresholds.length - 1];
+    const nextTier = tierThresholds.find(t => t.threshold > totalSpent);
+
+    res.json({
+      success: true,
+      customer: {
+        ...customer,
+        totalSpent,
+        orderCount: customer.orders.edges.length,
+        tier: tier.name,
+        tierColor: tier.color,
+        nextTier: nextTier?.name || null,
+        nextTierAmount: nextTier?.threshold || null,
+        remainingToNextTier: nextTier ? nextTier.threshold - totalSpent : 0
+      }
+    });
+  } catch (error) {
+    console.error('Customer tier lookup error:', error);
+    res.status(500).json({ error: 'Failed to get customer tier information' });
+  }
+});
