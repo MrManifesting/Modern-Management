@@ -33,7 +33,6 @@ import MenuSyncPage from "@/pages/menu-sync";
 import MediaManagerPage from "@/pages/media-manager";
 import CustomerAnalytics from "@/pages/CustomerAnalytics";
 import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
-import MobileInventoryPage from "@/pages/mobile-inventory";
 import VoiceSearchPage from "@/pages/voice-search";
 import PerformanceDashboard from "@/pages/performance-dashboard";
 
@@ -108,7 +107,7 @@ function Router() {
         <ProtectedRoute path="/inventory/graphql" component={() => <GraphQLInventory />} />
         <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
-        <ProtectedRoute path="/inventory/mobile" component={() => <MobileInventoryPage />} />
+
 
 
 

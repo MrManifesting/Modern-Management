@@ -1097,35 +1097,7 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Mobile inventory endpoint - MUST come before parameterized routes
-  app.get("/api/items/mobile", async (req: Request, res: Response) => {
-    try {
-      const items = await storage.getItems();
-      
-      // Filter and optimize for mobile: items with quantities, limited data
-      const mobileItems = items
-        .filter((item: any) => (item.quantity || 0) > 0)
-        .sort((a: any, b: any) => (b.quantity || 0) - (a.quantity || 0))
-        .slice(0, 50) // Limit to top 50 for mobile performance
-        .map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.base_price || item.sale_price || item.cost_price,
-          status: item.status,
-          category: item.category,
-          sku: item.sku,
-          weight: item.weight,
-          thumbnailUrl: item.image_url || null
-        }));
 
-      log(`Mobile inventory: ${mobileItems.length} items optimized for mobile`, 'mobile');
-      res.json(mobileItems);
-    } catch (error) {
-      log(`Mobile inventory error: ${error}`, 'mobile');
-      res.status(500).json({ error: "Failed to fetch mobile inventory" });
-    }
-  });
 
   // Get single item - with ID validation (must come AFTER specific routes)
   app.get("/api/items/:id", async (req: Request, res: Response) => {
