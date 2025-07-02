@@ -5953,4 +5953,448 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       res.status(500).json({ error: "Failed to generate live menu preview" });
     }
   });
+
+  // White Label Menu Generation API
+  app.post("/api/generate-white-label-menu", async (req: Request, res: Response) => {
+    try {
+      const { theme, branding, customBackground, includeLinks } = req.body;
+      
+      // Get current inventory from Shopify bulk query
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkQueryService = new ShopifyBulkQueryService();
+      
+      // Execute bulk query to get real-time inventory
+      const bulkResult = await bulkQueryService.executeBulkQuery();
+      const products = bulkResult.products || [];
+      
+      // Generate unique menu ID
+      const menuId = `menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create HTML menu with customization
+      const menuHtml = generateCustomMenuHtml(products, theme, branding, customBackground, includeLinks);
+      
+      // Save menu to uploads directory
+      const fs = await import('fs');
+      const path = await import('path');
+      const menuPath = path.join('uploads', `${menuId}.html`);
+      
+      fs.writeFileSync(menuPath, menuHtml);
+      
+      // Return menu URL
+      const menuUrl = `/api/view-menu/${menuId}`;
+      
+      res.json({
+        success: true,
+        menuId,
+        menuUrl,
+        productCount: products.length,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('White label menu generation error:', error);
+      res.status(500).json({ error: "Failed to generate white label menu" });
+    }
+  });
+
+  // Serve generated menus
+  app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
+    try {
+      const { menuId } = req.params;
+      const fs = await import('fs');
+      const path = await import('path');
+      const menuPath = path.join('uploads', `${menuId}.html`);
+      
+      if (!fs.existsSync(menuPath)) {
+        return res.status(404).json({ error: "Menu not found" });
+      }
+      
+      const menuHtml = fs.readFileSync(menuPath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuHtml);
+    } catch (error) {
+      console.error('Menu serving error:', error);
+      res.status(500).json({ error: "Failed to serve menu" });
+    }
+  });
+
+  // Logo upload endpoint
+  app.post("/api/upload-logo", uploadMemory.single('logo'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No logo file provided" });
+      }
+      
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Generate unique filename
+      const filename = `logo-${Date.now()}-${req.file.originalname}`;
+      const logoPath = path.join('uploads', filename);
+      
+      // Save logo file
+      fs.writeFileSync(logoPath, req.file.buffer);
+      
+      // Return logo URL
+      const logoUrl = `/api/uploads/${filename}`;
+      
+      res.json({
+        success: true,
+        logoUrl,
+        filename
+      });
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
+
+  // Serve uploaded files
+  app.get("/api/uploads/:filename", async (req: Request, res: Response) => {
+    try {
+      const { filename } = req.params;
+      const fs = await import('fs');
+      const path = await import('path');
+      const filePath = path.join('uploads', filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      // Set appropriate content type based on file extension
+      const ext = path.extname(filename).toLowerCase();
+      const contentTypes: { [key: string]: string } = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml'
+      };
+      
+      const contentType = contentTypes[ext] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      
+      const fileBuffer = fs.readFileSync(filePath);
+      res.send(fileBuffer);
+    } catch (error) {
+      console.error('File serving error:', error);
+      res.status(500).json({ error: "Failed to serve file" });
+    }
+  });
+}
+
+// Custom menu HTML generation function
+function generateCustomMenuHtml(products: any[], theme: any, branding: any, customBackground: string, includeLinks: any) {
+  const backgroundStyle = customBackground 
+    ? `background: url('${customBackground}') center/cover; position: relative;`
+    : `background: ${theme.backgroundGradient || theme.colors.background};`;
+  
+  const overlayStyle = customBackground 
+    ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 1;"></div>`
+    : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${branding.companyName} - Premium Cannabis Menu</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            ${backgroundStyle}
+            color: ${theme.colors.text};
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .logo {
+            max-height: 80px;
+            margin-bottom: 1rem;
+        }
+        .company-name {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: ${theme.colors.primary};
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .tagline {
+            font-size: 1.3rem;
+            color: ${theme.colors.accent};
+            margin-bottom: 1rem;
+        }
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .product-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: ${theme.colors.primary};
+        }
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+        .product-card:hover::before {
+            opacity: 1;
+            animation: shimmer 0.6s ease-in-out;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-200%) translateY(-200%) rotate(45deg); }
+            100% { transform: translateX(200%) translateY(200%) rotate(45deg); }
+        }
+        .product-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: ${theme.colors.primary};
+        }
+        .product-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: ${theme.colors.accent};
+        }
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        .btn {
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-coa {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        .btn-media {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        .btn-buy {
+            background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary});
+            color: ${theme.colors.background};
+            font-weight: 700;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .contact-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            margin-top: 3rem;
+        }
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .contact-item {
+            padding: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .contact-item a {
+            color: ${theme.colors.primary};
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: ${theme.colors.primary};
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .product-grid { grid-template-columns: 1fr; }
+            .company-name { font-size: 2rem; }
+            .action-buttons { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    ${overlayStyle}
+    <div class="container">
+        <div class="header">
+            ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="Logo" class="logo">` : ''}
+            <h1 class="company-name">${branding.companyName}</h1>
+            <p class="tagline">${branding.tagline}</p>
+            <p class="description">${branding.description}</p>
+            <div style="margin-top: 2rem; color: ${theme.colors.accent}; font-size: 0.95rem;">
+                Last Updated: ${new Date().toLocaleString()} | Live Shopify Sync
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number">${products.length}</div>
+                <div class="stat-label">Products Available</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${products.filter(p => p.totalInventory > 0).length}</div>
+                <div class="stat-label">In Stock</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${products.filter(p => p.totalInventory < 10).length}</div>
+                <div class="stat-label">Low Stock</div>
+            </div>
+        </div>
+
+        <div class="product-grid">
+            ${products.filter(p => p.totalInventory > 0).slice(0, 20).map((product: any) => {
+              const strainName = product.title.split(' - ')[0] || product.title;
+              const price = product.variants?.[0]?.price || 'Contact for Price';
+              const quantity = product.totalInventory || 0;
+              const handle = product.handle;
+              
+              return `
+                <div class="product-card">
+                    <h3 class="product-name">${strainName}</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$${price}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>${quantity} units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        ${includeLinks.coa ? `
+                        <a href="https://goldcbd.com/coa/${handle}" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>` : ''}
+                        ${includeLinks.media ? `
+                        <a href="https://goldcbd.com/media/download/${handle}" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>` : ''}
+                        ${includeLinks.store ? `
+                        <a href="https://goldcbd.com/products/${handle}" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>` : ''}
+                    </div>
+                </div>
+              `;
+            }).join('')}
+        </div>
+
+        <div class="contact-section">
+            <h2 style="color: ${theme.colors.primary}; margin-bottom: 1rem;">Contact Information</h2>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div>📞 Phone</div>
+                    <a href="tel:${branding.contactInfo.phone}">${branding.contactInfo.phone}</a>
+                </div>
+                <div class="contact-item">
+                    <div>📧 Email</div>
+                    <a href="mailto:${branding.contactInfo.email}">${branding.contactInfo.email}</a>
+                </div>
+                <div class="contact-item">
+                    <div>🌐 Website</div>
+                    <a href="https://${branding.contactInfo.website}" target="_blank">${branding.contactInfo.website}</a>
+                </div>
+                <div class="contact-item">
+                    <div>📍 Address</div>
+                    <span>${branding.contactInfo.address}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+  `;
 }
