@@ -708,14 +708,37 @@ export function registerRoutes(app: any, storage: any) {
         .product-card {
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
-            padding: 25px;
+            padding: 0;
             border: 1px solid ${style.colors.primary};
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            overflow: hidden;
+            position: relative;
         }
         .product-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(${style.colors.primary.slice(1)}, 0.3);
+        }
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid ${style.colors.primary};
+        }
+        .product-content {
+            padding: 25px;
+        }
+        .coa-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: ${style.colors.accent};
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
         }
         .product-header {
             display: flex;
@@ -820,33 +843,38 @@ export function registerRoutes(app: any, storage: any) {
         <div class="product-grid">
             ${items.map(item => `
                 <div class="product-card">
-                    <div class="product-header">
-                        <div class="product-name">${item.name}</div>
-                        <div class="product-price">$${(item.base_price || item.sale_price || item.cost_price || 0).toFixed(2)}</div>
-                    </div>
-                    <div class="product-details">
-                        <div class="detail-row">
-                            <span class="detail-label">Weight:</span>
-                            <span class="detail-value">${item.weight || 'Standard'}</span>
+                    <div class="coa-badge">COA Available</div>
+                    <img src="${item.imageUrl}" alt="${item.name}" class="product-image" 
+                         onerror="this.src='https://via.placeholder.com/350x200/2D5016/FFFFFF?text=Gold+Standard+CBD'">
+                    <div class="product-content">
+                        <div class="product-header">
+                            <div class="product-name">${item.strainSlug ? item.strainSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : item.name}</div>
+                            <div class="product-price">$${(item.base_price || item.sale_price || item.cost_price || 0).toFixed(2)}</div>
                         </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Stock:</span>
-                            <span class="stock-badge">${item.quantity} units</span>
+                        <div class="product-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Weight:</span>
+                                <span class="detail-value">${item.weight || 'Standard'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Stock:</span>
+                                <span class="stock-badge">${item.quantity} units</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Type:</span>
+                                <span class="detail-value">THCa Flower</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Lab Tested:</span>
+                                <span class="detail-value">✓ Certified</span>
+                            </div>
                         </div>
-                        <div class="detail-row">
-                            <span class="detail-label">SKU:</span>
-                            <span class="detail-value">${item.sku || 'N/A'}</span>
+                        <div class="actions">
+                            <a href="https://goldcbd.com/products/${item.strainSlug || (item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
+                               class="btn btn-primary" target="_blank">🛒 Order Now</a>
+                            <a href="https://goldcbd.com/coa/${item.strainSlug || (item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
+                               class="btn btn-secondary" target="_blank">📋 View COA</a>
                         </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Variant ID:</span>
-                            <span class="detail-value">${item.shopifyVariantId || 'Not linked'}</span>
-                        </div>
-                    </div>
-                    <div class="actions">
-                        <a href="https://goldcbd.com/products/${(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
-                           class="btn btn-primary" target="_blank">Order Now</a>
-                        <a href="https://goldcbd.com/coa/${(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}" 
-                           class="btn btn-secondary" target="_blank">View COA</a>
                     </div>
                 </div>
             `).join('')}
@@ -2680,10 +2708,22 @@ export function registerRoutes(app: any, storage: any) {
                                  parseFloat(item.sale_price?.toString() || '0') > 0 ||
                                  parseFloat(item.cost_price?.toString() || '0') > 0;
         const hasShopifyVariantId = item.shopifyVariantId; // Only real Shopify items
-        const hasAuthenticImages = item.images && item.images.length > 0;
         
         return hasFlower && hasQuantity && hasRealisticPrice && hasShopifyVariantId;
-      });
+      }).map((item: any) => ({
+        ...item,
+        // Extract strain name for COA and image URLs
+        strainSlug: (item.name || '').toLowerCase()
+          .replace(/\s*-\s*thca\s*(bulk\s*)?flower.*$/i, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+        // Get primary image URL from Shopify or fallback
+        imageUrl: item.images && item.images.length > 0 ? 
+          (typeof item.images[0] === 'string' ? item.images[0] : 
+           item.images[0]?.src || item.images[0]?.url || 
+           `https://cdn.shopify.com/s/files/1/0755/6064/3774/files/gold-standard-placeholder.jpg`) :
+          `https://cdn.shopify.com/s/files/1/0755/6064/3774/files/gold-standard-placeholder.jpg`
+      }));
 
       // Sort by highest quantities first - prioritize best sellers
       authenticFlowerItems.sort((a: any, b: any) => 
@@ -2727,6 +2767,46 @@ export function registerRoutes(app: any, storage: any) {
         success: false,
         error: 'Failed to generate themed menus with authentic data' 
       });
+    }
+  });
+
+  // Enhanced Themed Menu with Images and COA - Single Theme Demo
+  app.get("/api/themed-menu-demo/:theme", async (req: Request, res: Response) => {
+    try {
+      const theme = req.params.theme || 'cannabis';
+      const allItems = await storage.getAllItems();
+      
+      // Get authentic items with images
+      const authenticFlowerItems = allItems.filter((item: any) => {
+        const itemName = (item.name || '').toLowerCase();
+        const hasFlower = itemName.includes('flower') || itemName.includes('thca') || itemName.includes('bulk');
+        const hasQuantity = item.quantity && parseInt(item.quantity.toString()) > 0;
+        const hasRealisticPrice = parseFloat(item.base_price?.toString() || '0') > 0 || 
+                                 parseFloat(item.sale_price?.toString() || '0') > 0 ||
+                                 parseFloat(item.cost_price?.toString() || '0') > 0;
+        const hasShopifyVariantId = item.shopifyVariantId;
+        
+        return hasFlower && hasQuantity && hasRealisticPrice && hasShopifyVariantId;
+      }).map((item: any) => ({
+        ...item,
+        strainSlug: (item.name || '').toLowerCase()
+          .replace(/\s*-\s*thca\s*(bulk\s*)?flower.*$/i, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+        imageUrl: item.images && item.images.length > 0 ? 
+          (typeof item.images[0] === 'string' ? item.images[0] : 
+           item.images[0]?.src || item.images[0]?.url || 
+           `https://cdn.shopify.com/s/files/1/0755/6064/3774/files/gold-standard-placeholder.jpg`) :
+          `https://cdn.shopify.com/s/files/1/0755/6064/3774/files/gold-standard-placeholder.jpg`
+      })).slice(0, 12); // Show first 12 items
+
+      const menuHtml = generateAuthenticThemedMenu(authenticFlowerItems, theme);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuHtml);
+    } catch (error) {
+      console.error('Themed menu demo error:', error);
+      res.status(500).json({ error: 'Failed to generate themed menu demo' });
     }
   });
 
