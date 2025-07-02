@@ -59,6 +59,7 @@ import GraphQLInventory from "@/pages/graphql-inventory";
 import LabelGeneration from "@/pages/label-generation";
 import SyncDashboard from "@/pages/sync-dashboard";
 import BarcodeScannerPage from "@/pages/barcode-scanner";
+import BulkBreakdownPage from "@/pages/bulk-breakdown";
 
 import SheetsMappingAdmin from "@/pages/sheets-mapping-admin";
 import RealTimeSyncDashboard from "@/pages/real-time-sync-dashboard";
@@ -158,6 +159,7 @@ function Router() {
         <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
         <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
         <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
+        <ProtectedRoute path="/bulk-breakdown" component={() => <BulkBreakdownPage />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />

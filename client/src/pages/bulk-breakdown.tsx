@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryLoader, LoadingPage } from "@/components/ui/inventory-loader";
 import { AlertTriangle, CheckCircle, PlusSquare, Trash2, Package, Clipboard, ArrowRight, Layers, ArrowDownUp } from "lucide-react";
+import { TwoStepBreakdown } from "@/components/breakdown/two-step-breakdown";
 
 type Item = {
   id: number;
