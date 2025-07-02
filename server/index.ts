@@ -4,9 +4,16 @@ import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage.js";
 import { createGraphQLServer, getGraphQLMiddleware } from './graphql/server.js';
+import { securityMiddleware } from './middleware/security.js';
 import cors from 'cors';
 
 const app = express();
+
+// Apply security middleware first
+app.use(securityMiddleware.securityHeaders);
+app.use(securityMiddleware.validateRequest);
+app.use(securityMiddleware.sanitizeInput);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
