@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   // Safely extract user data with proper null checking
-  const user = result && result.success === true ? result.user : null;
+  const user = result && result.authenticated === true ? result : null;
 
   const loginMutation = useMutation<LoginResponse, Error, LoginData>({
     mutationFn: async (credentials: LoginData) => {
