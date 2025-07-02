@@ -727,8 +727,53 @@ export function registerRoutes(app: any, storage: any) {
           // These will be sorted to bottom by the new sorting logic
         }
         
-        // Generate realistic pricing based on weight
-        const pricing = generateRealisticPrice(item);
+        // Extract proper weight from product name FIRST - NO DEFAULTS TO POUNDS
+        let extractedWeight = 'Weight not specified';
+        if (item.name) {
+          const nameLower = item.name.toLowerCase();
+          
+          // Extract gram weights FIRST - highest priority for gram products
+          if (nameLower.includes('2 gram') || nameLower.includes('2g')) {
+            extractedWeight = '2 grams';
+          } else if (nameLower.includes('3 gram') || nameLower.includes('3g')) {
+            extractedWeight = '3 grams';
+          } else if (nameLower.includes('half gram') || nameLower.includes('0.5g')) {
+            extractedWeight = 'half gram';
+          } else if (nameLower.includes('1 gram') || nameLower.includes('1g ')) {
+            extractedWeight = '1 gram';
+          } else if (nameLower.includes('7 gram') || nameLower.includes('7g')) {
+            extractedWeight = '7 grams';
+          } else if (nameLower.includes('14 gram') || nameLower.includes('14g')) {
+            extractedWeight = '14 grams';
+          } else if (nameLower.includes('28 gram') || nameLower.includes('28g')) {
+            extractedWeight = '28 grams';
+          }
+          // Extract ounce weights
+          else if (nameLower.includes('eighth') || nameLower.includes('1/8')) {
+            extractedWeight = 'eighth (3.5g)';
+          } else if (nameLower.includes('quarter oz') || nameLower.includes('1/4 oz')) {
+            extractedWeight = 'quarter ounce';
+          } else if (nameLower.includes('half oz') || nameLower.includes('1/2 oz')) {
+            extractedWeight = 'half ounce';
+          } else if (nameLower.includes('1 oz') || nameLower.includes('1oz') || nameLower.includes(' ounce')) {
+            extractedWeight = '1 ounce';
+          }
+          // Extract pound weights ONLY when explicitly mentioned
+          else if (nameLower.includes('1 pound') || nameLower.includes('(1 pound)') || nameLower.includes('one pound')) {
+            extractedWeight = '1 pound';
+          } else if (nameLower.includes('half pound') || nameLower.includes('1/2 pound')) {
+            extractedWeight = 'half pound';
+          } else if (nameLower.includes('quarter pound') || nameLower.includes('1/4 pound')) {
+            extractedWeight = 'quarter pound';
+          }
+          // Extract bulk flower indicators ONLY - no automatic pound assignment
+          else if (nameLower.includes('bulk flower') || nameLower.includes('book flower')) {
+            extractedWeight = '1 pound'; // Only for actual bulk flower products
+          }
+        }
+        
+        // Generate realistic pricing based on extracted weight (not item.weight)
+        const pricing = generateRealisticPrice({...item, weight: extractedWeight});
         
         return {
           ...item,
@@ -742,7 +787,7 @@ export function registerRoutes(app: any, storage: any) {
           costPrice: pricing.cost_price,  // Legacy field name
           // Ensure no NaN values
           quantity: parseInt(item.quantity) || 0,
-          weight: item.weight || 'Weight not specified'
+          weight: extractedWeight // Use properly extracted weight, never default to pounds
         };
       });
       
