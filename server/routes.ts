@@ -720,10 +720,28 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Enhanced inventory endpoint
+  // Enhanced inventory endpoint with real Shopify data
   app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
+      
+      // Get real Shopify data for all products
+      let shopifyProducts = [];
+      try {
+        const { ShopifyGraphQLService } = await import('./services/shopify-graphql.js');
+        const shopifyGraphQL = new ShopifyGraphQLService();
+        shopifyProducts = await shopifyGraphQL.getAllProducts();
+        log(`Fetched ${shopifyProducts.length} products from Shopify for enhanced inventory`, 'shopify-integration');
+      } catch (error) {
+        log(`Failed to fetch Shopify data: ${error}`, 'shopify-integration');
+      }
+
+      // Create a map of Shopify products by handle/title for fast lookup
+      const shopifyProductMap = new Map();
+      shopifyProducts.forEach(product => {
+        shopifyProductMap.set(product.handle.toLowerCase(), product);
+        shopifyProductMap.set(product.title.toLowerCase(), product);
+      });
       
       // PRIORITIZE ITEMS WITH QUANTITIES - this is what matters for $100K+ daily operations
       const enhancedItems = items.filter((item: any) => {
@@ -763,18 +781,90 @@ export function registerRoutes(app: any, storage: any) {
           thumbnailUrl = `/uploads/${thumbnailUrl}`;
         }
 
+        // Get real Shopify data for this item
+        let shopifyData = null;
+        let realWeight = item.weight;
+        let realPrice = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
+        
+        // Try to find matching Shopify product
+        const itemName = item.name?.toLowerCase() || '';
+        const potentialMatches = [
+          itemName,
+          itemName.replace(/\s+/g, '-'),
+          itemName.replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-'),
+          item.sku?.toLowerCase(),
+          item.handle?.toLowerCase()
+        ].filter(Boolean);
+
+        for (const key of potentialMatches) {
+          if (shopifyProductMap.has(key)) {
+            shopifyData = shopifyProductMap.get(key);
+            break;
+          }
+        }
+
+        // Use real Shopify data if found
+        if (shopifyData && shopifyData.variants && shopifyData.variants.edges.length > 0) {
+          const primaryVariant = shopifyData.variants.edges[0].node;
+          
+          // Get real weight from Shopify
+          if (primaryVariant.weight && primaryVariant.weightUnit) {
+            const weight = primaryVariant.weight;
+            const unit = primaryVariant.weightUnit.toLowerCase();
+            
+            if (unit === 'grams' || unit === 'g') {
+              if (weight >= 453.592) { // 1 pound in grams
+                realWeight = `${Math.round(weight / 453.592)} pound${weight >= 907.184 ? 's' : ''}`;
+              } else if (weight >= 28.3495) { // 1 ounce in grams
+                realWeight = `${Math.round(weight / 28.3495)} ounce${weight >= 56.699 ? 's' : ''}`;
+              } else {
+                realWeight = `${weight} gram${weight > 1 ? 's' : ''}`;
+              }
+            } else if (unit === 'pounds' || unit === 'lb') {
+              if (weight >= 1) {
+                realWeight = `${weight} pound${weight > 1 ? 's' : ''}`;
+              } else if (weight >= 0.0625) { // 1 ounce
+                const ounces = weight * 16;
+                realWeight = `${ounces} ounce${ounces > 1 ? 's' : ''}`;
+              } else {
+                const grams = weight * 453.592;
+                realWeight = `${Math.round(grams)} gram${grams > 1 ? 's' : ''}`;
+              }
+            } else {
+              realWeight = `${weight} ${unit}`;
+            }
+          }
+          
+          // Get real price from Shopify
+          if (primaryVariant.price) {
+            realPrice = parseFloat(primaryVariant.price);
+          }
+          
+          // Update thumbnail from Shopify if available
+          if (shopifyData.images && shopifyData.images.edges.length > 0 && !thumbnailUrl) {
+            thumbnailUrl = shopifyData.images.edges[0].node.url;
+          }
+        }
+
         return {
           ...item,
+          // Use real weight from Shopify if available, otherwise fallback to local
+          weight: realWeight || item.weight || 'Weight not specified',
           thumbnailUrl,
           hasImage: !!thumbnailUrl,
-          displayPrice: parseFloat(item.base_price || item.sale_price || item.cost_price || '0'),
+          // Use real price from Shopify if available
+          displayPrice: realPrice > 0 ? realPrice : parseFloat(item.base_price || item.sale_price || item.cost_price || '0'),
           // Ensure proper price field mapping for frontend display
-          basePrice: parseFloat(item.base_price || '0'),
+          basePrice: realPrice > 0 ? realPrice : parseFloat(item.base_price || '0'),
           salePrice: parseFloat(item.sale_price || '0'),
           costPrice: parseFloat(item.cost_price || '0'),
-          hasValidPrice: (parseFloat(item.base_price || '0') > 0) || 
+          shopifyPrice: realPrice > 0 ? realPrice : null,
+          shopifyWeight: realWeight !== item.weight ? realWeight : null,
+          hasValidPrice: realPrice > 0 || 
+                         (parseFloat(item.base_price || '0') > 0) || 
                          (parseFloat(item.sale_price || '0') > 0) || 
-                         (parseFloat(item.cost_price || '0') > 0)
+                         (parseFloat(item.cost_price || '0') > 0),
+          dataSource: shopifyData ? 'shopify' : 'local'
         };
       });
 

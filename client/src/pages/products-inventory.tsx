@@ -2192,7 +2192,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                            <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                             <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
@@ -2565,7 +2565,7 @@ const ProductsInventoryPage: React.FC = () => {
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                               <td className="py-3 px-4 text-right">
                                 <div className="flex flex-col items-end">
                                   <span className="font-medium">{product.displayPrice || "No Price"}</span>
@@ -2825,7 +2825,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                            <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                             <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
                             <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                             <td className="py-3 px-4 text-center">
@@ -2975,7 +2975,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 <Badge variant="outline">{product.category}</Badge>
                               </td>
                               <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                               <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
                               <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                               <td className="py-3 px-4 text-center">
@@ -3124,7 +3124,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 <Badge variant="outline">{product.category}</Badge>
                               </td>
                               <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                               <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
                               <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                               <td className="py-3 px-4 text-center">
@@ -3273,7 +3273,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 <Badge variant="outline">{product.category}</Badge>
                               </td>
                               <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                               <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
                               <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                               <td className="py-3 px-4 text-center">
@@ -3422,7 +3422,7 @@ const ProductsInventoryPage: React.FC = () => {
                                 <Badge variant="outline">{product.category}</Badge>
                               </td>
                               <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
-                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
                               <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
                               <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
                               <td className="py-3 px-4 text-center">
