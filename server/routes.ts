@@ -676,33 +676,55 @@ export function registerRoutes(app: any, storage: any) {
         // Use existing extractStrainName function from line 4251
         let strainName = item.name;
         
-        // Extract strain name from proper cannabis product names
+        // Extract actual strain names from your inventory data
         if (item.name) {
-          // Pattern: "Strain Name - THCA BULK FLOWER - TIER (weight)"
-          const fullMatch = item.name.match(/^([^-]+)\s*-\s*THCA\s*BULK\s*FLOWER/i);
-          if (fullMatch) {
-            strainName = fullMatch[1].trim();
-          }
-          // Pattern: "strain-name--thca" (kebab case)
-          else if (item.name.includes('--thca') || item.name.includes('-thca')) {
-            strainName = item.name
-              .replace(/-+thca.*$/i, '')
-              .replace(/-+/g, ' ')
-              .split(' ')
+          // Pattern: "blueberry-muffin-thca-smalls-aa-indoor-1-pound" -> "Blueberry Muffin"
+          if (item.name.includes('-thca-')) {
+            const strainPart = item.name.split('-thca-')[0];
+            strainName = strainPart
+              .split('-')
               .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
               .join(' ');
           }
-          // Simple weight names - try description
-          else if (/(^1 pound$|^2 grams$|^half gram$|^1\/2 pound$|^1\/4 pound$)/i.test(item.name.trim())) {
-            if (item.description) {
-              const descMatch = item.description.match(/^([^-]+)\s*-\s*THCA/i);
-              if (descMatch) {
-                strainName = descMatch[1].trim();
-              }
-            } else {
-              strainName = 'Premium Cannabis';
+          // Pattern: "tropicana-cherry-thca-bulk-flower-1-pound" -> "Tropicana Cherry"
+          else if (item.name.includes('-thca-bulk-flower')) {
+            const strainPart = item.name.split('-thca-bulk-flower')[0];
+            strainName = strainPart
+              .split('-')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+          }
+          // Pattern: "cadillac-rainbow---aa-indoor" -> "Cadillac Rainbow"
+          else if (item.name.includes('---')) {
+            const strainPart = item.name.split('---')[0];
+            strainName = strainPart
+              .split('-')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+          }
+          // Pattern: "hash-burger-thca-bulk-flower-mediums-top-shelf" -> "Hash Burger"
+          else if (item.name.match(/^([a-z-]+)-thca-/i)) {
+            const match = item.name.match(/^([a-z-]+)-thca-/i);
+            if (match) {
+              strainName = match[1]
+                .split('-')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
             }
           }
+          // Keep original name if it doesn't match patterns and isn't a simple weight
+          else if (!/(^1 pound$|^2 grams$|^half gram$|^1\/2 pound$|^1\/4 pound$)/i.test(item.name.trim())) {
+            strainName = item.name;
+          }
+          // For simple weight names, check if we have description with strain info
+          else if (item.description && item.description.includes('Premium')) {
+            const descMatch = item.description.match(/Premium\s+([^-]+)/i);
+            if (descMatch) {
+              strainName = descMatch[1].trim();
+            }
+          }
+          // If still no good strain name found and it's just a weight, keep fallback
+          // These will be sorted to bottom by the new sorting logic
         }
         
         // Generate realistic pricing based on weight
@@ -724,39 +746,43 @@ export function registerRoutes(app: any, storage: any) {
         };
       });
       
-      // Enhanced sorting: FULL pound variants first, then everything else
+      // Enhanced sorting: Flower/Book Flower with quantities FIRST, then everything else
       const sortedItems = items.sort((a: any, b: any) => {
-        // Helper function to check if item is a FULL pound variant (exclude 1/2 and 1/4 pounds)
-        const isFullPoundVariant = (item: any) => {
-          const searchText = `${item.name || ''} ${item.weight || ''} ${item.description || ''}`.toLowerCase();
-          
-          // Exclude fractional pounds first
-          if (/(\b1\/2\s*pound\b|\bhalf\s*pound\b|\b1\/4\s*pound\b|\bquarter\s*pound\b)/i.test(searchText)) {
-            return false;
-          }
-          
-          // Only include full pounds
-          return /(\b1\s*pound\b|\b1pound\b|\bone\s*pound\b|\bfull\s*pound\b)/i.test(searchText);
+        // Helper function to check if item is flower/book flower
+        const isFlowerItem = (item: any) => {
+          const searchText = `${item.name || ''} ${item.category || ''} ${item.description || ''}`.toLowerCase();
+          return searchText.includes('flower') || searchText.includes('book');
         };
         
-        const aIsFullPound = isFullPoundVariant(a);
-        const bIsFullPound = isFullPoundVariant(b);
+        // Helper function to check if item has available quantity
+        const hasQuantity = (item: any) => {
+          return item.quantity && parseInt(item.quantity) > 0;
+        };
         
-        // FIRST PRIORITY: Full pound variants at the very top
-        if (aIsFullPound && !bIsFullPound) return -1;
-        if (!aIsFullPound && bIsFullPound) return 1;
+        const aIsFlower = isFlowerItem(a);
+        const bIsFlower = isFlowerItem(b);
+        const aHasQuantity = hasQuantity(a);
+        const bHasQuantity = hasQuantity(b);
         
-        // SECOND PRIORITY: Newest items first (highest ID)
-        const aId = a.id || 0;
-        const bId = b.id || 0;
-        if (aId !== bId) {
-          return bId - aId;
+        // FIRST PRIORITY: Flower/Book Flower items with available quantities at the very top
+        if (aIsFlower && aHasQuantity && !(bIsFlower && bHasQuantity)) return -1;
+        if (bIsFlower && bHasQuantity && !(aIsFlower && aHasQuantity)) return 1;
+        
+        // SECOND PRIORITY: If both are flower items with quantities, sort by highest quantity
+        if (aIsFlower && aHasQuantity && bIsFlower && bHasQuantity) {
+          const aQuantity = parseInt(a.quantity) || 0;
+          const bQuantity = parseInt(b.quantity) || 0;
+          return bQuantity - aQuantity;
         }
         
-        // THIRD PRIORITY: Highest quantities
-        const aQuantity = a.quantity || 0;
-        const bQuantity = b.quantity || 0;
-        return bQuantity - aQuantity;
+        // THIRD PRIORITY: Items with quantities (non-flower)
+        if (aHasQuantity && !bHasQuantity) return -1;
+        if (!aHasQuantity && bHasQuantity) return 1;
+        
+        // FOURTH PRIORITY: Newest items first (highest ID)
+        const aId = a.id || 0;
+        const bId = b.id || 0;
+        return bId - aId;
       });
 
       // Optimize response for large datasets
