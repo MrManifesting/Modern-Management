@@ -3742,6 +3742,84 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Comprehensive weight fix using advanced parser
+  app.post('/api/items/fix-comprehensive-weights', async (req: Request, res: Response) => {
+    try {
+      log('Starting comprehensive weight data fix for all items', 'weight-fix');
+      
+      const { parseWeightFromProductName } = await import('./utils/weight-parser.js');
+      
+      const items = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      let updatedCount = 0;
+      const updates = [];
+      const gramItems = [];
+      const ounceItems = [];
+      const errorItems = [];
+
+      for (const item of items) {
+        try {
+          const currentWeight = item.weight;
+          const parsedWeight = parseWeightFromProductName(item.name);
+          
+          // Only update if the weight is different and we have a specific weight
+          if (currentWeight !== parsedWeight && parsedWeight !== 'Not specified') {
+            await storage.updateItem(item.id, { weight: parsedWeight });
+            updatedCount++;
+            
+            const update = {
+              id: item.id,
+              name: item.name,
+              oldWeight: currentWeight,
+              newWeight: parsedWeight,
+              category: parsedWeight.includes('g') ? 'grams' : 
+                       parsedWeight.includes('ounce') ? 'ounces' : 'pounds'
+            };
+            
+            updates.push(update);
+            
+            // Track specific corrections
+            if (parsedWeight.includes('g') && !parsedWeight.includes('kg')) {
+              gramItems.push(update);
+            } else if (parsedWeight.includes('ounce')) {
+              ounceItems.push(update);
+            }
+            
+            log(`Corrected weight: "${item.name}" from "${currentWeight}" to "${parsedWeight}"`, 'weight-fix');
+          }
+        } catch (itemError) {
+          errorItems.push({
+            id: item.id,
+            name: item.name,
+            error: String(itemError)
+          });
+        }
+      }
+
+      log(`Comprehensive weight fix completed: ${updatedCount} items updated, ${gramItems.length} gram items, ${ounceItems.length} ounce items`, 'weight-fix');
+      
+      res.json({
+        success: true,
+        message: `Fixed weights for ${updatedCount} items. Corrected ${gramItems.length} gram items and ${ounceItems.length} ounce items that were incorrectly showing as pounds.`,
+        updatedCount,
+        totalItems: items.length,
+        gramCorrections: gramItems.length,
+        ounceCorrections: ounceItems.length,
+        errorCount: errorItems.length,
+        gramItems: gramItems.slice(0, 10),
+        ounceItems: ounceItems.slice(0, 10),
+        allUpdates: updates.slice(0, 20),
+        errors: errorItems.slice(0, 5)
+      });
+
+    } catch (error) {
+      log(`Comprehensive weight fix error: ${error}`, 'error');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fix weight data comprehensively" 
+      });
+    }
+  });
+
   // Fix status for pound variant items (change from draft to active if they have pricing and stock)
   app.post('/api/items/fix-pound-status', async (req: Request, res: Response) => {
     try {
