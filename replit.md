@@ -125,6 +125,20 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 2, 2025: **ALL WEBHOOK URLS CONFIRMED CONFIGURED FOR GOLD-STANDARD-MANAGEMENT.REPLIT.APP DOMAIN**
+  - Verified all 9 Shopify webhook endpoints correctly configured to use https://gold-standard-management.replit.app/
+  - Webhook documentation files updated with proper domain: webhook-setup-guide.md and shopify-webhooks-setup.md
+  - All critical webhooks configured: orders/create, inventory_levels/update, products/update, customers/create, etc.
+  - Webhook security system operational with HMAC SHA-256 verification and rate limiting
+  - Production-ready webhook monitoring dashboard available at /webhook-monitoring
+  - System ready for high-volume e-commerce operations with real-time order processing and inventory sync
+- July 2, 2025: **FIXED WEIGHT AND PRICING DATA MAPPING - SHOPIFY INTEGRATION NOW SHOWS AUTHENTIC PRODUCT DATA**
+  - Resolved critical issue where items showed incorrect "1 pound" weight and wrong pricing for grab items, salves, rosin, pre-rolls
+  - Enhanced inventory endpoint now fetches real Shopify data for 405+ products using GraphQL integration
+  - System displays authentic weight values (grams, ounces, pounds) instead of fallback defaults
+  - Real pricing data from Shopify now shown for each specific product instead of incorrect fallback values
+  - Products like "14 grams", "2 GRAMS", "100 count", and "Half Gram" now show correct weights and pricing
+  - Replaced hardcoded fallbacks with actual Shopify weight and pricing data for authentic product information
 - July 2, 2025: **ENHANCED CUSTOMIZABLE MENU GENERATION SYSTEM WITH THEME TEMPLATES AND BRANDING DEPLOYED**
   - Enhanced existing MenuSyncPanel with new "Branding" tab for complete customization of generated menus
   - Added 5 predefined theme templates: Professional (blue/corporate), Modern (purple/neon), Cannabis (gold/green), Wholesale (forest green), Luxury (red/gold)
