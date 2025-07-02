@@ -317,15 +317,13 @@ const ProductsInventoryPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   
-  // Fetch enhanced inventory with pricing from Google Sheets
+  // Fetch inventory items using the standard endpoint
   const { data: products = [], isLoading, refetch: refetchItems } = useQuery({
-    queryKey: ['/api/inventory/enhanced'],
+    queryKey: ['/api/items'],
     queryFn: async () => {
-      console.log("Fetching items with media from API...");
-      const res = await apiRequest('GET', '/api/inventory/enhanced');
-      const data = await res.json();
-      const items = data.items || data || [];
-      console.log("Fetched items with media:", items.length);
+      console.log("Fetching items from API...");
+      const items = await apiRequest('GET', '/api/items');
+      console.log("Fetched items:", items?.length || 0);
       
       return items.map((item: any) => {
         // Parse weight to extract exact standard values - no decimal weights
