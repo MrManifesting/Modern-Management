@@ -933,11 +933,25 @@ const ProductsInventoryPage: React.FC = () => {
 
   // This function is already implemented above, so we're removing the duplicate
 
-  const handleBulkSelectAll = (select: boolean) => {
+  const handleBulkSelectAll = (select: boolean, category?: string) => {
     if (select) {
-      setSelectedItems([...filteredProducts]);
+      if (category) {
+        // Select only items from the specific category
+        const categoryProducts = filteredProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
+        setSelectedItems([...selectedItems.filter(item => !categoryProducts.some(cp => cp.id === item.id)), ...categoryProducts]);
+      } else {
+        // Select all filtered products
+        setSelectedItems([...filteredProducts]);
+      }
     } else {
-      setSelectedItems([]);
+      if (category) {
+        // Deselect only items from the specific category
+        const categoryProducts = filteredProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
+        setSelectedItems(selectedItems.filter(item => !categoryProducts.some(cp => cp.id === item.id)));
+      } else {
+        // Deselect all items
+        setSelectedItems([]);
+      }
     }
   };
 
@@ -2897,41 +2911,600 @@ const ProductsInventoryPage: React.FC = () => {
                   </div>
                 </TabsContent>
 
-                {/* Other cannabis categories with similar structure */}
+                {/* Concentrates Category */}
                 <TabsContent value="concentrates" className="mt-0">
-                  <div className="text-center py-8 text-muted-foreground">
-                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length === 0 ? 
-                      "No concentrates found." : 
-                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length} concentrates available`
-                    }
-                  </div>
+                  {filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No concentrates found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {bulkSelectMode && (
+                              <th className="py-3 px-2 w-10">
+                                <Checkbox 
+                                  checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'concentrates').length > 0}
+                                  onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'concentrates')}
+                                />
+                              </th>
+                            )}
+                            <th className="text-center py-3 px-2 w-16">Image</th>
+                            <th className="text-left py-3 px-4">Product</th>
+                            <th className="text-left py-3 px-4">Category</th>
+                            <th className="text-center py-3 px-4">SKU</th>
+                            <th className="text-center py-3 px-4">Size</th>
+                            <th className="text-right py-3 px-4">Price</th>
+                            <th className="text-center py-3 px-4">Qty</th>
+                            <th className="text-center py-3 px-4">Status</th>
+                            <th className="text-center py-3 px-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.filter(product => product.category?.toLowerCase() === 'concentrates').map((product: Product) => (
+                            <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-2 text-center">
+                                <div className="relative group">
+                                  {product.images && product.images.length > 0 ? (
+                                    <img 
+                                      src={product.images[0]} 
+                                      alt={product.name}
+                                      className="w-10 h-10 object-cover rounded-md cursor-pointer hover:scale-110 transition-transform"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline">{product.category}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
+                              <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
+                                    onClick={() => {
+                                      if (product.id !== undefined) {
+                                        handleViewClick(product.id);
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handlePrintBarcodeClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Breakdown Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </TabsContent>
 
+                {/* Edibles Category */}
                 <TabsContent value="edibles" className="mt-0">
-                  <div className="text-center py-8 text-muted-foreground">
-                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length === 0 ? 
-                      "No edibles found." : 
-                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length} edibles available`
-                    }
-                  </div>
+                  {filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No edibles found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {bulkSelectMode && (
+                              <th className="py-3 px-2 w-10">
+                                <Checkbox 
+                                  checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'edibles').length > 0}
+                                  onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'edibles')}
+                                />
+                              </th>
+                            )}
+                            <th className="text-center py-3 px-2 w-16">Image</th>
+                            <th className="text-left py-3 px-4">Product</th>
+                            <th className="text-left py-3 px-4">Category</th>
+                            <th className="text-center py-3 px-4">SKU</th>
+                            <th className="text-center py-3 px-4">Size</th>
+                            <th className="text-right py-3 px-4">Price</th>
+                            <th className="text-center py-3 px-4">Qty</th>
+                            <th className="text-center py-3 px-4">Status</th>
+                            <th className="text-center py-3 px-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.filter(product => product.category?.toLowerCase() === 'edibles').map((product: Product) => (
+                            <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-2 text-center">
+                                <div className="relative group">
+                                  {product.images && product.images.length > 0 ? (
+                                    <img 
+                                      src={product.images[0]} 
+                                      alt={product.name}
+                                      className="w-10 h-10 object-cover rounded-md cursor-pointer hover:scale-110 transition-transform"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline">{product.category}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
+                              <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
+                                    onClick={() => {
+                                      if (product.id !== undefined) {
+                                        handleViewClick(product.id);
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handlePrintBarcodeClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Breakdown Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </TabsContent>
 
+                {/* Vapes Category */}
                 <TabsContent value="vapes" className="mt-0">
-                  <div className="text-center py-8 text-muted-foreground">
-                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length === 0 ? 
-                      "No vapes found." : 
-                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length} vapes available`
-                    }
-                  </div>
+                  {filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No vapes found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {bulkSelectMode && (
+                              <th className="py-3 px-2 w-10">
+                                <Checkbox 
+                                  checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'vapes').length > 0}
+                                  onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'vapes')}
+                                />
+                              </th>
+                            )}
+                            <th className="text-center py-3 px-2 w-16">Image</th>
+                            <th className="text-left py-3 px-4">Product</th>
+                            <th className="text-left py-3 px-4">Category</th>
+                            <th className="text-center py-3 px-4">SKU</th>
+                            <th className="text-center py-3 px-4">Size</th>
+                            <th className="text-right py-3 px-4">Price</th>
+                            <th className="text-center py-3 px-4">Qty</th>
+                            <th className="text-center py-3 px-4">Status</th>
+                            <th className="text-center py-3 px-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.filter(product => product.category?.toLowerCase() === 'vapes').map((product: Product) => (
+                            <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-2 text-center">
+                                <div className="relative group">
+                                  {product.images && product.images.length > 0 ? (
+                                    <img 
+                                      src={product.images[0]} 
+                                      alt={product.name}
+                                      className="w-10 h-10 object-cover rounded-md cursor-pointer hover:scale-110 transition-transform"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline">{product.category}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
+                              <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
+                                    onClick={() => {
+                                      if (product.id !== undefined) {
+                                        handleViewClick(product.id);
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handlePrintBarcodeClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Breakdown Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </TabsContent>
 
+                {/* Bulk Category */}
                 <TabsContent value="bulk" className="mt-0">
-                  <div className="text-center py-8 text-muted-foreground">
-                    {filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length === 0 ? 
-                      "No bulk items found." : 
-                      `${filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length} bulk items available`
-                    }
-                  </div>
+                  {filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No bulk items found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {bulkSelectMode && (
+                              <th className="py-3 px-2 w-10">
+                                <Checkbox 
+                                  checked={selectedItems.length === filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length && filteredProducts.filter(p => p.category?.toLowerCase() === 'bulk').length > 0}
+                                  onCheckedChange={(checked) => handleBulkSelectAll(!!checked, 'bulk')}
+                                />
+                              </th>
+                            )}
+                            <th className="text-center py-3 px-2 w-16">Image</th>
+                            <th className="text-left py-3 px-4">Product</th>
+                            <th className="text-left py-3 px-4">Category</th>
+                            <th className="text-center py-3 px-4">SKU</th>
+                            <th className="text-center py-3 px-4">Size</th>
+                            <th className="text-right py-3 px-4">Price</th>
+                            <th className="text-center py-3 px-4">Qty</th>
+                            <th className="text-center py-3 px-4">Status</th>
+                            <th className="text-center py-3 px-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.filter(product => product.category?.toLowerCase() === 'bulk').map((product: Product) => (
+                            <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                              {bulkSelectMode && (
+                                <td className="py-3 px-2">
+                                  <Checkbox 
+                                    checked={selectedItems.some(item => item.id === product.id)}
+                                    onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                  />
+                                </td>
+                              )}
+                              <td className="py-3 px-2 text-center">
+                                <div className="relative group">
+                                  {product.images && product.images.length > 0 ? (
+                                    <img 
+                                      src={product.images[0]} 
+                                      alt={product.name}
+                                      className="w-10 h-10 object-cover rounded-md cursor-pointer hover:scale-110 transition-transform"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.subcategory}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline">{product.category}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono text-sm">{product.sku}</td>
+                              <td className="py-3 px-4 text-center">{product.weight || "1 pound"}</td>
+                              <td className="py-3 px-4 text-right">{renderPriceCell(product)}</td>
+                              <td className="py-3 px-4 text-center">{renderQuantityCell(product)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge className={getStatusBadgeClass(product.status)}>
+                                  {product.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md"
+                                    onClick={() => {
+                                      if (product.id !== undefined) {
+                                        handleViewClick(product.id);
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 shadow-sm hover:shadow-md">
+                                        Actions <ChevronDown className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuLabel>Manage Item</DropdownMenuLabel>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handlePrintBarcodeClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print Barcode/QR
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        className="flex items-center cursor-pointer"
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleQuickBreakdownClick(product.id);
+                                          }
+                                        }}
+                                      >
+                                        <PackageOpen className="mr-2 h-4 w-4" />
+                                        Breakdown Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          if (product.id !== undefined) {
+                                            handleDeleteClick(product.id);
+                                          }
+                                        }}
+                                        className="flex items-center cursor-pointer text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </TabsContent>
                 
                 {/* Live View Tab */}
