@@ -6812,10 +6812,114 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       res.json({ 
         configured: hasApiKey,
         model: "gpt-4o",
-        features: ["chat", "insights", "product-analysis", "descriptions"]
+        features: ["chat", "insights", "product-analysis", "descriptions", "shopify-matching"]
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to check AI status" });
+    }
+  });
+
+  // AI Shopify Matching Routes
+  
+  // Match single inventory item to Shopify
+  app.post("/api/ai/match-shopify/:itemId", async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      const item = await storage.getItem(parseInt(itemId));
+      
+      if (!item) {
+        return res.status(404).json({ success: false, error: "Item not found" });
+      }
+
+      const { aiShopifyMatcher } = await import('./services/ai-shopify-matcher.js');
+      const matchResult = await aiShopifyMatcher.findBestShopifyMatch(item);
+
+      // Update item with Shopify match info if successful
+      if (matchResult.success && matchResult.shopifyProductId) {
+        await storage.updateItem(parseInt(itemId), {
+          shopifyProductId: matchResult.shopifyProductId,
+          shopifyVariantId: matchResult.shopifyVariantId,
+          shopifyHandle: matchResult.shopifyHandle
+        });
+      }
+
+      res.json({
+        success: true,
+        match: matchResult,
+        itemId: parseInt(itemId)
+      });
+
+    } catch (error) {
+      log(`AI Shopify match error for item ${req.params.itemId}: ${error}`, 'ai-shopify-match');
+      res.status(500).json({ success: false, error: "Shopify matching failed" });
+    }
+  });
+
+  // Batch match multiple items to Shopify
+  app.post("/api/ai/batch-match-shopify", async (req: Request, res: Response) => {
+    try {
+      const { itemIds } = req.body;
+      
+      if (!itemIds || !Array.isArray(itemIds)) {
+        return res.status(400).json({ success: false, error: "Item IDs array required" });
+      }
+
+      // Get items from storage
+      const items = await Promise.all(
+        itemIds.map(async (id: number) => await storage.getItem(id))
+      );
+      const validItems = items.filter(item => item !== null);
+
+      const { aiShopifyMatcher } = await import('./services/ai-shopify-matcher.js');
+      const matchResults = await aiShopifyMatcher.batchMatchInventoryItems(validItems);
+
+      // Update items with successful matches
+      for (const [itemId, matchResult] of Object.entries(matchResults)) {
+        if (matchResult.success && matchResult.shopifyProductId) {
+          await storage.updateItem(parseInt(itemId), {
+            shopifyProductId: matchResult.shopifyProductId,
+            shopifyVariantId: matchResult.shopifyVariantId,
+            shopifyHandle: matchResult.shopifyHandle
+          });
+        }
+      }
+
+      const successfulMatches = Object.values(matchResults).filter(r => r.success).length;
+
+      res.json({
+        success: true,
+        totalItems: validItems.length,
+        successfulMatches,
+        results: matchResults
+      });
+
+    } catch (error) {
+      log(`AI batch Shopify matching error: ${error}`, 'ai-shopify-batch-match');
+      res.status(500).json({ success: false, error: "Batch Shopify matching failed" });
+    }
+  });
+
+  // Get enhanced inventory with AI Shopify matching
+  app.get("/api/inventory/ai-enhanced", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getAllItems();
+      const activeItems = items.filter(item => 
+        item.status === 'active' || item.status === 'available'
+      );
+
+      // Limit to first 50 items for performance
+      const limitedItems = activeItems.slice(0, 50);
+
+      const { aiShopifyMatcher } = await import('./services/ai-shopify-matcher.js');
+      const enhancedItems = await aiShopifyMatcher.enhanceInventoryWithShopifyLinks(limitedItems);
+
+      log(`Enhanced ${enhancedItems.length} items with AI Shopify matching`, 'ai-enhanced-inventory');
+
+      res.json(enhancedItems);
+
+    } catch (error) {
+      log(`AI enhanced inventory error: ${error}`, 'ai-enhanced-inventory');
+      res.status(500).json({ error: "Failed to get AI enhanced inventory" });
     }
   });
 
@@ -7177,12 +7281,15 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     try {
       const { theme, branding, customBackground, includeLinks } = req.body;
       
-      // Get current inventory from Shopify bulk query
-      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
-      const bulkQueryService = new ShopifyBulkQueryService();
+      // Get current inventory from database (more reliable than bulk query)
+      const items = await storage.getAllItems();
       
-      // Execute bulk query to get real-time inventory
-      const products = await bulkQueryService.executeBulkInventoryQuery();
+      // Filter for active flower/bulk flower items only
+      const products = items.filter(item => 
+        item.quantity > 0 && 
+        (item.name?.toLowerCase().includes('flower') || 
+         item.category?.toLowerCase().includes('flower'))
+      );
       
       // Generate unique menu ID
       const menuId = `menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

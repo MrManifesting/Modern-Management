@@ -26,6 +26,7 @@ import {
   Smartphone,
   Activity,
   Bot,
+  Brain,
   Palette
 } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -184,6 +185,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "AI Assistant",
       icon: <Bot className="h-5 w-5" />,
       path: "/ai-assistant",
+      highlight: true,
+    },
+    {
+      title: "AI Shopify Matching",
+      icon: <Brain className="h-5 w-5" />,
+      path: "/ai-shopify-matching",
       highlight: true,
     },
     {

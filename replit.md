@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 2, 2025: **AI-POWERED SHOPIFY FUZZY MATCHING SYSTEM DEPLOYED - INTELLIGENT INVENTORY LINKING WITH OPENAI INTEGRATION**
+  - **CREATED AI SHOPIFY MATCHER SERVICE**: Advanced AI system using GPT-4o to intelligently match inventory items to Shopify products with high accuracy
+  - **ENHANCED FUZZY MATCHING ALGORITHM**: AI analyzes strain names, weights, categories, and product descriptions for optimal Shopify product matching
+  - **BATCH PROCESSING CAPABILITIES**: Process multiple inventory items simultaneously with intelligent batching and progress tracking
+  - **CONFIDENCE SCORING SYSTEM**: Each match includes confidence levels (High/Medium/Low) with detailed reasoning for match decisions
+  - **REAL-TIME SHOPIFY INTEGRATION**: Direct connection to live Shopify product catalog for authentic matching against actual store products
+  - **AI SHOPIFY MATCHING PAGE**: New dedicated interface at /ai-shopify-matching with batch selection and progress monitoring
+  - **NAVIGATION INTEGRATION**: Added "AI Shopify Matching" to main sidebar navigation with Brain icon for easy team access
+  - **API ENDPOINTS DEPLOYED**: /api/ai/match-shopify/:itemId for single items, /api/ai/batch-match-shopify for bulk processing
+  - **ENHANCED INVENTORY ENDPOINT**: /api/inventory/ai-enhanced provides inventory with AI-generated Shopify links and confidence scores
+  - **AUTOMATIC DATABASE UPDATES**: Successful matches automatically update items with shopifyProductId, shopifyVariantId, and shopifyHandle
+  - System intelligently weighs strain similarity (50+ points), type matching (30 points), tier matching (40 points) for accurate product linking
 - July 2, 2025: **INVENTORY WEIGHT AND NAMING SYSTEM COMPLETELY FIXED - CLEAN STRAIN NAMES AND PROPER WEIGHT SEPARATION**
   - **FIXED PRODUCT NAME DISPLAY**: Product names now show clean strain names only (Blueberry Muffin, Tropicana Cherry, Gmo) without weights or technical terms
   - **PROPER WEIGHT SEPARATION**: Weights now correctly appear in weight column (1 pound, 400 grams, quarter pound) separate from product names
