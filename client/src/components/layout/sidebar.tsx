@@ -158,6 +158,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/customers",
     },
     {
+      title: "Customer Tiers",
+      icon: <Users className="h-5 w-5" />,
+      path: "/customer-tiers",
+      highlight: true,
+    },
+    {
       title: "Reports",
       icon: <FileBarChart className="h-5 w-5" />,
       path: "/reports",

@@ -125,19 +125,20 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- January 2, 2025: **WHITE-LABEL MENU GENERATOR WITH CUSTOMIZABLE THEMES AND SHOPIFY INTEGRATION DEPLOYED**
-  - **CREATED COMPREHENSIVE WHITE-LABEL MENU GENERATION SYSTEM** - allows complete customization of product menus for distributors and resellers
-  - Built MenuGenerator component with 5 theme templates: Gold Standard, Cannabis Green, Purple Haze, Sunset Orange, Ice Blue
-  - Added customizable branding options: company name, tagline, logo upload, description, and complete contact information
-  - Implemented real-time Shopify bulk query integration for authentic product data with COA links, media downloads, and direct store purchase buttons
-  - Created backend endpoints: /api/generate-white-label-menu, /api/view-menu/:menuId, /api/upload-logo, /api/uploads/:filename
-  - Enhanced menu includes all requested features: valid COA links (goldcbd.com/coa/), media download links, and direct store purchase functionality
-  - Added custom background image support and advanced styling options for complete white-label customization
+- January 2, 2025: **COMPLETE CUSTOMER TIERING SYSTEM WITH REAL-TIME SHOPIFY SALES DATA ANALYTICS DEPLOYED**
+  - **CREATED COMPREHENSIVE CUSTOMER TIERING SYSTEM** - analyzes all Shopify customer order data to categorize customers based on total spending
+  - Built customer tier structure as requested: Diamond ($250,000+), Platinum ($100,000+), Gold ($50,000+), Silver ($25,000+), Bronze ($5,000+), Standard (under $5,000)
+  - Created backend endpoints: /api/customers/tiers (complete tier analysis), /api/customers/:customerId/tier (individual customer lookup)
+  - Implemented CustomerTiersPage component with comprehensive tier visualizations, customer rankings, and spending analytics
+  - Added customer tier navigation to sidebar with highlighted "Customer Tiers" menu item for easy access
+  - System pulls real-time data from Shopify GraphQL API analyzing up to 250 customers with 100 orders each for accurate tier placement
+  - Enhanced analytics include: total customers, total revenue, average spend per tier, VIP customer counts, and progression tracking
+  - **MAINTAINED WHITE-LABEL MENU GENERATOR** - complete customization system with 5 theme templates and real-time Shopify integration
+  - Built MenuGenerator component with customizable branding: company name, tagline, logo upload, contact information
   - **FIXED AI ASSISTANT API KEY CONFIGURATION** - added clickable dialog for OpenAI API key configuration with proper UI components
-  - System integrates with ShopifyBulkQueryService for real-time inventory data ensuring menus always show current stock levels
-  - Menu generator added to navigation at /menu-generator with comprehensive theming and branding capabilities
-  - Removed all CSV export functionality as requested - system now uses direct Shopify API integration only
-  - Complete unified inventory system operational with 1,626 total items and 275+ active products with authentic pricing
+  - **RESOLVED SHOPIFY INTEGRATION ISSUES** - confirmed 1,626 inventory items properly displaying with authentic pricing and stock levels
+  - System integrates with ShopifyBulkQueryService for real-time inventory data ensuring accurate customer purchase analysis
+  - Complete unified system operational: customer tiering, white-label menus, inventory management, and AI assistance
 - July 2, 2025: **COMPREHENSIVE SECURITY AUDIT AND VULNERABILITY REMEDIATION COMPLETED**
   - Successfully investigated CVE-2025-30208 Vite vulnerability alert and confirmed as false positive (application uses secure Vite 6.3.5)
   - Replaced vulnerable xmldom package with secure @xmldom/xmldom package to eliminate critical security vulnerabilities
