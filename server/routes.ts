@@ -4531,6 +4531,93 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Shopify inventory sync endpoint to populate pricing and variant IDs
+  app.post('/api/shopify/sync-inventory', async (req: Request, res: Response) => {
+    try {
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Shopify access token not configured" 
+        });
+      }
+
+      // Fetch products with variants and pricing
+      const productsResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,variants`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!productsResponse.ok) {
+        throw new Error(`Failed to fetch Shopify products: ${productsResponse.statusText}`);
+      }
+
+      const productsData = await productsResponse.json();
+      const products = productsData.products || [];
+
+      // Get current internal inventory
+      const internalItems = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      let updatedCount = 0;
+      let pricingUpdated = 0;
+
+      for (const item of internalItems) {
+        if (item.sku) {
+          // Find matching Shopify product by SKU or name similarity
+          let matchedVariant = null;
+          
+          for (const product of products) {
+            for (const variant of product.variants) {
+              if (variant.sku === item.sku || 
+                  product.title.toLowerCase().includes(item.name.toLowerCase()) ||
+                  item.name.toLowerCase().includes(product.title.toLowerCase())) {
+                matchedVariant = {
+                  shopifyProductId: product.id,
+                  shopifyVariantId: variant.id,
+                  inventoryItemId: variant.inventory_item_id,
+                  price: parseFloat(variant.price) || 0
+                };
+                break;
+              }
+            }
+            if (matchedVariant) break;
+          }
+
+          if (matchedVariant) {
+            const updateData: any = {
+              shopifyProductId: matchedVariant.shopifyProductId,
+              shopifyVariantId: matchedVariant.shopifyVariantId
+            };
+
+            // Update pricing if we have valid price data and current pricing is null/0
+            if (matchedVariant.price > 0 && (!item.base_price || item.base_price === 0)) {
+              updateData.base_price = matchedVariant.price;
+              pricingUpdated++;
+            }
+
+            await storage.updateItem(item.id, updateData);
+            updatedCount++;
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sync completed: ${updatedCount} items updated with Shopify data, ${pricingUpdated} items got pricing`,
+        updatedCount,
+        pricingUpdated,
+        totalProcessed: internalItems.length
+      });
+
+    } catch (error) {
+      log(`Shopify sync error: ${error}`, 'shopify-sync');
+      res.status(500).json({ error: "Failed to sync with Shopify" });
+    }
+  });
+
   // Enhanced live inventory update endpoint
   app.get('/api/inventory/live-update', async (req: Request, res: Response) => {
     try {
@@ -4564,23 +4651,32 @@ export function registerRoutes(app: any, storage: any) {
       let updatedCount = 0;
       const updates = [];
       
-      // Match inventory levels with internal items
+      // Match inventory levels with internal items using multiple strategies
       for (const item of internalItems) {
+        let matchingLevel = null;
+
+        // First try by shopifyVariantId if available
         if (item.shopifyVariantId) {
-          const matchingLevel = inventoryLevels.find((level: any) => 
+          matchingLevel = inventoryLevels.find((level: any) => 
             level.inventory_item_id === item.shopifyVariantId
           );
-          
-          if (matchingLevel && matchingLevel.available !== item.quantity) {
-            await storage.updateItem(item.id, { quantity: matchingLevel.available });
-            updates.push({
-              itemId: item.id,
-              itemName: item.name,
-              oldQuantity: item.quantity,
-              newQuantity: matchingLevel.available
-            });
-            updatedCount++;
-          }
+        }
+
+        // If no match and we have SKU, try to find by SKU
+        if (!matchingLevel && item.sku) {
+          // This would require additional API call to get inventory_item details
+          // For now, skip items without shopifyVariantId
+        }
+        
+        if (matchingLevel && matchingLevel.available !== item.quantity) {
+          await storage.updateItem(item.id, { quantity: matchingLevel.available });
+          updates.push({
+            itemId: item.id,
+            itemName: item.name,
+            oldQuantity: item.quantity,
+            newQuantity: matchingLevel.available
+          });
+          updatedCount++;
         }
       }
       
@@ -4589,7 +4685,8 @@ export function registerRoutes(app: any, storage: any) {
         message: `Live update completed: ${updatedCount} items synchronized`,
         updatedCount,
         updates: updates.slice(0, 10), // Show first 10 updates
-        totalProcessed: internalItems.length
+        totalProcessed: internalItems.length,
+        itemsWithShopifyIds: internalItems.filter(item => item.shopifyVariantId).length
       });
       
     } catch (error) {
