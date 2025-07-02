@@ -125,6 +125,12 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 2, 2025: **SECURITY PATCH: MULTER CVE-2025-48997 RESOLVED**
+  - Upgraded multer from vulnerable version 1.4.5-lts.2 to secure version 2.0.1
+  - Fixed CVE-2025-48997 (GHSA-g5hg-p3ph-g8qg) which allowed attackers to trigger Denial of Service through empty string field names in upload requests
+  - Security assessment confirmed moderate risk due to specific field name usage in existing upload endpoints (/api/items, /api/import-from-csv)
+  - Application tested and confirmed operational after security patch deployment
+  - All file upload functionality remains intact with enhanced security protection
 - July 2, 2025: **ALL WEBHOOK URLS CONFIRMED CONFIGURED FOR GOLD-STANDARD-MANAGEMENT.REPLIT.APP DOMAIN**
   - Verified all 9 Shopify webhook endpoints correctly configured to use https://gold-standard-management.replit.app/
   - Webhook documentation files updated with proper domain: webhook-setup-guide.md and shopify-webhooks-setup.md
