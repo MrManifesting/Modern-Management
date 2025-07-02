@@ -1,4 +1,4 @@
-import { log } from '../utils/logger.js';
+import { log } from '../utils/logger';
 
 interface ShopifyGraphQLVariant {
   id: string;

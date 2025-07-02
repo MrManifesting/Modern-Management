@@ -2,17 +2,10 @@
  * Logger utility for consistent logging across the application
  */
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'inventory' | 'shopify' | 'webhook' | 'sync';
-
-export interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  context?: string;
-}
+type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'inventory' | 'shopify' | 'webhook' | 'sync';
 
 class Logger {
-  private getTimestamp(): string {
+  getTimestamp(): string {
     return new Date().toLocaleTimeString('en-US', { 
       hour12: true,
       hour: 'numeric',
@@ -21,7 +14,7 @@ class Logger {
     });
   }
 
-  private formatMessage(message: string, level: LogLevel, context?: string): string {
+  formatMessage(message: string, level: LogLevel, context?: string): string {
     const timestamp = this.getTimestamp();
     const contextStr = context ? `[${context}]` : '';
     return `${timestamp} ${contextStr} ${message}`;
@@ -89,11 +82,7 @@ const logger = new Logger();
 
 // Export the main log function for backward compatibility
 export const log = logger.log.bind(logger);
-
-// Export the logger instance for more specific logging methods
 export { logger };
-
-// Export convenience functions
 export const logInfo = logger.info.bind(logger);
 export const logWarn = logger.warn.bind(logger);
 export const logError = logger.error.bind(logger);

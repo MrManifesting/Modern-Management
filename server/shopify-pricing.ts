@@ -1,12 +1,39 @@
 // Direct Shopify pricing fetch service
 
-export async function getShopifyPricing() {
+interface ShopifyVariant {
+  id: number;
+  price: string;
+  sku?: string;
+}
+
+interface ShopifyProduct {
+  id: number;
+  title: string;
+  handle: string;
+  variants: ShopifyVariant[];
+}
+
+interface ShopifyProductsResponse {
+  products: ShopifyProduct[];
+}
+
+interface ProductData {
+  price: number;
+  title: string;
+  handle: string;
+  shopifyId: number;
+  variantId: number;
+}
+
+type PricingData = Record<string, ProductData>;
+
+export async function getShopifyPricing(): Promise<PricingData> {
   const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
   const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   
   if (!SHOPIFY_ACCESS_TOKEN) {
     console.log('No Shopify access token available');
-    return [];
+    return {};
   }
 
   try {
@@ -22,20 +49,20 @@ export async function getShopifyPricing() {
 
     if (!response.ok) {
       console.error(`Shopify API error: ${response.status} ${response.statusText}`);
-      return [];
+      return {};
     }
 
-    const data = await response.json();
+    const data: ShopifyProductsResponse = await response.json();
     const products = data.products || [];
     
     console.log(`Retrieved ${products.length} products with live pricing from Shopify`);
     
     // Map products with pricing data by SKU and title
-    const pricingData = {};
+    const pricingData: PricingData = {};
     products.forEach(product => {
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach(variant => {
-          const productData = {
+          const productData: ProductData = {
             price: parseFloat(variant.price),
             title: product.title,
             handle: product.handle,
