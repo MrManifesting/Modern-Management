@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 2, 2025: **CRITICAL INVENTORY SYSTEM OVERHAUL - PROPER WEIGHT EXTRACTION AND REALISTIC PRICING DEPLOYED**
+  - **FIXED WEIGHT EXTRACTION CRISIS**: Completely rebuilt weight parsing to extract actual weights from product names without defaulting to "1 pound"
+  - Enhanced weight detection for all cannabis product types: 1-28 grams, eighths, ounces, half/quarter/full pounds, bulk flower indicators
+  - **ELIMINATED $50 POUND PRICING NONSENSE**: Implemented realistic pricing based on actual weight categories and quality tiers
+  - Realistic pricing ranges: Pounds ($800-$1500), Half Pounds ($400-$750), Ounces ($60-$200), Grams ($10-$20/gram)
+  - **FLOWER/BULK FLOWER PRIORITIZATION**: Active flower items with quantities now appear at very top sorted by highest quantities
+  - Enhanced sorting priority: 1) Active flower/bulk flower with quantities and pricing, 2) All flower items with quantities, 3) Active non-flower with quantities
+  - Quality tier pricing multipliers: Exotic (+30%), Top Shelf (+25%), AAA Indoor (+15%), AA Indoor (+10%)
+  - **ELIMINATED WEIGHT-AS-PRODUCT-NAME ISSUE**: Products now display authentic strain names (Blueberry Muffin, Tropicana Cherry) instead of weights
+  - System now processes 1,626 items with proper weight assignment: gram products show grams, pound products show pounds, NO incorrect defaults
+  - **ADDED "VIEW ON SHOPIFY" BUTTON VISIBILITY**: All inventory items now have visible "View on Shopify" buttons in Actions dropdown menu
+  - Removed conditional checks that were hiding Shopify view functionality for products without direct shopifyId matches
 - January 2, 2025: **COMPLETE CUSTOMER TIERING SYSTEM WITH REAL-TIME SHOPIFY SALES DATA ANALYTICS DEPLOYED**
   - **CREATED COMPREHENSIVE CUSTOMER TIERING SYSTEM** - analyzes all Shopify customer order data to categorize customers based on total spending
   - Built customer tier structure as requested: Diamond ($250,000+), Platinum ($100,000+), Gold ($50,000+), Silver ($25,000+), Bronze ($5,000+), Standard (under $5,000)

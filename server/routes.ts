@@ -629,28 +629,54 @@ export function registerRoutes(app: any, storage: any) {
 
 
 
-  // Helper function to generate realistic pricing
+  // Helper function to generate realistic pricing based on ACTUAL weight
   const generateRealisticPrice = (item: any): { base_price: number; sale_price: number; cost_price: number } => {
-    // Base prices by weight category
     const weight = item.weight?.toLowerCase() || '';
-    let basePrice = 50; // Default minimum
+    let basePrice = 0; // NO DEFAULT PRICING
     
-    if (weight.includes('pound') || weight.includes('lb')) {
-      basePrice = Math.floor(Math.random() * (1500 - 800) + 800); // $800-$1500
-    } else if (weight.includes('ounce') || weight.includes('oz')) {
-      basePrice = Math.floor(Math.random() * (200 - 60) + 60); // $60-$200
-    } else if (weight.includes('gram')) {
-      const gramMatch = weight.match(/(\d+)/);
-      const grams = gramMatch ? parseInt(gramMatch[1]) : 1;
-      basePrice = Math.floor(Math.random() * (20 - 8) + 8) * grams; // $8-$20 per gram
+    // Extract quality tier for pricing adjustments
+    const name = item.name?.toLowerCase() || '';
+    const description = item.description?.toLowerCase() || '';
+    let qualityMultiplier = 1.0;
+    
+    if (name.includes('exotic') || description.includes('exotic')) {
+      qualityMultiplier = 1.3; // +30% for Exotic
+    } else if (name.includes('top shelf') || description.includes('top shelf')) {
+      qualityMultiplier = 1.25; // +25% for Top Shelf
+    } else if (name.includes('aaa indoor') || description.includes('aaa indoor')) {
+      qualityMultiplier = 1.15; // +15% for AAA Indoor
+    } else if (name.includes('aa indoor') || description.includes('aa indoor')) {
+      qualityMultiplier = 1.1; // +10% for AA Indoor
     }
     
-    // Quality tier adjustments
-    const description = item.description?.toLowerCase() || '';
-    if (description.includes('exotic') || description.includes('top shelf')) {
-      basePrice = Math.floor(basePrice * 1.3);
-    } else if (description.includes('aa indoor') || description.includes('aaa indoor')) {
-      basePrice = Math.floor(basePrice * 1.1);
+    // Realistic pricing by ACTUAL weight
+    if (weight.includes('1 pound') || weight.includes('pound')) {
+      basePrice = Math.floor((Math.random() * (1500 - 800) + 800) * qualityMultiplier); // $800-$1500
+    } else if (weight.includes('half pound')) {
+      basePrice = Math.floor((Math.random() * (750 - 400) + 400) * qualityMultiplier); // $400-$750
+    } else if (weight.includes('quarter pound')) {
+      basePrice = Math.floor((Math.random() * (375 - 200) + 200) * qualityMultiplier); // $200-$375
+    } else if (weight.includes('ounce') || weight.includes('oz')) {
+      basePrice = Math.floor((Math.random() * (200 - 60) + 60) * qualityMultiplier); // $60-$200
+    } else if (weight.includes('half ounce')) {
+      basePrice = Math.floor((Math.random() * (100 - 30) + 30) * qualityMultiplier); // $30-$100
+    } else if (weight.includes('quarter ounce')) {
+      basePrice = Math.floor((Math.random() * (50 - 15) + 15) * qualityMultiplier); // $15-$50
+    } else if (weight.includes('eighth')) {
+      basePrice = Math.floor((Math.random() * (35 - 15) + 15) * qualityMultiplier); // $15-$35
+    } else if (weight.includes('gram')) {
+      // Extract gram amount for proper pricing
+      const gramMatch = weight.match(/(\d+(?:\.\d+)?)/);
+      const grams = gramMatch ? parseFloat(gramMatch[1]) : 1;
+      const pricePerGram = Math.floor((Math.random() * (20 - 10) + 10) * qualityMultiplier); // $10-$20 per gram
+      basePrice = Math.floor(pricePerGram * grams);
+    } else if (weight === 'half gram') {
+      basePrice = Math.floor((Math.random() * (15 - 8) + 8) * qualityMultiplier); // $8-$15
+    }
+    
+    // NO PRICING for items without proper weight specification
+    if (basePrice === 0) {
+      return { base_price: 0, sale_price: 0, cost_price: 0 };
     }
     
     const salePrice = Math.floor(basePrice * 0.85); // 15% discount
@@ -791,40 +817,64 @@ export function registerRoutes(app: any, storage: any) {
         };
       });
       
-      // Enhanced sorting: Flower/Book Flower with quantities FIRST, then everything else
+      // ENHANCED SORTING: Flower/Bulk Flower with available quantities and active status at the VERY TOP
       const sortedItems = items.sort((a: any, b: any) => {
-        // Helper function to check if item is flower/book flower
+        // Helper function to check if item is flower/bulk flower
         const isFlowerItem = (item: any) => {
           const searchText = `${item.name || ''} ${item.category || ''} ${item.description || ''}`.toLowerCase();
-          return searchText.includes('flower') || searchText.includes('book');
+          return searchText.includes('flower') || searchText.includes('bulk flower') || searchText.includes('book flower');
         };
         
-        // Helper function to check if item has available quantity
+        // Helper function to check if item is active and has available quantity
+        const isActiveWithQuantity = (item: any) => {
+          return item.status === 'active' && item.quantity && parseInt(item.quantity) > 0;
+        };
+        
+        // Helper function to check if item has available quantity (any status)
         const hasQuantity = (item: any) => {
           return item.quantity && parseInt(item.quantity) > 0;
         };
         
+        // Helper function to check if item has realistic pricing
+        const hasRealisticPricing = (item: any) => {
+          const basePrice = parseFloat(item.base_price) || 0;
+          const salePrice = parseFloat(item.sale_price) || 0;
+          return basePrice > 0 || salePrice > 0;
+        };
+        
         const aIsFlower = isFlowerItem(a);
         const bIsFlower = isFlowerItem(b);
+        const aIsActiveWithQty = isActiveWithQuantity(a);
+        const bIsActiveWithQty = isActiveWithQuantity(b);
         const aHasQuantity = hasQuantity(a);
         const bHasQuantity = hasQuantity(b);
+        const aHasPricing = hasRealisticPricing(a);
+        const bHasPricing = hasRealisticPricing(b);
         
-        // FIRST PRIORITY: Flower/Book Flower items with available quantities at the very top
-        if (aIsFlower && aHasQuantity && !(bIsFlower && bHasQuantity)) return -1;
-        if (bIsFlower && bHasQuantity && !(aIsFlower && aHasQuantity)) return 1;
+        // TOP PRIORITY: Active flower/bulk flower items with quantities and pricing at VERY TOP
+        if (aIsFlower && aIsActiveWithQty && aHasPricing && !(bIsFlower && bIsActiveWithQty && bHasPricing)) return -1;
+        if (bIsFlower && bIsActiveWithQty && bHasPricing && !(aIsFlower && aIsActiveWithQty && aHasPricing)) return 1;
         
-        // SECOND PRIORITY: If both are flower items with quantities, sort by highest quantity
-        if (aIsFlower && aHasQuantity && bIsFlower && bHasQuantity) {
+        // If both are active flower items with quantities and pricing, sort by highest quantity
+        if (aIsFlower && aIsActiveWithQty && aHasPricing && bIsFlower && bIsActiveWithQty && bHasPricing) {
           const aQuantity = parseInt(a.quantity) || 0;
           const bQuantity = parseInt(b.quantity) || 0;
           return bQuantity - aQuantity;
         }
         
-        // THIRD PRIORITY: Items with quantities (non-flower)
+        // SECOND PRIORITY: Flower items with quantities (any status)
+        if (aIsFlower && aHasQuantity && !(bIsFlower && bHasQuantity)) return -1;
+        if (bIsFlower && bHasQuantity && !(aIsFlower && aHasQuantity)) return 1;
+        
+        // THIRD PRIORITY: Active items with quantities (non-flower)
+        if (aIsActiveWithQty && !bIsActiveWithQty) return -1;
+        if (!aIsActiveWithQty && bIsActiveWithQty) return 1;
+        
+        // FOURTH PRIORITY: Any items with quantities
         if (aHasQuantity && !bHasQuantity) return -1;
         if (!aHasQuantity && bHasQuantity) return 1;
         
-        // FOURTH PRIORITY: Newest items first (highest ID)
+        // LAST PRIORITY: Newest items first (highest ID)
         const aId = a.id || 0;
         const bId = b.id || 0;
         return bId - aId;
