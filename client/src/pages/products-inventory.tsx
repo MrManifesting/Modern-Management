@@ -588,18 +588,7 @@ const ProductsInventoryPage: React.FC = () => {
     }
   };
 
-  // Handle streamlined breakdown
-  const handleStreamlinedBreakdownClick = (id: number | undefined) => {
-    if (!id) return; // Skip if id is undefined
-    const itemToBreakdown = products.find((item: Product) => item.id === id);
-    if (itemToBreakdown && itemToBreakdown.id) { // Ensure id is defined
-      setSelectedItem({
-        ...itemToBreakdown,
-        id: itemToBreakdown.id // Ensure id is passed
-      });
-      setIsStreamlinedBreakdownOpen(true);
-    }
-  };
+  // Streamlined breakdown removed - use improved two-step workflow instead
 
   // Handle barcode printing
   const handlePrintBarcodeClick = (id: number | undefined) => {
@@ -1377,7 +1366,9 @@ const ProductsInventoryPage: React.FC = () => {
                   sku: selectedItem.sku,
                   barcode: selectedItem.barcode,
                   price: selectedItem.price,
-                  quantity: selectedItem.quantity
+                  quantity: selectedItem.quantity,
+                  imageUrl: selectedItem.imageUrl,
+                  images: selectedItem.images
                 }}
                 onClose={() => setIsPrintModalOpen(false)}
               />
@@ -2380,13 +2371,7 @@ const ProductsInventoryPage: React.FC = () => {
                                           <PackageOpen className="mr-2 h-4 w-4" />
                                           Quick Breakdown
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          className="flex items-center cursor-pointer"
-                                          onClick={() => handleStreamlinedBreakdownClick(product.id)}
-                                        >
-                                          <CircleDollarSign className="mr-2 h-4 w-4" />
-                                          Streamlined Breakdown
-                                        </DropdownMenuItem>
+
                                       </>
                                     )}
                                     <DropdownMenuSeparator />
