@@ -3,7 +3,7 @@
 ## Configured Webhooks Status ✅
 
 Your Gold Standard CBD store now has 9 active webhooks pointing to:
-`https://modern-inventory-and-sales-management-whateversclever.replit.app`
+`https://gold-standard-management.replit.app`
 
 ## How to Verify Integration is Working
 
