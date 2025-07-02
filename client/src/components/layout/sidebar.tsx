@@ -103,6 +103,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/menu-generator",
           className: "menu-generator-link highlight",
         },
+        {
+          title: "Comprehensive Menu",
+          path: "/comprehensive-menu",
+          className: "comprehensive-menu-link highlight",
+        },
 
       ]
     },
