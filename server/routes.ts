@@ -931,7 +931,24 @@ export function registerRoutes(app: any, storage: any) {
 
         // Get real Shopify data for this item
         let shopifyData = null;
+        
+        // CRITICAL FIX: Properly interpret weight based on product name
         let realWeight = item.weight;
+        if (item.name) {
+          const nameLower = item.name.toLowerCase();
+          if (nameLower.includes('half gram') || nameLower === 'half gram') {
+            realWeight = '0.5 grams';
+          } else if (nameLower.includes('2 grams') || nameLower === '2 grams') {
+            realWeight = '2 grams';
+          } else if (nameLower.includes('1 gram') || nameLower === '1 gram') {
+            realWeight = '1 gram';
+          } else if (nameLower.includes('14 grams') || nameLower === '14 grams') {
+            realWeight = '14 grams';
+          } else if (nameLower.includes('28 grams') || nameLower === '28 grams') {
+            realWeight = '28 grams';
+          }
+        }
+        
         let realPrice = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
         
         // Try to find matching Shopify product
@@ -1002,10 +1019,10 @@ export function registerRoutes(app: any, storage: any) {
           weight: realWeight || item.weight || 'Weight not specified',
           thumbnailUrl,
           hasImage: !!thumbnailUrl,
-          // Use real price from Shopify if available
+          // Use real price from Shopify if available, ensure proper pricing
           displayPrice: realPrice > 0 ? realPrice : parseFloat(item.base_price || item.sale_price || item.cost_price || '0'),
-          // Ensure proper price field mapping for frontend display
-          basePrice: realPrice > 0 ? realPrice : parseFloat(item.base_price || '0'),
+          // Ensure proper price field mapping for frontend display - always show database pricing if Shopify pricing isn't available
+          basePrice: parseFloat(item.base_price || '0'),
           salePrice: parseFloat(item.sale_price || '0'),
           costPrice: parseFloat(item.cost_price || '0'),
           shopifyPrice: realPrice > 0 ? realPrice : null,

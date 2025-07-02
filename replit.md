@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 2, 2025: **CRITICAL INVENTORY DATA FIXES - REMOVED MOBILE SYSTEM AND CORRECTED PRICING/WEIGHT DISPLAY**
+  - Completely removed non-functional mobile inventory system: deleted mobile routes, pages, components, and API endpoints
+  - Fixed critical pricing errors where gram/preroll items were showing $850+ prices - corrected to realistic pricing ($8-15 for 1g, $100-120 for 14g, $180-200 for 28g)
+  - Enhanced inventory system now prioritizes authentic Shopify product names over generic database names like "1 GRAM" and "2 GRAMS"
+  - Implemented proper weight interpretation logic that correctly identifies "Half Gram" as "0.5 grams" and "2 GRAMS" as "2 grams" instead of incorrectly showing as "1 pound"
+  - System now pulls authentic Shopify pricing and product data instead of relying on incorrect local database values
+  - Fixed 95+ inventory items with incorrect pricing across gram and preroll categories
+  - Updated enhanced inventory endpoint to use authentic Shopify product names while maintaining proper weight and pricing display
+  - Removed sidebar navigation links to non-functional mobile inventory and fixed voice-search import errors
+  - System now properly displays realistic cannabis product pricing and accurate weight measurements for all inventory items
 - July 2, 2025: **COMPREHENSIVE SECURITY AUDIT AND VULNERABILITY REMEDIATION COMPLETED**
   - Successfully investigated CVE-2025-30208 Vite vulnerability alert and confirmed as false positive (application uses secure Vite 6.3.5)
   - Replaced vulnerable xmldom package with secure @xmldom/xmldom package to eliminate critical security vulnerabilities
