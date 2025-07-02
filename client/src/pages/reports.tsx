@@ -238,7 +238,7 @@ export default function Reports() {
                 <CardTitle className="text-lg font-medium text-gray-500">Total Sales</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{reportData.summary.totalSales}</div>
+                <div className="text-3xl font-bold">{reportData?.summary?.totalSales || 0}</div>
                 <p className="text-sm text-gray-500">Orders</p>
               </CardContent>
             </Card>
@@ -248,7 +248,7 @@ export default function Reports() {
                 <CardTitle className="text-lg font-medium text-gray-500">Total Revenue</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{formatCurrency(reportData.summary.totalRevenue)}</div>
+                <div className="text-3xl font-bold">{formatCurrency(reportData?.summary?.totalRevenue || 0)}</div>
                 <p className="text-sm text-gray-500">Gross sales</p>
               </CardContent>
             </Card>
@@ -258,7 +258,7 @@ export default function Reports() {
                 <CardTitle className="text-lg font-medium text-gray-500">Total Profit</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{formatCurrency(reportData.summary.totalProfit)}</div>
+                <div className="text-3xl font-bold">{formatCurrency(reportData?.summary?.totalProfit || 0)}</div>
                 <p className="text-sm text-gray-500">Net earnings</p>
               </CardContent>
             </Card>
@@ -268,7 +268,7 @@ export default function Reports() {
                 <CardTitle className="text-lg font-medium text-gray-500">Avg. Order Value</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{formatCurrency(reportData.summary.averageOrderValue)}</div>
+                <div className="text-3xl font-bold">{formatCurrency(reportData?.summary?.averageOrderValue || 0)}</div>
                 <p className="text-sm text-gray-500">Per transaction</p>
               </CardContent>
             </Card>
