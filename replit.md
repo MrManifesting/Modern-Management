@@ -125,22 +125,19 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- January 2, 2025: **SHOPIFY API-FIRST SYSTEM DEPLOYMENT - CSV EXPORT FUNCTIONALITY REMOVED PER USER REQUEST**
-  - Completely removed enhanced inventory system per user request - deleted /api/inventory/enhanced endpoint and enhanced-inventory.tsx page  
-  - Fixed critical weight consistency issue where item detail views showed different weights than inventory list
-  - Updated ViewItemModal and EditItemModal to use identical weight interpretation logic as standard inventory
-  - Database corrected for problematic items: Half Gram (0.5 grams, $8), 2 GRAMS (2 grams, $15) with realistic pricing
-  - **DEPLOYED COMPREHENSIVE SHOPIFY BULK QUERY SYSTEM** - matching user's Google Apps Script workflow exactly
-  - Created ShopifyBulkQueryService with complete bulk operation workflow: start query → poll completion → download JSONL → parse inventory data
-  - Added bulk query endpoints: /api/shopify/bulk-query/start, /api/shopify/bulk-query/status, /api/shopify/bulk-query/execute
-  - Enhanced live menu generation (/api/generate-live-menu) to prioritize real-time bulk query data with fallback to local inventory
-  - Created dedicated Bulk Query page (/bulk-query) with real-time progress tracking, status monitoring, and comprehensive results display
-  - **REMOVED ALL CSV EXPORT FUNCTIONALITY** - system now uses direct Shopify API integration only as requested by user
-  - **FIXED INVENTORY DISPLAY ISSUE** - updated ProductsInventoryPage to use /api/items endpoint instead of removed enhanced endpoint
-  - **DEPLOYED AI ASSISTANT FUNCTIONALITY** - created working conversation system with OpenAI integration for inventory analysis
-  - AI assistant configured with cannabis industry expertise for product analysis, inventory optimization, and business insights
-  - System now displays 1,626 total items with 275+ active products properly prioritized with pound variants at top
-  - Complete unified inventory system operational with authentic Shopify API-first integration and working AI assistance
+- January 2, 2025: **WHITE-LABEL MENU GENERATOR WITH CUSTOMIZABLE THEMES AND SHOPIFY INTEGRATION DEPLOYED**
+  - **CREATED COMPREHENSIVE WHITE-LABEL MENU GENERATION SYSTEM** - allows complete customization of product menus for distributors and resellers
+  - Built MenuGenerator component with 5 theme templates: Gold Standard, Cannabis Green, Purple Haze, Sunset Orange, Ice Blue
+  - Added customizable branding options: company name, tagline, logo upload, description, and complete contact information
+  - Implemented real-time Shopify bulk query integration for authentic product data with COA links, media downloads, and direct store purchase buttons
+  - Created backend endpoints: /api/generate-white-label-menu, /api/view-menu/:menuId, /api/upload-logo, /api/uploads/:filename
+  - Enhanced menu includes all requested features: valid COA links (goldcbd.com/coa/), media download links, and direct store purchase functionality
+  - Added custom background image support and advanced styling options for complete white-label customization
+  - **FIXED AI ASSISTANT API KEY CONFIGURATION** - added clickable dialog for OpenAI API key configuration with proper UI components
+  - System integrates with ShopifyBulkQueryService for real-time inventory data ensuring menus always show current stock levels
+  - Menu generator added to navigation at /menu-generator with comprehensive theming and branding capabilities
+  - Removed all CSV export functionality as requested - system now uses direct Shopify API integration only
+  - Complete unified inventory system operational with 1,626 total items and 275+ active products with authentic pricing
 - July 2, 2025: **COMPREHENSIVE SECURITY AUDIT AND VULNERABILITY REMEDIATION COMPLETED**
   - Successfully investigated CVE-2025-30208 Vite vulnerability alert and confirmed as false positive (application uses secure Vite 6.3.5)
   - Replaced vulnerable xmldom package with secure @xmldom/xmldom package to eliminate critical security vulnerabilities
