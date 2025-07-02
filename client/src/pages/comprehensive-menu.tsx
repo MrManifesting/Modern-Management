@@ -52,7 +52,7 @@ export default function ComprehensiveMenuPage() {
       if (!response.ok) {
         // Fallback to basic inventory data and create our own comprehensive menu
         const inventoryResponse = await apiRequest('GET', '/api/items');
-        const items = inventoryResponse as any[];
+        const items = Array.isArray(inventoryResponse) ? inventoryResponse : [];
         
         const activeItems = items.filter(item => 
           item.status === 'active' && 

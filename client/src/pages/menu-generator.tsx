@@ -17,6 +17,7 @@ import {
   Download, 
   Eye, 
   RefreshCw, 
+  RotateCcw,
   ShoppingCart, 
   FileText, 
   Images,
@@ -158,8 +159,11 @@ export default function MenuGenerator() {
       });
       return response;
     },
-    onSuccess: (data) => {
-      setGeneratedMenuUrl(data.menuUrl);
+    onSuccess: (data: any) => {
+      const menuUrl = data?.menuUrl || data?.url || null;
+      if (menuUrl) {
+        setGeneratedMenuUrl(menuUrl);
+      }
       toast({
         title: "Menu Generated Successfully",
         description: "Your customized menu is ready to view and share."
@@ -435,7 +439,7 @@ export default function MenuGenerator() {
                 <div>
                   <p className="font-semibold">Current Inventory</p>
                   <p className="text-sm text-muted-foreground">
-                    {inventory?.products?.length || 0} products available
+                    {Array.isArray(inventory) ? inventory.length : (inventory?.products?.length || 0)} products available
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/shopify/bulk-query/execute'] })}>
@@ -475,7 +479,7 @@ export default function MenuGenerator() {
               >
                 {generateMenu.isPending ? (
                   <>
-                    <Refresh className="h-4 w-4 mr-2 animate-spin" />
+                    <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
                     Generating Menu...
                   </>
                 ) : (
