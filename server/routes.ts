@@ -3929,6 +3929,84 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Fix weight data using accurate weight extractor
+  app.post('/api/items/fix-accurate-weights', async (req: Request, res: Response) => {
+    try {
+      log('Starting accurate weight data fix for all items', 'weight-fix');
+      
+      const { AccurateWeightExtractor } = await import('./services/accurate-weight-extractor.js');
+      const items = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      
+      let updatedCount = 0;
+      const updates = [];
+      const criticalFixes = [];
+      const errorItems = [];
+
+      for (const item of items) {
+        try {
+          const currentWeight = item.weight;
+          const weightResult = AccurateWeightExtractor.extractAccurateWeight(item.name);
+          const correctWeight = AccurateWeightExtractor.formatWeightForDisplay(weightResult);
+          
+          // Only update if weight is different and makes sense
+          if (currentWeight !== correctWeight && 
+              correctWeight !== 'Weight not specified' &&
+              AccurateWeightExtractor.validateWeight(item.name, correctWeight)) {
+            
+            await storage.updateItem(item.id, { weight: correctWeight });
+            updatedCount++;
+            
+            const update = {
+              id: item.id,
+              name: item.name,
+              oldWeight: currentWeight,
+              newWeight: correctWeight,
+              category: weightResult.category,
+              source: weightResult.source
+            };
+            
+            updates.push(update);
+            
+            // Track critical fixes (gram/count products that were showing as pounds)
+            if ((item.name.toLowerCase().includes('gram') || item.name.toLowerCase().includes('count')) && 
+                currentWeight?.includes('pound')) {
+              criticalFixes.push(update);
+            }
+            
+            log(`Fixed weight: "${item.name}" from "${currentWeight}" to "${correctWeight}"`, 'weight-fix');
+          }
+        } catch (itemError) {
+          errorItems.push({
+            id: item.id,
+            name: item.name,
+            error: String(itemError)
+          });
+        }
+      }
+
+      log(`Accurate weight fix completed: ${updatedCount} items updated, ${criticalFixes.length} critical fixes`, 'weight-fix');
+      
+      res.json({
+        success: true,
+        message: `Fixed weights for ${updatedCount} items. Resolved ${criticalFixes.length} critical display bugs.`,
+        updatedCount,
+        totalItems: items.length,
+        criticalFixes: criticalFixes.length,
+        errorCount: errorItems.length,
+        sampleUpdates: updates.slice(0, 10),
+        criticalFixesSample: criticalFixes.slice(0, 5),
+        errors: errorItems.slice(0, 5)
+      });
+
+    } catch (error) {
+      log(`Accurate weight fix error: ${error}`, 'error');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fix weight data with accurate extractor" 
+      });
+    }
+  });
+
   // Fix weight data for all items
   app.post('/api/items/fix-weights', async (req: Request, res: Response) => {
     try {

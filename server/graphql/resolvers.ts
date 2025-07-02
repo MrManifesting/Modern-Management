@@ -1,5 +1,6 @@
 import { storage } from '../storage.js';
 import { shopifyGraphQL } from '../services/shopify-graphql.js';
+import { AccurateWeightExtractor } from '../services/accurate-weight-extractor.js';
 
 const log = (message: string, context: string = 'graphql') => {
   console.log(`${new Date().toLocaleTimeString()} [${context}] ${message}`);
@@ -283,89 +284,36 @@ function calculatePricing(item: any, shopifyProduct?: any) {
 
 // Helper function to format weight with authentic cannabis terminology
 function formatWeight(item: any, shopifyProduct?: any) {
-  // Prioritize Shopify weight data from GraphQL
-  let weight = 0;
-  let weightUnit = 'grams';
+  // Use the accurate weight extractor to fix critical display bugs
+  const productName = item.name || item.title || '';
   
-  if (shopifyProduct?.weight && shopifyProduct?.weightUnit) {
-    weight = shopifyProduct.weight;
-    weightUnit = shopifyProduct.weightUnit.toLowerCase();
-  } else if (shopifyProduct?.weightInGrams) {
-    weight = shopifyProduct.weightInGrams;
-    weightUnit = 'grams';
+  // Prepare Shopify data if available
+  const shopifyData = shopifyProduct?.weight && shopifyProduct?.weightUnit ? {
+    weight: shopifyProduct.weight,
+    weightUnit: shopifyProduct.weightUnit
+  } : null;
+  
+  // Extract accurate weight using the new service
+  const weightResult = AccurateWeightExtractor.extractAccurateWeight(productName, shopifyData);
+  const formattedWeight = AccurateWeightExtractor.formatWeightForDisplay(weightResult);
+  
+  // Validate the extracted weight makes sense
+  const isValid = AccurateWeightExtractor.validateWeight(productName, formattedWeight);
+  
+  if (!isValid) {
+    log(`Weight validation failed for ${productName}: extracted "${formattedWeight}"`, 'weight-validation');
   }
-  
-  // Fallback to local weight data
-  if (!weight && item.weight) {
-    const localWeight = String(item.weight).toLowerCase();
-    
-    // Extract numeric value and unit
-    const weightMatch = localWeight.match(/(\d+(?:\.\d+)?)\s*(grams?|g|ounces?|oz|pounds?|lbs?|lb|kilograms?|kg)/i);
-    if (weightMatch) {
-      weight = parseFloat(weightMatch[1]);
-      weightUnit = weightMatch[2].toLowerCase();
-    } else {
-      // Try to parse just the number and infer unit from product name
-      const numMatch = localWeight.match(/(\d+(?:\.\d+)?)/);
-      if (numMatch) {
-        weight = parseFloat(numMatch[1]);
-        // Infer unit from product name/title
-        const titleLower = (item.name || '').toLowerCase();
-        if (titleLower.includes('pound') || titleLower.includes('lb')) {
-          weightUnit = 'pounds';
-        } else if (titleLower.includes('ounce') || titleLower.includes('oz')) {
-          weightUnit = 'ounces';
-        } else if (titleLower.includes('gram') || titleLower.includes('g')) {
-          weightUnit = 'grams';
-        }
-      }
-    }
-  }
-  
-  // Convert to cannabis-friendly display format
-  const formatCannabisWeight = (weight: number, unit: string): string => {
-    switch (unit) {
-      case 'pounds':
-      case 'pound':
-      case 'lbs':
-      case 'lb':
-        if (weight === 1) return '1 pound';
-        if (weight === 0.5) return 'half pound';
-        if (weight === 0.25) return 'quarter pound';
-        return `${weight} pound${weight !== 1 ? 's' : ''}`;
-        
-      case 'ounces':
-      case 'ounce':
-      case 'oz':
-        if (weight === 1) return '1 ounce';
-        if (weight === 0.5) return 'half ounce';
-        if (weight === 0.25) return 'quarter ounce';
-        if (weight === 0.125) return 'eighth';
-        return `${weight} ounce${weight !== 1 ? 's' : ''}`;
-        
-      case 'grams':
-      case 'gram':
-      case 'g':
-        if (weight === 1) return '1 gram';
-        if (weight === 3.5) return 'eighth (3.5g)';
-        if (weight === 7) return 'quarter ounce (7g)';
-        if (weight === 14) return 'half ounce (14g)';
-        if (weight === 28) return 'ounce (28g)';
-        return `${weight}g`;
-        
-      default:
-        return weight > 0 ? `${weight}${unit}` : 'N/A';
-    }
-  };
   
   return {
     originalWeight: item.weight,
     shopifyWeight: shopifyProduct?.weight,
     shopifyWeightUnit: shopifyProduct?.weightUnit,
-    formattedWeight: weight > 0 ? formatCannabisWeight(weight, weightUnit) : (item.weight || 'N/A'),
-    numericWeight: weight,
-    weightUnit: weightUnit,
-    weightInGrams: convertToGrams(weight, weightUnit)
+    formattedWeight: formattedWeight,
+    weightCategory: weightResult.category,
+    weightSource: weightResult.source,
+    numericWeight: shopifyProduct?.weight || 0,
+    weightUnit: shopifyProduct?.weightUnit || 'unknown',
+    weightInGrams: shopifyProduct?.weight ? convertToGrams(shopifyProduct.weight, shopifyProduct.weightUnit || 'grams') : 0
   };
 }
 
