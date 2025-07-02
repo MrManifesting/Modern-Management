@@ -85,11 +85,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/products-inventory",
       subItems: [
 
-        {
-          title: "Mobile Inventory",
-          path: "/inventory/mobile",
-          className: "inventory-link mobile-brand",
-        },
+
 
         {
           title: "Products",
