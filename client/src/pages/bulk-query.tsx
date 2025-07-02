@@ -93,17 +93,18 @@ export default function BulkQueryPage() {
   };
 
   const handleExecuteComplete = () => {
-    setExecutionProgress(50);
-    executeBulkQuery.mutate();
+    setExecutionProgress(75);
+    setIsExecuting(false);
   };
 
-  // Update progress based on status
+  // Update progress based on status - fixed to prevent infinite loop
   useEffect(() => {
     if (statusData?.status && isExecuting) {
-      if (statusData.status.status === 'COMPLETED') {
+      const status = (statusData.status as any)?.status;
+      if (status === 'COMPLETED') {
         setExecutionProgress(75);
-        handleExecuteComplete();
-      } else if (statusData.status.status === 'FAILED') {
+        setIsExecuting(false);
+      } else if (status === 'FAILED') {
         setIsExecuting(false);
         setExecutionProgress(0);
       }
