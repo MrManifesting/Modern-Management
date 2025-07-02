@@ -25,7 +25,8 @@ import {
   Shield,
   Smartphone,
   Activity,
-  Bot
+  Bot,
+  Palette
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -205,6 +206,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Media Pack Demo",
       icon: <Package className="h-5 w-5" />,
       path: "/media-pack-demo",
+      highlight: true,
+    },
+    {
+      title: "Themed Menus",
+      icon: <Palette className="h-5 w-5" />,
+      path: "/themed-menus",
       highlight: true,
     },
 

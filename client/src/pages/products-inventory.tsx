@@ -753,7 +753,7 @@ const ProductsInventoryPage: React.FC = () => {
     try {
       setSyncLoading(true);
       
-      const response = await apiRequest('POST', '/api/shopify/import-all-products');
+      const response = await apiRequest('POST', '/api/shopify/sync-inventory');
       const result = await response.json();
       
       if (result.success) {

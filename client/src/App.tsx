@@ -134,6 +134,16 @@ function Router() {
         <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
         <ProtectedRoute path="/voice-search" component={() => <VoiceSearchPage />} />
         <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
+        <ProtectedRoute path="/themed-menus" component={() => {
+          const ThemedMenusPage = React.lazy(() => import("@/pages/themed-menus"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <ThemedMenusPage />
+            </React.Suspense>
+          );
+        }} />
         <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
         <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
         <ProtectedRoute path="/graphql-inventory" component={() => <GraphQLInventory />} />
