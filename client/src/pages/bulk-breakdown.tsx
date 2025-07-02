@@ -303,12 +303,18 @@ export default function BulkBreakdownPage() {
       <h1 className="text-3xl font-bold mb-6">Bulk Product Breakdown</h1>
       
       <Tabs defaultValue="bulk" className="w-full">
-        <TabsList className="grid grid-cols-4 mb-4">
+        <TabsList className="grid grid-cols-5 mb-4">
+          <TabsTrigger value="two-step">Two-Step Workflow</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Inventory</TabsTrigger>
           <TabsTrigger value="waiting">Waiting Area</TabsTrigger>
           <TabsTrigger value="breakdowns">Active Breakdowns</TabsTrigger>
           <TabsTrigger value="completed">Breakdown Products</TabsTrigger>
         </TabsList>
+        
+        {/* Two-Step Workflow Tab */}
+        <TabsContent value="two-step" className="space-y-4">
+          <TwoStepBreakdown />
+        </TabsContent>
         
         {/* Bulk Inventory Tab */}
         <TabsContent value="bulk" className="space-y-4">
