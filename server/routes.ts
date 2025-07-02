@@ -897,7 +897,7 @@ export function registerRoutes(app: any, storage: any) {
       const bulkService = new ShopifyBulkQueryService();
       
       const query = `query { currentBulkOperation { status url errorCode } }`;
-      const response = await bulkService['makeShopifyRequest'](query);
+      const response = await bulkService.makeShopifyRequest(query);
       
       res.json({
         success: true,

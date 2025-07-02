@@ -42,12 +42,18 @@ export class ShopifyBulkQueryService {
   private accessToken: string;
 
   constructor() {
-    this.shopDomain = process.env.SHOPIFY_SHOP_DOMAIN?.replace('.myshopify.com', '') || '';
-    this.accessToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    this.shopDomain = (process.env.SHOPIFY_STORE || 
+                      process.env.SHOPIFY_SHOP_DOMAIN || 
+                      process.env.SHOPIFY_DOMAIN || '').replace('.myshopify.com', '');
+    this.accessToken = process.env.SHOPIFY_ACCESS_TOKEN || 
+                      process.env.SHOPIFY_ADMIN_API_ACCESS_TOKEN || '';
     
     if (!this.shopDomain || !this.accessToken) {
-      throw new Error('Missing Shopify credentials for bulk operations');
+      log('Missing Shopify credentials - check SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN environment variables', 'bulk-query');
+      throw new Error('Missing Shopify credentials for bulk operations. Please configure SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN in environment variables.');
     }
+    
+    log(`Bulk query service initialized for domain: ${this.shopDomain}`, 'bulk-query');
   }
 
   // 1️⃣ Start bulk query with all required IDs - matching your Google Apps Script
@@ -256,8 +262,8 @@ export class ShopifyBulkQueryService {
     }
   }
 
-  // GraphQL request function
-  private async makeShopifyRequest(query: string, variables: any = {}): Promise<any> {
+  // GraphQL request function - made public for route access
+  public async makeShopifyRequest(query: string, variables: any = {}): Promise<any> {
     const url = `https://${this.shopDomain}.myshopify.com/admin/api/2025-04/graphql.json`;
     
     const response = await fetch(url, {
