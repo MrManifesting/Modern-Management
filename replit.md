@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 2, 2025: **INVENTORY WEIGHT AND NAMING SYSTEM COMPLETELY FIXED - CLEAN STRAIN NAMES AND PROPER WEIGHT SEPARATION**
+  - **FIXED PRODUCT NAME DISPLAY**: Product names now show clean strain names only (Blueberry Muffin, Tropicana Cherry, Gmo) without weights or technical terms
+  - **PROPER WEIGHT SEPARATION**: Weights now correctly appear in weight column (1 pound, 400 grams, quarter pound) separate from product names
+  - **ELIMINATED "PREMIUM" TERMINOLOGY**: Removed all premium references from strain name extraction and fallback naming
+  - **PRIORITIZED DATABASE WEIGHTS**: System uses authentic database weight data first (400 grams, 1 pound), then product name analysis as fallback
+  - **ENHANCED STRAIN NAME EXTRACTION**: Intelligent parsing removes technical suffixes (-THCA, -BULK FLOWER, -TOP SHELF) to display clean strain names
+  - **FIXED COMPREHENSIVE MENU GENERATOR**: Updated to use clean strain names and proper weight categorization throughout menu system
+  - **ELIMINATED WEIGHT-IN-NAME ISSUE**: Products no longer display "Mule Fuel - THCA BULK FLOWER - TOP SHELF (1 pound)" as name, now just "Mule Fuel"
+  - System now properly separates product identity (strain name) from product specifications (weight, tier, type) for professional display
 - July 2, 2025: **COMPREHENSIVE MENU GENERATOR SYSTEM DEPLOYED - COMPLETE ORGANIZED INVENTORY DISPLAY**
   - **CREATED COMPREHENSIVE MENU PAGE**: New /comprehensive-menu route with professional inventory organization system
   - **INTELLIGENT PRODUCT CATEGORIZATION**: Automatically organizes 205+ active items into Flower & Bulk Flower (prioritized first), Pre-Rolls, Edibles, Concentrates, Accessories

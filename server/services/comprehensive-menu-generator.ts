@@ -298,8 +298,8 @@ export class ComprehensiveMenuGenerator {
     
     // Remove common cannabis product keywords and extract strain name
     const cleanName = name
-      .replace(/\b(thca|bulk|flower|smalls|mediums|indoor|outdoor|exotic|top shelf|classic reserve|aa|aaa)\b/gi, '')
-      .replace(/\b(1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g)\b/gi, '')
+      .replace(/\b(thca|bulk|flower|smalls|mediums|indoor|outdoor|exotic|top shelf|classic reserve|aa|aaa|premium|quality)\b/gi, '')
+      .replace(/\b(1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g|\d+\s*gram|\d+\s*g)\b/gi, '')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -307,7 +307,7 @@ export class ComprehensiveMenuGenerator {
     // Capitalize each word
     return cleanName.split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ') || 'Premium Strain';
+      .join(' ') || 'Cannabis Strain';
   }
 
   private extractWeight(name: string): string {
