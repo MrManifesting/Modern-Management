@@ -27,12 +27,11 @@ export class ComprehensiveMenuGenerator {
   async generateStylizedMenu(): Promise<ComprehensiveMenu> {
     console.log('[comprehensive-menu] Starting comprehensive menu generation...');
     
-    // Get all active items with quantities
+    // Get all items with quantities (active or draft)
     const allItems = await this.storage.getAllItems();
     const activeItems = allItems.filter(item => 
-      item.status === 'active' && 
-      item.quantity > 0 &&
-      (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
+      (item.status === 'active' || item.status === 'draft') && 
+      item.quantity > 0
     );
 
     console.log(`[comprehensive-menu] Found ${activeItems.length} active items with quantities`);
@@ -197,6 +196,11 @@ export class ComprehensiveMenuGenerator {
 
   private getDisplayPrice(item: any): number {
     return item.sale_price || item.base_price || item.cost_price || 0;
+  }
+
+  private formatPrice(price: number): string {
+    if (price <= 0) return 'Contact for Price';
+    return `$${price.toFixed(2)}`;
   }
 
   private calculatePricePerGram(item: any): number {
