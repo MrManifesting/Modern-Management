@@ -2031,44 +2031,33 @@ const ProductsInventoryPage: React.FC = () => {
                 )}
               </div>
             ) : (
-              // Desktop view - Cannabis product categories only
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid grid-cols-7 mb-4">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="flower">Flower</TabsTrigger>
-                  <TabsTrigger value="concentrates">Concentrates</TabsTrigger>
-                  <TabsTrigger value="edibles">Edibles</TabsTrigger>
-                  <TabsTrigger value="vapes">Vapes</TabsTrigger>
-                  <TabsTrigger value="bulk">Bulk</TabsTrigger>
-                  <TabsTrigger value="live" className="text-green-600 font-medium">Live View</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="all" className="mt-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-border">
-                          {bulkSelectMode && (
-                            <th className="py-3 px-2 w-10">
-                              <Checkbox 
-                                checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
-                                onCheckedChange={(checked) => handleBulkSelectAll(!!checked)}
-                              />
-                            </th>
-                          )}
-                          <th className="text-center py-3 px-2 w-16">Image</th>
-                          <th className="text-left py-3 px-4">Product</th>
-                          <th className="text-left py-3 px-4">Category</th>
-                          <th className="text-center py-3 px-4">SKU</th>
-                          <th className="text-center py-3 px-4">Barcode/QR</th>
-                          <th className="text-center py-3 px-4">Weight</th>
-                          <th className="text-right py-3 px-4">Price</th>
-                          <th className="text-center py-3 px-4">Qty</th>
-                          <th className="text-center py-3 px-4">Status</th>
-                          <th className="text-center py-3 px-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+              // Desktop view - Simplified inventory view without tabs
+              <div className="w-full">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-border">
+                        {bulkSelectMode && (
+                          <th className="py-3 px-2 w-10">
+                            <Checkbox 
+                              checked={selectedItems.length === filteredProducts.length && filteredProducts.length > 0}
+                              onCheckedChange={(checked) => handleBulkSelectAll(!!checked)}
+                            />
+                          </th>
+                        )}
+                        <th className="text-center py-3 px-2 w-16">Image</th>
+                        <th className="text-left py-3 px-4">Product</th>
+                        <th className="text-left py-3 px-4">Category</th>
+                        <th className="text-center py-3 px-4">SKU</th>
+                        <th className="text-center py-3 px-4">Barcode/QR</th>
+                        <th className="text-center py-3 px-4">Weight</th>
+                        <th className="text-right py-3 px-4">Price</th>
+                        <th className="text-center py-3 px-4">Qty</th>
+                        <th className="text-center py-3 px-4">Status</th>
+                        <th className="text-center py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                         {filteredProducts.map((product: Product) => (
                           <tr key={product.id} className="border-b border-border hover:bg-muted/50">
                             {bulkSelectMode && (
@@ -2448,9 +2437,7 @@ const ProductsInventoryPage: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                </TabsContent>
-                
-                {/* Electronics Category */}
+                </div>
                 <TabsContent value="electronics" className="mt-0">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
