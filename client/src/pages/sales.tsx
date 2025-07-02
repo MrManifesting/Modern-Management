@@ -48,16 +48,19 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState("all");
 
   // Fetch all sales
-  const { data: sales, isLoading, error, refetch } = useQuery({
+  const { data: salesResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/sales'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/sales');
       if (!response.ok) {
         throw new Error("Failed to fetch sales");
       }
-      return response.json() as Promise<Sale[]>;
+      return response.json();
     },
   });
+
+  // Extract sales array from response object
+  const sales = salesResponse?.sales || [];
 
   // Fetch items to get names
   const { data: items } = useQuery({
