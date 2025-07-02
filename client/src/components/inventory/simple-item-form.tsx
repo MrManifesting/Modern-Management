@@ -122,175 +122,398 @@ export default function SimpleItemForm({
     onSubmit(data);
   };
 
+  // Handle "Add New" selection
+  const handleAddNewSelection = (value: string, fieldName: string, type: 'category' | 'vendor' | 'tier' | 'type') => {
+    if (value.startsWith('Add New')) {
+      setAddDialogType(type);
+      setNewItemValue('');
+      setShowAddDialog(true);
+    } else {
+      form.setValue(fieldName as any, value);
+    }
+  };
+
+  // Add new custom item
+  const handleAddNewItem = () => {
+    if (!newItemValue.trim()) return;
+    
+    const trimmedValue = newItemValue.trim();
+    
+    switch (addDialogType) {
+      case 'category':
+        setCustomCategories(prev => [...prev, trimmedValue]);
+        form.setValue('category', trimmedValue);
+        break;
+      case 'vendor':
+        setCustomVendors(prev => [...prev, trimmedValue]);
+        form.setValue('brand', trimmedValue);
+        break;
+      case 'tier':
+        setCustomTiers(prev => [...prev, trimmedValue]);
+        form.setValue('tier', trimmedValue);
+        break;
+      case 'type':
+        setCustomTypes(prev => [...prev, trimmedValue]);
+        form.setValue('strainType', trimmedValue);
+        break;
+    }
+    
+    setShowAddDialog(false);
+    setNewItemValue('');
+  };
+
+  // Get options for dropdowns including custom items
+  const getCategoryOptions = () => [...CATEGORIES.filter(c => !c.startsWith('Add New')), ...customCategories, 'Add New Category'];
+  const getVendorOptions = () => [...VENDORS.filter(v => !v.startsWith('Add New')), ...customVendors, 'Add New Vendor'];
+  const getTierOptions = () => [...TIERS.filter(t => !t.startsWith('Add New')), ...customTiers, 'Add New Tier'];
+  const getTypeOptions = () => [...STRAIN_TYPES.filter(t => !t.startsWith('Add New')), ...customTypes, 'Add New Type'];
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter product name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sku"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Auto-generated if empty" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select 
+                    onValueChange={(value) => handleAddNewSelection(value, 'category', 'category')} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {getCategoryOptions().map((category) => (
+                        <SelectItem key={category} value={category}>
+                          <div className="flex items-center gap-2">
+                            {category.startsWith('Add New') && <Plus className="w-4 h-4" />}
+                            {category}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor</FormLabel>
+                  <Select 
+                    onValueChange={(value) => handleAddNewSelection(value, 'brand', 'vendor')} 
+                    defaultValue={field.value || "Gold Standard"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select vendor" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {getVendorOptions().map((vendor) => (
+                        <SelectItem key={vendor} value={vendor}>
+                          <div className="flex items-center gap-2">
+                            {vendor.startsWith('Add New') && <Plus className="w-4 h-4" />}
+                            {vendor}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weight</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select weight" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {WEIGHT_OPTIONS.map((weight) => (
+                        <SelectItem key={weight} value={weight}>
+                          {weight}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tier"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quality Tier</FormLabel>
+                  <Select 
+                    onValueChange={(value) => handleAddNewSelection(value, 'tier', 'tier')} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tier" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {getTierOptions().map((tier) => (
+                        <SelectItem key={tier} value={tier}>
+                          <div className="flex items-center gap-2">
+                            {tier.startsWith('Add New') && <Plus className="w-4 h-4" />}
+                            {tier}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="strainType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Strain Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => handleAddNewSelection(value, 'strainType', 'type')} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select strain type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {getTypeOptions().map((type) => (
+                        <SelectItem key={type} value={type}>
+                          <div className="flex items-center gap-2">
+                            {type.startsWith('Add New') && <Plus className="w-4 h-4" />}
+                            {type}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="1" 
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Photo</FormLabel>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input 
+                          placeholder="https://example.com/image.jpg" 
+                          {...field}
+                        />
+                      </FormControl>
+                      <MobilePhotoUpload 
+                        onImageUrl={(url) => field.onChange(url)}
+                        className="flex-shrink-0"
+                      />
+                    </div>
+                    {field.value && (
+                      <div className="mt-2">
+                        <div className="w-20 h-20 border rounded-lg overflow-hidden bg-gray-50">
+                          <img
+                            src={field.value}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="hidden w-full h-full flex items-center justify-center">
+                            <Package className="w-6 h-6 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Pricing Tiers</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="costPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Price</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bulkPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bulk Price</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="distroPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Distro 25lbs+</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="masterPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Master 50lbs+</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="master100Price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Master 100lbs+</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="salePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sale Price</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
           <FormField
             control={form.control}
-            name="name"
+            name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Product Name</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter product name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="sku"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SKU</FormLabel>
-                <FormControl>
-                  <Input placeholder="Auto-generated if empty" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {CATEGORIES.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="brand"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vendor</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || "Gold Standard"}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {VENDORS.map((vendor) => (
-                      <SelectItem key={vendor} value={vendor}>
-                        {vendor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="weight"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Weight</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select weight" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {WEIGHT_OPTIONS.map((weight) => (
-                      <SelectItem key={weight} value={weight}>
-                        {weight}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="tier"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quality Tier</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tier" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {TIERS.map((tier) => (
-                      <SelectItem key={tier} value={tier}>
-                        {tier}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="strainType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Strain Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select strain type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {STRAIN_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quantity</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="1" 
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value)}
+                  <Textarea 
+                    placeholder="Enter product description..." 
+                    className="min-h-[100px]"
+                    {...field} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -298,170 +521,53 @@ export default function SimpleItemForm({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="imageUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Photo</FormLabel>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <FormControl>
-                      <Input 
-                        placeholder="https://example.com/image.jpg" 
-                        {...field}
-                      />
-                    </FormControl>
-                    <MobilePhotoUpload 
-                      onImageUrl={(url) => field.onChange(url)}
-                      className="flex-shrink-0"
-                    />
-                  </div>
-                  {field.value && (
-                    <div className="mt-2">
-                      <div className="w-20 h-20 border rounded-lg overflow-hidden bg-gray-50">
-                        <img
-                          src={field.value}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.nextElementSibling?.classList.remove('hidden');
-                          }}
-                        />
-                        <div className="hidden w-full h-full flex items-center justify-center">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Pricing Tiers</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField
-              control={form.control}
-              name="costPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Price</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="bulkPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bulk Price</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="distroPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Distro 25lbs+</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="masterPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Master 50lbs+</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="master100Price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Master 100lbs+</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="salePrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sale Price</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="flex justify-end space-x-4">
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : isEditing ? "Update Item" : "Add Item"}
+            </Button>
           </div>
+        </form>
+      </Form>
 
-
-        </div>
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Enter product description..." 
-                  className="min-h-[100px]"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-
-
-
-
-        <div className="flex justify-end space-x-4">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : isEditing ? "Update Item" : "Add Item"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      {/* Custom Input Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New {addDialogType === 'type' ? 'Strain Type' : addDialogType.charAt(0).toUpperCase() + addDialogType.slice(1)}</DialogTitle>
+            <DialogDescription>
+              Enter a new {addDialogType === 'type' ? 'strain type' : addDialogType} to add to your options.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newItem" className="text-right">
+                Name
+              </label>
+              <Input
+                id="newItem"
+                value={newItemValue}
+                onChange={(e) => setNewItemValue(e.target.value)}
+                className="col-span-3"
+                placeholder={`Enter ${addDialogType === 'type' ? 'strain type' : addDialogType} name`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddNewItem();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddNewItem} disabled={!newItemValue.trim()}>
+              Add {addDialogType === 'type' ? 'Type' : addDialogType.charAt(0).toUpperCase() + addDialogType.slice(1)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
