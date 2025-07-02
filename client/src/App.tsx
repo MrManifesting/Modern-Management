@@ -50,7 +50,7 @@ import CustomersPage from "@/pages/customers";
 import AuthPage from "@/pages/auth-page-simple";
 import LiveCatalog from "@/pages/LiveCatalog";
 import QrScanPage from "@/pages/qr-scan";
-import AnimationDemo from "@/pages/animation-demo";
+
 import CheckoutPage from "@/pages/checkout";
 import CredentialsPage from "@/pages/credentials-page";
 import MediaPackDemo from "@/pages/media-pack-demo";
@@ -163,7 +163,7 @@ function Router() {
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
-        <ProtectedRoute path="/animation-demo" component={() => <AnimationDemo />} />
+
         
         {/* Public Live Catalog - No authentication required */}
         <Route path="/catalog" component={() => {
