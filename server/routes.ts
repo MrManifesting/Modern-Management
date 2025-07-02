@@ -868,8 +868,106 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Bulk query endpoints for comprehensive inventory synchronization
+  app.post("/api/shopify/bulk-query/start", async (_req: Request, res: Response) => {
+    try {
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      log('Starting Shopify bulk query operation', 'bulk-query');
+      const operationId = await bulkService.startBulkQuery();
+      
+      res.json({
+        success: true,
+        operationId,
+        message: 'Bulk query started successfully'
+      });
+    } catch (error) {
+      log(`Bulk query start error: ${error}`, 'bulk-query');
+      res.status(500).json({ 
+        success: false, 
+        error: `Failed to start bulk query: ${error}` 
+      });
+    }
+  });
 
+  app.get("/api/shopify/bulk-query/status", async (_req: Request, res: Response) => {
+    try {
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      const query = `query { currentBulkOperation { status url errorCode } }`;
+      const response = await bulkService['makeShopifyRequest'](query);
+      
+      res.json({
+        success: true,
+        status: response.data.currentBulkOperation
+      });
+    } catch (error) {
+      log(`Bulk query status error: ${error}`, 'bulk-query');
+      res.status(500).json({ 
+        success: false, 
+        error: `Failed to check bulk query status: ${error}` 
+      });
+    }
+  });
 
+  app.post("/api/shopify/bulk-query/execute", async (_req: Request, res: Response) => {
+    try {
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      log('Executing complete bulk inventory query', 'bulk-query');
+      const results = await bulkService.executeBulkInventoryQuery();
+      
+      // Transform results for menu compatibility
+      const menuItems = results.flatMap(product => 
+        product.variants.map(variant => ({
+          productId: product.id,
+          productTitle: product.title,
+          variantId: variant.id,
+          variantTitle: variant.title,
+          sku: variant.sku,
+          inventoryQuantity: variant.inventoryQuantity,
+          location: variant.location,
+          strain: extractStrainName(product.title),
+          tier: extractTier(product.title),
+          weight: extractWeight(product.title),
+          urls: {
+            storefront: `https://goldcbd.com/products/${product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+            coa: `https://goldcbd.com/coa/${extractStrainName(product.title).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+            media: `https://goldcbd.com/media/download/${variant.sku}`,
+            admin: `https://gold-standard-cbd.myshopify.com/admin/products/${product.id.split('/').pop()}`
+          }
+        }))
+      );
+
+      res.json({
+        success: true,
+        lastUpdated: new Date().toISOString(),
+        summary: {
+          totalProducts: results.length,
+          totalVariants: menuItems.length,
+          totalInventory: menuItems.reduce((sum, item) => sum + item.inventoryQuantity, 0),
+          averageStock: menuItems.length > 0 ? 
+            Math.round(menuItems.reduce((sum, item) => sum + item.inventoryQuantity, 0) / menuItems.length) : 0
+        },
+        items: menuItems.filter(item => item.inventoryQuantity > 0), // Only show available items
+        contactInfo: {
+          email: "kaya@goldcbd.com",
+          phone: "541-295-8811 ext #1",
+          website: "https://goldcbd.com",
+          company: "Gold Standard CBD"
+        }
+      });
+    } catch (error) {
+      log(`Bulk query execution error: ${error}`, 'bulk-query');
+      res.status(500).json({ 
+        success: false, 
+        error: `Failed to execute bulk query: ${error}` 
+      });
+    }
+  });
 
   // Get single item - with ID validation (must come AFTER specific routes)
   app.get("/api/items/:id", async (req: Request, res: Response) => {
@@ -4848,19 +4946,59 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Generate live functional menu with working buttons and links
+  // Generate live functional menu with working buttons and links - now powered by bulk query
   app.get('/api/generate-live-menu', async (req: Request, res: Response) => {
     try {
-      log('Generating live functional menu with working links', 'live-menu');
+      log('Generating live functional menu with bulk query integration', 'live-menu');
       
-      const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+      // Try to use bulk query first for real-time data
+      let activeItems: any[] = [];
+      let usedBulkQuery = false;
       
-      // Filter for active items with quantities and proper pricing
-      const activeItems = results.filter((item: any) => 
-        item.status === 'active' && 
-        item.quantity > 0 &&
-        (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
-      );
+      try {
+        const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+        const bulkService = new ShopifyBulkQueryService();
+        
+        log('Attempting to fetch live data using bulk query', 'bulk-query');
+        const bulkResults = await bulkService.executeBulkInventoryQuery();
+        
+        // Transform bulk query results to menu format
+        activeItems = bulkResults.flatMap(product => 
+          product.variants
+            .filter(variant => variant.inventoryQuantity > 0)
+            .map(variant => ({
+              id: variant.id,
+              name: product.title,
+              sku: variant.sku,
+              quantity: variant.inventoryQuantity,
+              base_price: 0, // Will be populated from local data if available
+              sale_price: 0,
+              cost_price: 0,
+              status: 'active',
+              weight: extractWeight(product.title),
+              strain: extractStrainName(product.title),
+              tier: extractTier(product.title),
+              shopifyProductId: product.id,
+              shopifyVariantId: variant.id,
+              location: variant.location
+            }))
+        );
+        
+        usedBulkQuery = true;
+        log(`Successfully fetched ${activeItems.length} items from bulk query`, 'bulk-query');
+        
+      } catch (bulkError) {
+        log(`Bulk query failed, falling back to local data: ${bulkError}`, 'bulk-query');
+        
+        // Fallback to local inventory
+        const results = await storage.getAllItems ? await storage.getAllItems() : await storage.getItems();
+        
+        activeItems = results.filter((item: any) => 
+          item.status === 'active' && 
+          item.quantity > 0 &&
+          (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
+        );
+      }
       
       // Sort by highest quantities first (business priority)
       activeItems.sort((a: any, b: any) => {

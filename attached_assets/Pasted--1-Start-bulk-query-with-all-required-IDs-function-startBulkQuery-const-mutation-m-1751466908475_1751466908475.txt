@@ -1,0 +1,120 @@
+// 1️⃣ Start bulk query with all required IDs
+function startBulkQuery() {
+  const mutation = `
+    mutation {
+      bulkOperationRunQuery(
+        query: """
+        {
+          products(query: "product_type:flower OR product_type:bulk flower AND status:active") {
+            edges { node {
+              id
+              title
+              variants { edges { node {
+                id
+                title
+                sku
+                inventoryItem {
+                  inventoryLevels {
+                    edges { node {
+                      id
+                      location { name }
+                      quantities(names:["available"]) { name quantity }
+                    }}
+                  }
+                }
+              }}}
+            }}
+          }
+        }
+        """
+      ) {
+        bulkOperation { id status }
+        userErrors { field message }
+      }
+    }`;
+  const resp = makeShopifyRequestWithRetry(mutation);
+  const errs = resp.data.bulkOperationRunQuery.userErrors;
+  if (errs.length) throw new Error(JSON.stringify(errs));
+  return resp.data.bulkOperationRunQuery.bulkOperation.id;
+}
+
+// 2️⃣ Poll until COMPLETE
+function waitForCompletion() {
+  const query = `query { currentBulkOperation { status url errorCode } }`;
+  for (let i = 0; i < 60; i++) {
+    const op = makeShopifyRequestWithRetry(query).data.currentBulkOperation;
+    if (op.status === 'COMPLETED') return op.url;
+    if (op.status === 'FAILED') throw new Error('Bulk failed');
+    Utilities.sleep(5000);
+  }
+  throw new Error('Bulk timed out');
+}
+
+// 3️⃣ Download and parse JSONL
+function fetchAndParse(url) {
+  const lines = UrlFetchApp.fetch(url).getContentText().split('\n');
+  const output = [];
+  const parentMap = {};
+  
+  lines.forEach(line => {
+    if (!line) return;
+    const obj = JSON.parse(line);
+    if (obj.__typename === 'Product') {
+      parentMap[obj.id] = { title: obj.title, variants: {} };
+    } else if (obj.__typename === 'ProductVariant') {
+      const par = parentMap[obj.__parentId];
+      par.variants[obj.id] = { title: obj.title, sku: obj.sku, levels: [] };
+    } else if (obj.__typename === 'InventoryLevel') {
+      const parts = obj.__parentId.split('/');
+      const variantId = parts[parts.length - 1];
+      const parent = parentMap[obj.__parentId.split(`/Product/`)[1]];
+      // find variant
+      const variant = Object.values(parent.variants).find(v => v.title);
+      const available = (obj.quantities?.find(q => q.name === 'available')?.quantity) || 0;
+      output.push([parent.title, variant.title, variant.sku, obj.location.name, available]);
+    }
+  });
+  return output;
+}
+
+// 4️⃣ Write to sheet
+function writeRows(rows) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Inventory') || ss.insertSheet('Inventory');
+  sheet.clear();
+  sheet.appendRow(['Product','Variant','SKU','Location','Available']);
+  if (rows.length) {
+    sheet.getRange(2,1,rows.length,rows[0].length).setValues(rows);
+  }
+}
+
+// Utility functions (retries, GraphQL)
+function makeShopifyRequestWithRetry(query, vars = {}, max = 3) {
+  for (let i = 0; i < max; i++) {
+    try { return makeShopifyRequest(query, vars); } 
+    catch (e) {
+      if (e.message.includes('Throttled')) {
+        Utilities.sleep((2 ** (i+1)) * 1000);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
+function makeShopifyRequest(query, variables = {}) {
+  const token = PropertiesService.getScriptProperties().getProperty('SHOPIFY_ACCESS_TOKEN');
+  const domain = PropertiesService.getScriptProperties().getProperty('SHOPIFY_SHOP_DOMAIN').replace(/\.myshopify\.com$/,'');
+  const res = UrlFetchApp.fetch(`https://${domain}.myshopify.com/admin/api/2025-04/graphql.json`, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'X-Shopify-Access-Token': token },
+    payload: JSON.stringify({ query, variables })
+  });
+  const json = JSON.parse(res.getContentText());
+  if (json.errors) {
+    Logger.log('GraphQL errors: ' + JSON.stringify(json.errors));
+    throw new Error('GraphQL request failed');
+  }
+  return json;
+}

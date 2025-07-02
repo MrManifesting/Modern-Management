@@ -28,6 +28,7 @@ import VoiceAccessibilitySettingsPage from "@/pages/voice-accessibility-settings
 import ProductsInventoryPage from "@/pages/products-inventory";
 import SpecialtyProductsPage from "@/pages/specialty-products";
 import MenuSyncPage from "@/pages/menu-sync";
+import BulkQueryPage from "@/pages/bulk-query";
 
 
 import MediaManagerPage from "@/pages/media-manager";
