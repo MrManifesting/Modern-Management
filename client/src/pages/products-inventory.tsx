@@ -93,6 +93,7 @@ import BarcodePrint from '@/components/inventory/barcode-print';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import AddItemModal from '@/components/modals/add-item-modal';
+import EditItemModal from '@/components/modals/edit-item-modal';
 import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
 import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
