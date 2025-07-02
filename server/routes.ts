@@ -5526,4 +5526,86 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       res.status(500).json({ error: "Failed to generate description" });
     }
   });
+
+  // CSV Sync API endpoints for enhanced menu system
+  app.get("/api/csv-sync/summary", async (req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      const summary = await csvSync.getSyncSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error('CSV sync summary error:', error);
+      res.status(500).json({ error: "Failed to get sync summary" });
+    }
+  });
+
+  app.post("/api/csv-sync/generate-custom-menu", async (req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      const options = {
+        theme: req.body.theme || 'professional',
+        branding: req.body.branding || {
+          companyName: 'Gold Standard CBD',
+          subtitle: 'Premium Cannabis Products',
+          description: 'Premium quality cannabis products for wholesale and distribution.',
+          logoUrl: '',
+          contactInfo: {
+            phone: '541-295-8811',
+            email: 'kaya@goldcbd.com',
+            website: 'goldcbd.com',
+            address: 'Contact for location'
+          }
+        },
+        format: req.body.format || 'html',
+        includeImages: req.body.includeImages !== false,
+        filterOptions: req.body.filterOptions || {}
+      };
+
+      const menuData = await csvSync.generateCustomMenu(options);
+      
+      if (options.format === 'html') {
+        res.setHeader('Content-Type', 'text/html');
+        res.send(menuData.data);
+      } else {
+        res.json(menuData);
+      }
+    } catch (error) {
+      console.error('Custom menu generation error:', error);
+      res.status(500).json({ error: "Failed to generate custom menu" });
+    }
+  });
+
+  app.get("/api/csv-sync/live-menu-preview", async (req: Request, res: Response) => {
+    try {
+      const { CSVInventorySync } = await import('./services/csv-inventory-sync.js');
+      const csvSync = new CSVInventorySync();
+      await csvSync.loadMenuTabCSV();
+      await csvSync.syncMenuTabWithShopifyQuantities();
+      
+      const menuData = await csvSync.generateCustomMenu({
+        format: 'html',
+        theme: 'professional',
+        branding: {
+          companyName: 'Gold Standard CBD',
+          subtitle: 'Live Menu Preview',
+          description: 'Real-time synchronized inventory menu',
+          logoUrl: '',
+          contactInfo: {
+            phone: '541-295-8811',
+            email: 'kaya@goldcbd.com',
+            website: 'goldcbd.com',
+            address: 'Contact for location'
+          }
+        }
+      });
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuData.data);
+    } catch (error) {
+      console.error('Live menu preview error:', error);
+      res.status(500).json({ error: "Failed to generate live menu preview" });
+    }
+  });
 }
