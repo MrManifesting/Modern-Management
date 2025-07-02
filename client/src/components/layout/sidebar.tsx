@@ -97,6 +97,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/bulk-query",
           className: "bulk-query-link highlight",
         },
+        {
+          title: "Menu Generator",
+          path: "/menu-generator",
+          className: "menu-generator-link highlight",
+        },
 
       ]
     },
