@@ -33,19 +33,24 @@ const ThemedMenusPage: React.FC = () => {
   const fetchMenuData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/all-themed-menus');
+      // Fetch authentic Shopify data for themed menus
+      const response = await fetch('/api/themed-menus-with-real-data');
       const data = await response.json();
       
       if (data.success) {
         setMenuData(data);
+        toast({
+          title: "Success",
+          description: `Loaded ${data.themes?.length || 0} themed menus with ${data.flowerItems || 0} authentic products`,
+        });
       } else {
-        throw new Error(data.error || 'Failed to fetch menu data');
+        throw new Error(data.error || 'Failed to fetch authentic menu data');
       }
     } catch (error) {
-      console.error('Error fetching menu data:', error);
+      console.error('Error fetching authentic menu data:', error);
       toast({
         title: "Error",
-        description: "Failed to load themed menus. Please try again.",
+        description: "Failed to load themed menus with authentic data. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -132,12 +137,30 @@ const ThemedMenusPage: React.FC = () => {
             <h1 className="text-4xl font-bold text-primary">Themed Menu Generator</h1>
           </div>
           <p className="text-xl text-muted-foreground mb-2">
-            Professional cannabis menu templates with live flower inventory
+            Professional cannabis menu templates with authentic Shopify data
           </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{menuData.flowerItems}</div>
+              <div className="text-sm text-muted-foreground">Authentic Products</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{(menuData as any).withVariantIds || 0}</div>
+              <div className="text-sm text-muted-foreground">Shopify Variants</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{menuData.themes.length}</div>
+              <div className="text-sm text-muted-foreground">Theme Options</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{(menuData as any).totalInventory || 0}</div>
+              <div className="text-sm text-muted-foreground">Total Inventory</div>
+            </Card>
+          </div>
           <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4" />
-              <span>{menuData.flowerItems} Active Flower Products</span>
+              <span>Real-time Gold Standard CBD synchronization</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -184,6 +207,32 @@ const ThemedMenusPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
+                      {/* Sample Products Preview */}
+                      {menu && (menu as any).sampleProducts && (
+                        <div className="mb-6">
+                          <h4 className="font-semibold mb-3 text-sm text-muted-foreground">SAMPLE AUTHENTIC PRODUCTS</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {(menu as any).sampleProducts.slice(0, 3).map((product: any, idx: number) => (
+                              <Card key={idx} className="p-3 border border-gray-200">
+                                <div className="space-y-2">
+                                  <div className="font-medium text-sm truncate">{product.name}</div>
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-green-600 font-bold">${product.price?.toFixed(2) || '0.00'}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {product.quantity} units
+                                    </Badge>
+                                  </div>
+                                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                    <span>SKU: {product.sku?.substring(0, 10) || 'N/A'}...</span>
+                                    <span>ID: {product.variantId?.substring(0, 8) || 'N/A'}...</span>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Preview Frame */}
                       <div className="border rounded-lg overflow-hidden bg-white shadow-inner">
                         <div className="bg-gray-100 px-4 py-2 border-b flex items-center gap-2">
