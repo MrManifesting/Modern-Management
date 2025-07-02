@@ -1,4 +1,4 @@
-declare module 'xmldom' {
+declare module '@xmldom/xmldom' {
   export class DOMImplementation {
     createDocument(namespaceURI: string, qualifiedName: string, doctype: any): Document;
   }
