@@ -720,7 +720,155 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Enhanced inventory endpoint with real Shopify data
+  // Weight fix test endpoint
+  app.get("/api/fix-weights/test", async (_req: Request, res: Response) => {
+    try {
+      const { weightService } = await import('./services/weight-service.js');
+      
+      const testCases = [
+        "2 GRAMS Frozen Lemons - THCA Flower", 
+        "3 GRAMS Blueberry Muffin - THCA",
+        "Half Gram Purple Push Pop",
+        "1 POUND Zoap - THCA BULK FLOWER",
+        "Book Flower - Gelato 47"
+      ];
+
+      const results = testCases.map(productName => ({
+        productName,
+        extractedWeight: weightService.extractFromProductName(productName),
+        isCorrect: productName.includes('2 GRAMS') ? 
+          weightService.extractFromProductName(productName) === '2 grams' : true
+      }));
+
+      const criticalTest = weightService.extractFromProductName("2 GRAMS Frozen Lemons - THCA Flower");
+      
+      res.json({
+        success: true,
+        message: "Weight extraction test results",
+        results,
+        critical_test: {
+          input: "2 GRAMS Frozen Lemons - THCA Flower",
+          output: criticalTest,
+          expected: "2 grams",
+          passes: criticalTest === "2 grams"
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Weight test failed" });
+    }
+  });
+
+  // Apply weight fixes to database
+  app.post("/api/fix-weights/apply", async (_req: Request, res: Response) => {
+    try {
+      const { weightService } = await import('./services/weight-service.js');
+      const items = await storage.getItems();
+      
+      const updates = [];
+      let fixed = 0;
+
+      for (const item of items) {
+        if (item.name) {
+          const currentWeight = item.weight;
+          const correctWeight = weightService.extractFromProductName(item.name);
+          
+          // Only update if weight is significantly different
+          if (currentWeight !== correctWeight && correctWeight !== 'Weight not specified') {
+            await storage.updateItem(item.id, { weight: correctWeight });
+            updates.push({
+              id: item.id,
+              name: item.name,
+              oldWeight: currentWeight,
+              newWeight: correctWeight
+            });
+            fixed++;
+          }
+        }
+      }
+
+      log(`Fixed ${fixed} items with incorrect weight data`, 'weight-fix');
+
+      res.json({
+        success: true,
+        message: `Fixed weights for ${fixed} items`,
+        totalItems: items.length,
+        fixedItems: fixed,
+        sampleUpdates: updates.slice(0, 10)
+      });
+
+    } catch (error) {
+      log(`Weight fix error: ${error}`, 'weight-fix');
+      res.status(500).json({
+        success: false,
+        error: "Failed to apply weight fixes"
+      });
+    }
+  });
+
+  // AI Assistant chat endpoint
+  app.post("/api/ai/chat", async (req: Request, res: Response) => {
+    try {
+      const { message, context } = req.body;
+      if (!message) {
+        return res.status(400).json({ success: false, error: "Message is required" });
+      }
+
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const response = await aiAssistant.chat(message, context);
+
+      res.json({
+        success: true,
+        response,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      log(`AI chat error: ${error}`, 'ai-assistant');
+      res.status(500).json({ success: false, error: "AI assistant unavailable" });
+    }
+  });
+
+  // AI Product analysis endpoint
+  app.post("/api/ai/analyze-product", async (req: Request, res: Response) => {
+    try {
+      const { productName, shopifyData } = req.body;
+      if (!productName) {
+        return res.status(400).json({ success: false, error: "Product name is required" });
+      }
+
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const analysis = await aiAssistant.analyzeProduct(productName, shopifyData);
+
+      res.json({
+        success: true,
+        analysis,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      log(`AI product analysis error: ${error}`, 'ai-assistant');
+      res.status(500).json({ success: false, error: "Product analysis failed" });
+    }
+  });
+
+  // AI Inventory optimization endpoint
+  app.get("/api/ai/optimize-inventory", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      const { aiAssistant } = await import('./services/ai-assistant.js');
+      const optimization = await aiAssistant.optimizeInventory(items);
+
+      res.json({
+        success: true,
+        optimization,
+        itemCount: items.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      log(`AI inventory optimization error: ${error}`, 'ai-assistant');
+      res.status(500).json({ success: false, error: "Inventory optimization failed" });
+    }
+  });
+
+  // Enhanced inventory endpoint with real Shopify data and AI-powered weight extraction
   app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
     try {
       const items = await storage.getItems();
