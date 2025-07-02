@@ -5964,8 +5964,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const bulkQueryService = new ShopifyBulkQueryService();
       
       // Execute bulk query to get real-time inventory
-      const bulkResult = await bulkQueryService.executeBulkQuery();
-      const products = bulkResult.products || [];
+      const products = await bulkQueryService.executeBulkInventoryQuery();
       
       // Generate unique menu ID
       const menuId = `menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -6324,21 +6323,22 @@ function generateCustomMenuHtml(products: any[], theme: any, branding: any, cust
                 <div class="stat-label">Products Available</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${products.filter(p => p.totalInventory > 0).length}</div>
+                <div class="stat-number">${products.filter(p => p.variants && p.variants.some(v => v.inventoryQuantity > 0)).length}</div>
                 <div class="stat-label">In Stock</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${products.filter(p => p.totalInventory < 10).length}</div>
+                <div class="stat-number">${products.filter(p => p.variants && p.variants.some(v => v.inventoryQuantity < 10 && v.inventoryQuantity > 0)).length}</div>
                 <div class="stat-label">Low Stock</div>
             </div>
         </div>
 
         <div class="product-grid">
-            ${products.filter(p => p.totalInventory > 0).slice(0, 20).map((product: any) => {
+            ${products.filter(p => p.variants && p.variants.length > 0 && p.variants.some(v => v.inventoryQuantity > 0)).slice(0, 20).map((product: any) => {
               const strainName = product.title.split(' - ')[0] || product.title;
-              const price = product.variants?.[0]?.price || 'Contact for Price';
-              const quantity = product.totalInventory || 0;
-              const handle = product.handle;
+              const variant = product.variants?.[0] || {};
+              const price = variant.price || 'Contact for Price';
+              const quantity = variant.inventoryQuantity || 0;
+              const handle = product.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
               
               return `
                 <div class="product-card">
