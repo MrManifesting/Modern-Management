@@ -525,8 +525,8 @@ export const resolvers = {
           const bIsPound = isPoundVariant(b);
           
           // Check if items have valid pricing and quantities (available)
-          const aHasValidPrice = a.pricing.displayPrice > 0 || a.sale_price > 0 || a.base_price > 0 || a.bulk_price > 0 || a.cost_price > 0;
-          const bHasValidPrice = b.pricing.displayPrice > 0 || b.sale_price > 0 || b.base_price > 0 || b.bulk_price > 0 || b.cost_price > 0;
+          const aHasValidPrice = a.pricing && a.pricing.displayPrice > 0;
+          const bHasValidPrice = b.pricing && b.pricing.displayPrice > 0;
           
           const aIsAvailable = aHasValidPrice && a.quantity > 0;
           const bIsAvailable = bHasValidPrice && b.quantity > 0;
