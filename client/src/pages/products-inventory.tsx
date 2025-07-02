@@ -2438,7 +2438,10 @@ const ProductsInventoryPage: React.FC = () => {
                     </table>
                   </div>
                 </div>
-                <TabsContent value="electronics" className="mt-0">
+            )}
+          </CardContent>
+        </Card>
+      </div>
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
