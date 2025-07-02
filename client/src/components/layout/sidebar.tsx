@@ -92,7 +92,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/products-inventory",
           className: "inventory-link primary-brand",
         },
-
+        {
+          title: "Bulk Query",
+          path: "/bulk-query",
+          className: "bulk-query-link highlight",
+        },
 
       ]
     },
