@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import VoiceSearch from '@/components/mobile/voice-search';
-import MobileNavigation from '@/components/mobile/mobile-navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -242,7 +241,7 @@ export const VoiceSearchPage: React.FC = () => {
       </div>
 
       {/* Mobile Navigation */}
-      <MobileNavigation />
+
     </div>
   );
 };
