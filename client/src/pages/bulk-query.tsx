@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,15 +98,17 @@ export default function BulkQueryPage() {
   };
 
   // Update progress based on status
-  if (statusData?.status && isExecuting) {
-    if (statusData.status.status === 'COMPLETED') {
-      setExecutionProgress(75);
-      handleExecuteComplete();
-    } else if (statusData.status.status === 'FAILED') {
-      setIsExecuting(false);
-      setExecutionProgress(0);
+  useEffect(() => {
+    if (statusData?.status && isExecuting) {
+      if (statusData.status.status === 'COMPLETED') {
+        setExecutionProgress(75);
+        handleExecuteComplete();
+      } else if (statusData.status.status === 'FAILED') {
+        setIsExecuting(false);
+        setExecutionProgress(0);
+      }
     }
-  }
+  }, [statusData?.status, isExecuting]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
