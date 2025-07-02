@@ -30,6 +30,7 @@ import SpecialtyProductsPage from "@/pages/specialty-products";
 import MenuSyncPage from "@/pages/menu-sync";
 import BulkQueryPage from "@/pages/bulk-query";
 import MenuGenerator from "@/pages/menu-generator";
+import CustomerTiersPage from "@/pages/customer-tiers";
 
 
 import MediaManagerPage from "@/pages/media-manager";
@@ -111,6 +112,7 @@ function Router() {
         <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
         <ProtectedRoute path="/bulk-query" component={() => <BulkQueryPage />} />
         <ProtectedRoute path="/menu-generator" component={() => <MenuGenerator />} />
+        <ProtectedRoute path="/customer-tiers" component={() => <CustomerTiersPage />} />
 
 
 
