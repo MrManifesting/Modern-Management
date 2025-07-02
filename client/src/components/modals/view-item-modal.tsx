@@ -88,62 +88,54 @@ export default function ViewItemModal({ item, trigger, onEdit, onDelete }: ViewI
     return `https://gold-standard-cbd.myshopify.com/admin/products?query=${encodeURIComponent(item.handle || item.name)}`;
   };
 
-  // Parse weight from item name if weight field is null or invalid
+  // CRITICAL FIX: Use exact same weight logic as enhanced inventory to ensure consistency
   const getDisplayWeight = (item: any) => {
-    // If we have a valid weight field, use it
-    if (item.weight && item.weight !== 'null' && item.weight.trim() !== '') {
-      let cleanWeight = item.weight.trim();
-      
-      // Intelligent weight cleaning to remove trailing "g" from pound/ounce values
-      // but preserve legitimate gram measurements
-      if (cleanWeight.endsWith('g')) {
-        // Keep legitimate gram values
-        if (cleanWeight.endsWith('3.5g') || cleanWeight.endsWith('1g') || cleanWeight.endsWith('7g') || cleanWeight.endsWith('14g') || cleanWeight.endsWith('28g')) {
-          return cleanWeight;
-        }
-        // Remove trailing "g" from pound/ounce values
-        if (cleanWeight.includes('pound') || cleanWeight.includes('ounce')) {
-          cleanWeight = cleanWeight.slice(0, -1).trim();
-        }
+    if (!item) return 'Not specified';
+    
+    // Use the weight that comes from enhanced inventory (already processed correctly)
+    if (item.weight && item.weight !== 'Not specified' && item.weight !== 'null' && item.weight.trim() !== '') {
+      return item.weight.toString();
+    }
+    
+    // Apply same weight interpretation logic as enhanced inventory endpoint
+    if (item.name) {
+      const nameLower = item.name.toLowerCase();
+      if (nameLower.includes('half gram') || nameLower === 'half gram') {
+        return '0.5 grams';
+      } else if (nameLower.includes('2 grams') || nameLower === '2 grams') {
+        return '2 grams';
+      } else if (nameLower.includes('1 gram') || nameLower === '1 gram') {
+        return '1 gram';
+      } else if (nameLower.includes('14 grams') || nameLower === '14 grams') {
+        return '14 grams';
+      } else if (nameLower.includes('28 grams') || nameLower === '28 grams') {
+        return '28 grams';
       }
       
-      return cleanWeight;
-    }
+      // Check for pound variants in parentheses
+      const poundMatch = item.name.match(/\(([^)]*pound[^)]*)\)/i);
+      if (poundMatch) {
+        const weightText = poundMatch[1].trim();
+        if (weightText.includes('1 pound') || weightText === 'pound') {
+          return '1 pound';
+        } else if (weightText.includes('half pound')) {
+          return 'half pound';  
+        } else if (weightText.includes('quarter pound')) {
+          return 'quarter pound';
+        }
+        return weightText;
+      }
 
-    // Parse weight from item name for pound variants
-    const name = item.name || '';
-    const nameLower = name.toLowerCase();
-
-    // Check for pound variants in parentheses: "(1 pound)", "(half pound)", etc.
-    const poundMatch = name.match(/\(([^)]*pound[^)]*)\)/i);
-    if (poundMatch) {
-      const weightText = poundMatch[1].trim();
-      if (weightText.includes('1 pound') || weightText === 'pound') {
+      // Check for other weight indicators
+      if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
         return '1 pound';
-      } else if (weightText.includes('half pound')) {
-        return 'half pound';  
-      } else if (weightText.includes('quarter pound')) {
+      } else if (nameLower.includes('half pound') || nameLower.includes('0.5 pound')) {
+        return 'half pound';
+      } else if (nameLower.includes('quarter pound') || nameLower.includes('0.25 pound')) {
         return 'quarter pound';
       }
-      return weightText; // Return the parsed weight text
     }
 
-    // Check for other weight indicators in the name
-    if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
-      return '1 pound';
-    } else if (nameLower.includes('half pound') || nameLower.includes('0.5 pound')) {
-      return 'half pound';
-    } else if (nameLower.includes('quarter pound') || nameLower.includes('0.25 pound')) {
-      return 'quarter pound';
-    } else if (nameLower.includes('ounce')) {
-      return '1 ounce';
-    } else if (nameLower.includes('3.5g') || nameLower.includes('eighth')) {
-      return '3.5g (eighth)';
-    } else if (nameLower.includes('1g') || nameLower.includes('gram')) {
-      return '1g';
-    }
-
-    // Fallback to "Not specified" if we can't determine weight
     return 'Not specified';
   };
 

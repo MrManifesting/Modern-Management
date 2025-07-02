@@ -60,7 +60,28 @@ export default function EditItemModal({ item, trigger }: EditItemModalProps) {
       description: item.description || "",
       category: item.category || "Bulk Flower",
       brand: item.brand || "Gold Standard", 
-      weight: item.weight || "",
+      // CRITICAL FIX: Use same weight interpretation logic as ViewItemModal and enhanced inventory
+      weight: (() => {
+        if (item.weight && item.weight !== 'Not specified' && item.weight !== 'null' && item.weight.trim() !== '') {
+          return item.weight.toString();
+        }
+        // Apply same logic as enhanced inventory
+        if (item.name) {
+          const nameLower = item.name.toLowerCase();
+          if (nameLower.includes('half gram') || nameLower === 'half gram') {
+            return '0.5 grams';
+          } else if (nameLower.includes('2 grams') || nameLower === '2 grams') {
+            return '2 grams';
+          } else if (nameLower.includes('1 gram') || nameLower === '1 gram') {
+            return '1 gram';
+          } else if (nameLower.includes('14 grams') || nameLower === '14 grams') {
+            return '14 grams';
+          } else if (nameLower.includes('28 grams') || nameLower === '28 grams') {
+            return '28 grams';
+          }
+        }
+        return item.weight || "";
+      })(),
       sku: item.sku || "",
       basePrice: item.basePrice || "",
       costPrice: item.costPrice || "",
