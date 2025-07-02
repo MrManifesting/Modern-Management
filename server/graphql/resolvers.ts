@@ -135,15 +135,25 @@ function processMediaInfo(item: any, shopifyProduct?: any) {
     imageUrls.push(item.thumbnail_url);
   }
 
-  // Process Shopify images
-  if (shopifyProduct?.images) {
+  // Process Shopify images from GraphQL format
+  if (shopifyProduct?.images?.edges) {
+    shopifyProduct.images.edges.forEach((edge: any) => {
+      if (edge.node?.src) {
+        imageUrls.push(edge.node.src);
+      }
+    });
+  }
+  // Fallback to REST API format
+  else if (shopifyProduct?.images) {
     shopifyProduct.images.forEach((img: any) => {
       if (img.src) imageUrls.push(img.src);
     });
   }
 
-  // Set thumbnail - prioritize Shopify images first, then local images
-  if (shopifyProduct?.images?.[0]?.src) {
+  // Set thumbnail - prioritize Shopify GraphQL images first
+  if (shopifyProduct?.images?.edges?.[0]?.node?.src) {
+    thumbnailUrl = shopifyProduct.images.edges[0].node.src;
+  } else if (shopifyProduct?.images?.[0]?.src) {
     thumbnailUrl = shopifyProduct.images[0].src;
   } else if (imageUrls.length > 0) {
     thumbnailUrl = imageUrls[0];
@@ -234,7 +244,20 @@ function calculatePricing(item: any, shopifyProduct?: any) {
   }
 
   // PRIORITY: Shopify GraphQL data -> local sale price -> bulk price -> base price -> cost price
-  const displayPrice = shopifyPrice || salePrice || bulkPrice || basePrice || costPrice || 0;
+  let displayPrice = shopifyPrice || salePrice || bulkPrice || basePrice || costPrice || 0;
+  
+  // Validate pricing - reject unrealistic values for prerolls
+  if (item.name && item.name.toLowerCase().includes('preroll') && displayPrice > 100) {
+    log(`Rejected unrealistic preroll price ${displayPrice} for ${item.name}, using cost price instead`, 'pricing-validation');
+    displayPrice = costPrice || 0;
+  }
+  
+  // General validation for all products
+  if (displayPrice > 5000 || displayPrice < 0) {
+    log(`Rejected unrealistic price ${displayPrice} for ${item.name}`, 'pricing-validation');
+    displayPrice = costPrice || bulkPrice || 0;
+  }
+  
   const originalPrice = shopifyComparePrice || bulkPrice || basePrice || shopifyPrice || 0;
   const hasDiscount = (shopifyComparePrice && shopifyPrice && shopifyComparePrice > shopifyPrice) || 
                      (salePrice > 0 && originalPrice > salePrice);
