@@ -328,8 +328,11 @@ export default function EnhancedInventory() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{item.name}</div>
+                        <div className="font-medium">{item.strain || item.name}</div>
                         <div className="text-sm text-gray-500">{item.brand}</div>
+                        {item.strain && item.strain !== item.name && (
+                          <div className="text-xs text-muted-foreground mt-1">{item.name}</div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
