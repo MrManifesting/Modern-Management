@@ -133,6 +133,10 @@ This is a comprehensive inventory management system built with Node.js, React, a
   - **PRICING FALLBACK SYSTEM**: Added "Contact for Price" display for $0.00 items while maintaining authentic pricing for available items
   - **COMPLETE HTML GENERATION**: Professional styled HTML menus with Gold Standard CBD branding and responsive design operational
   - **WEIGHT SEPARATION CONFIRMED**: Clean strain names (Jager Cake, Animal Face, Mac) properly separated from "1 pound" weights in menu display
+  - **FIXED INVENTORY WEIGHT DATA**: Updated 36 bulk flower items to show correct "1 pound" weights instead of "1 gram" defaults
+  - **AUTHENTIC STRAIN NAME EXTRACTION**: Improved parsing to show clean names like "Blueberry Muffin" instead of "Blueberry Muffin 1"
+  - **VERIFIED PRICING ACCURACY**: Confirmed realistic wholesale pricing ($800-$1,150 per pound) with no items exceeding $2,000
+  - **COMPLETE LINK FUNCTIONALITY**: All COA, order, and media links properly formatted for goldcbd.com integration
   - System now generates comprehensive flower-only menus with authentic strain names, proper weight categorization, and professional styling
 - July 2, 2025: **AI-POWERED SHOPIFY FUZZY MATCHING SYSTEM DEPLOYED - INTELLIGENT INVENTORY LINKING WITH OPENAI INTEGRATION**
   - **CREATED AI SHOPIFY MATCHER SERVICE**: Advanced AI system using GPT-4o to intelligently match inventory items to Shopify products with high accuracy

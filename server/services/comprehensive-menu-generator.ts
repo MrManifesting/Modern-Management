@@ -97,12 +97,12 @@ export class ComprehensiveMenuGenerator {
     return items
       .sort((a, b) => b.quantity - a.quantity) // Sort by highest quantity first
       .map(item => {
-        console.log(`[debug] Processing item: ${item.name}, weight field: ${item.weight}`);
+
         return {
           id: item.id,
         name: this.extractStrainName(item.name),
         originalName: item.name,
-        weight: item.weight || this.extractWeight(item.name),
+        weight: item.weight || this.extractWeight(item.name, item.category),
         tier: this.extractTier(item.name),
         thcaPercentage: this.extractTHCAPercentage(item.name),
         quantity: item.quantity,
@@ -145,8 +145,11 @@ export class ComprehensiveMenuGenerator {
       .join(' ') || 'Cannabis Strain';
   }
 
-  private extractWeight(name: string): string {
-    if (!name) return '1 gram';
+  private extractWeight(name: string, category?: string): string {
+    if (!name) {
+      // Default bulk flower items to 1 pound when no name/weight data
+      return (category?.toLowerCase().includes('bulk flower')) ? '1 pound' : '1 gram';
+    }
     
     const nameLower = name.toLowerCase();
     
@@ -160,7 +163,8 @@ export class ComprehensiveMenuGenerator {
     const gramMatch = nameLower.match(/(\d+)\s*gram/);
     if (gramMatch) return `${gramMatch[1]} gram${parseInt(gramMatch[1]) > 1 ? 's' : ''}`;
     
-    return '1 gram';
+    // Default bulk flower items to 1 pound when weight can't be extracted from name
+    return (category?.toLowerCase().includes('bulk flower')) ? '1 pound' : '1 gram';
   }
 
   private extractTier(name: string): string {
@@ -208,7 +212,7 @@ export class ComprehensiveMenuGenerator {
 
   private calculatePricePerGram(item: any): number {
     const price = this.getDisplayPrice(item);
-    const weight = this.extractWeight(item.name);
+    const weight = this.extractWeight(item.name, item.category);
     
     let grams = 1;
     if (weight.includes('pound')) grams = 453.592;
