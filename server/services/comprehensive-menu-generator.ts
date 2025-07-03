@@ -36,47 +36,78 @@ export class ComprehensiveMenuGenerator {
 
     console.log(`[comprehensive-menu] Found ${activeItems.length} active items with quantities`);
 
-    // Create sections
+    // Create sections with proper weight categorization
     const sections: MenuSection[] = [];
 
-    // 1. Flower and Bulk Flower Section ONLY - NO gram/ounce variants
-    const flowerItems = activeItems.filter(item => {
+    // Helper function to determine if item is bulk flower (1 pound units)
+    const isBulkFlower = (item: any): boolean => {
+      const weight = item.weight?.toLowerCase() || '';
       const name = item.name?.toLowerCase() || '';
       const category = item.category?.toLowerCase() || '';
-      const weight = item.weight?.toLowerCase() || '';
       
-      // Must be flower or bulk flower category
+      // Check for 1 pound indicators
+      return weight.includes('1 pound') || 
+             weight.includes('one pound') || 
+             weight.includes('1lb') || 
+             weight.includes('pound') ||
+             name.includes('1 pound') ||
+             name.includes('one pound') ||
+             category.includes('bulk flower');
+    };
+
+    // Helper function to determine if item is smaller flower units
+    const isSmallerFlower = (item: any): boolean => {
+      const weight = item.weight?.toLowerCase() || '';
+      const name = item.name?.toLowerCase() || '';
+      const category = item.category?.toLowerCase() || '';
+      
+      // Check for smaller units (grams, ounces, half/quarter pounds)
+      return (category.includes('flower') && !isBulkFlower(item)) ||
+             weight.includes('gram') ||
+             weight.includes('ounce') ||
+             weight.includes('1/2 pound') ||
+             weight.includes('half pound') ||
+             weight.includes('1/4 pound') ||
+             weight.includes('quarter pound') ||
+             /\d+\s*g\b/.test(weight) ||  // 1g, 28g etc.
+             /\d+\s*oz/.test(weight);     // 1oz, 2oz etc.
+    };
+
+    // 1. BULK FLOWER SECTION (1 Pound Units Only)
+    const bulkFlowerItems = activeItems.filter(item => {
+      const category = item.category?.toLowerCase() || '';
       const isFlowerCategory = category.includes('flower') || category.includes('bulk flower');
       
-      // Must NOT contain gram or ounce weights - only pound variants allowed
-      const hasGramOunceWeight = weight.includes('gram') || 
-                                weight.includes('ounce') || 
-                                weight.includes('oz') ||
-                                weight.includes('eighth') ||
-                                name.includes('gram') ||
-                                name.includes('ounce') ||
-                                name.includes('oz');
+      return isFlowerCategory && isBulkFlower(item);
+    });
+
+    if (bulkFlowerItems.length > 0) {
+      sections.push({
+        title: 'Bulk Flower (1 Pound Units)',
+        description: 'Premium THCa flower products available in 1 pound quantities for bulk orders',
+        items: this.formatFlowerItems(bulkFlowerItems),
+        totalValue: this.calculateSectionValue(bulkFlowerItems),
+        totalQuantity: bulkFlowerItems.reduce((sum, item) => sum + item.quantity, 0)
+      });
+    }
+
+    // 2. SMALLER FLOWER UNITS SECTION (1g-28g, 1/2 lb, 1/4 lb)
+    const smallerFlowerItems = activeItems.filter(item => {
+      const category = item.category?.toLowerCase() || '';
+      const isFlowerCategory = category.includes('flower') || category.includes('bulk flower');
       
-      // Must be authentic flower/bulk flower without small weight variants
-      return isFlowerCategory && !hasGramOunceWeight;
+      return isFlowerCategory && isSmallerFlower(item);
     });
 
-    sections.push({
-      title: 'Premium Cannabis Flower & Bulk Flower',
-      description: 'High-quality THCa flower products available in various weights and quality tiers',
-      items: this.formatFlowerItems(flowerItems),
-      totalValue: this.calculateSectionValue(flowerItems),
-      totalQuantity: flowerItems.reduce((sum, item) => sum + item.quantity, 0)
-    });
-
-    // REMOVED: Pre-Rolls section per user requirement - flower/bulk flower only
-
-    // REMOVED: Edibles section per user requirement - flower/bulk flower only
-
-    // REMOVED: Concentrates section per user requirement - flower/bulk flower only
-
-    // REMOVED: All other sections per user requirement - flower/bulk flower only
-    // System now exclusively displays flower and bulk flower items without gram/ounce variants
+    if (smallerFlowerItems.length > 0) {
+      sections.push({
+        title: 'Flower Units (1g-28g, 1/2 lb, 1/4 lb)',
+        description: 'Premium THCa flower products in smaller quantities for retail and personal use',
+        items: this.formatFlowerItems(smallerFlowerItems),
+        totalValue: this.calculateSectionValue(smallerFlowerItems),
+        totalQuantity: smallerFlowerItems.reduce((sum, item) => sum + item.quantity, 0)
+      });
+    }
 
     const totalItems = activeItems.length;
     const totalValue = sections.reduce((sum, section) => sum + section.totalValue, 0);
@@ -100,21 +131,21 @@ export class ComprehensiveMenuGenerator {
 
         return {
           id: item.id,
-        name: this.extractStrainName(item.name),
-        originalName: item.name,
-        weight: item.weight || this.extractWeight(item.name, item.category),
-        tier: this.extractTier(item.name),
-        thcaPercentage: this.extractTHCAPercentage(item.name),
-        quantity: item.quantity,
-        price: this.getDisplayPrice(item),
-        pricePerGram: this.getDisplayPrice(item), // Show total price, not per-gram calculation
-        sku: item.sku,
-        image: item.thumbnail || item.images?.[0] || null,
-        coaLink: `https://goldcbd.com/coa/${this.createSlug(this.extractStrainName(item.name))}`,
-        orderLink: `https://goldcbd.com/products/${this.createSlug(item.name)}`,
-        mediaLink: `https://goldcbd.com/media/download/${item.sku}`,
-        inStock: item.quantity > 0,
-        lowStock: item.quantity <= 10
+          name: this.extractStrainName(item.name),
+          originalName: item.name,
+          weight: item.weight || this.extractWeight(item.name, item.category),
+          tier: this.extractTier(item.name),
+          thcaPercentage: this.extractTHCAPercentage(item.name),
+          quantity: item.quantity,
+          price: this.getDisplayPrice(item),
+          pricePerGram: this.getDisplayPrice(item), // Show total price, not per-gram calculation
+          sku: item.sku,
+          image: item.thumbnail || item.images?.[0] || null,
+          coaLink: `https://goldcbd.com/coa/${this.createSlug(this.extractStrainName(item.name))}`,
+          orderLink: `https://goldcbd.com/products/${this.createSlug(item.name)}`,
+          mediaLink: `https://goldcbd.com/media/download/${item.sku}`,
+          inStock: item.quantity > 0,
+          lowStock: item.quantity <= 10
         };
       });
   }
