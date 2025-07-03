@@ -96,11 +96,13 @@ export class ComprehensiveMenuGenerator {
   private formatFlowerItems(items: any[]): any[] {
     return items
       .sort((a, b) => b.quantity - a.quantity) // Sort by highest quantity first
-      .map(item => ({
-        id: item.id,
+      .map(item => {
+        console.log(`[debug] Processing item: ${item.name}, weight field: ${item.weight}`);
+        return {
+          id: item.id,
         name: this.extractStrainName(item.name),
         originalName: item.name,
-        weight: this.extractWeight(item.name),
+        weight: item.weight || this.extractWeight(item.name),
         tier: this.extractTier(item.name),
         thcaPercentage: this.extractTHCAPercentage(item.name),
         quantity: item.quantity,
@@ -113,7 +115,8 @@ export class ComprehensiveMenuGenerator {
         mediaLink: `https://goldcbd.com/media/download/${item.sku}`,
         inStock: item.quantity > 0,
         lowStock: item.quantity <= 10
-      }));
+        };
+      });
   }
 
   // REMOVED: All unused formatting methods for non-flower products per user requirement
@@ -131,7 +134,7 @@ export class ComprehensiveMenuGenerator {
     // Remove common cannabis product keywords and extract strain name
     const cleanName = name
       .replace(/\b(thca|bulk|flower|smalls|mediums|indoor|outdoor|exotic|top shelf|classic reserve|aa|aaa|premium|quality)\b/gi, '')
-      .replace(/\b(1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g|\d+\s*gram|\d+\s*g)\b/gi, '')
+      .replace(/\b(1-pound|1\/4|1\/2|quarter|half|pound|lb|ounce|oz|gram|g|\d+\s*gram|\d+\s*g)\b/gi, '')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
