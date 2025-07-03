@@ -146,25 +146,39 @@ export class ComprehensiveMenuGenerator {
   }
 
   private extractWeight(name: string, category?: string): string {
-    if (!name) {
-      // Default bulk flower items to 1 pound when no name/weight data
-      return (category?.toLowerCase().includes('bulk flower')) ? '1 pound' : '1 gram';
-    }
+    if (!name) return 'Unknown';
     
     const nameLower = name.toLowerCase();
     
-    if (nameLower.includes('1 pound') || nameLower.includes('1lb') || nameLower.includes('one pound')) return '1 pound';
-    if (nameLower.includes('1/2 pound') || nameLower.includes('half pound')) return 'half pound';
-    if (nameLower.includes('1/4 pound') || nameLower.includes('quarter pound')) return 'quarter pound';
-    if (nameLower.includes('ounce') || nameLower.includes('oz')) return '1 ounce';
-    if (nameLower.includes('half gram')) return 'half gram';
+    // Check for specific weight patterns in name
+    if (nameLower.includes('1 pound') || nameLower.includes('1-pound') || nameLower.includes('1lb') || nameLower.includes('one pound')) return '1 pound';
+    if (nameLower.includes('1/2 pound') || nameLower.includes('half pound') || nameLower.includes('half-pound')) return 'half pound';
+    if (nameLower.includes('1/4 pound') || nameLower.includes('quarter pound') || nameLower.includes('quarter-pound')) return 'quarter pound';
     
-    // Extract gram amounts
+    // Check for ounce patterns
+    if (nameLower.includes('ounce') || nameLower.includes(' oz')) {
+      const ounceMatch = nameLower.match(/(\d+)\s*ounce/);
+      if (ounceMatch) return `${ounceMatch[1]} ounce${parseInt(ounceMatch[1]) > 1 ? 's' : ''}`;
+      return '1 ounce';
+    }
+    
+    // Check for gram patterns
+    if (nameLower.includes('half gram') || nameLower.includes('0.5 gram')) return 'half gram';
     const gramMatch = nameLower.match(/(\d+)\s*gram/);
     if (gramMatch) return `${gramMatch[1]} gram${parseInt(gramMatch[1]) > 1 ? 's' : ''}`;
     
-    // Default bulk flower items to 1 pound when weight can't be extracted from name
-    return (category?.toLowerCase().includes('bulk flower')) ? '1 pound' : '1 gram';
+    // Check for eighth patterns
+    if (nameLower.includes('eighth') || nameLower.includes('1/8')) return 'eighth';
+    
+    // Check for count patterns
+    const countMatch = nameLower.match(/(\d+)\s*count/);
+    if (countMatch) return `${countMatch[1]} count`;
+    
+    // Only default based on category if no weight is found in name
+    if (category?.toLowerCase().includes('bulk flower') && nameLower.includes('bulk')) return '1 pound';
+    
+    // Return unknown if no weight pattern is found
+    return 'Unknown';
   }
 
   private extractTier(name: string): string {
