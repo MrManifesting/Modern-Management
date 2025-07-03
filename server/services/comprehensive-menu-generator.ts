@@ -105,7 +105,7 @@ export class ComprehensiveMenuGenerator {
         thcaPercentage: this.extractTHCAPercentage(item.name),
         quantity: item.quantity,
         price: this.getDisplayPrice(item),
-        pricePerGram: this.calculatePricePerGram(item),
+        pricePerGram: this.getDisplayPrice(item), // Show total price, not per-gram calculation
         sku: item.sku,
         image: item.thumbnail || item.images?.[0] || null,
         coaLink: `https://goldcbd.com/coa/${this.createSlug(this.extractStrainName(item.name))}`,
