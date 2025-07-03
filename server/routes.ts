@@ -20,30 +20,48 @@ const setCachedData = (key: string, data: any, ttl: number = 30000) => {
   cache.set(key, { data, timestamp: Date.now(), ttl });
 };
 
-// HTML generation for comprehensive menu
+// Enhanced HTML generation for comprehensive menu with all features
 const generateComprehensiveMenuHTML = (menu: any) => {
   const sectionsHTML = menu.sections.map((section: any) => {
     const itemsHTML = section.items.map((item: any) => `
-      <div class="product-card">
+      <div class="product-card" data-product-id="${item.id}">
         <div class="product-image">
-          ${item.image ? `<img src="${item.image}" alt="${item.name}" />` : '<div class="no-image">📸</div>'}
+          ${item.image ? `<img src="${item.image}" alt="${item.name}" loading="lazy" />` : '<div class="no-image">🌿</div>'}
         </div>
         <div class="product-info">
           <h3 class="product-name">${item.name}</h3>
-          ${item.weight ? `<p class="weight">${item.weight}</p>` : ''}
-          ${item.tier ? `<span class="tier-badge">${item.tier}</span>` : ''}
-          ${item.thcaPercentage ? `<span class="thca-badge">THCa: ${item.thcaPercentage}</span>` : ''}
-          <div class="pricing">
-            <span class="price">$${item.price.toFixed(2)}</span>
-            ${item.pricePerGram ? `<span class="price-per-gram">$${item.pricePerGram.toFixed(2)}/g</span>` : ''}
+          <div class="product-details">
+            ${item.weight !== 'Unknown' ? `<span class="detail-badge weight-badge">⚖️ ${item.weight}</span>` : ''}
+            ${item.tier ? `<span class="detail-badge tier-badge">⭐ ${item.tier}</span>` : ''}
+            ${item.thcaPercentage ? `<span class="detail-badge thca-badge">🧪 THCa ${item.thcaPercentage}</span>` : ''}
+            <span class="detail-badge sku-badge">📦 ${item.sku}</span>
           </div>
-          <div class="stock-info">
-            <span class="quantity ${item.lowStock ? 'low-stock' : ''}">${item.quantity} in stock</span>
+          <div class="pricing-section">
+            <div class="main-price">$${item.price.toFixed(2)}</div>
+            ${item.price > 0 && item.weight.includes('pound') ? `<div class="price-note">Wholesale Price</div>` : ''}
+          </div>
+          <div class="stock-section">
+            <div class="stock-indicator ${item.lowStock ? 'low-stock' : item.inStock ? 'in-stock' : 'out-stock'}">
+              <span class="stock-icon">${item.inStock ? '✅' : '❌'}</span>
+              <span class="stock-text">${item.quantity} units available</span>
+            </div>
+            ${item.lowStock && item.inStock ? '<div class="low-stock-warning">⚠️ Low Stock Alert</div>' : ''}
           </div>
           <div class="action-buttons">
-            <a href="${item.orderLink}" class="btn order-btn">🛒 Order Now</a>
-            ${item.coaLink ? `<a href="${item.coaLink}" class="btn coa-btn">📋 COA</a>` : ''}
-            ${item.mediaLink ? `<a href="${item.mediaLink}" class="btn media-btn">📱 Media</a>` : ''}
+            <a href="${item.orderLink}" target="_blank" class="btn primary-btn order-btn" onclick="trackClick('order', '${item.sku}')">
+              🛒 Order Now
+            </a>
+            <div class="secondary-buttons">
+              <a href="${item.coaLink}" target="_blank" class="btn secondary-btn coa-btn" onclick="trackClick('coa', '${item.sku}')">
+                📋 View COA
+              </a>
+              <a href="${item.mediaLink}" target="_blank" class="btn secondary-btn media-btn" onclick="trackClick('media', '${item.sku}')">
+                📱 Media Pack
+              </a>
+              <a href="tel:541-295-8811" class="btn secondary-btn call-btn" onclick="trackClick('call', '${item.sku}')">
+                📞 Call Now
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -74,49 +92,91 @@ const generateComprehensiveMenuHTML = (menu: any) => {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Gold Standard CBD - Complete Product Menu</title>
+      <meta name="description" content="Professional cannabis product menu with live inventory, direct ordering, and COA access">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #2d2d2d 100%);
           color: #ffffff;
           line-height: 1.6;
+          min-height: 100vh;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .container { 
+          max-width: 1400px; 
+          margin: 0 auto; 
+          padding: 20px; 
+        }
         .header { 
           text-align: center; 
           margin-bottom: 40px; 
-          padding: 40px 0;
-          background: linear-gradient(135deg, #d4af37 0%, #228b22 100%);
-          border-radius: 20px;
-          margin-bottom: 40px;
+          padding: 50px 20px;
+          background: linear-gradient(135deg, #d4af37 0%, #228b22 50%, #1a5f1a 100%);
+          border-radius: 25px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          position: relative;
+          overflow: hidden;
         }
+        .header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+          opacity: 0.3;
+        }
+        .header-content { position: relative; z-index: 1; }
         .header h1 { 
-          font-size: 3em; 
-          margin-bottom: 10px; 
+          font-size: clamp(2em, 5vw, 4em); 
+          margin-bottom: 15px; 
           color: #000;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+          text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+          font-weight: 800;
+          letter-spacing: -1px;
         }
         .header .subtitle { 
-          font-size: 1.2em; 
-          color: #333;
-          margin-bottom: 20px;
+          font-size: clamp(1em, 2.5vw, 1.3em); 
+          color: #1a1a1a;
+          margin-bottom: 30px;
+          font-weight: 500;
         }
         .summary-stats {
-          display: flex;
-          justify-content: center;
-          gap: 30px;
-          margin-top: 20px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-top: 30px;
+          max-width: 800px;
+          margin-left: auto;
+          margin-right: auto;
         }
         .stat {
-          background: rgba(255,255,255,0.2);
-          padding: 15px 25px;
-          border-radius: 10px;
+          background: rgba(0,0,0,0.2);
+          backdrop-filter: blur(10px);
+          padding: 20px;
+          border-radius: 15px;
           text-align: center;
-          color: #000;
+          color: #fff;
+          border: 1px solid rgba(255,255,255,0.1);
+          transition: transform 0.3s ease;
         }
-        .stat .number { font-size: 1.5em; font-weight: bold; }
-        .stat .label { font-size: 0.9em; opacity: 0.8; }
+        .stat:hover { transform: translateY(-5px); }
+        .stat .number { 
+          font-size: 2em; 
+          font-weight: bold; 
+          margin-bottom: 5px;
+          background: linear-gradient(45deg, #d4af37, #ffd700);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .stat .label { 
+          font-size: 0.9em; 
+          opacity: 0.9; 
+          text-transform: uppercase; 
+          letter-spacing: 1px;
+        }
         .menu-section { 
           margin-bottom: 60px; 
           background: rgba(255,255,255,0.05);
@@ -281,12 +341,178 @@ const generateComprehensiveMenuHTML = (menu: any) => {
           background: linear-gradient(45deg, #9370db, #6a5acd); 
           transform: scale(1.05);
         }
+        
+        /* Enhanced Elements Styling */
+        .product-details {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin: 15px 0;
+          justify-content: center;
+        }
+        .detail-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: linear-gradient(135deg, #d4af37, #228b22);
+          color: #000;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.75em;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          transition: all 0.3s ease;
+        }
+        .detail-badge:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .weight-badge { background: linear-gradient(135deg, #228b22, #32cd32); color: #fff; }
+        .tier-badge { background: linear-gradient(135deg, #d4af37, #ffd700); color: #000; }
+        .thca-badge { background: linear-gradient(135deg, #6a5acd, #9370db); color: #fff; }
+        .sku-badge { background: linear-gradient(135deg, #888, #bbb); color: #fff; }
+        
+        .pricing-section {
+          text-align: center;
+          margin: 20px 0;
+          padding: 15px;
+          background: rgba(212,175,55,0.1);
+          border-radius: 12px;
+          border: 1px solid rgba(212,175,55,0.3);
+        }
+        .main-price {
+          font-size: 2em;
+          font-weight: 800;
+          color: #d4af37;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          margin-bottom: 5px;
+        }
+        .price-note {
+          font-size: 0.9em;
+          color: #228b22;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .stock-section {
+          margin: 15px 0;
+          text-align: center;
+        }
+        .stock-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 16px;
+          border-radius: 20px;
+          font-weight: 600;
+          font-size: 0.9em;
+        }
+        .in-stock {
+          background: rgba(34,139,34,0.2);
+          color: #32cd32;
+          border: 1px solid rgba(34,139,34,0.4);
+        }
+        .low-stock {
+          background: rgba(255,165,0,0.2);
+          color: #ffa500;
+          border: 1px solid rgba(255,165,0,0.4);
+        }
+        .out-stock {
+          background: rgba(255,0,0,0.2);
+          color: #ff6b6b;
+          border: 1px solid rgba(255,0,0,0.4);
+        }
+        .low-stock-warning {
+          margin-top: 8px;
+          padding: 6px 12px;
+          background: rgba(255,165,0,0.1);
+          border: 1px solid rgba(255,165,0,0.3);
+          border-radius: 12px;
+          font-size: 0.8em;
+          color: #ffa500;
+        }
+        
+        .action-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 20px;
+        }
+        .primary-btn {
+          width: 100%;
+          padding: 12px 16px;
+          font-size: 1em;
+          font-weight: 700;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #d4af37, #228b22);
+          color: #000;
+          text-decoration: none;
+          text-align: center;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .primary-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+          background: linear-gradient(135deg, #228b22, #d4af37);
+        }
+        .secondary-buttons {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+          gap: 8px;
+        }
+        .secondary-btn {
+          padding: 8px 12px;
+          font-size: 0.85em;
+          font-weight: 600;
+          border-radius: 8px;
+          text-decoration: none;
+          text-align: center;
+          transition: all 0.3s ease;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .call-btn {
+          background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+          color: #fff;
+        }
+        .call-btn:hover {
+          background: linear-gradient(135deg, #ff8e8e, #ff6b6b);
+          transform: scale(1.05);
+        }
+        
+        /* Enhanced Responsive Design */
+        @media (max-width: 1200px) {
+          .products-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+          .container { padding: 15px; }
+        }
         @media (max-width: 768px) {
-          .header h1 { font-size: 2em; }
-          .products-grid { grid-template-columns: 1fr; }
-          .summary-stats { flex-direction: column; gap: 10px; }
-          .action-buttons { flex-direction: column; }
-          .btn { flex: none; }
+          .header h1 { font-size: clamp(1.8em, 6vw, 2.5em); }
+          .header { padding: 30px 15px; }
+          .products-grid { grid-template-columns: 1fr; gap: 15px; }
+          .summary-stats { grid-template-columns: 1fr; gap: 15px; }
+          .product-card { padding: 15px; }
+          .detail-badge { font-size: 0.7em; padding: 4px 8px; }
+          .main-price { font-size: 1.6em; }
+          .secondary-buttons { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 480px) {
+          .container { padding: 10px; }
+          .header { padding: 20px 10px; }
+          .product-card { padding: 12px; }
+          .secondary-buttons { grid-template-columns: 1fr; }
+          .detail-badge { font-size: 0.65em; padding: 3px 6px; }
+        }
+        @media print {
+          body { background: white; color: black; }
+          .product-card { border: 1px solid #ccc; background: white; }
+          .header { background: #f0f0f0; color: black; }
+          .btn { background: #ddd !important; color: black !important; }
         }
       </style>
     </head>
