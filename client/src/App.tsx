@@ -183,6 +183,7 @@ function Router() {
         <ProtectedRoute path="/bulk-breakdown" component={() => <BulkBreakdownPage />} />
         <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
+        <ProtectedRoute path="/customer-tiers" component={() => <CustomerTiersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
 
         
