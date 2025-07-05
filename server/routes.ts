@@ -3754,6 +3754,42 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Customer tier endpoints
+  app.get("/api/customers/tiers", async (_req: Request, res: Response) => {
+    try {
+      const { CustomerTierService } = await import('./services/customer-tiers.js');
+      const tierService = new CustomerTierService();
+      
+      const tierData = await tierService.getCustomerTierSummary();
+      
+      log(`Retrieved customer tier data: ${tierData.totalCustomers} customers, $${tierData.totalRevenue.toFixed(2)} total revenue`, 'api');
+      
+      res.json(tierData);
+    } catch (error) {
+      log(`Error fetching customer tiers: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to fetch customer tier data' });
+    }
+  });
+  
+  app.get("/api/customers/:customerId/tier", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const { CustomerTierService } = await import('./services/customer-tiers.js');
+      const tierService = new CustomerTierService();
+      
+      const customerTier = await tierService.getCustomerTier(customerId);
+      
+      if (!customerTier) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      
+      res.json(customerTier);
+    } catch (error) {
+      log(`Error fetching customer tier: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to fetch customer tier' });
+    }
+  });
+
   // Sales endpoints
   app.get("/api/sales/recent", async (_req: Request, res: Response) => {
     try {
