@@ -45,6 +45,7 @@ import AiToolsPage from "@/pages/ai/tools";
 import AiAssistantPage from "@/pages/ai-assistant";
 import AIShopifyMatchingPage from "@/pages/ai-shopify-matching";
 import ComprehensiveMenuPage from "@/pages/comprehensive-menu";
+import MobileInventoryPage from "@/pages/mobile-inventory";
 
 import GoogleSheetsIntegration from "@/pages/google-sheets-integration";
 import GoogleSheetsPage from "@/pages/google-sheets-page";
@@ -159,6 +160,7 @@ function Router() {
         <ProtectedRoute path="/ai-assistant" component={() => <AiAssistantPage />} />
         <ProtectedRoute path="/ai-shopify-matching" component={() => <AIShopifyMatchingPage />} />
         <ProtectedRoute path="/comprehensive-menu" component={() => <ComprehensiveMenuPage />} />
+        <ProtectedRoute path="/mobile-inventory" component={() => <MobileInventoryPage />} />
 
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
         <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />

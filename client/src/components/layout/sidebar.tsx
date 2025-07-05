@@ -109,6 +109,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
           path: "/comprehensive-menu",
           className: "comprehensive-menu-link highlight",
         },
+        {
+          title: "Mobile Inventory",
+          path: "/mobile-inventory",
+          className: "mobile-inventory-link highlight",
+        },
 
       ]
     },
