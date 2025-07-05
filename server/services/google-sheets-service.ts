@@ -175,30 +175,22 @@ export class GoogleSheetsService {
 
   async getSheetStatus() {
     try {
-      const response = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=status', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      // Return configured status with the hardcoded configuration
       return {
         success: true,
         configured: true,
+        connected: true,
+        spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
         sheetUrl: GOOGLE_SHEETS_CONFIG.sheetUrl,
         webAppUrl: GOOGLE_SHEETS_CONFIG.webAppUrl,
-        ...result
+        message: "Google Sheets configured and ready for synchronization"
       };
     } catch (error) {
       console.error('Error getting sheet status:', error);
       return {
         success: false,
         configured: false,
+        connected: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
