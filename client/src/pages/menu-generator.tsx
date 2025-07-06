@@ -141,7 +141,7 @@ export default function MenuGenerator() {
 
   // Fetch current inventory for menu generation
   const { data: inventory } = useQuery({
-    queryKey: ['/api/shopify/bulk-query/execute'],
+    queryKey: ['/api/inventory/enhanced'],
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
