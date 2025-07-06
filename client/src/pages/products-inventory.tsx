@@ -488,14 +488,14 @@ const ProductsInventoryPage: React.FC = () => {
   const filteredProducts = (Array.isArray(products) ? products : [])
     .filter((product: Product) => {
       const matchesSearch = 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.sku ? product.sku.toLowerCase().includes(searchTerm.toLowerCase()) : false);
       
       let matchesCategory = false;
       if (selectedCategory === "All") {
         matchesCategory = true;
       } else {
-        const productName = product.name.toLowerCase();
+        const productName = (product.name || '').toLowerCase();
         const productCategory = (product.category || '').toLowerCase();
         const selectedCat = selectedCategory.toLowerCase();
         
@@ -2108,7 +2108,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       const mediaPatterns = [
                                         `/media/${product.sku}.jpg`,
                                         `/media/${product.sku}.png`,
-                                        `/media/${product.name.toLowerCase().replace(/\s+/g, '_')}.jpg`,
+                                        `/media/${(product.name || '').toLowerCase().replace(/\s+/g, '_')}.jpg`,
                                         `/media/item_${product.id}.jpg`,
                                         `/media/item_${product.id}.png`
                                       ];
