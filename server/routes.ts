@@ -1538,29 +1538,47 @@ export function registerRoutes(app: any, storage: any) {
                 .join(' ');
             }
           }
-          // Extract strain name from complex product names
-          else if (!/(^1 pound$|^2 grams$|^half gram$|^1\/2 pound$|^1\/4 pound$)/i.test(item.name.trim())) {
-            // Remove technical terms and extract strain name
+          // Extract strain name from complex product names - REMOVE ALL WEIGHTS
+          else {
+            // Aggressively remove ALL weight-related terms first
             strainName = item.name
-              .replace(/\s*-\s*(THCA|thca).*$/i, '') // Remove everything after "- THCA"
-              .replace(/\s*\(.*\)$/i, '') // Remove weight/tier info in parentheses
-              // Remove all weight patterns
-              .replace(/\b(1\s*pound|1\s*lb|pound|lb|half\s*pound|1\/2\s*pound|quarter\s*pound|1\/4\s*pound)\b/gi, '')
-              .replace(/\b(\d+\s*gram[s]?|\d+\s*g|half\s*gram|quarter\s*ounce|eighth|ounce|oz)\b/gi, '')
-              .replace(/\b(bulk|flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, '')
+              // Remove all numeric weights with units
+              .replace(/\b\d+\s*(gram|grams|g|gr|gm|pound|pounds|lb|lbs|ounce|ounces|oz|ozs|kilo|kilogram|kg|mg|milligram)s?\b/gi, '')
+              // Remove fractional weights
+              .replace(/\b(half|quarter|eighth|third|1\/2|1\/4|1\/8|1\/3)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, '')
+              // Remove spelled out numbers with weights
+              .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, '')
+              // Remove weight descriptors
+              .replace(/\b(weight|bulk|size)\b/gi, '')
+              // Remove everything after "- THCA" or similar
+              .replace(/\s*-\s*(THCA|thca|THC|thc|CBD|cbd).*$/i, '')
+              // Remove weight/tier info in parentheses
+              .replace(/\s*\([^)]*\)/g, '')
+              // Remove quality/tier terms
+              .replace(/\b(flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, '')
+              // Clean up
               .replace(/[-_]+/g, ' ')
               .replace(/\s+/g, ' ')
               .trim();
             
+            // Final cleanup - remove any remaining weight terms
+            const weightTerms = ['gram', 'grams', 'g', 'pound', 'pounds', 'lb', 'lbs', 'ounce', 'ounces', 'oz', 'half', 'quarter', 'eighth'];
+            weightTerms.forEach(term => {
+              const regex = new RegExp(`\\b${term}\\b`, 'gi');
+              strainName = strainName.replace(regex, '').trim();
+            });
+            
             // Capitalize properly
-            if (strainName) {
+            if (strainName && strainName.length > 2) {
               strainName = strainName.split(' ')
+                .filter(word => word.length > 0)
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
             }
           }
-          // For simple weight names, check if we have description with strain info
-          else if (item.description) {
+          
+          // If we still don't have a strain name, check description as fallback
+          if (!strainName && item.description) {
             // Extract strain name from description, avoiding quality descriptors
             const descMatch = item.description.match(/(?:Cannabis|Hemp|THCa)?\s*([A-Za-z\s]+?)(?:\s*-|\s*\(|$)/i);
             if (descMatch && descMatch[1] && descMatch[1].trim().length > 2) {
@@ -1569,8 +1587,6 @@ export function registerRoutes(app: any, storage: any) {
                 .trim();
             }
           }
-          // If still no good strain name found and it's just a weight, keep fallback
-          // These will be sorted to bottom by the new sorting logic
         }
         
         // Extract proper weight - prioritize database weight, then product name analysis
@@ -1624,8 +1640,45 @@ export function registerRoutes(app: any, storage: any) {
           }
         }
         
-        // Generate realistic pricing based on extracted weight (not item.weight)
-        const pricing = generateRealisticPrice({...item, weight: extractedWeight});
+        // PRIORITY 1: Use existing database prices if available
+        let finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
+        let finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
+        let finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+        
+        // PRIORITY 2: If no existing prices, generate based on weight
+        if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
+          const pricing = generateRealisticPrice({...item, weight: extractedWeight});
+          
+          // PRIORITY 3: If still no price (no weight info), generate default based on category
+          if (pricing.base_price === 0) {
+            const nameLower = (item.name || '').toLowerCase();
+            const categoryLower = (item.category || '').toLowerCase();
+            
+            // Default pricing by product type
+            if (nameLower.includes('flower') || categoryLower.includes('flower')) {
+              finalBasePrice = 1200; // Default pound price for flower
+              finalSalePrice = 1020;
+              finalCostPrice = 720;
+            } else if (nameLower.includes('concentrate') || categoryLower.includes('concentrate')) {
+              finalBasePrice = 40; // Default gram price for concentrates
+              finalSalePrice = 34;
+              finalCostPrice = 24;
+            } else if (nameLower.includes('edible') || categoryLower.includes('edible')) {
+              finalBasePrice = 25; // Default price for edibles
+              finalSalePrice = 21;
+              finalCostPrice = 15;
+            } else {
+              // General cannabis product default (assume 1/8 oz)
+              finalBasePrice = 35;
+              finalSalePrice = 30;
+              finalCostPrice = 21;
+            }
+          } else {
+            finalBasePrice = pricing.base_price;
+            finalSalePrice = pricing.sale_price;
+            finalCostPrice = pricing.cost_price;
+          }
+        }
         
         return {
           ...item,
@@ -1635,12 +1688,12 @@ export function registerRoutes(app: any, storage: any) {
           original_name: item.name,
           // Display name for UI
           display_name: strainName || item.name,
-          base_price: pricing.base_price,
-          sale_price: pricing.sale_price,
-          cost_price: pricing.cost_price,
-          basePrice: pricing.base_price,  // Legacy field name
-          salePrice: pricing.sale_price,  // Legacy field name  
-          costPrice: pricing.cost_price,  // Legacy field name
+          base_price: finalBasePrice,
+          sale_price: finalSalePrice,
+          cost_price: finalCostPrice,
+          basePrice: finalBasePrice,  // Legacy field name
+          salePrice: finalSalePrice,  // Legacy field name  
+          costPrice: finalCostPrice,  // Legacy field name
           // Ensure no NaN values
           quantity: parseInt(item.quantity) || 0,
           weight: extractedWeight // Use properly extracted weight, never default to pounds
@@ -1766,6 +1819,149 @@ export function registerRoutes(app: any, storage: any) {
         success: false, 
         error: "Failed to generate inventory summary" 
       });
+    }
+  });
+
+  // Enhanced inventory endpoint for menu generator
+  app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
+    try {
+      const rawItems = await storage.getItems();
+      
+      // Transform items with proper strain name extraction and pricing
+      const items = rawItems.map((item: any) => {
+        let strainName = '';
+        
+        // AGGRESSIVE strain name extraction - REMOVE ALL WEIGHTS
+        if (item.name) {
+          strainName = item.name
+            // Remove all numeric weights with units
+            .replace(/\b\d+\s*(gram|grams|g|gr|gm|pound|pounds|lb|lbs|ounce|ounces|oz|ozs|kilo|kilogram|kg|mg|milligram)s?\b/gi, '')
+            // Remove fractional weights
+            .replace(/\b(half|quarter|eighth|third|1\/2|1\/4|1\/8|1\/3)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, '')
+            // Remove spelled out numbers with weights
+            .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, '')
+            // Remove weight descriptors
+            .replace(/\b(weight|bulk|size)\b/gi, '')
+            // Remove everything after "- THCA" or similar
+            .replace(/\s*-\s*(THCA|thca|THC|thc|CBD|cbd).*$/i, '')
+            // Remove weight/tier info in parentheses
+            .replace(/\s*\([^)]*\)/g, '')
+            // Remove quality/tier terms
+            .replace(/\b(flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, '')
+            // Clean up
+            .replace(/[-_]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          // Final cleanup - remove any remaining weight terms
+          const weightTerms = ['gram', 'grams', 'g', 'pound', 'pounds', 'lb', 'lbs', 'ounce', 'ounces', 'oz', 'half', 'quarter', 'eighth'];
+          weightTerms.forEach(term => {
+            const regex = new RegExp(`\\b${term}\\b`, 'gi');
+            strainName = strainName.replace(regex, '').trim();
+          });
+          
+          // Capitalize properly
+          if (strainName && strainName.length > 2) {
+            strainName = strainName.split(' ')
+              .filter((word: string) => word.length > 0)
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+          }
+        }
+        
+        // Extract weight for the weight column
+        let extractedWeight = 'Weight not specified';
+        if (item.weight && item.weight !== 'Weight not specified' && item.weight.trim() !== '') {
+          extractedWeight = item.weight;
+        } else if (item.name) {
+          const nameLower = item.name.toLowerCase();
+          if (nameLower.includes('1 pound') || nameLower.includes('one pound')) {
+            extractedWeight = '1 pound';
+          } else if (nameLower.includes('half pound')) {
+            extractedWeight = 'half pound';
+          } else if (nameLower.includes('quarter pound')) {
+            extractedWeight = 'quarter pound';
+          } else if (nameLower.includes('ounce')) {
+            extractedWeight = '1 ounce';
+          } else if (nameLower.includes('28 gram')) {
+            extractedWeight = '28 grams';
+          } else if (nameLower.includes('14 gram')) {
+            extractedWeight = '14 grams';
+          } else if (nameLower.includes('7 gram')) {
+            extractedWeight = '7 grams';
+          } else if (nameLower.includes('3.5 gram') || nameLower.includes('eighth')) {
+            extractedWeight = '3.5 grams';
+          } else if (nameLower.includes('2 gram')) {
+            extractedWeight = '2 grams';
+          } else if (nameLower.includes('1 gram')) {
+            extractedWeight = '1 gram';
+          }
+        }
+        
+        // ENSURE REAL PRICING - NO $0.00
+        let finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
+        let finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
+        let finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+        
+        // If no prices exist, generate realistic defaults
+        if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
+          // Generate based on weight
+          if (extractedWeight.includes('pound')) {
+            finalBasePrice = 1200;
+            finalSalePrice = 1020;
+            finalCostPrice = 720;
+          } else if (extractedWeight.includes('28 gram') || extractedWeight.includes('ounce')) {
+            finalBasePrice = 200;
+            finalSalePrice = 170;
+            finalCostPrice = 120;
+          } else if (extractedWeight.includes('14 gram')) {
+            finalBasePrice = 100;
+            finalSalePrice = 85;
+            finalCostPrice = 60;
+          } else if (extractedWeight.includes('7 gram')) {
+            finalBasePrice = 50;
+            finalSalePrice = 43;
+            finalCostPrice = 30;
+          } else if (extractedWeight.includes('3.5 gram') || extractedWeight.includes('eighth')) {
+            finalBasePrice = 35;
+            finalSalePrice = 30;
+            finalCostPrice = 21;
+          } else {
+            // Default price for unknown weights
+            finalBasePrice = 50;
+            finalSalePrice = 43;
+            finalCostPrice = 30;
+          }
+        }
+        
+        return {
+          ...item,
+          name: strainName || item.name,
+          display_name: strainName || item.name,
+          base_price: finalBasePrice,
+          sale_price: finalSalePrice,
+          cost_price: finalCostPrice,
+          basePrice: finalBasePrice,
+          salePrice: finalSalePrice,
+          costPrice: finalCostPrice,
+          quantity: parseInt(item.quantity) || 0,
+          weight: extractedWeight
+        };
+      });
+      
+      // Sort by active items with quantities first
+      const sortedItems = items.sort((a: any, b: any) => {
+        const aActive = a.status === 'active' && a.quantity > 0;
+        const bActive = b.status === 'active' && b.quantity > 0;
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+        return b.quantity - a.quantity;
+      });
+      
+      res.json({ items: sortedItems });
+    } catch (error) {
+      console.error('Error getting enhanced inventory:', error);
+      res.status(500).json({ error: 'Failed to get enhanced inventory' });
     }
   });
 
