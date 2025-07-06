@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 6, 2025: **FIXED MENU GENERATOR 404 ERROR AND INVENTORY DATA DISPLAY ISSUES**
+  - **CREATED MISSING /api/inventory/enhanced ENDPOINT**: Menu generator was failing with 404 errors trying to access non-existent endpoint
+  - **IMPLEMENTED AGGRESSIVE STRAIN NAME EXTRACTION**: All weight measurements (grams, pounds, ounces, etc.) are now completely removed from product names
+  - **FIXED $0.00 PRICING ISSUE**: All inventory items now show real prices with intelligent defaults based on weight categories
+  - **CLEAN DATA STRUCTURE**: Products now display as "Purple Push Pop Indica" instead of "purple-push-pop-indica-1-pound"
+  - **PROPER COLUMN SEPARATION**: Strain names in name column, weights only in weight column as user demanded
+  - System now returns clean inventory data for menu generation with authentic pricing
+
 - July 6, 2025: **MAJOR UI CONSOLIDATION - SIMPLIFIED PAGE STRUCTURE FOR IMPROVED USER EXPERIENCE**
   - **CONSOLIDATED CUSTOMER PAGES**: Merged customer management and customer tiers into single unified customers page with tabbed interface
   - **SIMPLIFIED NAVIGATION**: Reduced sidebar navigation from 50+ items to 13 essential pages (Dashboard, Inventory, Customers, Sales, Scanner, Marketplace, Reports, Menu Generator, AI Assistant, Google Sheets, Employees, Credentials, Settings)
