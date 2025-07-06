@@ -1544,6 +1544,9 @@ export function registerRoutes(app: any, storage: any) {
             strainName = item.name
               .replace(/\s*-\s*(THCA|thca).*$/i, '') // Remove everything after "- THCA"
               .replace(/\s*\(.*\)$/i, '') // Remove weight/tier info in parentheses
+              // Remove all weight patterns
+              .replace(/\b(1\s*pound|1\s*lb|pound|lb|half\s*pound|1\/2\s*pound|quarter\s*pound|1\/4\s*pound)\b/gi, '')
+              .replace(/\b(\d+\s*gram[s]?|\d+\s*g|half\s*gram|quarter\s*ounce|eighth|ounce|oz)\b/gi, '')
               .replace(/\b(bulk|flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, '')
               .replace(/[-_]+/g, ' ')
               .replace(/\s+/g, ' ')
@@ -1626,8 +1629,12 @@ export function registerRoutes(app: any, storage: any) {
         
         return {
           ...item,
-          name: strainName || 'Cannabis Product',
-          display_name: strainName || 'Cannabis Product',
+          // Use strain name if extracted, otherwise fall back to original name
+          name: strainName || item.name,
+          // Keep original name for reference
+          original_name: item.name,
+          // Display name for UI
+          display_name: strainName || item.name,
           base_price: pricing.base_price,
           sale_price: pricing.sale_price,
           cost_price: pricing.cost_price,
