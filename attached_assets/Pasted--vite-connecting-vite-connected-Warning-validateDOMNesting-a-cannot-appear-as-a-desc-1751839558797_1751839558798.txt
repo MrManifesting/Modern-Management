@@ -1,0 +1,51 @@
+[vite] connecting...
+[vite] connected.
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:220:18
+    at li
+    at ul
+    at nav
+    at aside
+    at Sidebar (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/layout/sidebar.tsx:37:35)
+    at div
+    at MainLayout (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/layout/main-layout.tsx:24:38)
+    at Route (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:206:16)
+    at ProtectedRoute (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/lib/protected-route.tsx:20:3)
+    at Switch (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:262:17)
+    at Suspense
+    at Router
+    at Provider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=39d6e0bf:38:15)
+    at TooltipProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=39d6e0bf:65:5)
+    at AuthProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/hooks/use-auth.tsx:39:32)
+    at QueryClientProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=39d6e0bf:2933:3)
+    at ThemeProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+    at App
+    at ThemeProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+at a
+at a
+at https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:220:18
+at li
+at ul
+at nav
+at aside
+at Sidebar (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/layout/sidebar.tsx:37:35)
+at div
+at MainLayout (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/layout/main-layout.tsx:24:38)
+at Route (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:206:16)
+at ProtectedRoute (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/lib/protected-route.tsx:20:3)
+at Switch (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=39d6e0bf:262:17)
+at Suspense
+at Router
+at Provider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=39d6e0bf:38:15)
+at TooltipProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=39d6e0bf:65:5)
+at AuthProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/hooks/use-auth.tsx:39:32)
+at QueryClientProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=39d6e0bf:2933:3)
+at ThemeProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+at App
+at ThemeProvider (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+at t.value (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://e720d597-41fd-4132-9f82-bcef62959d56-00-3vpil0p000xz0.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
