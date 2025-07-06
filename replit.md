@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 6, 2025: **MAJOR UI CONSOLIDATION - SIMPLIFIED PAGE STRUCTURE FOR IMPROVED USER EXPERIENCE**
+  - **CONSOLIDATED CUSTOMER PAGES**: Merged customer management and customer tiers into single unified customers page with tabbed interface
+  - **SIMPLIFIED NAVIGATION**: Reduced sidebar navigation from 50+ items to 13 essential pages (Dashboard, Inventory, Customers, Sales, Scanner, Marketplace, Reports, Menu Generator, AI Assistant, Google Sheets, Employees, Credentials, Settings)
+  - **REMOVED REDUNDANT PAGES**: Eliminated duplicate routes including multiple inventory views, multiple marketplace pages, multiple Google Sheets pages, and redundant report pages
+  - **STREAMLINED INVENTORY**: Consolidated all inventory functionality into single /inventory page instead of products-inventory, graphql-inventory, mobile-inventory, etc.
+  - **ENHANCED CUSTOMER PAGE**: Customer page now includes both customer management and tier analysis with Diamond ($250k+), Platinum ($100k+), Gold ($50k+), Silver ($25k+), Bronze ($5k+) spending tiers
+  - **CLEAN ROUTE STRUCTURE**: App.tsx reduced from hundreds of routes to essential business functions only
+  - **MAINTAINED FUNCTIONALITY**: All core features remain accessible through consolidated pages with improved organization
+  - System now provides cleaner, faster navigation with reduced cognitive load for enterprise cannabis operations
+
 - January 3, 2025: **COMPREHENSIVE MENU SYSTEM WITH WEIGHT CATEGORIZATION COMPLETELY FIXED - NON-JSX REACT IMPLEMENTATION DEPLOYED**
   - **FIXED JSX SYNTAX ERRORS**: Completely converted comprehensive menu component from JSX to React.createElement syntax per project requirements
   - **WEIGHT CATEGORIZATION FULLY OPERATIONAL**: System correctly separates bulk flower (1 pound units) from smaller units (1g-28g, 1/2 lb, 1/4 lb)

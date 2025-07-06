@@ -8,26 +8,13 @@ import {
   ScanLine,
   DollarSign,
   FileBarChart,
-  Image,
   Users,
   X,
-  Camera,
-  RefreshCw,
-  Layers,
-  Database,
-  Trash2,
   ShoppingBag,
-  Share2,
-  CreditCard,
-  QrCode,
-  FileSpreadsheet,
-  FileCheck,
-  Shield,
-  Smartphone,
-  Activity,
   Bot,
-  Brain,
-  Palette
+  Menu,
+  FileSpreadsheet,
+  CreditCard
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -41,11 +28,6 @@ type NavigationItem = {
   icon: React.ReactNode;
   path: string;
   highlight?: boolean;
-  subItems?: {
-    title: string;
-    path: string;
-    className: string;
-  }[];
 };
 
 export default function Sidebar({ expanded }: SidebarProps) {
@@ -84,75 +66,12 @@ export default function Sidebar({ expanded }: SidebarProps) {
     {
       title: "Inventory",
       icon: <Package className="h-5 w-5" />,
-      path: "/products-inventory",
-      subItems: [
-
-
-
-        {
-          title: "Products",
-          path: "/products-inventory",
-          className: "inventory-link primary-brand",
-        },
-        {
-          title: "Bulk Query",
-          path: "/bulk-query",
-          className: "bulk-query-link highlight",
-        },
-        {
-          title: "Menu Generator",
-          path: "/menu-generator",
-          className: "menu-generator-link highlight",
-        },
-        {
-          title: "Comprehensive Menu",
-          path: "/comprehensive-menu",
-          className: "comprehensive-menu-link highlight",
-        },
-        {
-          title: "Mobile Inventory",
-          path: "/mobile-inventory",
-          className: "mobile-inventory-link highlight",
-        },
-
-      ]
+      path: "/inventory",
     },
     {
-      title: "Marketplaces",
-      icon: <ShoppingBag className="h-5 w-5" />,
-      path: "/marketplace",
-      subItems: [
-        {
-          title: "Marketplace",
-          path: "/marketplace",
-          className: "inventory-link primary-brand",
-        },
-        {
-          title: "Connect & Manage",
-          path: "/marketplace-management",
-          className: "inventory-link specialty-brand",
-        },
-        {
-          title: "Shopify Sync",
-          path: "/shopify-sync",
-          className: "inventory-link package-brand",
-        },
-        {
-          title: "Shopify Reports",
-          path: "/shopify-reports",
-          className: "inventory-link package-brand",
-        },
-        {
-          title: "Shopify Import",
-          path: "/shopify-import",
-          className: "inventory-link specialty-brand",
-        }
-      ]
-    },
-    {
-      title: "Scanner",
-      icon: <ScanLine className="h-5 w-5" />,
-      path: "/scanner",
+      title: "Customers",
+      icon: <Users className="h-5 w-5" />,
+      path: "/customers",
     },
     {
       title: "Sales",
@@ -160,20 +79,14 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/sales",
     },
     {
-      title: "Employees",
-      icon: <Users className="h-5 w-5" />,
-      path: "/employees",
+      title: "Scanner",
+      icon: <ScanLine className="h-5 w-5" />,
+      path: "/scanner",
     },
     {
-      title: "Customers",
-      icon: <CreditCard className="h-5 w-5" />,
-      path: "/customers",
-    },
-    {
-      title: "Customer Tiers",
-      icon: <Users className="h-5 w-5" />,
-      path: "/customer-tiers",
-      highlight: true,
+      title: "Marketplace",
+      icon: <ShoppingBag className="h-5 w-5" />,
+      path: "/marketplace",
     },
     {
       title: "Reports",
@@ -181,85 +94,29 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/reports",
     },
     {
-      title: "Performance Monitor",
-      icon: <Activity className="h-5 w-5" />,
-      path: "/performance-dashboard",
-      highlight: true,
+      title: "Menu Generator",
+      icon: <Menu className="h-5 w-5" />,
+      path: "/menu-generator",
     },
     {
       title: "AI Assistant",
       icon: <Bot className="h-5 w-5" />,
       path: "/ai-assistant",
-      highlight: true,
-    },
-    {
-      title: "AI Shopify Matching",
-      icon: <Brain className="h-5 w-5" />,
-      path: "/ai-shopify-matching",
-      highlight: true,
-    },
-    {
-      title: "Affiliate Program",
-      icon: <Share2 className="h-5 w-5" />,
-      path: "/affiliate-dashboard",
-      highlight: true,
-    },
-    {
-      title: "Forecast",
-      icon: <BarChart3 className="h-5 w-5" />,
-      path: "/forecast",
-    },
-    {
-      title: "Image Optimization",
-      icon: <Image className="h-5 w-5" />,
-      path: "/image-optimization",
-    },
-    {
-      title: "Media Manager",
-      icon: <Camera className="h-5 w-5" />,
-      path: "/media-manager",
-    },
-    {
-      title: "Media Pack Demo",
-      icon: <Package className="h-5 w-5" />,
-      path: "/media-pack-demo",
-      highlight: true,
-    },
-    {
-      title: "Themed Menus",
-      icon: <Palette className="h-5 w-5" />,
-      path: "/themed-menus",
-      highlight: true,
-    },
-
-    {
-      title: "Database Cleanup",
-      icon: <Database className="h-5 w-5" />,
-      path: "/database-cleanup",
     },
     {
       title: "Google Sheets",
       icon: <FileSpreadsheet className="h-5 w-5" />,
       path: "/google-sheets",
-      highlight: true,
     },
     {
-      title: "Sync Dashboard",
-      icon: <RefreshCw className="h-5 w-5" />,
-      path: "/sync-dashboard",
-      highlight: true,
+      title: "Employees",
+      icon: <Users className="h-5 w-5" />,
+      path: "/employees",
     },
     {
       title: "Credentials",
-      icon: <Shield className="h-5 w-5" />,
-      path: "/credentials",
-      highlight: true,
-    },
-    {
-      title: "Payment Testing",
       icon: <CreditCard className="h-5 w-5" />,
-      path: "/checkout",
-      highlight: true,
+      path: "/credentials",
     },
     {
       title: "Settings",
@@ -272,16 +129,14 @@ export default function Sidebar({ expanded }: SidebarProps) {
     <aside
       ref={sidebarRef}
       className={cn(
-        "fixed z-20 h-full flex-shrink-0 transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-border shadow-sm overflow-y-auto",
-        "bg-background", 
-        expanded ? "translate-x-0 w-64" : "translate-x-[-100%] w-64 lg:w-20 lg:translate-x-0",
-        "pb-safe-bottom"
+        "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col bg-card border-r transition-transform duration-300 ease-in-out lg:static lg:translate-x-0",
+        expanded ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      {/* Close button for mobile */}
-      {expanded && (
-        <button 
-          className="lg:hidden absolute top-4 right-4 z-50 text-muted-foreground hover:text-foreground rounded-full p-1 hover:bg-muted"
+      <div className="flex h-16 items-center justify-between px-4 border-b">
+        <h2 className="text-lg font-semibold">Gold-Standard</h2>
+        <button
+          className="lg:hidden p-1 hover:bg-accent rounded-md"
           onClick={() => {
             const closeEvent = new CustomEvent('closeSidebar');
             window.dispatchEvent(closeEvent);
@@ -289,95 +144,40 @@ export default function Sidebar({ expanded }: SidebarProps) {
         >
           <X className="h-5 w-5" />
         </button>
-      )}
-
-      {/* Logo and Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-border px-4">
-        <div className="flex items-center space-x-2 lg:justify-start md:justify-center">
-          <div className="flex items-center justify-center rounded-md bg-primary p-1.5 text-primary-foreground">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              />
-            </svg>
-          </div>
-          {expanded && (
-            <span className="text-lg font-semibold text-foreground">Gold-Standard_Management</span>
-          )}
-        </div>
       </div>
-
-      {/* Navigation */}
-      <nav className="flex flex-col space-y-1 px-3 py-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
-        {navigationItems.map((item) => (
-          <div key={item.path} className="space-y-1">
-            <Link
-              href={item.path}
-              className={cn(
-                "flex items-center space-x-2 rounded-lg px-3 py-2 transition-all",
-                location === item.path || (item.subItems && item.subItems.some(subItem => location === subItem.path))
-                  ? "bg-primary/20 text-primary border-l-2 border-primary"
-                  : item.highlight 
-                    ? "text-foreground bg-primary/10 border-l-2 border-primary/80 font-medium"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground hover:border-l-2 hover:border-primary/50"
-              )}
-            >
-              {item.icon}
-              {expanded && <span className="text-sm">{item.title}</span>}
-            </Link>
-            
-            {/* Sub-items, if any */}
-            {expanded && item.subItems && (
-              <div className="ml-6 space-y-1">
-                {item.subItems.map((subItem) => (
-                  <Link
-                    key={subItem.path}
-                    href={subItem.path}
-                    className={cn(
-                      "flex items-center space-x-2 rounded-lg px-2 py-1 text-sm transition-all",
-                      subItem.className,
-                      location === subItem.path
-                        ? "bg-primary/10 text-primary border-l border-primary"
-                        : "text-gray-400 hover:bg-black/30 hover:text-primary hover:border-l hover:border-primary/50"
-                    )}
-                  >
-                    <span>•</span>
-                    <span>{subItem.title}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+      
+      <nav className="flex-1 overflow-y-auto p-4">
+        <ul className="space-y-1">
+          {navigationItems.map((item) => (
+            <li key={item.path}>
+              <Link href={item.path}>
+                <a
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent",
+                    location === item.path ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                    item.highlight && "font-semibold text-primary"
+                  )}
+                >
+                  {item.icon}
+                  <span>{item.title}</span>
+                </a>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
-
-      {/* User Menu */}
-      <div className="mt-auto border-t border-primary/30 p-4">
-        <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
-            <span className="text-sm font-medium">
-              {user ? (user.firstName?.charAt(0) || user.username.charAt(0)).toUpperCase() : '?'}
+      
+      <div className="p-4 border-t">
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2">
+          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <span className="text-xs font-medium">
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
             </span>
           </div>
-          {expanded && user && (
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-200">
-                {user.firstName && user.lastName 
-                  ? `${user.firstName} ${user.lastName}` 
-                  : user.username}
-              </p>
-              <p className="text-xs text-primary/70">{user.email || ''}</p>
-            </div>
-          )}
+          <div className="flex-1 truncate">
+            <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
+            <p className="text-xs text-muted-foreground">Admin</p>
+          </div>
         </div>
       </div>
     </aside>

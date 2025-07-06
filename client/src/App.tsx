@@ -98,92 +98,24 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={() => <Dashboard />} />
 
-        <ProtectedRoute path="/inventory/legacy" component={() => <Inventory />} />
-        <ProtectedRoute path="/products-inventory" component={() => <ProductsInventoryPage />} />
-        <ProtectedRoute path="/inventory/:id" component={() => {
-          const InventoryDetailPage = React.lazy(() => import('@/pages/inventory-detail'));
-          return (
-            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>}>
-              <InventoryDetailPage />
-            </React.Suspense>
-          );
-        }} />
-        <ProtectedRoute path="/inventory/graphql" component={() => <GraphQLInventory />} />
-        <ProtectedRoute path="/inventory/products" component={() => <ProductsInventoryPage />} />
-        <ProtectedRoute path="/inventory/specialty-products" component={() => <SpecialtyProductsPage />} />
+        <ProtectedRoute path="/inventory" component={() => <ProductsInventoryPage />} />
         <ProtectedRoute path="/bulk-query" component={() => <BulkQueryPage />} />
         <ProtectedRoute path="/menu-generator" component={() => <MenuGenerator />} />
-        <ProtectedRoute path="/customer-tiers" component={() => <CustomerTiersPage />} />
 
 
 
 
         <ProtectedRoute path="/marketplace" component={() => <Marketplace />} />
-        <ProtectedRoute path="/marketplace-management" component={() => <MarketplaceManagement />} />
         <ProtectedRoute path="/scanner" component={() => <Scanner />} />
         <ProtectedRoute path="/sales" component={() => <Sales />} />
         <ProtectedRoute path="/reports" component={() => <Reports />} />
-        <ProtectedRoute path="/forecast" component={() => <Forecast />} />
-        <ProtectedRoute path="/image-optimization" component={() => <ImageOptimization />} />
         <ProtectedRoute path="/employees" component={() => <Employees />} />
         <ProtectedRoute path="/settings" component={() => <Settings />} />
-        <ProtectedRoute path="/shopify-settings" component={() => <ShopifySettingsPage />} />
-        <ProtectedRoute path="/shopify-sync" component={() => <ShopifySyncPage />} />
-        <ProtectedRoute path="/shopify-reports" component={() => <ShopifyReportsPage />} />
-        <ProtectedRoute path="/shopify-import" component={() => <ShopifyImportPage />} />
-        <ProtectedRoute path="/accessibility-guide" component={() => <AccessibilityGuide />} />
-        <ProtectedRoute path="/voice-accessibility-settings" component={() => <VoiceAccessibilitySettingsPage />} />
-        <ProtectedRoute path="/voice-search" component={() => <VoiceSearchPage />} />
-        <ProtectedRoute path="/menu-sync" component={() => <MenuSyncPage />} />
-        <ProtectedRoute path="/themed-menus" component={() => {
-          const ThemedMenusPage = React.lazy(() => import("@/pages/themed-menus"));
-          return (
-            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>}>
-              <ThemedMenusPage />
-            </React.Suspense>
-          );
-        }} />
-        <ProtectedRoute path="/media-manager" component={() => <MediaManagerPage />} />
-        <ProtectedRoute path="/media-pack-demo" component={() => <MediaPackDemo />} />
-        <ProtectedRoute path="/graphql-inventory" component={() => <GraphQLInventory />} />
-        <ProtectedRoute path="/customer-analytics" component={() => <CustomerAnalytics />} />
-        <ProtectedRoute path="/webhook-monitoring" component={() => <WebhookMonitoringPage />} />
-        <ProtectedRoute path="/performance-dashboard" component={() => <PerformanceDashboard />} />
-
-        <ProtectedRoute path="/database-cleanup" component={() => <DatabaseCleanupPage />} />
-        <ProtectedRoute path="/affiliate-dashboard" component={() => <AffiliateDashboard />} />
-        <ProtectedRoute path="/ai-tools" component={() => <AiToolsPage />} />
         <ProtectedRoute path="/ai-assistant" component={() => <AiAssistantPage />} />
-        <ProtectedRoute path="/ai-shopify-matching" component={() => <AIShopifyMatchingPage />} />
-        <ProtectedRoute path="/comprehensive-menu" component={() => <ComprehensiveMenuPage />} />
-        <ProtectedRoute path="/mobile-inventory" component={() => <MobileInventoryPage />} />
 
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
-        <ProtectedRoute path="/google-sheets-integration" component={() => <GoogleSheetsIntegration />} />
-        <ProtectedRoute path="/sheets-config" component={() => <SheetsConfigPage />} />
-        <ProtectedRoute path="/google-apps-script-admin" component={() => <GoogleAppsScriptAdminPage />} />
-        <ProtectedRoute path="/sheets-mapping-admin" component={() => <SheetsMappingAdmin />} />
-        <ProtectedRoute path="/thca-pivot-tables" component={() => <ThcaPivotTablesPage />} />
-        <ProtectedRoute path="/thca-inventory" component={() => <ThcaInventoryManagerPage />} />
 
-        <ProtectedRoute path="/google-sheets-auth" component={() => <GoogleSheetsAuthConfig />} />
-        <ProtectedRoute path="/google-oauth-setup" component={() => <GoogleOAuthSetupPage />} />
-        <ProtectedRoute path="/quick-oauth" component={() => <QuickOAuthSetupPage />} />
-        <ProtectedRoute path="/thca-setup" component={() => <SimpleOAuthPage />} />
-        <ProtectedRoute path="/auth-direct" component={() => <AuthDirectPage />} />
-        <ProtectedRoute path="/manual-auth" component={() => <ManualAuthPage />} />
-        <ProtectedRoute path="/label-generation" component={() => <LabelGeneration />} />
-        <ProtectedRoute path="/sync-dashboard" component={() => <SyncDashboard />} />
-        <ProtectedRoute path="/real-time-sync" component={() => <RealTimeSyncDashboard />} />
-        <ProtectedRoute path="/barcode-scanner" component={() => <BarcodeScannerPage />} />
-        <ProtectedRoute path="/bulk-breakdown" component={() => <BulkBreakdownPage />} />
-        <ProtectedRoute path="/shopify-webhooks" component={() => <ShopifyWebhooksPage />} />
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
-        <ProtectedRoute path="/customer-tiers" component={() => <CustomerTiersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
 
         
