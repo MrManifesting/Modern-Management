@@ -150,17 +150,16 @@ export default function Sidebar({ expanded }: SidebarProps) {
         <ul className="space-y-1">
           {navigationItems.map((item) => (
             <li key={item.path}>
-              <Link href={item.path}>
-                <a
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent",
-                    location === item.path ? "bg-accent text-accent-foreground" : "text-muted-foreground",
-                    item.highlight && "font-semibold text-primary"
-                  )}
-                >
-                  {item.icon}
-                  <span>{item.title}</span>
-                </a>
+              <Link 
+                href={item.path}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent",
+                  location === item.path ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  item.highlight && "font-semibold text-primary"
+                )}
+              >
+                {item.icon}
+                <span>{item.title}</span>
               </Link>
             </li>
           ))}
