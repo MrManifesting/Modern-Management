@@ -3993,6 +3993,158 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Import sales data from Shopify
+  app.post("/api/sales/import", async (_req: Request, res: Response) => {
+    try {
+      const { getShopifyCredentials } = await import('./services/shopify-auth.js');
+      const { accessToken } = await getShopifyCredentials();
+      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
+
+      log('Importing sales data from Shopify', 'sales-import');
+
+      // GraphQL query to get recent orders
+      const query = `
+        query GetRecentOrders($cursor: String) {
+          orders(first: 50, after: $cursor, query: "financial_status:paid", sortKey: CREATED_AT, reverse: true) {
+            edges {
+              node {
+                id
+                name
+                createdAt
+                totalPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+                lineItems(first: 100) {
+                  edges {
+                    node {
+                      id
+                      title
+                      quantity
+                      sku
+                      product {
+                        id
+                      }
+                      variant {
+                        id
+                        price
+                      }
+                      originalTotalSet {
+                        shopMoney {
+                          amount
+                        }
+                      }
+                    }
+                  }
+                }
+                customer {
+                  id
+                  email
+                  firstName
+                  lastName
+                }
+                shippingAddress {
+                  province
+                  country
+                }
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(`https://${shopifyDomain}/admin/api/2024-01/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': accessToken,
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      const data = await response.json();
+
+      if (data.errors) {
+        log(`GraphQL errors: ${JSON.stringify(data.errors)}`, 'sales-import');
+        throw new Error('Failed to fetch sales data from Shopify');
+      }
+
+      // Process orders into sales records
+      let importedCount = 0;
+      let totalRevenue = 0;
+      const salesSummary: any[] = [];
+
+      for (const edge of data.data.orders.edges) {
+        const order = edge.node;
+        totalRevenue += parseFloat(order.totalPriceSet.shopMoney.amount);
+        
+        // Create sales record for each line item
+        for (const lineEdge of order.lineItems.edges) {
+          const item = lineEdge.node;
+          
+          const saleRecord = {
+            orderId: order.id.split('/').pop(),
+            orderName: order.name,
+            date: order.createdAt,
+            itemName: item.title,
+            sku: item.sku || 'N/A',
+            quantity: item.quantity,
+            unitPrice: item.variant?.price || '0',
+            totalAmount: item.originalTotalSet.shopMoney.amount,
+            customerEmail: order.customer?.email || 'Guest',
+            customerName: `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'Guest',
+            location: `${order.shippingAddress?.province || 'N/A'}, ${order.shippingAddress?.country || 'N/A'}`,
+          };
+
+          // Store sale in database (if needed)
+          try {
+            await storage.createSale({
+              marketplace: 'shopify',
+              externalOrderId: saleRecord.orderId,
+              itemId: null, // Would need to match with inventory
+              quantity: saleRecord.quantity,
+              unitPrice: parseFloat(saleRecord.unitPrice),
+              totalAmount: parseFloat(saleRecord.totalAmount),
+              customerName: saleRecord.customerName,
+              customerEmail: saleRecord.customerEmail,
+              status: 'completed',
+              orderDate: new Date(saleRecord.date),
+            });
+            importedCount++;
+          } catch (error) {
+            // Sale might already exist, continue
+            log(`Sale already exists or error: ${error}`, 'sales-import');
+          }
+
+          salesSummary.push(saleRecord);
+        }
+      }
+
+      log(`Imported ${importedCount} sales records, total revenue: $${totalRevenue.toFixed(2)}`, 'sales-import');
+
+      res.json({
+        success: true,
+        message: `Imported ${importedCount} sales records`,
+        summary: {
+          totalOrders: data.data.orders.edges.length,
+          totalRevenue: totalRevenue.toFixed(2),
+          importedSales: importedCount,
+          recentSales: salesSummary.slice(0, 10), // Show first 10 sales
+        },
+      });
+
+    } catch (error) {
+      log(`Error importing sales data: ${error}`, 'sales-import');
+      res.status(500).json({ error: 'Failed to import sales data from Shopify' });
+    }
+  });
+
   // Sales endpoints
   app.get("/api/sales/recent", async (_req: Request, res: Response) => {
     try {

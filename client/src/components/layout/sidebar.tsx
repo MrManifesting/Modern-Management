@@ -14,7 +14,8 @@ import {
   Bot,
   Menu,
   FileSpreadsheet,
-  CreditCard
+  CreditCard,
+  Crown
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -72,6 +73,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Customers",
       icon: <Users className="h-5 w-5" />,
       path: "/customers",
+    },
+    {
+      title: "Customer Tiers",
+      icon: <Crown className="h-5 w-5" />,
+      path: "/customer-tiers",
     },
     {
       title: "Sales",
