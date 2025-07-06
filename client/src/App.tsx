@@ -116,6 +116,7 @@ function Router() {
         <ProtectedRoute path="/google-sheets" component={() => <GoogleSheetsPage />} />
 
         <ProtectedRoute path="/customers" component={() => <CustomersPage />} />
+        <ProtectedRoute path="/customer-tiers" component={() => <CustomerTiersPage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsPage />} />
 
         
