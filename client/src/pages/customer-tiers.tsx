@@ -33,18 +33,19 @@ interface TierSummary {
 }
 
 interface CustomerTiersData {
-  success: boolean;
-  customers: Customer[];
-  summary: {
-    totalCustomers: number;
+  totalCustomers: number;
+  totalRevenue: number;
+  averageSpend: number;
+  summary: Array<{
+    tier: {
+      name: string;
+      threshold: number;
+      color: string;
+      icon: string;
+    };
+    count: number;
     totalRevenue: number;
-    averageSpend: number;
-    tierBreakdown: TierSummary[];
-  };
-  tiers: Array<{
-    name: string;
-    threshold: number;
-    color: string;
+    customers: Customer[];
   }>;
 }
 
@@ -102,7 +103,7 @@ export default function CustomerTiersPage() {
     );
   }
 
-  if (error || !tierData?.success) {
+  if (error || !tierData) {
     return (
       <div className="container mx-auto p-6">
         <Card className="border-red-200 bg-red-50">
@@ -117,7 +118,12 @@ export default function CustomerTiersPage() {
     );
   }
 
-  const { customers, summary, tiers } = tierData;
+  const { totalCustomers, totalRevenue, averageSpend, summary } = tierData;
+  
+  // Extract all customers from tier data and sort by totalSpent
+  const allCustomers = summary
+    .flatMap(tierData => tierData.customers)
+    .sort((a, b) => b.totalSpent - a.totalSpent);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -137,7 +143,7 @@ export default function CustomerTiersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalCustomers.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{totalCustomers.toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -147,7 +153,7 @@ export default function CustomerTiersPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalRevenue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
           </CardContent>
         </Card>
 
@@ -157,7 +163,7 @@ export default function CustomerTiersPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.averageSpend)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averageSpend)}</div>
           </CardContent>
         </Card>
 
@@ -168,7 +174,7 @@ export default function CustomerTiersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {summary.tierBreakdown.filter(t => ['Diamond', 'Platinum', 'Gold'].includes(t.name)).reduce((sum, t) => sum + t.count, 0)}
+              {summary.filter(t => ['Diamond', 'Platinum', 'Gold'].includes(t.tier.name)).reduce((sum, t) => sum + t.count, 0)}
             </div>
           </CardContent>
         </Card>
@@ -176,24 +182,24 @@ export default function CustomerTiersPage() {
 
       {/* Tier Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {summary.tierBreakdown.map((tier) => (
-          <Card key={tier.name} className="border-2" style={{ borderColor: tier.color }}>
+        {summary.map((tierData) => (
+          <Card key={tierData.tier.name} className="border-2" style={{ borderColor: tierData.tier.color }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                {getTierIcon(tier.name)}
-                {tier.name} Tier
+                {getTierIcon(tierData.tier.name)}
+                {tierData.tier.name} Tier
               </CardTitle>
-              <Badge style={{ backgroundColor: tier.color, color: '#000' }}>
-                {formatCurrency(tier.threshold)}+
+              <Badge style={{ backgroundColor: tierData.tier.color, color: '#000' }}>
+                {formatCurrency(tierData.tier.threshold)}+
               </Badge>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-2xl font-bold">{tier.count} customers</div>
+              <div className="text-2xl font-bold">{tierData.count} customers</div>
               <div className="text-sm text-muted-foreground">
-                Total Revenue: {formatCurrency(tier.totalRevenue)}
+                Total Revenue: {formatCurrency(tierData.totalRevenue)}
               </div>
               <div className="text-sm text-muted-foreground">
-                Avg: {tier.count > 0 ? formatCurrency(tier.totalRevenue / tier.count) : '$0'}
+                Avg: {tierData.count > 0 ? formatCurrency(tierData.totalRevenue / tierData.count) : '$0'}
               </div>
             </CardContent>
           </Card>
@@ -210,7 +216,7 @@ export default function CustomerTiersPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {customers.slice(0, 20).map((customer, index) => (
+            {allCustomers.slice(0, 20).map((customer, index) => (
               <div key={customer.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gold-100 text-gold-800 font-bold">
@@ -248,14 +254,14 @@ export default function CustomerTiersPage() {
       {/* All Customers Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Customers ({customers.length})</CardTitle>
+          <CardTitle>All Customers ({allCustomers.length})</CardTitle>
           <CardDescription>
             Complete customer list with tier information
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {customers.map((customer) => (
+            {allCustomers.map((customer) => (
               <div key={customer.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                 <div className="flex items-center space-x-3">
                   <div style={{ color: customer.tierColor }}>
