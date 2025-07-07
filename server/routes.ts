@@ -7937,6 +7937,36 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     }
   });
 
+  // View generated menu endpoint
+  app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
+    try {
+      const { menuId } = req.params;
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Validate menu ID format
+      if (!menuId || !menuId.startsWith('menu-')) {
+        return res.status(400).json({ error: 'Invalid menu ID' });
+      }
+      
+      const menuPath = path.join('uploads', `${menuId}.html`);
+      
+      // Check if menu file exists
+      if (!fs.existsSync(menuPath)) {
+        return res.status(404).json({ error: 'Menu not found' });
+      }
+      
+      // Read and serve the menu HTML
+      const menuHtml = fs.readFileSync(menuPath, 'utf-8');
+      res.setHeader('Content-Type', 'text/html');
+      res.send(menuHtml);
+      
+    } catch (error) {
+      console.error('Menu viewing error:', error);
+      res.status(500).json({ error: 'Failed to load menu' });
+    }
+  });
+
   // Serve generated menus
   app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
     try {
