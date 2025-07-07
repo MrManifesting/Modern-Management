@@ -526,10 +526,12 @@ export default function MenuGenerator() {
             <CardContent>
               <div 
                 className="p-6 rounded-lg border-2 min-h-[200px] relative overflow-hidden"
-                style={{ 
-                  background: customBackground ? `url(${customBackground})` : selectedTheme.backgroundGradient,
+                style={customBackground ? { 
+                  backgroundImage: `url(${customBackground})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center'
+                } : {
+                  background: selectedTheme.backgroundGradient
                 }}
               >
                 {customBackground && (

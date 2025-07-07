@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 7, 2025: **FIXED MENU GENERATOR API ENDPOINT ERROR AND CSS STYLING CONFLICTS**
+  - **ADDED MISSING MENU VIEW ENDPOINT**: Created GET /api/view-menu/:menuId endpoint to serve generated menu HTML files
+  - **FIXED CSS STYLE CONFLICTS**: Resolved background property conflicts causing console warnings by conditionally applying backgroundSize/backgroundPosition only for custom images
+  - **MENU GENERATION FULLY OPERATIONAL**: Menu generator now successfully creates menus with 97 flower products and provides viewable URLs
+  - **PROPER ERROR HANDLING**: Added validation for menu ID format and file existence checks in view endpoint
+  - System generates menu IDs like "menu-1751850225729-8db5zki89" and serves HTML menus correctly
+
 - July 6, 2025: **FIXED MENU GENERATOR 404 ERROR AND INVENTORY DATA DISPLAY ISSUES**
   - **CREATED MISSING /api/inventory/enhanced ENDPOINT**: Menu generator was failing with 404 errors trying to access non-existent endpoint
   - **IMPLEMENTED AGGRESSIVE STRAIN NAME EXTRACTION**: All weight measurements (grams, pounds, ounces, etc.) are now completely removed from product names
