@@ -1700,12 +1700,19 @@ export function registerRoutes(app: any, storage: any) {
         };
       });
       
-      // ENHANCED SORTING: Flower/Bulk Flower with available quantities and active status at the VERY TOP
+      // ENHANCED SORTING: Flower/Bulk Flower with pound weights at the VERY TOP
       const sortedItems = items.sort((a: any, b: any) => {
         // Helper function to check if item is flower/bulk flower
         const isFlowerItem = (item: any) => {
           const searchText = `${item.name || ''} ${item.category || ''} ${item.description || ''}`.toLowerCase();
           return searchText.includes('flower') || searchText.includes('bulk flower') || searchText.includes('book flower');
+        };
+        
+        // Helper function to check if item has pound weight
+        const hasPoundWeight = (item: any) => {
+          const weight = (item.weight || '').toLowerCase();
+          return weight.includes('pound') || weight.includes('1 lb') || weight.includes('1lb') || 
+                 weight === '1 pound' || weight === 'pound';
         };
         
         // Helper function to check if item is active and has available quantity
@@ -1727,6 +1734,8 @@ export function registerRoutes(app: any, storage: any) {
         
         const aIsFlower = isFlowerItem(a);
         const bIsFlower = isFlowerItem(b);
+        const aHasPound = hasPoundWeight(a);
+        const bHasPound = hasPoundWeight(b);
         const aIsActiveWithQty = isActiveWithQuantity(a);
         const bIsActiveWithQty = isActiveWithQuantity(b);
         const aHasQuantity = hasQuantity(a);
@@ -1734,20 +1743,26 @@ export function registerRoutes(app: any, storage: any) {
         const aHasPricing = hasRealisticPricing(a);
         const bHasPricing = hasRealisticPricing(b);
         
-        // TOP PRIORITY: Active flower/bulk flower items with quantities and pricing at VERY TOP
-        if (aIsFlower && aIsActiveWithQty && aHasPricing && !(bIsFlower && bIsActiveWithQty && bHasPricing)) return -1;
-        if (bIsFlower && bIsActiveWithQty && bHasPricing && !(aIsFlower && aIsActiveWithQty && aHasPricing)) return 1;
+        // TOP PRIORITY: Active flower/bulk flower items with POUND WEIGHTS at VERY TOP
+        const aIsFlowerPoundActive = aIsFlower && aHasPound && aIsActiveWithQty && aHasPricing;
+        const bIsFlowerPoundActive = bIsFlower && bHasPound && bIsActiveWithQty && bHasPricing;
         
-        // If both are active flower items with quantities and pricing, sort by highest quantity
-        if (aIsFlower && aIsActiveWithQty && aHasPricing && bIsFlower && bIsActiveWithQty && bHasPricing) {
+        if (aIsFlowerPoundActive && !bIsFlowerPoundActive) return -1;
+        if (bIsFlowerPoundActive && !aIsFlowerPoundActive) return 1;
+        
+        // If both are active flower pound items, sort by highest quantity
+        if (aIsFlowerPoundActive && bIsFlowerPoundActive) {
           const aQuantity = parseInt(a.quantity) || 0;
           const bQuantity = parseInt(b.quantity) || 0;
           return bQuantity - aQuantity;
         }
         
-        // SECOND PRIORITY: Flower items with quantities (any status)
-        if (aIsFlower && aHasQuantity && !(bIsFlower && bHasQuantity)) return -1;
-        if (bIsFlower && bHasQuantity && !(aIsFlower && aHasQuantity)) return 1;
+        // SECOND PRIORITY: Flower items with pound weights (any status with quantity)
+        const aIsFlowerPoundQty = aIsFlower && aHasPound && aHasQuantity;
+        const bIsFlowerPoundQty = bIsFlower && bHasPound && bHasQuantity;
+        
+        if (aIsFlowerPoundQty && !bIsFlowerPoundQty) return -1;
+        if (bIsFlowerPoundQty && !aIsFlowerPoundQty) return 1;
         
         // THIRD PRIORITY: Active items with quantities (non-flower)
         if (aIsActiveWithQty && !bIsActiveWithQty) return -1;
@@ -4087,6 +4102,127 @@ export function registerRoutes(app: any, storage: any) {
     } catch (error) {
       log(`Error processing bulk results: ${error}`, 'api');
       res.status(500).json({ error: 'Failed to process bulk results' });
+    }
+  });
+
+  // Get customer tiers from bulk operation data
+  app.get("/api/customers/tiers-from-bulk", async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({ error: 'Operation ID required' });
+      }
+      
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      log(`Fetching customer tiers from bulk operation: ${operationId}`, 'api');
+      
+      // Check operation status
+      const status = await bulkService.checkBulkOperationStatus(operationId as string);
+      
+      if (status?.status !== 'COMPLETED' || !status.url) {
+        return res.status(400).json({ error: 'Bulk operation not completed or URL not available' });
+      }
+      
+      // Download and process results
+      const customers = await bulkService.downloadBulkResults(status.url);
+      
+      // Process into tier data structure
+      const tiers = [
+        { name: 'Diamond', threshold: 250000, color: 'bg-purple-600', icon: 'Crown' },
+        { name: 'Platinum', threshold: 100000, color: 'bg-gray-500', icon: 'Award' },
+        { name: 'Gold', threshold: 50000, color: 'bg-yellow-500', icon: 'Medal' },
+        { name: 'Silver', threshold: 25000, color: 'bg-gray-400', icon: 'Star' },
+        { name: 'Bronze', threshold: 5000, color: 'bg-orange-600', icon: 'User' },
+        { name: 'Standard', threshold: 0, color: 'bg-blue-500', icon: 'User' }
+      ];
+
+      const tierSummary: any[] = [];
+      let totalRevenue = 0;
+      let totalCustomers = 0;
+
+      // Initialize tier summaries
+      tiers.forEach(tier => {
+        tierSummary.push({
+          tier,
+          count: 0,
+          totalRevenue: 0,
+          customers: []
+        });
+      });
+
+      // Process each customer
+      customers.forEach((customer: any) => {
+        if (!customer.id?.startsWith('gid://shopify/Customer/')) return;
+        
+        let lifetimeSpent = 0;
+        let orderCount = 0;
+        
+        // Calculate lifetime spending from orders
+        const orders = customers.filter((record: any) => 
+          record.id?.startsWith('gid://shopify/Order/') && 
+          record.__parentId === customer.id
+        );
+        
+        orders.forEach((order: any) => {
+          lifetimeSpent += parseFloat(order.totalPriceSet?.shopMoney?.amount || '0');
+          orderCount++;
+        });
+        
+        // Skip customers under $25,000
+        if (lifetimeSpent < 25000) return;
+        
+        totalCustomers++;
+        totalRevenue += lifetimeSpent;
+        
+        // Find appropriate tier
+        const tierIndex = tiers.findIndex(t => lifetimeSpent >= t.threshold);
+        const tier = tiers[tierIndex];
+        const nextTier = tierIndex > 0 ? tiers[tierIndex - 1] : null;
+        
+        const customerData = {
+          id: customer.id.split('/').pop() || customer.id,
+          email: customer.email || 'No email',
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          displayName: customer.displayName || customer.email || 'No name',
+          totalSpent: lifetimeSpent,
+          orderCount: orderCount,
+          tier: tier.name,
+          tierColor: tier.color,
+          nextTier: nextTier?.name || null,
+          nextTierAmount: nextTier?.threshold || null,
+          remainingToNextTier: nextTier ? nextTier.threshold - lifetimeSpent : 0,
+          createdAt: customer.createdAt
+        };
+        
+        // Add to appropriate tier summary
+        const summaryIndex = tierSummary.findIndex(s => s.tier.name === tier.name);
+        if (summaryIndex !== -1) {
+          tierSummary[summaryIndex].count++;
+          tierSummary[summaryIndex].totalRevenue += lifetimeSpent;
+          tierSummary[summaryIndex].customers.push(customerData);
+        }
+      });
+
+      // Sort customers within each tier by spending
+      tierSummary.forEach(tier => {
+        tier.customers.sort((a: any, b: any) => b.totalSpent - a.totalSpent);
+      });
+      
+      log(`Processed ${totalCustomers} customers with $25k+ lifetime spending`, 'api');
+
+      res.json({
+        totalCustomers,
+        totalRevenue,
+        averageSpend: totalCustomers > 0 ? totalRevenue / totalCustomers : 0,
+        summary: tierSummary.filter(tier => tier.count > 0) // Only return tiers with customers
+      });
+    } catch (error) {
+      log(`Error fetching tiers from bulk data: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to process bulk customer data' });
     }
   });
 
