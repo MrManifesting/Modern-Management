@@ -4041,6 +4041,55 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Process bulk operation results
+  app.post("/api/customers/process-bulk-results", async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.body;
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      log('Processing bulk operation results', 'api');
+      
+      // Wait for completion and get results
+      const url = await bulkService.waitForBulkOperation(operationId);
+      const customers = await bulkService.downloadBulkResults(url);
+      
+      // Process customers and calculate tiers
+      const { CustomerTierService } = await import('./services/customer-tiers.js');
+      const tierService = new CustomerTierService();
+      
+      // Process the bulk data
+      const processedCustomers = customers.map((customer: any) => {
+        let lifetimeSpent = 0;
+        let orderCount = 0;
+        
+        for (const order of customer.orders || []) {
+          lifetimeSpent += parseFloat(order.totalPriceSet?.shopMoney?.amount || '0');
+          orderCount++;
+        }
+        
+        return {
+          ...customer,
+          lifetimeSpent,
+          orderCount
+        };
+      });
+      
+      log(`Processed ${processedCustomers.length} customers from bulk operation`, 'api');
+      
+      res.json({ 
+        success: true,
+        message: `Successfully processed ${processedCustomers.length} customers`,
+        totalCustomers: processedCustomers.length,
+        highValueCustomers: processedCustomers.filter((c: any) => c.lifetimeSpent > 250000).length,
+        billionDollarCustomers: processedCustomers.filter((c: any) => c.lifetimeSpent > 1000000000).length
+      });
+    } catch (error) {
+      log(`Error processing bulk results: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to process bulk results' });
+    }
+  });
+
   app.get("/api/customers/:customerId/tier", async (req: Request, res: Response) => {
     try {
       const { customerId } = req.params;
