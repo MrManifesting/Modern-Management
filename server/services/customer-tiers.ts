@@ -148,15 +148,25 @@ export class CustomerTierService {
 
           // Determine tier based on total spending
           const tier = this.getTierForAmount(totalSpent);
+          
+          // Calculate next tier info
+          const nextTier = this.getNextTier(totalSpent);
+          const nextTierAmount = nextTier ? nextTier.threshold : null;
+          const remainingToNextTier = nextTierAmount ? nextTierAmount - totalSpent : 0;
 
           customers.push({
             id: customer.id.split('/').pop() || customer.id,
             email: customer.email || 'No email',
             firstName: customer.firstName || '',
             lastName: customer.lastName || '',
+            displayName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'No name',
             totalSpent,
-            ordersCount: validOrdersCount,
-            tier,
+            orderCount: validOrdersCount,
+            tier: tier.name,
+            tierColor: tier.color,
+            nextTier: nextTier?.name || null,
+            nextTierAmount,
+            remainingToNextTier,
             lastOrderDate,
             tags: customer.tags || [],
             phone: customer.phone || undefined,
@@ -208,7 +218,7 @@ export class CustomerTierService {
     // Categorize customers into tiers
     let totalRevenue = 0;
     customers.forEach(customer => {
-      const summary = tierSummaries.get(customer.tier.name);
+      const summary = tierSummaries.get(customer.tier);
       if (summary) {
         summary.count++;
         summary.totalRevenue += customer.totalSpent;
@@ -247,6 +257,21 @@ export class CustomerTierService {
       }
     }
     return this.tiers[this.tiers.length - 1]; // Return basic tier as fallback
+  }
+
+  /**
+   * Get the next tier based on current spending
+   */
+  private getNextTier(currentSpending: number): CustomerTier | null {
+    // Find all tiers with threshold higher than current spending
+    const higherTiers = this.tiers.filter(tier => tier.threshold > currentSpending);
+    
+    // Return the tier with the lowest threshold among the higher tiers
+    if (higherTiers.length > 0) {
+      return higherTiers[higherTiers.length - 1];
+    }
+    
+    return null; // Already at highest tier
   }
 
   /**

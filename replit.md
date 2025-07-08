@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 8, 2025: **FIXED CUSTOMER TIERS PAGE ERROR - REACT OBJECT RENDERING ISSUE RESOLVED**
+  - **FIXED REACT CHILD ERROR**: Resolved "Objects are not valid as a React child" error on Customer Tiers page
+  - **DATA STRUCTURE MISMATCH**: Server was returning tier as an object {name, threshold, color, icon} instead of string
+  - **SERVER SIDE FIX**: Modified customer-tiers service to return clean data with tier as string and separate tierColor field
+  - **ADDED MISSING FIELDS**: Included displayName, orderCount, nextTier, nextTierAmount, and remainingToNextTier fields
+  - **COMPLETE DATA FLOW**: Customer data now properly structured with 39 customers, $3,785 total revenue across tiers
+  - System properly displays customer tier badges without React rendering errors
+
 - July 7, 2025: **FIXED MENU GENERATOR API ENDPOINT ERROR AND CSS STYLING CONFLICTS**
   - **ADDED MISSING MENU VIEW ENDPOINT**: Created GET /api/view-menu/:menuId endpoint to serve generated menu HTML files
   - **FIXED CSS STYLE CONFLICTS**: Resolved background property conflicts causing console warnings by conditionally applying backgroundSize/backgroundPosition only for custom images
