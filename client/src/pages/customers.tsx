@@ -69,8 +69,10 @@ export default function CustomersPage() {
   });
 
   // Customer tiers query
-  const { data: tierData, isLoading: tiersLoading } = useQuery<any>({
+  const { data: tierData, isLoading: tiersLoading, error: tiersError } = useQuery<any>({
     queryKey: ['/api/customers/tiers'],
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Sync tiers mutation
@@ -209,6 +211,71 @@ export default function CustomersPage() {
               syncTiersMutation.isPending ? 'Syncing...' : 'Sync from Shopify'
             )
           ),
+          // Show error or loading state if no tier data
+          !tierData || tiersError ? React.createElement(
+            Card,
+            { className: "p-6" },
+            React.createElement(
+              'div',
+              { className: "text-center space-y-4" },
+              React.createElement(
+                'p',
+                { className: "text-muted-foreground" },
+                tiersError ? 
+                  "Failed to fetch customer tier data. Please check your Shopify connection." :
+                  syncTiersMutation.isPending ? 
+                    "Syncing customer data from Shopify... This may take a few minutes for large customer bases." :
+                    "No customer tier data available. Click 'Sync from Shopify' to load customer spending data."
+              ),
+              syncTiersMutation.isPending && React.createElement(
+                Progress,
+                { className: "w-full max-w-md mx-auto", indeterminate: true }
+              )
+            )
+          ) : tierData && tierData.summary && tierData.summary.totalCustomers === 0 ? React.createElement(
+            Card,
+            { className: "p-6" },
+            React.createElement(
+              'div',
+              { className: "text-center space-y-4" },
+              React.createElement(
+                'div',
+                null,
+                React.createElement(Users, { className: "h-12 w-12 text-muted-foreground mx-auto mb-4" }),
+                React.createElement('h3', { className: "text-lg font-semibold" }, "No High-Value Customers Yet"),
+                React.createElement(
+                  'p',
+                  { className: "text-muted-foreground" },
+                  "Your customer tier system is configured to show customers with $25,000+ in lifetime spending."
+                ),
+                React.createElement(
+                  'p',
+                  { className: "text-sm text-muted-foreground mt-2" },
+                  "Currently, no customers have reached this spending threshold. As your business grows and customers reach $25,000 in total purchases, they will appear here organized by tiers:"
+                ),
+                React.createElement(
+                  'div',
+                  { className: "mt-4 space-y-2 text-sm" },
+                  React.createElement('div', { className: "flex items-center justify-center gap-2" },
+                    React.createElement(Crown, { className: "h-4 w-4 text-purple-600" }),
+                    React.createElement('span', null, "Diamond: $250,000+")
+                  ),
+                  React.createElement('div', { className: "flex items-center justify-center gap-2" },
+                    React.createElement(Award, { className: "h-4 w-4 text-gray-600" }),
+                    React.createElement('span', null, "Platinum: $100,000+")
+                  ),
+                  React.createElement('div', { className: "flex items-center justify-center gap-2" },
+                    React.createElement(Medal, { className: "h-4 w-4 text-yellow-600" }),
+                    React.createElement('span', null, "Gold: $50,000+")
+                  ),
+                  React.createElement('div', { className: "flex items-center justify-center gap-2" },
+                    React.createElement(Star, { className: "h-4 w-4 text-gray-400" }),
+                    React.createElement('span', null, "Silver: $25,000+")
+                  )
+                )
+              )
+            )
+          ) : null,
           // Summary cards
           tierData && tierData.summary && React.createElement(
             'div',

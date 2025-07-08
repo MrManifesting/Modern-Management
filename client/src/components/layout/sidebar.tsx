@@ -75,11 +75,6 @@ export default function Sidebar({ expanded }: SidebarProps) {
       path: "/customers",
     },
     {
-      title: "Customer Tiers",
-      icon: <Crown className="h-5 w-5" />,
-      path: "/customer-tiers",
-    },
-    {
       title: "Sales",
       icon: <DollarSign className="h-5 w-5" />,
       path: "/sales",
