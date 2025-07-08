@@ -3974,6 +3974,73 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
   
+  app.post("/api/customers/sync-shopify-tiers", async (_req: Request, res: Response) => {
+    try {
+      const { CustomerTierService } = await import('./services/customer-tiers.js');
+      const tierService = new CustomerTierService();
+      
+      log('Starting Shopify customer tier sync', 'api');
+      const tierData = await tierService.getCustomerTierSummary();
+      
+      log(`Sync complete: ${tierData.totalCustomers} customers processed`, 'api');
+      res.json({ 
+        success: true, 
+        message: `Successfully synced ${tierData.totalCustomers} customers`,
+        data: tierData 
+      });
+    } catch (error) {
+      log(`Error syncing customer tiers: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to sync customer tier data' });
+    }
+  });
+
+  // Bulk operations endpoint for large customer datasets
+  app.post("/api/customers/bulk-sync-tiers", async (_req: Request, res: Response) => {
+    try {
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      log('Starting bulk customer tier sync', 'api');
+      
+      // Start the bulk operation
+      const operationId = await bulkService.startBulkQuery();
+      
+      // Return immediately with operation ID
+      res.json({ 
+        success: true, 
+        message: 'Bulk sync started. This will handle all 1000+ customers including high-value accounts.',
+        operationId,
+        note: 'Check /api/customers/bulk-sync-status/{operationId} for progress'
+      });
+    } catch (error) {
+      log(`Error starting bulk sync: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to start bulk sync' });
+    }
+  });
+
+  // Check bulk operation status
+  app.get("/api/customers/bulk-sync-status/:operationId", async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { ShopifyBulkQueryService } = await import('./services/shopify-bulk-query.js');
+      const bulkService = new ShopifyBulkQueryService();
+      
+      const status = await bulkService.checkBulkOperationStatus(operationId);
+      
+      res.json({ 
+        success: true,
+        status: status?.status,
+        objectCount: status?.objectCount,
+        fileSize: status?.fileSize,
+        url: status?.url,
+        completedAt: status?.completedAt
+      });
+    } catch (error) {
+      log(`Error checking bulk sync status: ${error}`, 'api');
+      res.status(500).json({ error: 'Failed to check bulk sync status' });
+    }
+  });
+
   app.get("/api/customers/:customerId/tier", async (req: Request, res: Response) => {
     try {
       const { customerId } = req.params;

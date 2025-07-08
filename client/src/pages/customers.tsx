@@ -76,7 +76,7 @@ export default function CustomersPage() {
   // Sync tiers mutation
   const syncTiersMutation = useMutation({
     mutationFn: () => 
-      apiRequest("/api/customers/sync-shopify-tiers", "POST", {}),
+      apiRequest("POST", "/api/customers/sync-shopify-tiers", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers/tiers'] });
     },
