@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 8, 2025: **COMPREHENSIVE 12-MONTH GRAPHQL CUSTOMER DATA IMPLEMENTATION**
+  - **ENHANCED GRAPHQL QUERIES**: Implemented comprehensive 12-month customer and sales data collection via GraphQL
+  - **QUERY OPTIMIZATION**: Reduced query cost from 2422 to under 1000 by limiting to 50 customers, 25 orders, and 10 line items per request
+  - **COMPLETE DATA FIELDS**: Now fetching displayName, numberOfOrders, lastOrder, createdAt, state, and detailed order information
+  - **12-MONTH SALES TRACKING**: Filter orders by date to analyze only last 12 months of customer spending for accurate tier placement
+  - **PAGINATION SUPPORT**: System fetches all customers across multiple pages for complete data coverage
+  - **ENHANCED TIER ANALYSIS**: Separate tracking of 12-month spending vs lifetime totals with averageOrderValue calculations
+  - Successfully processes comprehensive customer data with proper tier assignments based on 12-month spending patterns
+
 - July 8, 2025: **FIXED CUSTOMER TIERS PAGE ERROR - REACT OBJECT RENDERING ISSUE RESOLVED**
   - **FIXED REACT CHILD ERROR**: Resolved "Objects are not valid as a React child" error on Customer Tiers page
   - **DATA STRUCTURE MISMATCH**: Server was returning tier as an object {name, threshold, color, icon} instead of string

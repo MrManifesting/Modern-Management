@@ -13,19 +13,32 @@ export interface CustomerWithTier {
   email: string;
   firstName: string;
   lastName: string;
+  displayName: string;
   totalSpent: number;
+  lifetimeSpent: number;
+  orderCount: number;
   ordersCount: number;
-  tier: CustomerTier;
+  tier: string;
+  tierColor: string;
+  nextTier: string | null;
+  nextTierAmount: number | null;
+  remainingToNextTier: number;
   lastOrderDate: string;
   tags: string[];
   phone?: string;
   company?: string;
+  state?: string;
+  createdAt?: string;
+  orderDetails?: any[];
+  averageOrderValue: number;
 }
 
 export interface CustomerTierSummary {
   tier: CustomerTier;
   count: number;
   totalRevenue: number;
+  totalRevenue12Months: number;
+  averageSpending: number;
   customers: CustomerWithTier[];
 }
 
@@ -59,7 +72,7 @@ export class CustomerTierService {
       // GraphQL query to get customers with comprehensive 12-month order history
       const query = `
         query GetCustomersWithOrders($cursor: String) {
-          customers(first: 250, after: $cursor) {
+          customers(first: 50, after: $cursor) {
             edges {
               node {
                 id
@@ -72,11 +85,7 @@ export class CustomerTierService {
                 createdAt
                 updatedAt
                 state
-                totalSpentV2 {
-                  amount
-                  currencyCode
-                }
-                ordersCount
+                numberOfOrders
                 lastOrder {
                   id
                   createdAt
@@ -86,7 +95,7 @@ export class CustomerTierService {
                     }
                   }
                 }
-                orders(first: 100, query: "financial_status:paid AND created_at:>=${dateFilter}") {
+                orders(first: 25, query: "financial_status:paid AND created_at:>=${dateFilter}") {
                   edges {
                     node {
                       id
@@ -114,9 +123,9 @@ export class CustomerTierService {
                       }
                       createdAt
                       cancelledAt
-                      financialStatus
-                      fulfillmentStatus
-                      lineItems(first: 50) {
+                      displayFinancialStatus
+                      displayFulfillmentStatus
+                      lineItems(first: 10) {
                         edges {
                           node {
                             quantity
@@ -175,7 +184,12 @@ export class CustomerTierService {
 
         if (data.errors) {
           log(`GraphQL errors: ${JSON.stringify(data.errors)}`, 'customer-tiers');
-          throw new Error('Failed to fetch customer data from Shopify');
+          throw new Error(`Failed to fetch customer data from Shopify: ${JSON.stringify(data.errors)}`);
+        }
+
+        // Debug the response structure
+        if (customers.length === 0 && data.data?.customers?.edges?.length > 0) {
+          log(`Sample customer data: ${JSON.stringify(data.data.customers.edges[0]?.node, null, 2)}`, 'customer-tiers');
         }
 
         // Process each customer
@@ -213,10 +227,8 @@ export class CustomerTierService {
             }
           }
 
-          // Use totalSpentV2 as lifetime total if available
-          const lifetimeSpent = customer.totalSpentV2?.amount ? 
-            parseFloat(customer.totalSpentV2.amount) : 
-            totalSpent12Months;
+          // For now, use 12-month spending as lifetime total
+          const lifetimeSpent = totalSpent12Months;
 
           // Use 12-month spending for tier calculation
           const spendingForTier = totalSpent12Months;
@@ -238,8 +250,10 @@ export class CustomerTierService {
             firstName: customer.firstName || '',
             lastName: customer.lastName || '',
             displayName: customer.displayName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'No name',
-            totalSpent,
+            totalSpent: totalSpent12Months,
+            lifetimeSpent: lifetimeSpent,
             orderCount: validOrdersCount,
+            ordersCount: customer.numberOfOrders || validOrdersCount,
             tier: tier.name,
             tierColor: tier.color,
             nextTier: nextTier?.name || null,
@@ -249,15 +263,18 @@ export class CustomerTierService {
             tags: customer.tags || [],
             phone: customer.phone || undefined,
             company: customer.company?.value || undefined,
+            state: customer.state || '',
+            createdAt: customer.createdAt,
+            orderDetails: orderDetails,
+            averageOrderValue: validOrdersCount > 0 ? totalSpent12Months / validOrdersCount : 0,
           });
         }
 
         // Check if there are more pages
-        // For now, limit to first page to avoid timeout
-        hasNextPage = false; // data.data.customers.pageInfo.hasNextPage;
-        // if (hasNextPage && data.data.customers.edges.length > 0) {
-        //   cursor = data.data.customers.edges[data.data.customers.edges.length - 1].cursor;
-        // }
+        hasNextPage = data.data.customers.pageInfo.hasNextPage;
+        if (hasNextPage && data.data.customers.edges.length > 0) {
+          cursor = data.data.customers.edges[data.data.customers.edges.length - 1].cursor;
+        }
       }
 
       log(`Fetched ${customers.length} customers with spending data`, 'customer-tiers');
@@ -289,20 +306,32 @@ export class CustomerTierService {
         tier,
         count: 0,
         totalRevenue: 0,
+        totalRevenue12Months: 0,
+        averageSpending: 0,
         customers: []
       });
     });
 
     // Categorize customers into tiers
     let totalRevenue = 0;
+    let totalRevenue12Months = 0;
     customers.forEach(customer => {
       const summary = tierSummaries.get(customer.tier);
       if (summary) {
         summary.count++;
-        summary.totalRevenue += customer.totalSpent;
+        summary.totalRevenue += customer.lifetimeSpent;
+        summary.totalRevenue12Months += customer.totalSpent; // 12-month spending
         summary.customers.push(customer);
       }
-      totalRevenue += customer.totalSpent;
+      totalRevenue += customer.lifetimeSpent;
+      totalRevenue12Months += customer.totalSpent;
+    });
+
+    // Calculate average spending per tier
+    tierSummaries.forEach(summary => {
+      if (summary.count > 0) {
+        summary.averageSpending = summary.totalRevenue12Months / summary.count;
+      }
     });
 
     // Convert to array and sort by threshold (highest first)
@@ -312,8 +341,10 @@ export class CustomerTierService {
     return {
       summary: summaryArray,
       totalCustomers: customers.length,
-      totalRevenue,
-      averageSpend: customers.length > 0 ? totalRevenue / customers.length : 0
+      totalRevenue: totalRevenue12Months,
+      totalLifetimeRevenue: totalRevenue,
+      averageSpend: customers.length > 0 ? totalRevenue12Months / customers.length : 0,
+      averageLifetimeSpend: customers.length > 0 ? totalRevenue / customers.length : 0
     };
   }
 
