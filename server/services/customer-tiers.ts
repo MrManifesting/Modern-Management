@@ -158,10 +158,17 @@ export class CustomerTierService {
       const customers: CustomerWithTier[] = [];
       let cursor: string | null = null;
       let hasNextPage = true;
+      let pageCount = 0;
+      const maxPages = 4; // Limit to 200 customers (50 per page)
 
-      // Paginate through all customers
-      while (hasNextPage) {
-        log(`Making request to Shopify GraphQL API - Page: ${cursor ? 'next' : 'first'}`, 'customer-tiers');
+      // Paginate through customers (limited to prevent timeout)
+      while (hasNextPage && pageCount < maxPages) {
+        log(`Making request to Shopify GraphQL API - Page: ${cursor ? 'next' : 'first'} (${pageCount + 1}/${maxPages})`, 'customer-tiers');
+        
+        // Add delay between requests to avoid rate limiting
+        if (pageCount > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+        }
         
         const requestUrl = `https://${shopifyDomain}/admin/api/2024-01/graphql.json`;
         log(`Request URL: ${requestUrl}`, 'customer-tiers');
@@ -272,9 +279,10 @@ export class CustomerTierService {
 
         // Check if there are more pages
         hasNextPage = data.data.customers.pageInfo.hasNextPage;
-        if (hasNextPage && data.data.customers.edges.length > 0) {
+        if (hasNextPage && data.data.customers.edges.length > 0 && pageCount < maxPages - 1) {
           cursor = data.data.customers.edges[data.data.customers.edges.length - 1].cursor;
         }
+        pageCount++;
       }
 
       log(`Fetched ${customers.length} customers with spending data`, 'customer-tiers');
