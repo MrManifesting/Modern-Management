@@ -159,7 +159,7 @@ export class CustomerTierService {
       let cursor: string | null = null;
       let hasNextPage = true;
       let pageCount = 0;
-      const maxPages = 4; // Limit to 200 customers (50 per page)
+      const maxPages = 100; // Fetch up to 5000 customers (50 per page) to handle 1000+ customer base
 
       // Paginate through customers (limited to prevent timeout)
       while (hasNextPage && pageCount < maxPages) {
