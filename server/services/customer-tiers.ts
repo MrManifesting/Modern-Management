@@ -69,10 +69,10 @@ export class CustomerTierService {
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
       const dateFilter = twelveMonthsAgo.toISOString().split('T')[0];
 
-      // GraphQL query to get customers with comprehensive 12-month order history
+      // GraphQL query to get customers with simplified data to avoid cost limits
       const query = `
         query GetCustomersWithOrders($cursor: String) {
-          customers(first: 50, after: $cursor) {
+          customers(first: 10, after: $cursor) {
             edges {
               node {
                 id
@@ -80,69 +80,16 @@ export class CustomerTierService {
                 firstName
                 lastName
                 displayName
-                phone
-                tags
-                createdAt
-                updatedAt
-                state
                 numberOfOrders
-                lastOrder {
-                  id
-                  createdAt
-                  totalPriceSet {
-                    shopMoney {
-                      amount
-                    }
-                  }
-                }
-                orders(first: 250, query: "financial_status:paid") {
+                orders(first: 5, query: "financial_status:paid") {
                   edges {
                     node {
-                      id
-                      name
                       totalPriceSet {
                         shopMoney {
                           amount
-                          currencyCode
-                        }
-                      }
-                      subtotalPriceSet {
-                        shopMoney {
-                          amount
-                        }
-                      }
-                      totalTaxSet {
-                        shopMoney {
-                          amount
-                        }
-                      }
-                      totalShippingPriceSet {
-                        shopMoney {
-                          amount
-                        }
-                      }
-                      createdAt
-                      cancelledAt
-                      displayFinancialStatus
-                      displayFulfillmentStatus
-                      lineItems(first: 10) {
-                        edges {
-                          node {
-                            quantity
-                            variant {
-                              price
-                            }
-                            product {
-                              title
-                              productType
-                            }
-                          }
                         }
                       }
                     }
-                  }
-                  pageInfo {
-                    hasNextPage
                   }
                 }
               }
