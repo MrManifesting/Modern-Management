@@ -51,31 +51,89 @@ export class CustomerTierService {
 
       log('Fetching customer data from Shopify for tier analysis', 'customer-tiers');
 
-      // GraphQL query to get customers with their order history
-      // Limit to 50 customers initially for better performance
+      // Calculate date 12 months ago for comprehensive sales data
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      const dateFilter = twelveMonthsAgo.toISOString().split('T')[0];
+
+      // GraphQL query to get customers with comprehensive 12-month order history
       const query = `
         query GetCustomersWithOrders($cursor: String) {
-          customers(first: 50, after: $cursor) {
+          customers(first: 250, after: $cursor) {
             edges {
               node {
                 id
                 email
                 firstName
                 lastName
+                displayName
                 phone
                 tags
-                orders(first: 20, query: "financial_status:paid") {
+                createdAt
+                updatedAt
+                state
+                totalSpentV2 {
+                  amount
+                  currencyCode
+                }
+                ordersCount
+                lastOrder {
+                  id
+                  createdAt
+                  totalPriceSet {
+                    shopMoney {
+                      amount
+                    }
+                  }
+                }
+                orders(first: 100, query: "financial_status:paid AND created_at:>=${dateFilter}") {
                   edges {
                     node {
                       id
+                      name
                       totalPriceSet {
+                        shopMoney {
+                          amount
+                          currencyCode
+                        }
+                      }
+                      subtotalPriceSet {
+                        shopMoney {
+                          amount
+                        }
+                      }
+                      totalTaxSet {
+                        shopMoney {
+                          amount
+                        }
+                      }
+                      totalShippingPriceSet {
                         shopMoney {
                           amount
                         }
                       }
                       createdAt
                       cancelledAt
+                      financialStatus
+                      fulfillmentStatus
+                      lineItems(first: 50) {
+                        edges {
+                          node {
+                            quantity
+                            variant {
+                              price
+                            }
+                            product {
+                              title
+                              productType
+                            }
+                          }
+                        }
+                      }
                     }
+                  }
+                  pageInfo {
+                    hasNextPage
                   }
                 }
               }
@@ -124,42 +182,62 @@ export class CustomerTierService {
         for (const edge of data.data.customers.edges) {
           const customer = edge.node;
           
-          // Calculate total spent from non-cancelled orders
-          let totalSpent = 0;
+          // Calculate total spent from orders in the last 12 months
+          let totalSpent12Months = 0;
           let validOrdersCount = 0;
           let lastOrderDate = '';
+          const orderDetails: any[] = [];
 
+          // Process all orders from the last 12 months
           for (const orderEdge of customer.orders.edges) {
             const order = orderEdge.node;
             
             // Only count non-cancelled orders (already filtered for paid status in query)
             if (!order.cancelledAt) {
-              totalSpent += parseFloat(order.totalPriceSet.shopMoney.amount);
+              const orderAmount = parseFloat(order.totalPriceSet.shopMoney.amount);
+              totalSpent12Months += orderAmount;
               validOrdersCount++;
               
               if (!lastOrderDate || order.createdAt > lastOrderDate) {
                 lastOrderDate = order.createdAt;
               }
+
+              // Store order details for comprehensive analysis
+              orderDetails.push({
+                id: order.id,
+                name: order.name,
+                amount: orderAmount,
+                date: order.createdAt,
+                itemCount: order.lineItems?.edges?.length || 0
+              });
             }
           }
 
-          // Skip customers with no valid orders
-          if (validOrdersCount === 0) continue;
+          // Use totalSpentV2 as lifetime total if available
+          const lifetimeSpent = customer.totalSpentV2?.amount ? 
+            parseFloat(customer.totalSpentV2.amount) : 
+            totalSpent12Months;
 
-          // Determine tier based on total spending
-          const tier = this.getTierForAmount(totalSpent);
+          // Use 12-month spending for tier calculation
+          const spendingForTier = totalSpent12Months;
+
+          // Skip customers with no spending in the last 12 months
+          if (totalSpent12Months === 0) continue;
+
+          // Determine tier based on 12-month spending
+          const tier = this.getTierForAmount(spendingForTier);
           
           // Calculate next tier info
-          const nextTier = this.getNextTier(totalSpent);
+          const nextTier = this.getNextTier(spendingForTier);
           const nextTierAmount = nextTier ? nextTier.threshold : null;
-          const remainingToNextTier = nextTierAmount ? nextTierAmount - totalSpent : 0;
+          const remainingToNextTier = nextTierAmount ? nextTierAmount - spendingForTier : 0;
 
           customers.push({
             id: customer.id.split('/').pop() || customer.id,
             email: customer.email || 'No email',
             firstName: customer.firstName || '',
             lastName: customer.lastName || '',
-            displayName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'No name',
+            displayName: customer.displayName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'No name',
             totalSpent,
             orderCount: validOrdersCount,
             tier: tier.name,
