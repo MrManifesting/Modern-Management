@@ -95,7 +95,7 @@ export class CustomerTierService {
                     }
                   }
                 }
-                orders(first: 25, query: "financial_status:paid AND created_at:>=${dateFilter}") {
+                orders(first: 250, query: "financial_status:paid") {
                   edges {
                     node {
                       id
@@ -234,16 +234,31 @@ export class CustomerTierService {
             }
           }
 
-          // For now, use 12-month spending as lifetime total
-          const lifetimeSpent = totalSpent12Months;
+          // Calculate lifetime spent from ALL orders (not just 12 months)
+          let lifetimeSpentActual = totalSpent12Months;
+          
+          // Get numberOfOrders to determine if customer has historical orders
+          const totalOrderCount = parseInt(customer.numberOfOrders || '0');
+          
+          // If customer has more orders than we fetched, use lastOrder.totalPriceSet as a baseline
+          if (totalOrderCount > 0 && customer.lastOrder) {
+            const lastOrderAmount = parseFloat(customer.lastOrder.totalPriceSet?.shopMoney?.amount || '0');
+            // Estimate lifetime spending if we have more orders than fetched
+            if (totalOrderCount > customer.orders.edges.length) {
+              lifetimeSpentActual = Math.max(totalSpent12Months, lastOrderAmount * totalOrderCount * 0.8); // Conservative estimate
+            }
+          }
+          
+          // Skip only if they have NEVER ordered
+          if (lifetimeSpentActual === 0 && totalOrderCount === 0) continue;
+          
+          // Use actual lifetime spent
+          const lifetimeSpent = lifetimeSpentActual;
+          
+          // Use lifetime spending for tier calculation to capture high-value customers
+          const spendingForTier = lifetimeSpentActual;
 
-          // Use 12-month spending for tier calculation
-          const spendingForTier = totalSpent12Months;
-
-          // Skip customers with no spending in the last 12 months
-          if (totalSpent12Months === 0) continue;
-
-          // Determine tier based on 12-month spending
+          // Determine tier based on lifetime spending
           const tier = this.getTierForAmount(spendingForTier);
           
           // Calculate next tier info

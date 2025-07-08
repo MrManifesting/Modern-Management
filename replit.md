@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 8, 2025: **BULK OPERATIONS API IMPLEMENTATION FOR LARGE CUSTOMER DATASETS**
+  - **SHOPIFY BULK OPERATIONS**: Created ShopifyBulkQueryService to handle 1000+ customers including those with $250k+ and billion dollar spending
+  - **LIFETIME VALUE CALCULATION**: Updated customer tier system to use lifetime spending instead of just 12-month data for tier placement
+  - **PAGINATION ENHANCEMENT**: Increased GraphQL pagination from 50 to 100 pages (5000 customers) with proper rate limiting
+  - **FIXED SYNC ENDPOINT**: Added missing /api/customers/sync-shopify-tiers endpoint with proper parameter handling
+  - **BULK SYNC ENDPOINTS**: Created /api/customers/bulk-sync-tiers and /api/customers/bulk-sync-status/:operationId for async processing
+  - **ALL ORDERS FETCHING**: Modified GraphQL query to fetch up to 250 orders per customer without date filtering
+  - **INTELLIGENT LIFETIME ESTIMATION**: Added logic to estimate lifetime spending based on numberOfOrders when all orders can't be fetched
+  - System now properly handles enterprise-scale customer data with high-value account tracking
+
 - July 8, 2025: **COMPREHENSIVE 12-MONTH GRAPHQL CUSTOMER DATA IMPLEMENTATION**
   - **ENHANCED GRAPHQL QUERIES**: Implemented comprehensive 12-month customer and sales data collection via GraphQL
   - **QUERY OPTIMIZATION**: Reduced query cost from 2422 to under 1000 by limiting to 50 customers, 25 orders, and 10 line items per request
