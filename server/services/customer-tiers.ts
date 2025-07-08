@@ -196,8 +196,8 @@ export class CustomerTierService {
             }
           }
           
-          // Skip only if they have NEVER ordered
-          if (lifetimeSpentActual === 0 && totalOrderCount === 0) continue;
+          // Skip customers with lifetime spending less than $25,000
+          if (lifetimeSpentActual < 25000) continue;
           
           // Use actual lifetime spent
           const lifetimeSpent = lifetimeSpentActual;

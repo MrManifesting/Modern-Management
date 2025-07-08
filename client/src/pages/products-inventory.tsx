@@ -2083,7 +2083,13 @@ const ProductsInventoryPage: React.FC = () => {
                               <td className="py-3 px-2">
                                 <Checkbox 
                                   checked={selectedItems.some(item => item.id === product.id)}
-                                  onCheckedChange={(checked) => handleItemSelection(product, !!checked)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedItems(prev => [...prev, product]);
+                                    } else {
+                                      setSelectedItems(prev => prev.filter(item => item.id !== product.id));
+                                    }
+                                  }}
                                 />
                               </td>
                             )}
@@ -2145,12 +2151,17 @@ const ProductsInventoryPage: React.FC = () => {
                                 </div>
                                 
                                 {/* Larger preview on hover */}
-                                {product.imageUrl && (
-                                  <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
-                                    <div className="relative w-48 h-48 overflow-hidden rounded">
-                                      <img 
-                                        src={product.imageUrl} 
-                                        alt={product.name} 
+                                {(() => {
+                                  const previewImage = product.imageUrl || 
+                                    (product.images && product.images.length > 0 ? product.images[0] : null);
+                                  
+                                  if (previewImage) {
+                                    return (
+                                      <div className="absolute transform -translate-x-1/2 -translate-y-full top-0 left-1/2 mt-[-10px] z-50 hidden group-hover:block rounded-md shadow-lg border border-border bg-white p-1 transition-all duration-200 animate-in fade-in zoom-in-95">
+                                        <div className="relative w-48 h-48 overflow-hidden rounded">
+                                          <img 
+                                            src={previewImage} 
+                                            alt={product.name} 
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
                                           const imgElement = e.target as HTMLImageElement;
@@ -2173,7 +2184,10 @@ const ProductsInventoryPage: React.FC = () => {
                                     {/* Triangle pointer */}
                                     <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
                                   </div>
-                                )}
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </td>
                             <td className="py-3 px-4">
@@ -2486,6 +2500,39 @@ const ProductsInventoryPage: React.FC = () => {
         onItemUpdated={handleItemUpdated}
         item={selectedEditItem}
       />
+      
+      {/* Delete All Dialog */}
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Inventory</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>This action will permanently delete ALL items from your inventory. This cannot be undone.</p>
+              <p className="font-semibold">Please type DELETE_ALL_INVENTORY to confirm:</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              value={deleteAllConfirmation}
+              onChange={(e) => setDeleteAllConfirmation(e.target.value)}
+              placeholder="Type DELETE_ALL_INVENTORY"
+              className="w-full"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteAllConfirmation('');
+            }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAllInventory}
+              disabled={deleteAllConfirmation !== "DELETE_ALL_INVENTORY" || deleteAllLoading}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteAllLoading ? "Deleting..." : "Delete All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
