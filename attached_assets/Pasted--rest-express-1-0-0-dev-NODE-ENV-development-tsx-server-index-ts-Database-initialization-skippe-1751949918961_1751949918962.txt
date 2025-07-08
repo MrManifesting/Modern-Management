@@ -1,0 +1,46 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+Database initialization skipped - using existing schema
+4:37:36 AM [startup] Starting server in development mode
+4:37:36 AM [startup] Using existing database connection
+4:37:37 AM [graphql] GraphQL server started successfully
+4:37:37 AM [startup] GraphQL server initialized at /graphql
+4:37:37 AM [startup] Routes registered successfully
+4:37:37 AM [startup] serving on port 5000
+4:37:37 AM [startup] Vite development server setup complete
+4:37:37 AM [startup] Server startup completed successfully
+4:37:47 AM [express] GET /api/user 200 in 3ms :: {"id":"dev-user","authenticated":true,"username":"a…
+4:41:03 AM [inventory] Retrieved 1633 items with STRAIN NAMES and REALISTIC PRICING
+4:41:03 AM [express] GET /api/items 200 in 3007ms :: [{"id":1384,"name":"Blueberry Muffin","sku":"BB…
+4:42:46 AM [express] POST /api/items/2077/generate-qrcode 404 in 3ms :: {"error":"API endpoint not f…
+4:42:48 AM [inventory] Retrieved 1633 items with STRAIN NAMES and REALISTIC PRICING
+4:42:48 AM [express] GET /api/items 200 in 1140ms :: [{"id":1384,"name":"Blueberry Muffin","sku":"BB…
+Trying to fetch item with ID: 2076
+Result type: object
+Result is array: false
+Result keys: [
+  'command',    'rowCount',
+  'oid',        'rows',
+  'fields',     '_parsers',
+  '_types',     'RowCtor',
+  'rowAsArray'
+]
+Rows found: 1
+Found item: Purple Push Pop - Indica
+4:43:11 AM [express] GET /api/items/2076/shopify-store-view 200 in 4313ms :: {"success":true,"url":"…
+4:44:23 AM [inventory] Retrieved 1633 items with STRAIN NAMES and REALISTIC PRICING
+4:44:23 AM [express] GET /api/items 200 in 2591ms :: [{"id":1384,"name":"Blueberry Muffin","sku":"BB…
+4:44:42 AM [express] GET /api/customers 404 in 1ms :: {"error":"API endpoint not found"}
+4:44:43 AM [shopify-debug] Admin token length: 38
+4:44:43 AM [shopify-debug] Admin token starts with: shpat...
+4:44:43 AM [shopify-debug] Storefront token length: 32
+4:44:43 AM [customer-tiers] Fetching customer data from Shopify for tier analysis
+4:44:43 AM [customer-tiers] Making request to Shopify GraphQL API - Page: first
+4:44:43 AM [customer-tiers] Request URL: https://gold-standard-cbd.myshopify.com/admin/api/2024-01/graphql.json
+4:44:43 AM [express] GET /api/customers 404 in 1ms :: {"error":"API endpoint not found"}
+4:44:43 AM [customer-tiers] Response status: 200
+4:44:43 AM [customer-tiers] Fetched 39 customers with spending data
+4:44:43 AM [api] Retrieved customer tier data: 39 customers, $3785.00 total revenue
+4:44:43 AM [express] GET /api/customers/tiers 200 in 1275ms :: {"summary":[{"tier":{"name":"Diamond"…
