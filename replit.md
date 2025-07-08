@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 9, 2025: **INVENTORY FIXES AND CUSTOMER PAGE CONSOLIDATION**
+  - **FIXED BULK SELECTION**: Checkbox selection in inventory table now properly adds/removes items from selectedItems array
+  - **FIXED DELETE ALL INVENTORY**: Added missing confirmation dialog with "DELETE_ALL_INVENTORY" typing requirement
+  - **ENHANCED THUMBNAIL PREVIEWS**: Items now show larger preview images on hover for all items with images
+  - **INVENTORY SORTING**: Default view prioritizes flower/pound items at top, sorted by quantity
+  - **CUSTOMER PAGE CONSOLIDATION**: Removed duplicate customer-tiers route and merged into single customers page with tabs
+  - **CUSTOMER TIERS DISPLAY**: Added proper empty state for when no customers have reached $25,000+ spending threshold
+  - **REMOVED DUPLICATE NAVIGATION**: Eliminated customer-tiers from sidebar and App.tsx routes
+  - System correctly shows zero high-value customers when none have reached minimum tier thresholds
+
 - July 8, 2025: **BULK OPERATIONS API IMPLEMENTATION FOR LARGE CUSTOMER DATASETS**
   - **SHOPIFY BULK OPERATIONS**: Created ShopifyBulkQueryService to handle 1000+ customers including those with $250k+ and billion dollar spending
   - **LIFETIME VALUE CALCULATION**: Updated customer tier system to use lifetime spending instead of just 12-month data for tier placement
