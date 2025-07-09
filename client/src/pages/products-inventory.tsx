@@ -98,6 +98,37 @@ import BulkEditPanel from '@/components/inventory/bulk-edit-panel';
 import { BulkQuantityEdit } from '@/components/inventory/bulk-quantity-edit';
 import { GenerateUnitsDialog } from '@/components/inventory/generate-units-dialog';
 
+// Helper function to extract strain name from product name
+function extractStrainName(productName: string): string {
+  if (!productName) return 'Unknown Strain';
+  
+  // Remove weight measurements
+  const weightPatterns = [
+    /\b\d+\s*(?:lb|pound|pounds|oz|ounce|ounces|g|gram|grams|kg|kilogram|kilograms)\b/gi,
+    /\b(?:half|quarter|eighth|1\/2|1\/4|1\/8)\s*(?:lb|pound|pounds|oz|ounce|ounces)\b/gi,
+    /\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:lb|pound|pounds|oz|ounce|ounces|g|gram|grams)\b/gi,
+    /\bhalf\s*gram\b/gi,
+    /\b\d+\s*grams?\b/gi,
+    /\b\d+\s*pounds?\b/gi
+  ];
+  
+  let cleanName = productName;
+  weightPatterns.forEach(pattern => {
+    cleanName = cleanName.replace(pattern, '');
+  });
+  
+  // Remove extra spaces and hyphens
+  cleanName = cleanName.replace(/[-_]+/g, ' ').trim();
+  cleanName = cleanName.replace(/\s+/g, ' ');
+  
+  // Capitalize properly
+  cleanName = cleanName.split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+    
+  return cleanName || productName;
+}
+
 // Define the Product interface
 interface Product {
   id?: number;
@@ -1182,10 +1213,10 @@ const ProductsInventoryPage: React.FC = () => {
             </div>
             
             <div className="w-16 h-16 rounded-md border border-border overflow-hidden flex-shrink-0">
-              {product.imageUrl ? (
+              {(product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0 && product.images[0])) ? (
                 <img 
-                  src={product.imageUrl} 
-                  alt={product.name}
+                  src={product.imageUrl || product.images[0]} 
+                  alt={extractStrainName(product.name)}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const imgElement = e.target as HTMLImageElement;
@@ -1208,7 +1239,7 @@ const ProductsInventoryPage: React.FC = () => {
               )}
             </div>
             <div className="flex-1">
-              <CardTitle className="text-lg">{product.name}</CardTitle>
+              <CardTitle className="text-lg">{extractStrainName(product.name)}</CardTitle>
               <div className="flex flex-wrap gap-2 mt-1">
                 <Badge variant="outline">{product.category}</Badge>
                 <Badge variant={product.status?.includes("Low") ? "destructive" : "default"}>
@@ -2108,24 +2139,14 @@ const ProductsInventoryPage: React.FC = () => {
                                     else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
                                       imageUrl = product.images[0];
                                     }
-                                    // 3. Check for media files by item ID
-                                    else if (product.id) {
-                                      // Try to construct media URL from common patterns
-                                      const mediaPatterns = [
-                                        `/media/${product.sku}.jpg`,
-                                        `/media/${product.sku}.png`,
-                                        `/media/${(product.name || '').toLowerCase().replace(/\s+/g, '_')}.jpg`,
-                                        `/media/item_${product.id}.jpg`,
-                                        `/media/item_${product.id}.png`
-                                      ];
-                                      imageUrl = mediaPatterns[0]; // Try the first pattern
-                                    }
+                                    // Don't try to construct media patterns - only use actual data
+                                    // This avoids broken image attempts
                                     
                                     if (imageUrl) {
                                       return (
                                         <img 
                                           src={imageUrl} 
-                                          alt={product.name}
+                                          alt={extractStrainName(product.name)}
                                           className="object-cover w-full h-full"
                                           onError={(e) => {
                                             const imgElement = e.target as HTMLImageElement;
@@ -2161,7 +2182,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         <div className="relative w-48 h-48 overflow-hidden rounded">
                                           <img 
                                             src={previewImage} 
-                                            alt={product.name} 
+                                            alt={extractStrainName(product.name)} 
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
                                           const imgElement = e.target as HTMLImageElement;
@@ -2179,7 +2200,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       />
                                     </div>
                                     <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
-                                      {product.name}
+                                      {extractStrainName(product.name)}
                                     </div>
                                     {/* Triangle pointer */}
                                     <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
@@ -2191,7 +2212,7 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium">{product.name}</div>
+                              <div className="font-medium">{extractStrainName(product.name)}</div>
                               <div className="text-sm text-muted-foreground">{product.subcategory}</div>
                             </td>
                             <td className="py-3 px-4">
