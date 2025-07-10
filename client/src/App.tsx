@@ -99,6 +99,16 @@ function Router() {
         <ProtectedRoute path="/" component={() => <Dashboard />} />
 
         <ProtectedRoute path="/inventory" component={() => <ProductsInventoryPage />} />
+        <ProtectedRoute path="/inventory/:id" component={() => {
+          const InventoryDetailPage = React.lazy(() => import("@/pages/inventory-detail"));
+          return (
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>}>
+              <InventoryDetailPage />
+            </React.Suspense>
+          );
+        }} />
         <ProtectedRoute path="/bulk-query" component={() => <BulkQueryPage />} />
         <ProtectedRoute path="/menu-generator" component={() => <MenuGenerator />} />
 
