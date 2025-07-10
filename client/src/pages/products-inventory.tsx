@@ -404,14 +404,21 @@ const ProductsInventoryPage: React.FC = () => {
         };
 
         // Enhanced price display function
-        const formatPriceDisplay = (product: any) => {
-          if (product.displayPrice && product.displayPrice !== "No Price") {
-            return product.displayPrice;
+        const formatPriceDisplay = (item: any) => {
+          // Check all possible price fields
+          const price = item.price || item.sale_price || item.salePrice || 
+                       item.base_price || item.basePrice || 
+                       item.cost_price || 0;
+          
+          if (price > 0) {
+            return formatPrice(price);
           }
-          if (product.basePrice && product.basePrice > 0) {
-            return `$${product.basePrice}`;
+          
+          if (item.displayPrice && item.displayPrice !== "No Price") {
+            return item.displayPrice;
           }
-          return "No Price";
+          
+          return "$0.00";
         };
 
         const weightData = parseWeight(item.weight || '1 pound');
@@ -421,11 +428,15 @@ const ProductsInventoryPage: React.FC = () => {
           name: item.name,
           category: item.category || "Uncategorized",
           price: formatPriceDisplay(item),
-          displayPrice: item.displayPrice || "No Price",
+          displayPrice: item.displayPrice || formatPriceDisplay(item),
           priceSource: item.priceSource || "none",
-          basePrice: item.displayPrice || item.basePrice || 0,
-          retailPrice: item.retailPrice || item.basePrice || 0,
-          wholesalePrice: item.wholesalePrice || (item.basePrice ? item.basePrice * 0.5 : 0),
+          basePrice: item.basePrice || item.base_price || 0,
+          base_price: item.base_price || 0,
+          salePrice: item.salePrice || item.sale_price || 0,
+          sale_price: item.sale_price || 0,
+          cost_price: item.cost_price || 0,
+          retailPrice: item.retailPrice || item.base_price || item.basePrice || 0,
+          wholesalePrice: item.wholesalePrice || ((item.base_price || item.basePrice) ? (item.base_price || item.basePrice) * 0.5 : 0),
           sku: item.sku || "NO-SKU",
           barcode: item.barcode || "",
           quantity: item.quantity || 0,
