@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **ENHANCED PRICE DISPLAY ACCURACY IN INVENTORY VIEW**
+  - **FIXED PRICE DISPLAY**: Inventory table and mobile views now accurately show all price data
+  - **DATABASE FIELD MAPPING**: Added proper snake_case to camelCase mapping for price fields in storage layer
+  - **FRONTEND PRICE DISPLAY**: Updated inventory view to check multiple price fields (price, base_price, sale_price)
+  - **API RESPONSE ENHANCEMENT**: Storage layer now returns all price fields with proper fallback handling
+  - System ensures price data is accurately referenced regardless of field naming convention
+
 - January 10, 2025: **AUTOMATIC SHOPIFY INVENTORY SYNC IMPLEMENTATION**
   - **CRITICAL FIX**: Inventory quantities now automatically sync to Shopify when updated locally
   - Created `syncInventoryQuantityToShopify` function in shopify.ts service

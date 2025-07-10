@@ -2024,7 +2024,14 @@ export class DatabaseStorage implements IStorage {
           images: row.images || [],
           weight: weight,
           // Map snake_case to camelCase for frontend compatibility
-          imageUrl: row.image_url || null
+          imageUrl: row.image_url || null,
+          // Ensure all price fields are properly mapped
+          price: row.price || row.base_price || row.sale_price || 0,
+          basePrice: row.base_price || row.basePrice || 0,
+          base_price: row.base_price || 0,
+          salePrice: row.sale_price || row.salePrice || 0,
+          sale_price: row.sale_price || 0,
+          cost_price: row.cost_price || 0
         };
       });
     } catch (error) {
