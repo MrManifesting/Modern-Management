@@ -375,32 +375,92 @@ const ProductsInventoryPage: React.FC = () => {
       
       return items.map((item: any) => {
         // Parse weight to extract exact standard values - no decimal weights
-        const parseWeight = (weightStr: string) => {
-          if (!weightStr) return { value: 1, unit: 'pound', display: '1 pound' };
+        const parseWeight = (weightStr: string, category: string, name: string) => {
+          // Debug log to see what we're working with
+          if (item.id === items[0].id) {
+            console.log("Weight parsing for first item:", {
+              weight: weightStr,
+              category: category,
+              name: name
+            });
+          }
+          
+          // Smart defaults based on category
+          const getDefaultWeight = () => {
+            const categoryLower = category?.toLowerCase() || '';
+            const nameLower = name?.toLowerCase() || '';
+            
+            // Pre-rolls are always 1g by default
+            if (categoryLower.includes('preroll') || categoryLower.includes('pre-roll') ||
+                nameLower.includes('preroll') || nameLower.includes('pre-roll')) {
+              return { value: 1, unit: 'gram', display: '1g' };
+            }
+            
+            // Edibles, concentrates, vapes are typically measured in grams
+            if (categoryLower.includes('edible') || categoryLower.includes('concentrate') ||
+                categoryLower.includes('vape') || categoryLower.includes('cart')) {
+              return { value: 1, unit: 'gram', display: '1g' };
+            }
+            
+            // Bulk flower defaults to pounds
+            if (categoryLower.includes('bulk') || nameLower.includes('bulk')) {
+              return { value: 1, unit: 'pound', display: '1 pound' };
+            }
+            
+            // Regular flower defaults to eighths (3.5g)
+            if (categoryLower.includes('flower')) {
+              return { value: 3.5, unit: 'gram', display: '3.5g' };
+            }
+            
+            // Ultimate fallback
+            return { value: 1, unit: 'gram', display: '1g' };
+          };
+          
+          // If no weight string, use smart default
+          if (!weightStr) return getDefaultWeight();
           
           const weightLower = weightStr.toLowerCase().trim();
           
-          // Exact standard weight mappings - no decimals
-          if (weightLower.includes('1 pound') || weightLower === 'pound' || weightLower === '1lb') {
-            return { value: 1, unit: 'pound', display: '1 pound' };
-          } else if (weightLower.includes('half pound') || weightLower.includes('0.5 pound')) {
-            return { value: 0.5, unit: 'pound', display: 'half pound' };
-          } else if (weightLower.includes('quarter pound') || weightLower.includes('0.25 pound')) {
-            return { value: 0.25, unit: 'pound', display: 'quarter pound' };
-          } else if (weightLower.includes('1 ounce') || weightLower === 'ounce' || weightLower === '1oz') {
-            return { value: 1, unit: 'ounce', display: '1 ounce' };
-          } else if (weightLower.includes('half ounce') || weightLower.includes('0.5 ounce')) {
-            return { value: 0.5, unit: 'ounce', display: 'half ounce' };
-          } else if (weightLower.includes('quarter ounce') || weightLower.includes('0.25 ounce')) {
-            return { value: 0.25, unit: 'ounce', display: 'quarter ounce' };
-          } else if (weightLower.includes('3.5') && weightLower.includes('g')) {
-            return { value: 3.5, unit: 'gram', display: '3.5g' };
-          } else if (weightLower.includes('1') && weightLower.includes('g')) {
-            return { value: 1, unit: 'gram', display: '1g' };
-          } else {
-            // Default to 1 pound for any unrecognized weight
-            return { value: 1, unit: 'pound', display: '1 pound' };
+          // Check for gram weights first (most specific)
+          const gramMatch = weightLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/);
+          if (gramMatch) {
+            const value = parseFloat(gramMatch[1]);
+            return { value, unit: 'gram', display: `${value}g` };
           }
+          
+          // Check for ounce weights
+          const ozMatch = weightLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/);
+          if (ozMatch) {
+            const value = parseFloat(ozMatch[1]);
+            return { value, unit: 'ounce', display: `${value} ${value === 1 ? 'ounce' : 'ounces'}` };
+          }
+          
+          // Check for pound weights
+          const lbMatch = weightLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/);
+          if (lbMatch) {
+            const value = parseFloat(lbMatch[1]);
+            return { value, unit: 'pound', display: `${value} ${value === 1 ? 'pound' : 'pounds'}` };
+          }
+          
+          // Common cannabis weight terms
+          if (weightLower.includes('eighth')) {
+            return { value: 3.5, unit: 'gram', display: '3.5g (eighth)' };
+          }
+          if (weightLower.includes('quarter') && weightLower.includes('ounce')) {
+            return { value: 7, unit: 'gram', display: '7g (quarter oz)' };
+          }
+          if (weightLower.includes('half') && weightLower.includes('ounce')) {
+            return { value: 14, unit: 'gram', display: '14g (half oz)' };
+          }
+          if (weightLower.includes('quarter') && weightLower.includes('pound')) {
+            return { value: 0.25, unit: 'pound', display: 'quarter pound' };
+          }
+          if (weightLower.includes('half') && weightLower.includes('pound')) {
+            return { value: 0.5, unit: 'pound', display: 'half pound' };
+          }
+          
+          // If nothing matches, use smart default
+          return getDefaultWeight();
         };
 
         // Enhanced price display function
@@ -421,7 +481,7 @@ const ProductsInventoryPage: React.FC = () => {
           return "$0.00";
         };
 
-        const weightData = parseWeight(item.weight || '1 pound');
+        const weightData = parseWeight(item.weight, item.category, item.name);
 
         return {
           id: item.id,
