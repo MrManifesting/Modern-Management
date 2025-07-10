@@ -1977,7 +1977,9 @@ export class DatabaseStorage implements IStorage {
           id: Number(row.id),
           quantity: row.quantity !== null ? Number(row.quantity) : 0,
           tags: row.tags || [],
-          images: row.images || []
+          images: row.images || [],
+          // Map snake_case to camelCase for frontend compatibility
+          imageUrl: row.image_url || null
         };
       });
     } catch (error) {
