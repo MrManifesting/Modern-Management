@@ -1259,7 +1259,7 @@ const ProductsInventoryPage: React.FC = () => {
             <span className="text-muted-foreground">SKU:</span> <span className="font-mono">{product.sku}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Price:</span> {formatPrice(product.price)}
+            <span className="text-muted-foreground">Price:</span> {formatPrice(product.price || product.basePrice || product.base_price || product.salePrice || product.sale_price || 0)}
           </div>
           <div>
             <span className="text-muted-foreground">Stock:</span>{' '}
@@ -2236,7 +2236,7 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(product.basePrice || 0)}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.price || product.basePrice || product.base_price || product.salePrice || product.sale_price || 0)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
                                 {product.quantity}
