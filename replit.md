@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **WEIGHT DISPLAY FIX**
+  - Fixed weight display issue where all products showed "1 pound" as default (including pre-rolls)
+  - Database schema had default weight value of "pound" causing incorrect displays
+  - Added intelligent weight handling in storage layer based on product category:
+    - Pre-rolls automatically default to 1g
+    - Edibles/concentrates/vapes default to 1g
+    - Bulk flower defaults to 1 pound
+    - Regular flower defaults to 3.5g (eighth)
+    - System extracts weights from product names when available
+  - Frontend parseWeight function enhanced with category-aware logic and regex pattern matching
+
 - January 10, 2025: **PRICING DISPLAY FIX**
   - Fixed inventory pricing display issue where all prices showed $0.00
   - Updated Product interface to include snake_case price fields (base_price, sale_price, cost_price) for API compatibility

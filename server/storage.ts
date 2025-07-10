@@ -1972,12 +1972,66 @@ export class DatabaseStorage implements IStorage {
       
       // Map the results to Item type
       return result.map(row => {
+        // Smart weight handling based on category and name
+        let weight = row.weight;
+        if (!weight || weight === 'pound' || weight === 'Weight not specified') {
+          const categoryLower = (row.category || '').toLowerCase();
+          const nameLower = (row.name || '').toLowerCase();
+          
+          // Pre-rolls are always 1g
+          if (categoryLower.includes('preroll') || categoryLower.includes('pre-roll') ||
+              nameLower.includes('preroll') || nameLower.includes('pre-roll')) {
+            weight = '1g';
+          }
+          // Edibles, concentrates, vapes are typically measured in smaller units
+          else if (categoryLower.includes('edible') || categoryLower.includes('concentrate') ||
+                   categoryLower.includes('vape') || categoryLower.includes('cart')) {
+            weight = '1g';
+          }
+          // Extract weight from name if possible
+          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/)) {
+            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/);
+            weight = `${match[1]}g`;
+          }
+          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/)) {
+            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/);
+            weight = `${match[1]} ${parseFloat(match[1]) === 1 ? 'ounce' : 'ounces'}`;
+          }
+          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/)) {
+            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/);
+            weight = `${match[1]} ${parseFloat(match[1]) === 1 ? 'pound' : 'pounds'}`;
+          }
+          // Common cannabis weights
+          else if (nameLower.includes('eighth')) {
+            weight = '3.5g';
+          }
+          else if (nameLower.includes('quarter') && nameLower.includes('ounce')) {
+            weight = '7g';
+          }
+          else if (nameLower.includes('half') && nameLower.includes('ounce')) {
+            weight = '14g';
+          }
+          // Bulk flower defaults to 1 pound
+          else if (categoryLower.includes('bulk') || nameLower.includes('bulk')) {
+            weight = '1 pound';
+          }
+          // Regular flower defaults to eighths
+          else if (categoryLower.includes('flower')) {
+            weight = '3.5g';
+          }
+          // Default to 1g for everything else
+          else {
+            weight = '1g';
+          }
+        }
+        
         return {
           ...row,
           id: Number(row.id),
           quantity: row.quantity !== null ? Number(row.quantity) : 0,
           tags: row.tags || [],
           images: row.images || [],
+          weight: weight,
           // Map snake_case to camelCase for frontend compatibility
           imageUrl: row.image_url || null
         };
