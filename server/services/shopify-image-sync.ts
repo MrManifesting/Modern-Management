@@ -1,4 +1,5 @@
-import { Shopify } from '@shopify/shopify-api';
+import { shopifyApi, LATEST_API_VERSION } from '@shopify/shopify-api';
+import '@shopify/shopify-api/adapters/node';
 import { StorageInterface } from '../storage';
 import { log } from '../utils/logger';
 
@@ -33,14 +34,28 @@ export class ShopifyImageSyncService {
     const shopifyConfig = {
       shopDomain: process.env.SHOPIFY_STORE_URL || 'gold-standard-cbd.myshopify.com',
       accessToken: process.env.SHOPIFY_ACCESS_TOKEN || '',
-      apiVersion: '2024-01' as any
+      apiVersion: LATEST_API_VERSION
     };
 
-    this.shopify = new Shopify.Clients.Rest(
-      shopifyConfig.shopDomain,
-      shopifyConfig.accessToken,
-      shopifyConfig.apiVersion
-    );
+    // Initialize Shopify API instance
+    const shopifyApp = shopifyApi({
+      apiKey: process.env.SHOPIFY_API_KEY || '',
+      apiSecretKey: process.env.SHOPIFY_API_SECRET || '',
+      apiVersion: shopifyConfig.apiVersion,
+      isEmbeddedApp: false,
+      hostName: shopifyConfig.shopDomain
+    });
+
+    // Create REST client with session
+    this.shopify = new shopifyApp.clients.Rest({
+      session: {
+        shop: shopifyConfig.shopDomain,
+        accessToken: shopifyConfig.accessToken,
+        id: 'offline-session',
+        state: 'offline',
+        isOnline: false
+      }
+    });
   }
 
   /**
