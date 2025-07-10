@@ -125,6 +125,17 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 12, 2025: **CRITICAL FIX: STRAIN NAME EXTRACTION AND PRE-ROLL PRICING**
+  - **FIXED "CANNABIS PRODUCT" DISPLAY ISSUE**: Products no longer show generic "Cannabis Product" names
+  - **ENHANCED STRAIN NAME EXTRACTION**: Added 3-tier priority system for extracting strain names:
+    - Priority 1: Extract from handle (takes beginning parts before weight/category indicators)
+    - Priority 2: Extract from title field (parses beginning of title before "-" or "THCA")
+    - Priority 3: Falls back to category or SKU parsing only if needed
+  - **FIXED PRE-ROLL PRICING**: Pre-rolls now correctly priced at $8 sale price (was incorrectly showing $30)
+  - **ADDED PRE-ROLL PRICING CATEGORY**: Both in default pricing logic and generateRealisticPrice function
+  - Pre-rolls now have appropriate pricing range of $5-15 based on quality tier
+  - System properly extracts strain names from handles like "white-gushers-thca-1g-bulk-prerolls" → "White Gushers"
+
 - January 10, 2025: **SHOPIFY API DEPLOYMENT DEPENDENCY FIX COMPLETED**
   - **FIXED SHOPIFY API MODULE EXPORT ISSUE**: Corrected incorrect import of 'Shopify' from '@shopify/shopify-api' package
   - **ADDED NODE.JS ADAPTER**: Added required '@shopify/shopify-api/adapters/node' import to enable proper runtime support
