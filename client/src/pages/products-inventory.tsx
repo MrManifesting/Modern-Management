@@ -374,50 +374,12 @@ const ProductsInventoryPage: React.FC = () => {
       }
       
       return items.map((item: any) => {
-        // Parse weight to extract exact standard values - no decimal weights
-        const parseWeight = (weightStr: string, category: string, name: string) => {
-          // Debug log to see what we're working with
-          if (item.id === items[0].id) {
-            console.log("Weight parsing for first item:", {
-              weight: weightStr,
-              category: category,
-              name: name
-            });
+        // Parse weight to extract exact standard values
+        const parseWeight = (weightStr: string) => {
+          // If no weight string or generic, return as is
+          if (!weightStr || weightStr === 'Weight not specified') {
+            return { value: 0, unit: '', display: 'Weight not specified' };
           }
-          
-          // Smart defaults based on category
-          const getDefaultWeight = () => {
-            const categoryLower = category?.toLowerCase() || '';
-            const nameLower = name?.toLowerCase() || '';
-            
-            // Pre-rolls are always 1g by default
-            if (categoryLower.includes('preroll') || categoryLower.includes('pre-roll') ||
-                nameLower.includes('preroll') || nameLower.includes('pre-roll')) {
-              return { value: 1, unit: 'gram', display: '1g' };
-            }
-            
-            // Edibles, concentrates, vapes are typically measured in grams
-            if (categoryLower.includes('edible') || categoryLower.includes('concentrate') ||
-                categoryLower.includes('vape') || categoryLower.includes('cart')) {
-              return { value: 1, unit: 'gram', display: '1g' };
-            }
-            
-            // Bulk flower defaults to pounds
-            if (categoryLower.includes('bulk') || nameLower.includes('bulk')) {
-              return { value: 1, unit: 'pound', display: '1 pound' };
-            }
-            
-            // Regular flower defaults to eighths (3.5g)
-            if (categoryLower.includes('flower')) {
-              return { value: 3.5, unit: 'gram', display: '3.5g' };
-            }
-            
-            // Ultimate fallback
-            return { value: 1, unit: 'gram', display: '1g' };
-          };
-          
-          // If no weight string, use smart default
-          if (!weightStr) return getDefaultWeight();
           
           const weightLower = weightStr.toLowerCase().trim();
           
@@ -444,23 +406,23 @@ const ProductsInventoryPage: React.FC = () => {
           
           // Common cannabis weight terms
           if (weightLower.includes('eighth')) {
-            return { value: 3.5, unit: 'gram', display: '3.5g (eighth)' };
+            return { value: 3.5, unit: 'gram', display: '3.5g' };
           }
           if (weightLower.includes('quarter') && weightLower.includes('ounce')) {
-            return { value: 7, unit: 'gram', display: '7g (quarter oz)' };
+            return { value: 7, unit: 'gram', display: '7g' };
           }
           if (weightLower.includes('half') && weightLower.includes('ounce')) {
-            return { value: 14, unit: 'gram', display: '14g (half oz)' };
+            return { value: 14, unit: 'gram', display: '14g' };
           }
           if (weightLower.includes('quarter') && weightLower.includes('pound')) {
-            return { value: 0.25, unit: 'pound', display: 'quarter pound' };
+            return { value: 0.25, unit: 'pound', display: '0.25 pounds' };
           }
           if (weightLower.includes('half') && weightLower.includes('pound')) {
-            return { value: 0.5, unit: 'pound', display: 'half pound' };
+            return { value: 0.5, unit: 'pound', display: '0.5 pounds' };
           }
           
-          // If nothing matches, use smart default
-          return getDefaultWeight();
+          // If weight format not recognized, return as is
+          return { value: 0, unit: '', display: weightStr };
         };
 
         // Enhanced price display function
@@ -481,7 +443,7 @@ const ProductsInventoryPage: React.FC = () => {
           return "$0.00";
         };
 
-        const weightData = parseWeight(item.weight, item.category, item.name);
+        const weightData = parseWeight(item.weight);
 
         return {
           id: item.id,
