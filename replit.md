@@ -125,6 +125,14 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **CRITICAL FIX: SHOPIFY IMAGE SYNC AND PRODUCT LINKING**
+  - **FIXED IMAGE SYNC**: Created comprehensive ShopifyImageSyncService to fetch images from Shopify for all products
+  - **PROPER PRODUCT MATCHING**: System now uses Shopify variant IDs, SKUs, and barcodes for accurate product matching
+  - **FIXED "VIEW ON SHOPIFY" LINKS**: Replaced fuzzy name matching with direct Shopify ID linking
+  - **BULK IMAGE SYNC**: Update Images button now syncs all missing images from Shopify in one operation
+  - **SHOPIFY ID STORAGE**: System updates items with proper shopifyVariantId, shopifyProductId, and shopifyHandle
+  - Resolves issue where 75% of items were missing images and linked to wrong Shopify products with zero quantities
+
 - January 10, 2025: **ENHANCED PRICE DISPLAY ACCURACY IN INVENTORY VIEW**
   - **FIXED PRICE DISPLAY**: Inventory table and mobile views now accurately show all price data
   - **DATABASE FIELD MAPPING**: Added proper snake_case to camelCase mapping for price fields in storage layer
