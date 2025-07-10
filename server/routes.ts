@@ -2371,6 +2371,66 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Sync inventory quantity to Shopify
+  app.post("/api/inventory/:id/sync-quantity", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { quantity } = req.body;
+      
+      if (quantity === undefined || quantity === null) {
+        return res.status(400).json({ error: "Quantity is required" });
+      }
+      
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // Update local quantity first
+      const updatedItem = await storage.updateItem(itemId, { quantity });
+      
+      // Sync to Shopify if item has variant ID
+      if (updatedItem.shopifyVariantId || updatedItem.shopify_variant_id) {
+        try {
+          const { syncInventoryQuantityToShopify } = await import('./services/shopify.js');
+          const syncResult = await syncInventoryQuantityToShopify(updatedItem, quantity);
+          
+          if (syncResult.success) {
+            log(`Synced quantity to Shopify via sync endpoint for item ${itemId}: ${quantity}`, 'shopify-sync');
+            res.json({
+              success: true,
+              message: syncResult.message,
+              item: updatedItem
+            });
+          } else {
+            log(`Failed to sync quantity to Shopify for item ${itemId}: ${syncResult.message}`, 'shopify-sync');
+            res.json({
+              success: false,
+              message: syncResult.message,
+              item: updatedItem
+            });
+          }
+        } catch (syncError) {
+          log(`Error syncing to Shopify: ${syncError}`, 'shopify-sync');
+          res.json({
+            success: false,
+            message: `Sync error: ${syncError}`,
+            item: updatedItem
+          });
+        }
+      } else {
+        res.json({
+          success: true,
+          message: "Item updated locally (not linked to Shopify)",
+          item: updatedItem
+        });
+      }
+    } catch (error) {
+      log(`Inventory sync error: ${error}`, 'inventory');
+      res.status(500).json({ error: "Failed to sync inventory quantity" });
+    }
+  });
+
   // Stock adjustment endpoint for intake/fulfillment
   app.post("/api/items/:id/adjust-stock", async (req: Request, res: Response) => {
     try {
@@ -2476,6 +2536,56 @@ export function registerRoutes(app: any, storage: any) {
       
       if (!updatedItem) {
         return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // If quantity was updated and item has Shopify variant ID, sync to Shopify
+      if (updates.quantity !== undefined && (updatedItem.shopifyVariantId || updatedItem.shopify_variant_id)) {
+        try {
+          const { syncInventoryQuantityToShopify } = await import('./services/shopify.js');
+          const syncResult = await syncInventoryQuantityToShopify(updatedItem, updates.quantity);
+          
+          if (syncResult.success) {
+            log(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, 'shopify-sync');
+          } else {
+            log(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, 'shopify-sync');
+          }
+        } catch (syncError) {
+          log(`Error syncing to Shopify: ${syncError}`, 'shopify-sync');
+        }
+      }
+      
+      res.json(updatedItem);
+    } catch (error) {
+      log(`Item update error: ${error}`, 'inventory');
+      res.status(500).json({ error: "Failed to update item" });
+    }
+  });
+
+  // Update item (PATCH endpoint - same as PUT)
+  app.patch("/api/items/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedItem = await storage.updateItem(id, updates);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      
+      // If quantity was updated and item has Shopify variant ID, sync to Shopify
+      if (updates.quantity !== undefined && (updatedItem.shopifyVariantId || updatedItem.shopify_variant_id)) {
+        try {
+          const { syncInventoryQuantityToShopify } = await import('./services/shopify.js');
+          const syncResult = await syncInventoryQuantityToShopify(updatedItem, updates.quantity);
+          
+          if (syncResult.success) {
+            log(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, 'shopify-sync');
+          } else {
+            log(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, 'shopify-sync');
+          }
+        } catch (syncError) {
+          log(`Error syncing to Shopify: ${syncError}`, 'shopify-sync');
+        }
       }
       
       res.json(updatedItem);

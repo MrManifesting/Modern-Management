@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **AUTOMATIC SHOPIFY INVENTORY SYNC IMPLEMENTATION**
+  - **CRITICAL FIX**: Inventory quantities now automatically sync to Shopify when updated locally
+  - Created `syncInventoryQuantityToShopify` function in shopify.ts service
+  - Modified PUT and PATCH `/api/items/:id` endpoints to trigger Shopify sync on quantity changes
+  - Created missing `/api/inventory/:id/sync-quantity` endpoint that frontend was calling
+  - System uses Shopify REST API to update inventory levels with proper location handling
+  - Only syncs items that have a linked Shopify variant ID (shopifyVariantId or shopify_variant_id)
+  - Provides proper error handling and logging for sync operations
+  - Inventory updates now flow: Local update → Database → Automatic Shopify sync
+
 - January 10, 2025: **WEIGHT DISPLAY FIX**
   - Fixed weight display issue where all products showed "1 pound" as default (including pre-rolls)
   - Database schema had default weight value of "pound" causing incorrect displays
