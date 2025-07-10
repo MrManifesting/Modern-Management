@@ -139,6 +139,10 @@ interface Product {
   displayPrice?: string;
   priceSource?: string;
   basePrice?: number;
+  base_price?: number;
+  salePrice?: number;
+  sale_price?: number;
+  cost_price?: number;
   retailPrice: number;
   wholesalePrice: number;
   sku: string;
@@ -357,6 +361,18 @@ const ProductsInventoryPage: React.FC = () => {
       const items = await response.json();
       console.log("Fetched items:", items?.length || 0);
       
+      // Debug: Log first item's price data
+      if (items && items.length > 0) {
+        console.log("First item price data:", {
+          name: items[0].name,
+          price: items[0].price,
+          basePrice: items[0].basePrice,
+          base_price: items[0].base_price,
+          salePrice: items[0].salePrice,
+          sale_price: items[0].sale_price
+        });
+      }
+      
       return items.map((item: any) => {
         // Parse weight to extract exact standard values - no decimal weights
         const parseWeight = (weightStr: string) => {
@@ -491,11 +507,25 @@ const ProductsInventoryPage: React.FC = () => {
   });
 
   // Format price
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string | undefined) => {
+    // Debug: Log the price being formatted
+    if (price === undefined || price === null) {
+      console.log('Price is undefined or null:', price);
+      return '$0.00';
+    }
+    
+    // Convert string to number if needed
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    if (isNaN(numPrice)) {
+      console.log('Price is NaN:', price);
+      return '$0.00';
+    }
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(price);
+    }).format(numPrice);
   };
 
   // Enhanced price display for tables
