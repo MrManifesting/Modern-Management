@@ -2823,7 +2823,7 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Shopify admin view item endpoint
+  // Shopify admin view item endpoint - uses actual Shopify IDs
   app.get("/api/items/:id/shopify-store-view", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -2833,57 +2833,60 @@ export function registerRoutes(app: any, storage: any) {
         return res.status(404).json({ error: "Item not found" });
       }
 
-      // Try to find matching product in Gold Standard CBD store first
-      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
-      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      
-      let directProductUrl = null;
-      
-      if (accessToken && item.name) {
-        try {
-          // Get all products and search locally for better matching
-          const searchResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
-            headers: {
-              'X-Shopify-Access-Token': accessToken,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (searchResponse.ok) {
-            const searchData = await searchResponse.json();
-            const products = searchData.products || [];
-            
-            // Use enhanced fuzzy matching
-            const matchResult = findBestShopifyMatch(item.name!, products);
-            
-            if (matchResult.product && matchResult.score >= 80) {
-              directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
-              log(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, 'shopify');
-            }
-          }
-        } catch (error) {
-          log(`Error searching for product "${item.name}": ${error}`, 'shopify');
-        }
-      }
-      
-      // Fallback to search if no direct match found
       const shopifyStore = 'gold-standard-cbd';
-      let url = directProductUrl;
+      let url: string;
+      let directMatch = false;
       
-      if (!url) {
-        if (item.name) {
-          // Use the strain name for better search results
-          const strainName = item.name.split('-')[0] || item.name;
-          url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(strainName)}`;
+      // First priority: Use Shopify variant ID if available
+      if (item.shopifyVariantId || item.shopify_variant_id) {
+        const variantId = item.shopifyVariantId || item.shopify_variant_id;
+        // Extract numeric ID from gid://shopify/ProductVariant/123456 format if needed
+        const numericId = variantId.toString().replace(/^gid:\/\/shopify\/ProductVariant\//, '');
+        
+        // Link directly to the product page with variant selected
+        if (item.shopifyHandle || item.shopify_handle) {
+          // Use storefront URL with variant parameter
+          url = `https://${shopifyStore}.com/products/${item.shopifyHandle || item.shopify_handle}?variant=${numericId}`;
+        } else if (item.shopifyProductId || item.shopifyId || item.shopify_id) {
+          // Use admin URL if no handle available
+          const productId = (item.shopifyProductId || item.shopifyId || item.shopify_id).toString()
+            .replace(/^gid:\/\/shopify\/Product\//, '');
+          url = `https://admin.shopify.com/store/${shopifyStore}/products/${productId}`;
         } else {
-          url = `https://admin.shopify.com/store/${shopifyStore}/products`;
+          // Fallback to admin variant search
+          url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${numericId}`;
         }
+        directMatch = true;
+        log(`Direct variant match for item ${id}: variant ${variantId}`, 'shopify');
+      }
+      // Second priority: Use Shopify product ID
+      else if (item.shopifyProductId || item.shopifyId || item.shopify_id) {
+        const productId = (item.shopifyProductId || item.shopifyId || item.shopify_id).toString()
+          .replace(/^gid:\/\/shopify\/Product\//, '');
+        url = `https://admin.shopify.com/store/${shopifyStore}/products/${productId}`;
+        directMatch = true;
+        log(`Direct product match for item ${id}: product ${productId}`, 'shopify');
+      }
+      // Third priority: Search by SKU
+      else if (item.sku) {
+        url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(item.sku)}`;
+        log(`SKU search for item ${id}: ${item.sku}`, 'shopify');
+      }
+      // Last resort: Search by name
+      else if (item.name) {
+        // Use the strain name for better search results
+        const strainName = item.name.split('-')[0] || item.name;
+        url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(strainName)}`;
+        log(`Name search for item ${id}: ${strainName}`, 'shopify');
+      } else {
+        url = `https://admin.shopify.com/store/${shopifyStore}/products`;
+        log(`No identifiers for item ${id}, showing all products`, 'shopify');
       }
 
       res.json({ 
         success: true, 
         url,
-        found: !!directProductUrl,
+        found: directMatch,
         searchTerm: item.name?.split('-')[0] || item.name
       });
     } catch (error) {
@@ -6856,21 +6859,9 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
-  // Real-time Shopify image synchronization
+  // Shopify image synchronization - bulk sync from Shopify
   app.post('/api/shopify/update-images', async (req: Request, res: Response) => {
     try {
-      const { itemId, imageUrls } = req.body;
-      
-      if (!itemId || !imageUrls || !Array.isArray(imageUrls)) {
-        return res.status(400).json({ error: "Item ID and image URLs array are required" });
-      }
-      
-      // Get the item from internal database
-      const item = await storage.getItem(itemId);
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-      
       const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'gold-standard-cbd.myshopify.com';
       const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       
@@ -6879,73 +6870,30 @@ export function registerRoutes(app: any, storage: any) {
           error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables." 
         });
       }
+
+      log('Starting bulk image sync from Shopify', 'shopify-sync');
       
-      // Update images in internal database
-      const primaryImageUrl = imageUrls[0] || null;
-      await storage.updateItem(itemId, { 
-        image_url: primaryImageUrl,
-        additional_images: imageUrls.length > 1 ? imageUrls.slice(1).join(',') : null
-      });
+      // Initialize the image sync service
+      const imageSyncService = new (await import('./services/shopify-image-sync')).ShopifyImageSyncService(storage);
       
-      // If item has Shopify ID, update Shopify product images
-      if (item.shopifyId) {
-        try {
-          // First, get existing images to avoid duplicates
-          const productResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${item.shopifyId}.json`, {
-            headers: {
-              'X-Shopify-Access-Token': accessToken,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (productResponse.ok) {
-            const productData = await productResponse.json();
-            const existingImages = productData.product?.images || [];
-            
-            // Add new images that don't already exist
-            for (const imageUrl of imageUrls) {
-              const exists = existingImages.some((img: any) => img.src === imageUrl);
-              
-              if (!exists) {
-                const imageResponse = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${item.shopifyId}/images.json`, {
-                  method: 'POST',
-                  headers: {
-                    'X-Shopify-Access-Token': accessToken,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    image: {
-                      src: imageUrl,
-                      alt: item.name || 'Product Image'
-                    }
-                  })
-                });
-                
-                if (imageResponse.ok) {
-                  log(`Successfully added image to Shopify product ${item.shopifyId}`, 'shopify-images');
-                } else {
-                  log(`Failed to add image to Shopify product ${item.shopifyId}: ${imageResponse.statusText}`, 'shopify-images');
-                }
-              }
-            }
-          }
-        } catch (shopifyError) {
-          log(`Shopify image update error for item ${itemId}: ${shopifyError}`, 'shopify-images');
-          // Continue execution - internal images were still updated
-        }
-      }
+      // Perform the sync
+      const results = await imageSyncService.syncAllImages();
       
       res.json({
         success: true,
-        message: "Images updated successfully",
-        itemId,
-        imageCount: imageUrls.length,
-        shopifyUpdated: !!item.shopifyId
+        message: `Image sync completed. Updated ${results.updated} items${results.failed > 0 ? `, ${results.failed} failed` : ''}`,
+        updated: results.updated,
+        failed: results.failed,
+        errors: results.errors.slice(0, 10) // Limit errors in response
       });
       
     } catch (error) {
-      log(`Image update error: ${error}`, 'images');
-      res.status(500).json({ error: "Failed to update images" });
+      log(`Image sync error: ${error}`, 'shopify-sync', 'error');
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to sync images from Shopify",
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
