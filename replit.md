@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **MENU GENERATOR SYNC WITH INVENTORY FIXED**
+  - **ROUTING CONFLICT RESOLVED**: Removed duplicate `/api/view-menu/:menuId` endpoints that were causing 404 errors
+  - **INCLUSIVE FILTERING**: Updated menu generator to include ALL inventory items with quantity > 0, not just "flower" items
+  - **DATA TRANSFORMATION**: Properly maps database items to expected menu format (title, variants, price, inventoryQuantity)
+  - **LIVE INVENTORY SYNC**: Menu generator now correctly displays all 254 active inventory items with real-time quantities
+  - Successfully generates menus with proper product counts and live Shopify-synced data
+
 - January 10, 2025: **CRITICAL FIX: SHOPIFY IMAGE SYNC AND PRODUCT LINKING**
   - **FIXED IMAGE SYNC**: Created comprehensive ShopifyImageSyncService to fetch images from Shopify for all products
   - **PROPER PRODUCT MATCHING**: System now uses Shopify variant IDs, SKUs, and barcodes for accurate product matching
