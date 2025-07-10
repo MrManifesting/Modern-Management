@@ -1,0 +1,407 @@
+function onOpen() {
+  SpreadsheetApp.getUi()
+     .createMenu("GoldTools")
+    .addItem('Update From Shopify', 'exportBulkMenuLinksOnly')
+    .addItem('Add Inventory Item', 'showAddItemSidebar')
+    .addItem("Generate Read Only Menu", "generateReadOnlyMenuWithLock")
+    .addItem("Export Flower Menu Less Than Pound", "exportFlowerMenuLessThanPound")
+    .addItem("Export Bulk Preroll Menu", "exportBulkPrerollMenu")
+    .addToUi();
+}
+function exportBulkMenuLinksOnly() {
+  const SHEET_NAME = 'Menu';
+  const HEADER_ROW = 4;
+  const DATA_START_ROW = 5;
+  const scriptProps = PropertiesService.getScriptProperties();
+  const SHOP_DOMAIN = scriptProps.getProperty('SHOPIFY_STORE');
+  const ACCESS_TOKEN = scriptProps.getProperty('SHOPIFY_ACCESS_TOKEN');
+  const HEADERS = [
+    "Strain", "Variant Qty", "Potency %", "Type", "Tier", "Bulk Price",
+    "25lbs+", "50lbs+", "100lbs+", "COA", "Main Image", "Weight"
+  ];
+
+  // Deduped, uppercased known tier names
+  const KNOWN_TIERS = [
+    "EXOTIC INDOOR", "TOP SHELF", "MEDIUMS", "AAA INDOOR", "AA INDOOR", "CLASSIC RESERVE",
+    "EXOTIC AA INDOOR", "TOP SHELF AA", "CLASSIC RESERVE AA",
+    "EXOTIC INDOOR SMALLS", "TOP SHELF SMALLS", "AAA INDOOR SMALLS", "AA INDOOR SMALLS", "CLASSIC RESERVE SMALLS"
+  ].map(tier => tier.toUpperCase().trim());
+
+  const PRODUCTS_WITH_MEDIA = `
+    query getProductsWithMedia($first: Int!, $after: String) {
+      products(first: $first, after: $after, query: "status:active") {
+        edges {
+          node {
+            id
+            title
+            handle
+            productType
+            status
+            bodyHtml
+            media(first: 25) {
+              edges {
+                node {
+                  ... on MediaImage {
+                    alt
+                    image { url altText }
+                  }
+                }
+              }
+            }
+            variants(first: 25) {
+              edges {
+                node {
+                  id
+                  title
+                  sku
+                  price
+                  inventoryQuantity
+                }
+              }
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  `;
+
+  function shopifyGraphQL(query, variables) {
+    const url = `https://${SHOP_DOMAIN}/admin/api/2024-07/graphql.json`;
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'X-Shopify-Access-Token': ACCESS_TOKEN },
+      payload: JSON.stringify({ query, variables }),
+      muteHttpExceptions: true,
+    };
+    const response = UrlFetchApp.fetch(url, options);
+    const data = JSON.parse(response.getContentText());
+    if (data.errors) throw new Error(JSON.stringify(data.errors));
+    return data.data;
+  }
+
+  function fetchAllProducts() {
+    let allProducts = [];
+    let hasNextPage = true;
+    let cursor = null;
+    while (hasNextPage) {
+      const variables = { first: 25, ...(cursor && { after: cursor }) };
+      const data = shopifyGraphQL(PRODUCTS_WITH_MEDIA, variables);
+      const products = data.products.edges.map(edge => edge.node);
+      allProducts = allProducts.concat(products);
+      hasNextPage = data.products.pageInfo.hasNextPage;
+      cursor = data.products.pageInfo.endCursor;
+    }
+    return allProducts;
+  }
+
+  // Only allow 1 pound variants, not fractionals
+  function isExactPound(title) {
+    if (!title) return false;
+    title = title.trim().toLowerCase();
+
+    // Must NOT have these indicators
+    const forbidden = [
+      '/',    // any slash (like 1/2, 1/4)
+      '.',    // decimal (like 0.5, 0.25)
+      'half', // half pound
+      'quarter',
+      'oz',   // ounce
+      'ounce',
+      'g',    // grams
+      'gram',
+      'eighth',
+      'eigh', // just in case "eighth" is truncated
+      '2 lb', '2lb', 'two pound', 'two lb',
+      '3 lb', '3lb', 'three pound', 'three lb',
+      '4 lb', '4lb', 'four pound', 'four lb'
+    ];
+    for (let forb of forbidden) {
+      if (title.includes(forb)) return false;
+    }
+    // Must have a pound pattern
+    const poundPatterns = [
+      /^1[\s\-]?lb(s)?(\.|\s|$)/,
+      /^one[\s\-]?lb(s)?(\.|\s|$)/,
+      /^1[\s\-]?pound(s)?(\.|\s|$)/,
+      /^one[\s\-]?pound(s)?(\.|\s|$)/,
+      /\bpound\b/,
+      /\b1lb\b/,
+      /\b1 lb\b/,
+      /\bone pound\b/,
+      /\b1pound\b/,
+      /\bone lb\b/,
+      /\b1 Lb\b/,
+      /\b1 LB\b/,
+      /\b1 Pound\b/,
+      /\bONE POUND\b/
+    ];
+    return poundPatterns.some(re => re.test(title));
+  }
+
+  // 1️⃣ Clear previous data, keep headers
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error("Menu sheet not found!");
+  const maxRows = sheet.getMaxRows();
+  if (maxRows >= DATA_START_ROW) {
+    if (maxRows > DATA_START_ROW - 1) {
+      sheet.getRange(DATA_START_ROW, 1, maxRows - DATA_START_ROW + 1, HEADERS.length).clearContent();
+    }
+  }
+
+  // 2️⃣ Fetch products from Shopify, flatten to rows
+  const products = fetchAllProducts();
+  let rows = [];
+  for (const product of products) {
+    let imageUrls = [];
+    if (product.media && product.media.edges.length) {
+      product.media.edges.forEach(edge => {
+        if (edge.node.image && edge.node.image.url) {
+          imageUrls.push(edge.node.image.url);
+        }
+      });
+    }
+    for (const variantEdge of product.variants.edges) {
+      const v = variantEdge.node;
+      if (!v.inventoryQuantity || v.inventoryQuantity <= 0) continue;
+      const weightStr = (v.title || '').toLowerCase();
+      if (!isExactPound(weightStr)) continue;
+
+      let titleParts = product.title.split(/\s*-\s*/);
+      let strain = (titleParts[0] || '').trim();
+      let type   = (titleParts[1] || '').trim();
+      let tier   = (titleParts[2] || '').trim();
+      let potency = '';
+      if (product.bodyHtml) {
+        const potMatch = (product.bodyHtml || '').match(/([\d.]+)\s*%/);
+        potency = potMatch ? potMatch[1] + '%' : 'See COA';
+      }
+      const price = Number(v.price) || 0;
+      const fmt = n => n > 0 ? `$${parseFloat(n).toFixed(2)}` : '';
+      const bulkPrice   = fmt(price);
+      const distroPrice = fmt(price * 0.8);
+      const masterPrice = fmt(price * 0.7);
+      const master2Price= fmt(price * 0.65);
+      let mainImgLink = imageUrls[0]
+        ? `=HYPERLINK("${imageUrls[0]}","${strain}-Media")`
+        : "";
+      let coaLink = imageUrls[1]
+        ? `=HYPERLINK("${imageUrls[1]}","${strain}-COA")`
+        : "";
+      rows.push([
+        strain,               // Strain
+        v.inventoryQuantity,  // Variant Qty
+        potency,              // Potency %
+        type,                 // Type
+        tier,                 // Tier
+        bulkPrice,            // Bulk Price
+        distroPrice,          // 25lbs+
+        masterPrice,          // 50lbs+
+        master2Price,         // 100lbs+
+        coaLink,              // COA (uses Strain-COA)
+        mainImgLink,          // Main Image (uses Strain-Media)
+        v.title || ''         // Weight
+      ]);
+    }
+  }
+
+  // 3️⃣ Sort rows by Tier (column 5)
+  rows.sort((a, b) => {
+    const aTier = (a[4] || '').toUpperCase().trim();
+    const bTier = (b[4] || '').toUpperCase().trim();
+    return aTier.localeCompare(bTier, undefined, { sensitivity: 'base' });
+  });
+
+  // 4️⃣ Group by Tier, merged separator rows only for known tiers
+  let groupedRows = [];
+  let tierLabelRows = [];
+  let lastTier = null;
+  for (let i = 0; i < rows.length; ++i) {
+    let thisTier = (rows[i][4] || '').toUpperCase().trim();
+    if (thisTier && thisTier !== lastTier && KNOWN_TIERS.includes(thisTier)) {
+      let sepRow = Array(HEADERS.length).fill('');
+      sepRow[0] = `----- ${thisTier} -----`;
+      tierLabelRows.push(groupedRows.length);
+      groupedRows.push(sepRow);
+      lastTier = thisTier;
+    }
+    groupedRows.push(rows[i]);
+  }
+
+  // 5️⃣ Write grouped data back to the sheet
+  if (groupedRows.length) {
+    sheet.getRange(DATA_START_ROW, 1, groupedRows.length, HEADERS.length).setValues(groupedRows);
+
+    // Merge, color, bold, and center separator rows
+    for (let i = 0; i < tierLabelRows.length; i++) {
+      let rowNum = DATA_START_ROW + tierLabelRows[i];
+      let range = sheet.getRange(rowNum, 1, 1, HEADERS.length);
+      range.merge();
+      range.setFontWeight('bold')
+           .setBackground('#218838')
+           .setFontColor('#fff')
+           .setHorizontalAlignment('center');
+    }
+
+    // 6️⃣ Highlight any rows with an "unknown" (not in KNOWN_TIERS) tier (excluding blank and separators)
+    for (let i = 0; i < groupedRows.length; ++i) {
+      let row = groupedRows[i];
+      let thisTier = (row[4] || '').toUpperCase().trim();
+      // Only highlight if not a separator, not blank, not known
+      if (thisTier && !KNOWN_TIERS.includes(thisTier) && row[1] !== '') {
+        let range = sheet.getRange(DATA_START_ROW + i, 1, 1, HEADERS.length);
+        range.setBackground('#fff3cd'); // pale yellow for QA
+      }
+    }
+  }
+
+  Logger.log(`✅ Menu: Only exact pound variants, grouped by tier, merged green labels, unknown tiers highlighted. ${groupedRows.length} rows written.`);
+}
+function generateReadOnlyMenuWithLock() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const menuSheet = ss.getSheetByName('Menu');
+  if (!menuSheet) {
+    throw new Error("'Menu' sheet not found.");
+  }
+
+  // Step 1: Duplicate the Menu sheet and rename it
+  const copy = menuSheet.copyTo(ss);
+  const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  copy.setName(`Menu_READONLY_${timestamp}`);
+
+  // Step 2: Protect entire sheet content
+  const protection = copy.protect();
+  protection.removeEditors(protection.getEditors());
+  protection.setDomainEdit(false);
+
+  // Step 3: Make view-only copy via Drive API
+  const ssId = ss.getId();
+  Drive.Files.patch(
+    { contentRestrictions: [{ readOnly: true }] },
+    ssId
+  );  // requires Drive API enabled  [oai_citation:0‡stackoverflow.com](https://stackoverflow.com/questions/71080961/google-apps-script-save-copy-to-read-only?utm_source=chatgpt.com)
+
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert(`✅ Read-only menu copy created: ${copy.getName()}`);
+}
+// Open the sidebar
+function showAddItemSidebar() {
+  const html = HtmlService.createHtmlOutputFromFile('Sidebar')
+    .setTitle('Add Inventory Item')
+    .setWidth(420);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Image upload to Drive
+function uploadInventoryImage(base64, filename) {
+  Logger.log("uploadInventoryImage called!");
+  try {
+    if (!base64 || typeof base64 !== "string") {
+      throw new Error('No image data was provided! Did you pick a file?');
+    }
+    const FOLDER_NAME = 'Inventory Images';
+    const contentTypeMatch = base64.match(/^data:(.+);base64,/);
+    if (!contentTypeMatch) {
+      throw new Error('Image data is not valid base64 or missing data URL prefix.');
+    }
+    const contentType = contentTypeMatch[1];
+    const base64Data = base64.replace(/^data:.+;base64,/, '');
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), contentType, filename);
+
+    let folderIter = DriveApp.getFoldersByName(FOLDER_NAME);
+    let folder = folderIter.hasNext() ? folderIter.next() : DriveApp.createFolder(FOLDER_NAME);
+
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const url = file.getUrl();
+    Logger.log("File uploaded: " + url);
+    if (!url) throw new Error('Upload succeeded but could not get URL!');
+    return url;
+  } catch (err) {
+    Logger.log('Upload failed: ' + err.message);
+    throw new Error('Upload failed: ' + err.message);
+  }
+}
+
+function generateSKU(form) {
+  const slug = str => (str || '').replace(/\s+/g, '').toUpperCase().substring(0,4);
+  const timeStamp = Date.now().toString().slice(-5);
+  return `${slug(form.strain)}-${slug(form.type)}-${slug(form.tier)}-${timeStamp}`;
+}
+
+// Generate barcode (base64 PNG)
+function generateBarcodePng(sku) {
+  const bwipjs = BwipJs.getInstance(); // Library must be installed (see previous instructions)
+  return bwipjs.toBuffer({
+    bcid:        'code128',
+    text:        sku,
+    scale:       3,
+    height:      15,
+    includetext: false,
+  }).getBytes().toString('base64');
+}
+
+function generateLabelPdf(sku, form) {
+  const folderName = 'Inventory Labels';
+  let folderIter = DriveApp.getFoldersByName(folderName);
+  let folder = folderIter.hasNext() ? folderIter.next() : DriveApp.createFolder(folderName);
+
+  const html = `
+    <div style="
+      width: 300px;
+      padding: 12px;
+      font-family: Arial, sans-serif;
+      border: 1px solid #333;
+      text-align: center;
+    ">
+      <h2 style="margin: 0; font-size: 18px;">${form.strain}</h2>
+      <p style="margin: 4px 0;">${form.weight} • ${form.type} • ${form.tier}</p>
+      <p style="margin: 4px 0;"><strong>Potency:</strong> ${form.potency}</p>
+      <p style="margin: 4px 0;"><strong>SKU:</strong> ${sku}</p>
+    </div>`;
+
+  const blob = Utilities.newBlob(html, 'text/html', `${sku}_label.html`);
+  const tmp = folder.createFile(blob);
+  const pdf = tmp.getAs('application/pdf');
+  const pdfFile = folder.createFile(pdf);
+  tmp.setTrashed(true);
+
+  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return pdfFile.getUrl();
+}
+
+function addNewItemFromSidebar(form) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Inventory');
+  if (!sheet) throw new Error("Inventory sheet not found!");
+
+  const sku = generateSKU(form);
+  const labelPdfUrl = generateLabelPdf(sku, form);
+  const mainImgUrl = form.uploadedImgUrl || form.mainImg;
+
+  const row = [
+    form.strain,
+    form.variantQty,
+    form.potency,
+    form.type,
+    form.tier,
+    form.bulkPrice,
+    form.distro25,
+    form.master50,
+    form.master100,
+    form.coaLink,
+    mainImgUrl,
+    form.weight,
+    sku,
+    `=HYPERLINK("${labelPdfUrl}","Print Label")`
+  ];
+
+  sheet.appendRow(row);
+  Logger.log('✅ Row appended:', row);
+  SpreadsheetApp.getUi().alert('✅ Item added—check your Inventory sheet.');
+}
