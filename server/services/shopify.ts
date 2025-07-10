@@ -231,6 +231,182 @@ export function prepareItemForShopify(item: Item): ShopifyProduct {
 }
 
 /**
+ * Updates inventory level for a specific item in Shopify
+ */
+export async function updateShopifyInventoryLevel(
+  inventoryItemId: string, 
+  locationId: string, 
+  quantity: number
+): Promise<{ success: boolean, message: string }> {
+  try {
+    if (!pushToShopifyEnabled) {
+      return { 
+        success: false,
+        message: 'Shopify push is currently disabled. Enable it in settings to sync inventory.'
+      };
+    }
+
+    const storeUrl = getShopifyStoreName();
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    
+    if (!storeUrl || !accessToken) {
+      return { 
+        success: false,
+        message: 'Shopify API credentials are not configured.'
+      };
+    }
+
+    // Update inventory level using Shopify REST API
+    const response = await fetch(`https://${storeUrl}/admin/api/2023-10/inventory_levels/set.json`, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        location_id: locationId,
+        inventory_item_id: inventoryItemId,
+        available: quantity
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Shopify API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    logShopifyOperation(
+      'updateInventoryLevel',
+      { 
+        inventoryItemId,
+        locationId,
+        quantity,
+        result: data
+      },
+      true
+    );
+
+    return {
+      success: true,
+      message: `Successfully updated inventory to ${quantity} units`
+    };
+  } catch (error: any) {
+    logShopifyOperation(
+      'updateInventoryLevel',
+      { 
+        inventoryItemId,
+        locationId,
+        quantity,
+        error: error.message 
+      },
+      false,
+      error.message
+    );
+
+    return {
+      success: false,
+      message: `Failed to update Shopify inventory: ${error.message}`
+    };
+  }
+}
+
+/**
+ * Syncs inventory quantity for an item to Shopify
+ */
+export async function syncInventoryQuantityToShopify(
+  item: any,
+  newQuantity: number
+): Promise<{ success: boolean, message: string }> {
+  try {
+    // Check if item has Shopify variant ID
+    if (!item.shopifyVariantId && !item.shopify_variant_id) {
+      return {
+        success: false,
+        message: 'Item is not linked to a Shopify product'
+      };
+    }
+
+    const variantId = item.shopifyVariantId || item.shopify_variant_id;
+    
+    // Get variant details from Shopify to get inventory item ID
+    const storeUrl = getShopifyStoreName();
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || '';
+    
+    if (!storeUrl || !accessToken) {
+      return { 
+        success: false,
+        message: 'Shopify API credentials are not configured.'
+      };
+    }
+
+    // First get the variant to retrieve inventory item ID
+    const variantResponse = await fetch(
+      `https://${storeUrl}/admin/api/2023-10/variants/${variantId}.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!variantResponse.ok) {
+      throw new Error(`Failed to fetch variant: ${variantResponse.statusText}`);
+    }
+
+    const variantData = await variantResponse.json();
+    const inventoryItemId = variantData.variant?.inventory_item_id;
+
+    if (!inventoryItemId) {
+      return {
+        success: false,
+        message: 'Could not find inventory item ID for this variant'
+      };
+    }
+
+    // Get the default location ID (first location)
+    const locationsResponse = await fetch(
+      `https://${storeUrl}/admin/api/2023-10/locations.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!locationsResponse.ok) {
+      throw new Error(`Failed to fetch locations: ${locationsResponse.statusText}`);
+    }
+
+    const locationsData = await locationsResponse.json();
+    const locationId = locationsData.locations?.[0]?.id;
+
+    if (!locationId) {
+      return {
+        success: false,
+        message: 'Could not find default location ID'
+      };
+    }
+
+    // Update the inventory level
+    return await updateShopifyInventoryLevel(
+      inventoryItemId.toString(), 
+      locationId.toString(), 
+      newQuantity
+    );
+  } catch (error: any) {
+    console.error('Error syncing inventory to Shopify:', error);
+    return {
+      success: false,
+      message: `Failed to sync inventory: ${error.message}`
+    };
+  }
+}
+
+/**
  * Creates or updates a product in Shopify
  */
 export async function pushItemToShopify(product: ShopifyProduct): Promise<{ success: boolean, productId?: number, message: string }> {
