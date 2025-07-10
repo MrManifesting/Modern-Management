@@ -1972,36 +1972,29 @@ export class DatabaseStorage implements IStorage {
       
       // Map the results to Item type
       return result.map(row => {
-        // Smart weight handling based on category and name
+        // Only extract weight from name if database weight is missing or generic
         let weight = row.weight;
-        if (!weight || weight === 'pound' || weight === 'Weight not specified') {
-          const categoryLower = (row.category || '').toLowerCase();
+        if (!weight || weight === 'pound' || weight === 'Weight not specified' || weight.trim() === '') {
           const nameLower = (row.name || '').toLowerCase();
           
-          // Pre-rolls are always 1g
-          if (categoryLower.includes('preroll') || categoryLower.includes('pre-roll') ||
-              nameLower.includes('preroll') || nameLower.includes('pre-roll')) {
-            weight = '1g';
+          // Try to extract weight from product name
+          const gramMatch = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/);
+          const ozMatch = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/);
+          const lbMatch = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/);
+          
+          if (gramMatch) {
+            const value = parseFloat(gramMatch[1]);
+            weight = `${value}g`;
           }
-          // Edibles, concentrates, vapes are typically measured in smaller units
-          else if (categoryLower.includes('edible') || categoryLower.includes('concentrate') ||
-                   categoryLower.includes('vape') || categoryLower.includes('cart')) {
-            weight = '1g';
+          else if (ozMatch) {
+            const value = parseFloat(ozMatch[1]);
+            weight = `${value} ${value === 1 ? 'ounce' : 'ounces'}`;
           }
-          // Extract weight from name if possible
-          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/)) {
-            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)/);
-            weight = `${match[1]}g`;
+          else if (lbMatch) {
+            const value = parseFloat(lbMatch[1]);
+            weight = `${value} ${value === 1 ? 'pound' : 'pounds'}`;
           }
-          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/)) {
-            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce|ounces)/);
-            weight = `${match[1]} ${parseFloat(match[1]) === 1 ? 'ounce' : 'ounces'}`;
-          }
-          else if (nameLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/)) {
-            const match = nameLower.match(/(\d+(?:\.\d+)?)\s*(?:lb|pound|pounds)/);
-            weight = `${match[1]} ${parseFloat(match[1]) === 1 ? 'pound' : 'pounds'}`;
-          }
-          // Common cannabis weights
+          // Common cannabis weight terms
           else if (nameLower.includes('eighth')) {
             weight = '3.5g';
           }
@@ -2011,17 +2004,15 @@ export class DatabaseStorage implements IStorage {
           else if (nameLower.includes('half') && nameLower.includes('ounce')) {
             weight = '14g';
           }
-          // Bulk flower defaults to 1 pound
-          else if (categoryLower.includes('bulk') || nameLower.includes('bulk')) {
-            weight = '1 pound';
+          else if (nameLower.includes('quarter') && nameLower.includes('pound')) {
+            weight = '0.25 pounds';
           }
-          // Regular flower defaults to eighths
-          else if (categoryLower.includes('flower')) {
-            weight = '3.5g';
+          else if (nameLower.includes('half') && nameLower.includes('pound')) {
+            weight = '0.5 pounds';
           }
-          // Default to 1g for everything else
+          // If still no weight found, leave it as "Weight not specified"
           else {
-            weight = '1g';
+            weight = 'Weight not specified';
           }
         }
         
