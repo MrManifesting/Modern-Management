@@ -1587,17 +1587,61 @@ export function registerRoutes(app: any, storage: any) {
                 .trim();
             }
           }
+          
+          // CRITICAL: Check if the name is JUST a weight measurement
+          const isJustWeight = /^(\d+\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ))$/i.test(item.name.trim());
+          if (isJustWeight) {
+            // For items where name is just weight, use category or SKU info
+            if (item.category && item.category !== 'Shopify Import') {
+              strainName = item.category;
+            } else if (item.sku && item.sku.includes('-')) {
+              // Try to extract from SKU if available
+              const skuParts = item.sku.split('-');
+              if (skuParts.length > 1 && !skuParts[0].includes('SHOPIFY')) {
+                strainName = skuParts[0]
+                  .replace(/[0-9]/g, '')
+                  .split(/(?=[A-Z])/)
+                  .join(' ')
+                  .trim();
+              }
+            }
+            
+            // If still no name, use generic "Cannabis Product"
+            if (!strainName || strainName.trim() === '' || isJustWeight) {
+              strainName = 'Cannabis Product';
+            }
+          }
         }
         
-        // Extract proper weight - prioritize database weight, then product name analysis
+        // Extract proper weight - prioritize product name for weight-only names
         let extractedWeight = 'Weight not specified';
         
-        // PRIORITY 1: Use database weight if available and meaningful
-        if (item.weight && item.weight !== 'Weight not specified' && item.weight.trim() !== '') {
+        // Check if the original name is just a weight measurement
+        const nameIsWeight = /^(\d+\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ))$/i.test(item.name.trim());
+        
+        // PRIORITY 1: If name is just a weight, extract weight from the name itself
+        if (nameIsWeight) {
+          // Extract the weight from the name, normalize it
+          const weightMatch = item.name.match(/^(\d+)\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ)$/i);
+          if (weightMatch) {
+            const amount = weightMatch[1];
+            const unit = weightMatch[2].toLowerCase();
+            
+            if (unit.includes('gram') || unit === 'g') {
+              extractedWeight = `${amount} gram${amount !== '1' ? 's' : ''}`;
+            } else if (unit.includes('pound') || unit.includes('lb')) {
+              extractedWeight = `${amount} pound${amount !== '1' ? 's' : ''}`;
+            } else if (unit.includes('ounce') || unit === 'oz') {
+              extractedWeight = `${amount} ounce${amount !== '1' ? 's' : ''}`;
+            }
+          }
+        }
+        // PRIORITY 2: Use database weight if available and meaningful (and name isn't just a weight)
+        else if (item.weight && item.weight !== 'Weight not specified' && item.weight.trim() !== '' && !nameIsWeight) {
           extractedWeight = item.weight;
         }
-        // PRIORITY 2: Extract from product name if no database weight
-        else if (item.name) {
+        // PRIORITY 3: Extract from product name if no valid weight yet
+        if (extractedWeight === 'Weight not specified' && item.name) {
           const nameLower = item.name.toLowerCase();
           
           // Extract gram weights FIRST - highest priority for gram products

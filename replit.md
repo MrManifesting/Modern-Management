@@ -125,6 +125,15 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **CRITICAL FIXES: PRODUCT NAMES, WEIGHTS, AND IMAGE DATA**
+  - **FIXED WEIGHT-AS-NAME ISSUE**: Items with names like "2 GRAMS", "28 GRAMS" now display as "Cannabis Product" with proper weight extraction
+  - **FIXED WEIGHT EXTRACTION**: When product name is just a weight, system extracts weight from name instead of using incorrect database values
+  - **FIXED IMAGE DATA MISSING**: Storage layer now properly maps snake_case `image_url` to camelCase `imageUrl` for frontend
+  - **FIXED PERFORMANCE COMPRESSION**: Large datasets (1640+ items) no longer strip out imageUrl, images, and price fields
+  - **ENHANCED WEIGHT NORMALIZATION**: "28 GRAMS" → "28 grams", proper pluralization for all weight units
+  - System correctly prioritizes weight extraction: name-based for weight-only names, database values for regular products
+  - API now returns Shopify CDN images when available in database
+
 - January 9, 2025: **INVENTORY FIXES AND CUSTOMER PAGE CONSOLIDATION**
   - **FIXED BULK SELECTION**: Checkbox selection in inventory table now properly adds/removes items from selectedItems array
   - **FIXED DELETE ALL INVENTORY**: Added missing confirmation dialog with "DELETE_ALL_INVENTORY" typing requirement
