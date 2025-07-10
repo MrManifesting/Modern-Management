@@ -427,7 +427,9 @@ const ProductsInventoryPage: React.FC = () => {
           id: item.id,
           name: item.name,
           category: item.category || "Uncategorized",
-          price: formatPriceDisplay(item),
+          price: item.price || item.sale_price || item.salePrice || 
+                item.base_price || item.basePrice || 
+                item.cost_price || 0,
           displayPrice: item.displayPrice || formatPriceDisplay(item),
           priceSource: item.priceSource || "none",
           basePrice: item.basePrice || item.base_price || 0,
@@ -519,17 +521,19 @@ const ProductsInventoryPage: React.FC = () => {
 
   // Format price
   const formatPrice = (price: number | string | undefined) => {
-    // Debug: Log the price being formatted
     if (price === undefined || price === null) {
-      console.log('Price is undefined or null:', price);
       return '$0.00';
     }
     
+    // If it's already a formatted price string, return it
+    if (typeof price === 'string' && price.startsWith('$')) {
+      return price;
+    }
+    
     // Convert string to number if needed
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    const numPrice = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.-]/g, '')) : price;
     
     if (isNaN(numPrice)) {
-      console.log('Price is NaN:', price);
       return '$0.00';
     }
     
@@ -2277,7 +2281,7 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(product.price || product.basePrice || product.base_price || product.salePrice || product.sale_price || 0)}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.price)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
                                 {product.quantity}
