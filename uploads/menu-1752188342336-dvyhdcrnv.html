@@ -1,0 +1,829 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Standard CBD - Premium Cannabis Menu</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+            color: #FFFFFF;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .logo {
+            max-height: 80px;
+            margin-bottom: 1rem;
+        }
+        .company-name {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .tagline {
+            font-size: 1.3rem;
+            color: #FFD700;
+            margin-bottom: 1rem;
+        }
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .product-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: #FFD700;
+        }
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+        .product-card:hover::before {
+            opacity: 1;
+            animation: shimmer 0.6s ease-in-out;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-200%) translateY(-200%) rotate(45deg); }
+            100% { transform: translateX(200%) translateY(200%) rotate(45deg); }
+        }
+        .product-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: #FFD700;
+        }
+        .product-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #FFD700;
+        }
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        .btn {
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-coa {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        .btn-media {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        .btn-buy {
+            background: linear-gradient(135deg, #FFD700, #D4AF37);
+            color: #1A1A1A;
+            font-weight: 700;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .contact-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            margin-top: 3rem;
+        }
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .contact-item {
+            padding: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .contact-item a {
+            color: #FFD700;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .product-grid { grid-template-columns: 1fr; }
+            .company-name { font-size: 2rem; }
+            .action-buttons { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <div class="header">
+            
+            <h1 class="company-name">Gold Standard CBD</h1>
+            <p class="tagline">Premium Cannabis Products</p>
+            <p class="description">Experience the finest quality cannabis products</p>
+            <div style="margin-top: 2rem; color: #FFD700; font-size: 0.95rem;">
+                Last Updated: 7/10/2025, 10:59:02 PM | Live Shopify Sync
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number">254</div>
+                <div class="stat-label">Products Available</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">254</div>
+                <div class="stat-label">In Stock</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">59</div>
+                <div class="stat-label">Low Stock</div>
+            </div>
+        </div>
+
+        <div class="product-grid">
+            
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>50 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Lemon Cherry Gelato</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>98 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/lemon-cherry-gelato---indica" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/lemon-cherry-gelato---indica" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/lemon-cherry-gelato---indica" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Blue Dream</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>98 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/blue-dream---sativa" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/blue-dream---sativa" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/blue-dream---sativa" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Blueberry Muffin</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>99 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/blueberry-muffin---indica" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/blueberry-muffin---indica" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/blueberry-muffin---indica" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">White Gushers</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>98 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/white-gushers---indica" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/white-gushers---indica" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/white-gushers---indica" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Jager x Sour Diesel -Hybrid</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>100 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/jager-x-sour-diesel--hybrid" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/jager-x-sour-diesel--hybrid" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/jager-x-sour-diesel--hybrid" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Purple Runtz</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>100 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/purple-runtz---hybrid" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/purple-runtz---hybrid" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/purple-runtz---hybrid" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Hash Burger</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>100 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/hash-burger---hybrid" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/hash-burger---hybrid" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/hash-burger---hybrid" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Death Star</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>100 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/death-star---indica" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/death-star---indica" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/death-star---indica" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Cherry Pie</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>100 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/cherry-pie---indica" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/cherry-pie---indica" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/cherry-pie---indica" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">28 GRAMS</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>43 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/28-grams" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/28-grams" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/28-grams" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">28 GRAMS</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$Contact for Price</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>37 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/28-grams" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/28-grams" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/28-grams" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">2 GRAMS</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$15</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>21 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/2-grams" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/2-grams" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/2-grams" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">2 GRAMS</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$15</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>42 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/2-grams" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/2-grams" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/2-grams" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">Half Gram</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$8</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>22 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/half-gram" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/half-gram" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/half-gram" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$950</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>50 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$850</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>33 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$750</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>17 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$950</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>50 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+                <div class="product-card">
+                    <h3 class="product-name">1 pound</h3>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price:</span>
+                            <span>$750</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock:</span>
+                            <span>20 units</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        
+                        <a href="https://goldcbd.com/coa/1-pound" class="btn btn-coa" target="_blank">
+                            📋 COA
+                        </a>
+                        
+                        <a href="https://goldcbd.com/media/download/1-pound" class="btn btn-media" target="_blank">
+                            📁 Media
+                        </a>
+                        
+                        <a href="https://goldcbd.com/products/1-pound" class="btn btn-buy" target="_blank">
+                            🛒 Buy Now
+                        </a>
+                    </div>
+                </div>
+              
+        </div>
+
+        <div class="contact-section">
+            <h2 style="color: #FFD700; margin-bottom: 1rem;">Contact Information</h2>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div>📞 Phone</div>
+                    <a href="tel:541-295-8811">541-295-8811</a>
+                </div>
+                <div class="contact-item">
+                    <div>📧 Email</div>
+                    <a href="mailto:kaya@goldcbd.com">kaya@goldcbd.com</a>
+                </div>
+                <div class="contact-item">
+                    <div>🌐 Website</div>
+                    <a href="https://goldcbd.com" target="_blank">goldcbd.com</a>
+                </div>
+                <div class="contact-item">
+                    <div>📍 Address</div>
+                    <span>Contact for location</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+  

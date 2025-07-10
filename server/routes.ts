@@ -8252,20 +8252,74 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     }
   });
 
+  // Get menu inventory preview endpoint
+  app.get("/api/menu-inventory-preview", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getAllItems();
+      
+      // Show what data we have
+      const sampleItems = items.slice(0, 10);
+      const categoriesFound = [...new Set(items.map(item => item.category).filter(Boolean))];
+      const itemsWithQuantity = items.filter(item => item.quantity && parseInt(item.quantity) > 0);
+      
+      res.json({
+        totalItems: items.length,
+        itemsWithQuantity: itemsWithQuantity.length,
+        categories: categoriesFound,
+        sampleData: sampleItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.price || item.base_price || item.sale_price
+        })),
+        debug: {
+          namesContainingFlower: items.filter(i => i.name?.toLowerCase().includes('flower')).length,
+          namesContainingTHCA: items.filter(i => i.name?.toLowerCase().includes('thca')).length,
+          namesContainingPreroll: items.filter(i => i.name?.toLowerCase().includes('pre-roll') || i.name?.toLowerCase().includes('preroll')).length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get inventory preview" });
+    }
+  });
+
   // White Label Menu Generation API
   app.post("/api/generate-white-label-menu", async (req: Request, res: Response) => {
     try {
       const { theme, branding, customBackground, includeLinks } = req.body;
       
-      // Get current inventory from database (more reliable than bulk query)
+      // Get current inventory from database
       const items = await storage.getAllItems();
       
-      // Filter for active flower/bulk flower items only
-      const products = items.filter(item => 
-        item.quantity > 0 && 
-        (item.name?.toLowerCase().includes('flower') || 
-         item.category?.toLowerCase().includes('flower'))
-      );
+      console.log(`Total items in database: ${items.length}`);
+      
+      // More inclusive filter - include ALL items with quantity
+      const validItems = items.filter(item => {
+        // Must have quantity
+        if (!item.quantity || parseInt(item.quantity) <= 0) return false;
+        
+        // Must have a name
+        if (!item.name) return false;
+        
+        // Include all items that seem like cannabis products
+        // This is very inclusive to catch all inventory
+        return true; // Include everything with quantity and name
+      });
+      
+      console.log(`Valid items found: ${validItems.length}`);
+      
+      // Transform items to match the format expected by generateCustomMenuHtml
+      const products = validItems.map(item => ({
+        title: item.name,
+        handle: item.shopifyHandle || item.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        variants: [{
+          price: item.price || item.base_price || item.sale_price || 0,
+          inventoryQuantity: parseInt(item.quantity) || 0
+        }]
+      }));
+      
+      console.log(`Products formatted for menu: ${products.length}`);
       
       // Generate unique menu ID
       const menuId = `menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -8323,27 +8377,6 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     } catch (error) {
       console.error('Menu viewing error:', error);
       res.status(500).json({ error: 'Failed to load menu' });
-    }
-  });
-
-  // Serve generated menus
-  app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
-    try {
-      const { menuId } = req.params;
-      const fs = await import('fs');
-      const path = await import('path');
-      const menuPath = path.join('uploads', `${menuId}.html`);
-      
-      if (!fs.existsSync(menuPath)) {
-        return res.status(404).json({ error: "Menu not found" });
-      }
-      
-      const menuHtml = fs.readFileSync(menuPath, 'utf8');
-      res.setHeader('Content-Type', 'text/html');
-      res.send(menuHtml);
-    } catch (error) {
-      console.error('Menu serving error:', error);
-      res.status(500).json({ error: "Failed to serve menu" });
     }
   });
 
