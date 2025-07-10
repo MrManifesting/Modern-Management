@@ -52,7 +52,12 @@ export const compressLargeResponse = (data: any): any => {
       salePrice: item.salePrice || item.sale_price,
       costPrice: item.costPrice || item.cost_price,
       category: item.category,
-      weight: item.weight // Essential for cannabis product accuracy
+      weight: item.weight, // Essential for cannabis product accuracy
+      // Add image fields for display
+      imageUrl: item.imageUrl,
+      images: item.images,
+      // Add price field for frontend display
+      price: item.price
     }));
   }
   return data;

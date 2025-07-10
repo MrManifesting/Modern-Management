@@ -1694,6 +1694,11 @@ export function registerRoutes(app: any, storage: any) {
           basePrice: finalBasePrice,  // Legacy field name
           salePrice: finalSalePrice,  // Legacy field name  
           costPrice: finalCostPrice,  // Legacy field name
+          // Transform image fields from snake_case to camelCase
+          imageUrl: item.image_url || null,
+          images: item.images || [],
+          // Transform price field for frontend
+          price: finalSalePrice || finalBasePrice || finalCostPrice || 0,
           // Ensure no NaN values
           quantity: parseInt(item.quantity) || 0,
           weight: extractedWeight // Use properly extracted weight, never default to pounds
