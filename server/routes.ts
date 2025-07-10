@@ -1449,6 +1449,15 @@ export function registerRoutes(app: any, storage: any) {
       qualityMultiplier = 1.1; // +10% for AA Indoor
     }
     
+    // Check if this is a pre-roll product
+    if (name.includes('preroll') || name.includes('pre-roll') || name.includes('pre roll')) {
+      // Pre-rolls typically range from $5-15 each
+      basePrice = Math.floor((Math.random() * (15 - 5) + 5) * qualityMultiplier);
+      const salePrice = Math.floor(basePrice * 0.85); // 15% discount
+      const costPrice = Math.floor(basePrice * 0.6); // 40% margin
+      return { base_price: basePrice, sale_price: salePrice, cost_price: costPrice };
+    }
+    
     // Realistic pricing by ACTUAL weight
     if (weight.includes('1 pound') || weight.includes('pound')) {
       basePrice = Math.floor((Math.random() * (1500 - 800) + 800) * qualityMultiplier); // $800-$1500
@@ -1590,11 +1599,42 @@ export function registerRoutes(app: any, storage: any) {
           
           // CRITICAL: Check if the name is JUST a weight measurement
           const isJustWeight = /^(\d+\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ))$/i.test(item.name.trim());
-          if (isJustWeight) {
-            // For items where name is just weight, use category or SKU info
-            if (item.category && item.category !== 'Shopify Import') {
+          if (isJustWeight || !strainName || strainName.trim() === '') {
+            // PRIORITY 1: Try to extract from handle (beginning part before weight/category indicators)
+            if (item.handle) {
+              const handleParts = item.handle.split('-');
+              // Take the first few parts until we hit common weight/category terms
+              const stopWords = ['thca', 'bulk', 'flower', 'preroll', 'prerolls', '1g', '1gram', 'gram', 'grams', 'pound', 'pounds', 'lb', 'lbs'];
+              let strainParts = [];
+              
+              for (const part of handleParts) {
+                if (stopWords.includes(part.toLowerCase())) break;
+                strainParts.push(part);
+              }
+              
+              if (strainParts.length > 0) {
+                strainName = strainParts.join(' ')
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                  .join(' ');
+              }
+            }
+            
+            // PRIORITY 2: Try to extract from title if we have one
+            if ((!strainName || strainName.trim() === '') && item.title) {
+              // Extract strain name from beginning of title
+              const titleMatch = item.title.match(/^([^-]+?)(?:\s*-|\s*THCA|\s*THCa|\s*\d+|\s*\(|$)/i);
+              if (titleMatch && titleMatch[1]) {
+                strainName = titleMatch[1].trim()
+                  .replace(/\b(bulk|flower|preroll|prerolls)\b/gi, '')
+                  .trim();
+              }
+            }
+            
+            // PRIORITY 3: For items where name is just weight, use category or SKU info
+            if ((!strainName || strainName.trim() === '') && item.category && item.category !== 'Shopify Import') {
               strainName = item.category;
-            } else if (item.sku && item.sku.includes('-')) {
+            } else if ((!strainName || strainName.trim() === '') && item.sku && item.sku.includes('-')) {
               // Try to extract from SKU if available
               const skuParts = item.sku.split('-');
               if (skuParts.length > 1 && !skuParts[0].includes('SHOPIFY')) {
@@ -1606,8 +1646,8 @@ export function registerRoutes(app: any, storage: any) {
               }
             }
             
-            // If still no name, use generic "Cannabis Product"
-            if (!strainName || strainName.trim() === '' || isJustWeight) {
+            // If still no name, use generic "Cannabis Product" ONLY as last resort
+            if (!strainName || strainName.trim() === '') {
               strainName = 'Cannabis Product';
             }
           }
@@ -1699,7 +1739,12 @@ export function registerRoutes(app: any, storage: any) {
             const categoryLower = (item.category || '').toLowerCase();
             
             // Default pricing by product type
-            if (nameLower.includes('flower') || categoryLower.includes('flower')) {
+            if (nameLower.includes('preroll') || nameLower.includes('pre-roll') || nameLower.includes('pre roll')) {
+              // Pre-rolls have their own pricing (typically $5-15 each)
+              finalBasePrice = 10; // Default price for pre-rolls
+              finalSalePrice = 8;
+              finalCostPrice = 6;
+            } else if (nameLower.includes('flower') || categoryLower.includes('flower')) {
               finalBasePrice = 1200; // Default pound price for flower
               finalSalePrice = 1020;
               finalCostPrice = 720;
