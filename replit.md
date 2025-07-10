@@ -125,6 +125,13 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 10, 2025: **DEPLOYMENT DEPENDENCY FIX**
+  - **FIXED MISSING SHOPIFY API DEPENDENCY**: Added @shopify/shopify-api as production dependency to resolve deployment build failures
+  - **PRODUCTION DEPENDENCY CONFIGURATION**: Ensured all Shopify-related dependencies are properly configured for production builds
+  - **BUILD PROCESS OPTIMIZATION**: Verified both @shopify/shopify-api and shopify-api-node are available during runtime module resolution
+  - **DEPLOYMENT READINESS**: Fixed "Missing @shopify/shopify-api dependency in production build" error preventing successful deployment
+  - System now has all required dependencies for successful deployment to production environment
+
 - January 10, 2025: **MENU GENERATOR SYNC WITH INVENTORY FIXED**
   - **ROUTING CONFLICT RESOLVED**: Removed duplicate `/api/view-menu/:menuId` endpoints that were causing 404 errors
   - **INCLUSIVE FILTERING**: Updated menu generator to include ALL inventory items with quantity > 0, not just "flower" items
