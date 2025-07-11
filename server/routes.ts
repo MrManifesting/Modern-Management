@@ -1498,11 +1498,12 @@ export function registerRoutes(app: any, storage: any) {
     try {
       // Check cache first for performance
       const cacheKey = `items:${req.query.page || 1}:${req.query.limit || 50}`;
-      const cachedData = getCachedData(cacheKey);
-      if (cachedData) {
-        log(`Returned cached items data (${cachedData.length} items)`, 'inventory');
-        return res.json(cachedData);
-      }
+      // TEMPORARILY DISABLE CACHE TO ENSURE FIXES ARE APPLIED
+      // const cachedData = getCachedData(cacheKey);
+      // if (cachedData) {
+      //   log(`Returned cached items data (${cachedData.length} items)`, 'inventory');
+      //   return res.json(cachedData);
+      // }
 
       const rawItems = await storage.getItems();
       
@@ -1646,8 +1647,57 @@ export function registerRoutes(app: any, storage: any) {
               }
             }
             
+            // PRIORITY 4: For Shopify Import items with weight-only names, try to extract from image URLs or default to Premium Cannabis
+            if ((!strainName || strainName.trim() === '') && item.category === 'Shopify Import') {
+              // These are variant items with only weight in the name
+              // First, try to extract strain info from the images
+              if (item.images && item.images.length > 0) {
+                for (const image of item.images) {
+                  // Try to extract from image filenames (e.g., "Purple_Churro_Live_Rosin_THCA.png")
+                  // First extract just the filename from the URL
+                  const filenameMatch = image.match(/\/([^\/]+\.(jpg|jpeg|png|heic))/i);
+                  if (filenameMatch) {
+                    const filename = filenameMatch[1];
+                    // Now extract strain name from filename
+                    const strainMatch = filename.match(/^([^_]+?)(?:_Live_Rosin|_THCA|_THC|_CBD|_Badder|_Shot|\.)/i);
+                    if (strainMatch && strainMatch[1] && strainMatch[1].toLowerCase() !== 'gold') {
+                      strainName = strainMatch[1]
+                        .replace(/_/g, ' ')
+                        .replace(/Gold CBD/gi, '')
+                        // Add spaces before capital letters (for camelCase names like PurpleChurroRosin)
+                        .replace(/([a-z])([A-Z])/g, '$1 $2')
+                        .trim();
+                      if (strainName && strainName.length > 2) break;
+                    }
+                  }
+                }
+              }
+              
+              // If still no strain name, use a descriptive name based on weight
+              if (!strainName || strainName.trim() === '') {
+                const weightMatch = item.name.match(/(\d+)\s*(GRAM|GRAMS|gram|grams|g|G)/i);
+                if (weightMatch) {
+                  const amount = weightMatch[1];
+                  strainName = `Premium Cannabis (${amount}g)`;
+                } else if (item.name.includes('POUND') || item.name.includes('pound')) {
+                  strainName = 'Premium Cannabis (1lb)';
+                } else {
+                  strainName = 'Premium Cannabis';
+                }
+              }
+            }
+            
             // If still no name, use generic "Cannabis Product" ONLY as last resort
             if (!strainName || strainName.trim() === '') {
+              // Log when we fall back to Cannabis Product
+              log(`WARNING: Using 'Cannabis Product' for item: ${JSON.stringify({
+                id: item.id,
+                name: item.name,
+                handle: item.handle,
+                title: item.title,
+                sku: item.sku,
+                category: item.category
+              })}`, 'strain-extraction');
               strainName = 'Cannabis Product';
             }
           }
@@ -1724,13 +1774,37 @@ export function registerRoutes(app: any, storage: any) {
           }
         }
         
-        // PRIORITY 1: Use existing database prices if available
-        let finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
-        let finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
-        let finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+        // PRIORITY 1: Check if this is a pre-roll and override price
+        const nameLower = (item.name || '').toLowerCase();
+        const handleLower = (item.handle || '').toLowerCase();
+        const skuLower = (item.sku || '').toLowerCase();
+        const categoryLower = (item.category || '').toLowerCase();
         
-        // PRIORITY 2: If no existing prices, generate based on weight
-        if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
+        const isPreroll = nameLower.includes('preroll') || 
+                         nameLower.includes('pre-roll') || 
+                         nameLower.includes('pre roll') ||
+                         handleLower.includes('preroll') ||
+                         handleLower.includes('pre-roll') ||
+                         skuLower.includes('preroll') ||
+                         skuLower.includes('pre-roll') ||
+                         categoryLower.includes('preroll');
+        
+        let finalBasePrice, finalSalePrice, finalCostPrice;
+        
+        // For pre-rolls, always use correct pricing
+        if (isPreroll) {
+          finalBasePrice = 10;
+          finalSalePrice = 8;
+          finalCostPrice = 6;
+          log(`Pre-roll pricing applied to item: ${item.id} - ${item.name}`, 'pricing');
+        } else {
+          // Use existing database prices if available
+          finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
+          finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
+          finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+          
+          // PRIORITY 2: If no existing prices, generate based on weight
+          if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
           const pricing = generateRealisticPrice({...item, weight: extractedWeight});
           
           // PRIORITY 3: If still no price (no weight info), generate default based on category
@@ -1767,6 +1841,7 @@ export function registerRoutes(app: any, storage: any) {
             finalSalePrice = pricing.sale_price;
             finalCostPrice = pricing.cost_price;
           }
+          } // Close if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0)
         }
         
         return {

@@ -125,16 +125,23 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
-- January 12, 2025: **CRITICAL FIX: STRAIN NAME EXTRACTION AND PRE-ROLL PRICING**
-  - **FIXED "CANNABIS PRODUCT" DISPLAY ISSUE**: Products no longer show generic "Cannabis Product" names
-  - **ENHANCED STRAIN NAME EXTRACTION**: Added 3-tier priority system for extracting strain names:
-    - Priority 1: Extract from handle (takes beginning parts before weight/category indicators)
-    - Priority 2: Extract from title field (parses beginning of title before "-" or "THCA")
-    - Priority 3: Falls back to category or SKU parsing only if needed
-  - **FIXED PRE-ROLL PRICING**: Pre-rolls now correctly priced at $8 sale price (was incorrectly showing $30)
-  - **ADDED PRE-ROLL PRICING CATEGORY**: Both in default pricing logic and generateRealisticPrice function
-  - Pre-rolls now have appropriate pricing range of $5-15 based on quality tier
-  - System properly extracts strain names from handles like "white-gushers-thca-1g-bulk-prerolls" → "White Gushers"
+- January 12, 2025: **COMPLETE FIX: STRAIN NAME EXTRACTION AND PRE-ROLL PRICING ISSUES RESOLVED**
+  - **FIXED "CANNABIS PRODUCT" DISPLAY FOR SHOPIFY IMPORTS**: Shopify Import items with weight-only names now show proper strain names
+    - Enhanced extraction to parse strain names from image filenames for variants
+    - Example: "28 GRAMS" item now displays as "Purple Churro Rosin" (extracted from image filename)
+    - Added camelCase word separation for better readability
+  - **ENHANCED PRE-ROLL DETECTION**: Expanded detection to check handle, SKU, and category fields
+    - Pre-rolls are now detected across all field types, not just product names
+    - System logs when pre-roll pricing is applied for transparency
+  - **CONFIRMED PRE-ROLL PRICING FIX**: All pre-rolls now correctly priced at $8 sale price
+    - Tested items like "white-gushers--thca---1g---bulk-prerolls" show $8 pricing
+    - Pre-roll pricing override working consistently across inventory
+  - **IMPROVED STRAIN NAME EXTRACTION HIERARCHY**:
+    - Priority 0: Shopify Import weight-only items extract from image URLs
+    - Priority 1: Extract from handle (beginning parts before weight/category)
+    - Priority 2: Extract from title field (before "-" or "THCA")
+    - Priority 3: Category or SKU parsing fallback
+    - Priority 4: Descriptive names for remaining items
 
 - January 10, 2025: **SHOPIFY API DEPLOYMENT DEPENDENCY FIX COMPLETED**
   - **FIXED SHOPIFY API MODULE EXPORT ISSUE**: Corrected incorrect import of 'Shopify' from '@shopify/shopify-api' package
