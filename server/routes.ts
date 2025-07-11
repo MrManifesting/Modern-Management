@@ -4670,11 +4670,45 @@ export function registerRoutes(app: any, storage: any) {
                 continue;
               }
 
+              // Skip items with bad data patterns
+              const itemName = variant.title || product.title;
+              const nameLower = itemName.toLowerCase();
+              
+              // Skip weight-only names
+              if (nameLower.match(/^\d+(\.\d+)?\s*(gram|grams|g|oz|ounce|pound|lb)s?$/)) {
+                skippedCount++;
+                log(`Skipped weight-only variant: ${itemName}`, 'shopify-import');
+                continue;
+              }
+              
+              // Skip default titles
+              if (itemName === 'Default Title' || itemName === 'Title') {
+                skippedCount++;
+                log(`Skipped default title variant`, 'shopify-import');
+                continue;
+              }
+              
+              // Skip HTML content
+              if (itemName.includes('<') || itemName.includes('>')) {
+                skippedCount++;
+                log(`Skipped HTML content: ${itemName.substring(0, 50)}...`, 'shopify-import');
+                continue;
+              }
+              
+              // Skip suspicious $30 pricing for non-bulk items
+              const price = parseFloat(variant.price) || 0;
+              if (price === 30 && !nameLower.includes('pound') && !nameLower.includes('bulk')) {
+                skippedCount++;
+                log(`Skipped suspicious $30 item: ${itemName}`, 'shopify-import');
+                continue;
+              }
+              
               const itemData = {
-                name: variant.title || product.title,
+                name: itemName,
                 sku: generatedSku,
                 quantity: variant.inventory_quantity || 0,
-                base_price: parseFloat(variant.price) || 0,
+                base_price: price,
+                sale_price: price, // Set sale_price same as base_price initially
                 cost_price: parseFloat(variant.compare_at_price) || 0,
                 category: product.product_type || 'Shopify Import',
                 brand: product.vendor || 'Gold Standard',
