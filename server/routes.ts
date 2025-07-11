@@ -5426,6 +5426,188 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Fix pre-roll pricing in database
+  app.post("/api/fix-preroll-pricing", async (_req: Request, res: Response) => {
+    try {
+      // Find all pre-rolls with NULL or incorrect prices
+      const prerolls = await storage.getItems();
+      const prerollsToUpdate = prerolls.filter((item: any) => {
+        const nameLower = (item.name || '').toLowerCase();
+        const skuLower = (item.sku || '').toLowerCase();
+        const categoryLower = (item.category || '').toLowerCase();
+        
+        const isPreroll = nameLower.includes('preroll') || 
+                         nameLower.includes('pre-roll') || 
+                         nameLower.includes('pre roll') ||
+                         skuLower.includes('preroll') ||
+                         skuLower.includes('pre-roll') ||
+                         categoryLower.includes('preroll');
+        
+        // Check if it's a pre-roll that needs price update
+        return isPreroll && (!item.sale_price || item.sale_price !== 8);
+      });
+
+      let updatedCount = 0;
+      for (const preroll of prerollsToUpdate) {
+        await storage.updateItem(preroll.id, {
+          base_price: 10,
+          sale_price: 8,
+          cost_price: 6
+        });
+        updatedCount++;
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Updated pricing for ${updatedCount} pre-roll items`,
+        updated: updatedCount
+      });
+    } catch (error) {
+      console.error('Error fixing pre-roll pricing:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update pre-roll pricing' 
+      });
+    }
+  });
+
+  // Fix generic "Premium Cannabis" names in database
+  app.post("/api/fix-generic-names", async (_req: Request, res: Response) => {
+    try {
+      // Find all items with generic names
+      const items = await storage.getItems();
+      const itemsToUpdate = items.filter((item: any) => {
+        return item.name && (
+          item.name.startsWith('Premium Cannabis') ||
+          item.name === 'Cannabis Product' ||
+          item.name.match(/^\d+\s*(GRAM|GRAMS|gram|grams|g|G|POUND|POUNDS|pound|pounds|lb|LB)s?$/i)
+        );
+      });
+
+      let updatedCount = 0;
+      for (const item of itemsToUpdate) {
+        let newName = item.name;
+        
+        // Try to extract strain name from images
+        if (item.images && item.images.length > 0) {
+          for (const image of item.images) {
+            const filenameMatch = image.match(/\/([^\/]+\.(jpg|jpeg|png|heic))/i);
+            if (filenameMatch) {
+              const filename = filenameMatch[1];
+              const strainMatch = filename.match(/^([^_]+?)(?:_Live_Rosin|_THCA|_THC|_CBD|_Badder|_Shot|\.)/i);
+              if (strainMatch && strainMatch[1] && strainMatch[1].toLowerCase() !== 'gold') {
+                newName = strainMatch[1]
+                  .replace(/_/g, ' ')
+                  .replace(/([a-z])([A-Z])/g, '$1 $2')
+                  .trim();
+                if (newName && newName.length > 2) break;
+              }
+            }
+          }
+        }
+        
+        // Only update if we found a better name
+        if (newName !== item.name && !newName.startsWith('Premium Cannabis')) {
+          await storage.updateItem(item.id, { name: newName });
+          updatedCount++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Updated names for ${updatedCount} items`,
+        updated: updatedCount,
+        total_generic: itemsToUpdate.length
+      });
+    } catch (error) {
+      console.error('Error fixing generic names:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update generic names' 
+      });
+    }
+  });
+
+  // Comprehensive pricing fix for all items with NULL or incorrect prices
+  app.post("/api/fix-all-pricing", async (_req: Request, res: Response) => {
+    try {
+      const items = await storage.getItems();
+      let prerollsFixed = 0;
+      let nullPricesFixed = 0;
+      
+      for (const item of items) {
+        const nameLower = (item.name || '').toLowerCase();
+        const skuLower = (item.sku || '').toLowerCase();
+        const categoryLower = (item.category || '').toLowerCase();
+        
+        // Check if it's a pre-roll
+        const isPreroll = nameLower.includes('preroll') || 
+                         nameLower.includes('pre-roll') || 
+                         nameLower.includes('pre roll') ||
+                         skuLower.includes('preroll') ||
+                         skuLower.includes('pre-roll');
+        
+        // Fix pre-rolls regardless of current price
+        if (isPreroll && item.sale_price !== 8) {
+          await storage.updateItem(item.id, {
+            base_price: 10,
+            sale_price: 8,
+            cost_price: 6
+          });
+          prerollsFixed++;
+        }
+        // Fix items with NULL prices
+        else if (!item.sale_price || !item.base_price) {
+          let basePrice = 35; // Default
+          let salePrice = 30;
+          let costPrice = 21;
+          
+          // Set appropriate prices based on category/name
+          if (categoryLower.includes('flower') || nameLower.includes('flower')) {
+            // Check weight for flower pricing
+            if (nameLower.includes('pound') || nameLower.includes('1 lb')) {
+              basePrice = 1200;
+              salePrice = 1020;
+              costPrice = 720;
+            } else {
+              basePrice = 35;
+              salePrice = 30;
+              costPrice = 21;
+            }
+          } else if (categoryLower.includes('concentrate') || nameLower.includes('rosin') || nameLower.includes('badder')) {
+            basePrice = 40;
+            salePrice = 34;
+            costPrice = 24;
+          } else if (categoryLower.includes('edible')) {
+            basePrice = 25;
+            salePrice = 21;
+            costPrice = 15;
+          }
+          
+          await storage.updateItem(item.id, {
+            base_price: basePrice,
+            sale_price: salePrice,
+            cost_price: costPrice
+          });
+          nullPricesFixed++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Fixed pricing: ${prerollsFixed} pre-rolls, ${nullPricesFixed} items with null prices`,
+        prerolls_fixed: prerollsFixed,
+        null_prices_fixed: nullPricesFixed
+      });
+    } catch (error) {
+      console.error('Error fixing all pricing:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fix pricing' 
+      });
+    }
+  });
+
   // System health endpoint
   app.get("/api/system/health", async (_req: Request, res: Response) => {
     try {
