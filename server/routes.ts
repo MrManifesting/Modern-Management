@@ -1774,98 +1774,27 @@ export function registerRoutes(app: any, storage: any) {
           }
         }
         
-        // PRIORITY 1: Check if this is a pre-roll and override price
-        const nameLower = (item.name || '').toLowerCase();
-        const handleLower = (item.handle || '').toLowerCase();
-        const skuLower = (item.sku || '').toLowerCase();
-        const categoryLower = (item.category || '').toLowerCase();
-        
-        const isPreroll = nameLower.includes('preroll') || 
-                         nameLower.includes('pre-roll') || 
-                         nameLower.includes('pre roll') ||
-                         handleLower.includes('preroll') ||
-                         handleLower.includes('pre-roll') ||
-                         skuLower.includes('preroll') ||
-                         skuLower.includes('pre-roll') ||
-                         categoryLower.includes('preroll');
-        
-        let finalBasePrice, finalSalePrice, finalCostPrice;
-        
-        // For pre-rolls, always use correct pricing
-        if (isPreroll) {
-          finalBasePrice = 10;
-          finalSalePrice = 8;
-          finalCostPrice = 6;
-          log(`Pre-roll pricing applied to item: ${item.id} - ${item.name}`, 'pricing');
-        } else {
-          // Use existing database prices if available
-          finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
-          finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
-          finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
-          
-          // PRIORITY 2: If no existing prices, generate based on weight
-          if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
-          const pricing = generateRealisticPrice({...item, weight: extractedWeight});
-          
-          // PRIORITY 3: If still no price (no weight info), generate default based on category
-          if (pricing.base_price === 0) {
-            const nameLower = (item.name || '').toLowerCase();
-            const categoryLower = (item.category || '').toLowerCase();
-            
-            // Default pricing by product type
-            if (nameLower.includes('preroll') || nameLower.includes('pre-roll') || nameLower.includes('pre roll')) {
-              // Pre-rolls have their own pricing (typically $5-15 each)
-              finalBasePrice = 10; // Default price for pre-rolls
-              finalSalePrice = 8;
-              finalCostPrice = 6;
-            } else if (nameLower.includes('flower') || categoryLower.includes('flower')) {
-              finalBasePrice = 1200; // Default pound price for flower
-              finalSalePrice = 1020;
-              finalCostPrice = 720;
-            } else if (nameLower.includes('concentrate') || categoryLower.includes('concentrate')) {
-              finalBasePrice = 40; // Default gram price for concentrates
-              finalSalePrice = 34;
-              finalCostPrice = 24;
-            } else if (nameLower.includes('edible') || categoryLower.includes('edible')) {
-              finalBasePrice = 25; // Default price for edibles
-              finalSalePrice = 21;
-              finalCostPrice = 15;
-            } else {
-              // General cannabis product default (assume 1/8 oz)
-              finalBasePrice = 35;
-              finalSalePrice = 30;
-              finalCostPrice = 21;
-            }
-          } else {
-            finalBasePrice = pricing.base_price;
-            finalSalePrice = pricing.sale_price;
-            finalCostPrice = pricing.cost_price;
-          }
-          } // Close if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0)
-        }
-        
+        // Return raw database values without any transformations
         return {
           ...item,
-          // Use strain name if extracted, otherwise fall back to original name
-          name: strainName || item.name,
-          // Keep original name for reference
-          original_name: item.name,
-          // Display name for UI
-          display_name: strainName || item.name,
-          base_price: finalBasePrice,
-          sale_price: finalSalePrice,
-          cost_price: finalCostPrice,
-          basePrice: finalBasePrice,  // Legacy field name
-          salePrice: finalSalePrice,  // Legacy field name  
-          costPrice: finalCostPrice,  // Legacy field name
-          // Transform image fields from snake_case to camelCase
+          // Return name as-is from database, no strain extraction
+          name: item.name,
+          // Return all price fields exactly as they are in database
+          base_price: item.base_price,
+          sale_price: item.sale_price,
+          cost_price: item.cost_price,
+          basePrice: item.base_price,  // Map to camelCase for frontend
+          salePrice: item.sale_price,  // Map to camelCase for frontend
+          costPrice: item.cost_price,  // Map to camelCase for frontend
+          // Return image fields 
           imageUrl: item.image_url || null,
           images: item.images || [],
-          // Transform price field for frontend
-          price: finalSalePrice || finalBasePrice || finalCostPrice || 0,
-          // Ensure no NaN values
+          // Use sale_price if available, otherwise base_price
+          price: item.sale_price || item.base_price || 0,
+          // Return quantity as-is
           quantity: parseInt(item.quantity) || 0,
-          weight: extractedWeight // Use properly extracted weight, never default to pounds
+          // Return weight as-is from database
+          weight: item.weight || 'Weight not specified'
         };
       });
       
