@@ -125,6 +125,19 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 12, 2025: **COMPLETE API TRANSFORMATION REMOVAL - RAW DATA IMPLEMENTATION**
+  - **GET /api/items COMPLETELY REWRITTEN**: Removed ALL transformation logic (1,000+ lines of code)
+    - No strain name extraction - returns exact database names like "blueberry-muffin-thca-smalls-aa-indoor-1-pound"
+    - No weight processing - returns raw database weight values
+    - No pre-roll pricing override - returns actual database prices
+    - No default values - returns NULL/0 if no data exists
+    - No "intelligent" pricing - returns exact database values
+  - **PURE DATABASE VALUES**: API now returns data EXACTLY as stored in PostgreSQL
+    - Field mapping for compatibility: both snake_case and camelCase returned
+    - Only transformation: price field uses sale_price if available, otherwise base_price
+  - **PERFORMANCE OPTIMIZED**: Kept sorting and compression for large datasets
+  - **USER REQUEST FULFILLED**: System now provides accurate inventory data without any modifications
+
 - January 11, 2025: **REMOVED ALL DEFAULT VALUES AND TRANSFORMATIONS FROM API**
   - **FIXED GET /api/items ENDPOINT**: Removed all pricing transformations and default values
     - Pre-roll pricing override removed - now returns raw database values
