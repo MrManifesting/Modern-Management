@@ -496,7 +496,7 @@ const ProductsInventoryPage: React.FC = () => {
   // Enhanced price display for tables
   const renderPriceCell = (product: Product) => (
     <div className="flex flex-col items-end">
-      <span className="font-medium">{product.displayPrice || "No Price"}</span>
+      <span className="font-medium">{formatPrice(product.price)}</span>
       {product.priceSource === 'shopify' && (
         <Badge variant="outline" className="text-xs mt-1">Shopify</Badge>
       )}
@@ -1254,7 +1254,7 @@ const ProductsInventoryPage: React.FC = () => {
             <span className="text-muted-foreground">SKU:</span> <span className="font-mono">{product.sku}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Price:</span> {formatPrice(product.price || product.base_price || product.sale_price || 0)}
+            <span className="text-muted-foreground">Price:</span> {formatPrice(product.price)}
           </div>
           <div>
             <span className="text-muted-foreground">Stock:</span>{' '}
@@ -2231,7 +2231,7 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">{product.weight || "Weight not specified"}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(product.price || product.base_price || product.sale_price || 0)}</td>
+                            <td className="py-3 px-4 text-right">{formatPrice(product.price)}</td>
                             <td className="py-3 px-4 text-center">
                               <Badge variant={product.quantity > 10 ? "default" : "destructive"}>
                                 {product.quantity}
