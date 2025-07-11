@@ -445,40 +445,39 @@ const ProductsInventoryPage: React.FC = () => {
 
         const weightData = parseWeight(item.weight);
 
+        // Return raw data without any transformations or default values
         return {
           id: item.id,
           name: item.name,
-          category: item.category || "Uncategorized",
-          price: item.price || item.sale_price || item.salePrice || 
-                item.base_price || item.basePrice || 
-                item.cost_price || 0,
-          displayPrice: item.displayPrice || formatPriceDisplay(item),
-          priceSource: item.priceSource || "none",
-          basePrice: item.basePrice || item.base_price || 0,
-          base_price: item.base_price || 0,
-          salePrice: item.salePrice || item.sale_price || 0,
-          sale_price: item.sale_price || 0,
-          cost_price: item.cost_price || 0,
-          retailPrice: item.retailPrice || item.base_price || item.basePrice || 0,
-          wholesalePrice: item.wholesalePrice || ((item.base_price || item.basePrice) ? (item.base_price || item.basePrice) * 0.5 : 0),
-          sku: item.sku || "NO-SKU",
-          barcode: item.barcode || "",
-          quantity: item.quantity || 0,
-          images: item.images || [],
-          mediaFiles: item.mediaFiles || [],
-          status: item.status || "draft",
-          size: item.size || "",
-          volume: item.volume || "",
-          weight: weightData.display,
-          weightValue: weightData.value,
-          weightUnit: weightData.unit,
-          description: item.description || "",
-          imageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null),
-          marketplace: item.marketplace || [],
-          shopifyId: item.shopifyId || null,
-          shopifyUrl: item.shopifyUrl || null,
-          shopifySyncStatus: item.shopifySyncStatus || "not_synced",
-          sheetsData: item.sheetsData || null
+          category: item.category,
+          price: item.price,
+          displayPrice: item.displayPrice,
+          priceSource: item.priceSource,
+          basePrice: item.basePrice,
+          base_price: item.base_price,
+          salePrice: item.salePrice,
+          sale_price: item.sale_price,
+          cost_price: item.cost_price,
+          retailPrice: item.retailPrice,
+          wholesalePrice: item.wholesalePrice,
+          sku: item.sku,
+          barcode: item.barcode,
+          quantity: item.quantity,
+          images: item.images,
+          mediaFiles: item.mediaFiles,
+          status: item.status,
+          size: item.size,
+          volume: item.volume,
+          weight: item.weight,
+          weightValue: item.weightValue,
+          weightUnit: item.weightUnit,
+          description: item.description,
+          imageUrl: item.imageUrl,
+          marketplace: item.marketplace,
+          shopifyId: item.shopifyId,
+          shopifyUrl: item.shopifyUrl,
+          shopifySyncStatus: item.shopifySyncStatus,
+          sheetsData: item.sheetsData
         };
       });
     },
@@ -1283,7 +1282,7 @@ const ProductsInventoryPage: React.FC = () => {
               {(product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0 && product.images[0])) ? (
                 <img 
                   src={product.imageUrl || product.images[0]} 
-                  alt={extractStrainName(product.name)}
+                  alt={product.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const imgElement = e.target as HTMLImageElement;
@@ -2213,7 +2212,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       return (
                                         <img 
                                           src={imageUrl} 
-                                          alt={extractStrainName(product.name)}
+                                          alt={product.name}
                                           className="object-cover w-full h-full"
                                           onError={(e) => {
                                             const imgElement = e.target as HTMLImageElement;
@@ -2249,7 +2248,7 @@ const ProductsInventoryPage: React.FC = () => {
                                         <div className="relative w-48 h-48 overflow-hidden rounded">
                                           <img 
                                             src={previewImage} 
-                                            alt={extractStrainName(product.name)} 
+                                            alt={product.name} 
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
                                           const imgElement = e.target as HTMLImageElement;
