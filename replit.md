@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 12, 2025: **CRITICAL DATA CLEANUP - REMOVED 522 BAD SHOPIFY IMPORTS WITH $30 PRICING**
+  - **DELETED BAD IMPORTS**: Removed 522 items with incorrect $30 pricing that were showing wrong quantities
+    - These items were showing quantities like 100/90 in inventory view but had actual quantities of 37 or other values
+    - All were remnants of corrupted Shopify imports with inconsistent data
+  - **SHOPIFY SYNC VALIDATION ADDED**: Updated /api/shopify/sync-inventory to prevent re-importing bad data:
+    - Skips weight-only names (e.g., "2 GRAMS", "28 grams") 
+    - Skips default titles ("Default Title", "Title")
+    - Skips HTML content in product names
+    - Skips suspicious $30 pricing for non-bulk items
+  - **INVENTORY REDUCED**: From 1,210 items down to 688 clean items with accurate data
+  - **DATA INTEGRITY**: System now only contains items with authentic Shopify data and correct pricing
+
 - January 12, 2025: **COMPLETE API AND FRONTEND TRANSFORMATION REMOVAL - RAW DATA IMPLEMENTATION VERIFIED**
   - **GET /api/items COMPLETELY REWRITTEN**: Removed ALL transformation logic (1,000+ lines of code)
     - No strain name extraction - returns exact database names like "blueberry-muffin-thca-smalls-aa-indoor-1-pound"
