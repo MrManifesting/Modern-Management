@@ -43,6 +43,7 @@ import DatabaseCleanupPage from "@/pages/DatabaseCleanupPage";
 import AffiliateDashboard from "@/pages/affiliate/affiliate-dashboard";
 import AiToolsPage from "@/pages/ai/tools";
 import AiAssistantPage from "@/pages/ai-assistant";
+import { MediaGallery } from "@/pages/MediaGallery";
 import AIShopifyMatchingPage from "@/pages/ai-shopify-matching";
 import ComprehensiveMenuPage from "@/pages/comprehensive-menu";
 import MobileInventoryPage from "@/pages/mobile-inventory";
@@ -111,6 +112,7 @@ function Router() {
         }} />
         <ProtectedRoute path="/bulk-query" component={() => <BulkQueryPage />} />
         <ProtectedRoute path="/menu-generator" component={() => <MenuGenerator />} />
+        <ProtectedRoute path="/media-gallery" component={() => <MediaGallery />} />
 
 
 
