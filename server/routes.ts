@@ -1503,23 +1503,30 @@ export function registerRoutes(app: any, storage: any) {
       const rawItems = await storage.getItems();
       
       // Return items EXACTLY as they are in the database
-      const items = rawItems.map((item: any) => ({
-        ...item,
-        // Ensure consistent field naming for frontend compatibility
-        id: item.id,
-        name: item.name,
-        base_price: item.base_price,
-        sale_price: item.sale_price,
-        cost_price: item.cost_price,
-        basePrice: item.base_price,  // Map to camelCase for frontend
-        salePrice: item.sale_price,  // Map to camelCase for frontend
-        costPrice: item.cost_price,  // Map to camelCase for frontend
-        imageUrl: item.image_url || null,
-        images: item.images || [],
-        price: item.sale_price || item.base_price || 0,
-        quantity: parseInt(item.quantity) || 0,
-        weight: item.weight || 'Weight not specified'
-      }));
+      const items = rawItems.map((item: any) => {
+        // Convert string prices to numbers for proper display
+        const basePrice = parseFloat(item.base_price) || 0;
+        const salePrice = parseFloat(item.sale_price) || 0;
+        const costPrice = parseFloat(item.cost_price) || 0;
+        
+        return {
+          ...item,
+          // Ensure consistent field naming for frontend compatibility
+          id: item.id,
+          name: item.name,
+          base_price: basePrice,
+          sale_price: salePrice,
+          cost_price: costPrice,
+          basePrice: basePrice,  // Map to camelCase for frontend
+          salePrice: salePrice,  // Map to camelCase for frontend
+          costPrice: costPrice,  // Map to camelCase for frontend
+          imageUrl: item.image_url || null,
+          images: item.images || [],
+          price: salePrice || basePrice || 0,
+          quantity: parseInt(item.quantity) || 0,
+          weight: item.weight || 'Weight not specified'
+        };
+      });
       
       // ENHANCED SORTING: Flower/Bulk Flower with pound weights at the VERY TOP
       const sortedItems = items.sort((a: any, b: any) => {
