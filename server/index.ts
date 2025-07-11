@@ -65,6 +65,11 @@ app.head("/", (req: Request, res: Response) => {
   res.status(200).end();
 });
 
+// Add OPTIONS handler for CORS preflight
+app.options("*", (req: Request, res: Response) => {
+  res.status(200).end();
+});
+
 // Add webhook endpoints before authentication middleware
 app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
   try {

@@ -1,6 +1,6 @@
 import { storage } from '../storage.js';
 import { shopifyGraphQL } from '../services/shopify-graphql.js';
-import { AccurateWeightExtractor } from '../services/accurate-weight-extractor.js';
+import { WeightService } from '../utils/weight-service.js';
 
 // Fuzzy matching function for accurate Shopify product matching
 function findBestFuzzyMatch(item: any, shopifyProducts: any[]) {
@@ -464,11 +464,11 @@ function formatWeight(item: any, shopifyProduct?: any) {
   } : null;
   
   // Extract accurate weight using the new service
-  const weightResult = AccurateWeightExtractor.extractAccurateWeight(productName, shopifyData);
-  const formattedWeight = AccurateWeightExtractor.formatWeightForDisplay(weightResult);
+  const weightResult = WeightService.extractWeight(productName, shopifyData);
+  const formattedWeight = weightResult.weight;
   
   // Validate the extracted weight makes sense
-  const isValid = AccurateWeightExtractor.validateWeight(productName, formattedWeight);
+  const isValid = weightResult.category !== 'not_specified';
   
   if (!isValid) {
     log(`Weight validation failed for ${productName}: extracted "${formattedWeight}"`, 'weight-validation');
