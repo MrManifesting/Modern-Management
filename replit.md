@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 12, 2025: **SHOPIFY MEDIA SERVICE IMPLEMENTATION**
+  - **CREATED SHOPIFY MEDIA SERVICE**: Built comprehensive GraphQL-based service for fetching video and media files from Shopify
+  - **ADDED MEDIA API ENDPOINTS**: 
+    - GET /api/shopify/media/videos - Fetches video files with multiple resolution sources (1080p, 720p, 480p) and formats (mp4, m3u8)
+    - GET /api/shopify/media/product/:productId - Fetches all media for a specific product
+    - GET /api/shopify/media/all - Fetches and categorizes all media files (videos, images, other)
+  - **GRAPHQL INTEGRATION**: Uses Shopify GraphQL API to fetch media with proper pagination support
+  - **VIDEO DETAILS**: Returns comprehensive video information including duration, sources, dimensions, and CDN URLs
+  - **ROUTE PLACEMENT FIX**: Resolved issue where media endpoints weren't registering by relocating them within registerRoutes function
+
 - January 12, 2025: **COMPREHENSIVE DUPLICATE PREVENTION SYSTEM IMPLEMENTED**
   - **SHOPIFY SYNC DUPLICATE PREVENTION**: Enhanced /api/shopify/sync-inventory with multi-field duplicate detection:
     - Case-insensitive checking for SKU, barcode, variant ID, product ID, and name+weight combinations

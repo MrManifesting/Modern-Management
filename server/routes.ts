@@ -2426,6 +2426,91 @@ export function registerRoutes(app: any, storage: any) {
     }
   });
 
+  // Shopify Media API endpoints
+  app.get("/api/shopify/media/videos", async (req: Request, res: Response) => {
+    try {
+      const { shopifyMediaService } = await import('./services/shopify-media-service');
+      const first = parseInt(req.query.first as string) || 50;
+      const query = req.query.query as string;
+      
+      const videos = await shopifyMediaService.fetchVideoFiles(first, query);
+      
+      res.json({
+        success: true,
+        videos,
+        count: videos.length
+      });
+    } catch (error) {
+      log(`Shopify video fetch error: ${error}`, 'shopify-media');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch video files",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/shopify/media/product/:productId", async (req: Request, res: Response) => {
+    try {
+      const { shopifyMediaService } = await import('./services/shopify-media-service');
+      const productId = req.params.productId;
+      
+      const productMedia = await shopifyMediaService.fetchProductVideos(productId);
+      
+      res.json({
+        success: true,
+        product: productMedia
+      });
+    } catch (error) {
+      log(`Product media fetch error: ${error}`, 'shopify-media');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch product media",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/shopify/media/all", async (req: Request, res: Response) => {
+    try {
+      const { shopifyMediaService } = await import('./services/shopify-media-service');
+      const first = parseInt(req.query.first as string) || 50;
+      
+      const mediaFiles = await shopifyMediaService.fetchAllMediaFiles(first);
+      
+      // Categorize media by type
+      const videos = mediaFiles.filter((file: any) => file.filename);
+      const images = mediaFiles.filter((file: any) => file.image);
+      const genericFiles = mediaFiles.filter((file: any) => file.url && !file.filename && !file.image);
+      
+      res.json({
+        success: true,
+        media: {
+          videos: {
+            count: videos.length,
+            files: videos
+          },
+          images: {
+            count: images.length,
+            files: images
+          },
+          other: {
+            count: genericFiles.length,
+            files: genericFiles
+          }
+        },
+        totalCount: mediaFiles.length
+      });
+    } catch (error) {
+      log(`Media fetch error: ${error}`, 'shopify-media');
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch media files",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Shopify products endpoint
   app.get("/api/shopify/products", async (_req: Request, res: Response) => {
     try {
@@ -9123,92 +9208,8 @@ expressApp.get('/api/customers/:customerId/tier', async (req, res) => {
   }
 });
 
-  // Shopify Media API endpoints
-  console.log('[routes] Registering Shopify media endpoints...');
-  app.get("/api/shopify/media/videos", async (req: Request, res: Response) => {
-    try {
-      const { shopifyMediaService } = await import('./services/shopify-media-service');
-      const first = parseInt(req.query.first as string) || 50;
-      const query = req.query.query as string;
-      
-      const videos = await shopifyMediaService.fetchVideoFiles(first, query);
-      
-      res.json({
-        success: true,
-        videos,
-        count: videos.length
-      });
-    } catch (error) {
-      log(`Shopify video fetch error: ${error}`, 'shopify-media');
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to fetch video files",
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.get("/api/shopify/media/product/:productId", async (req: Request, res: Response) => {
-    try {
-      const { shopifyMediaService } = await import('./services/shopify-media-service');
-      const productId = req.params.productId;
-      
-      const productMedia = await shopifyMediaService.fetchProductVideos(productId);
-      
-      res.json({
-        success: true,
-        product: productMedia
-      });
-    } catch (error) {
-      log(`Product media fetch error: ${error}`, 'shopify-media');
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to fetch product media",
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.get("/api/shopify/media/all", async (req: Request, res: Response) => {
-    try {
-      const { shopifyMediaService } = await import('./services/shopify-media-service');
-      const first = parseInt(req.query.first as string) || 50;
-      
-      const mediaFiles = await shopifyMediaService.fetchAllMediaFiles(first);
-      
-      // Categorize media by type
-      const videos = mediaFiles.filter((file: any) => file.filename);
-      const images = mediaFiles.filter((file: any) => file.image);
-      const genericFiles = mediaFiles.filter((file: any) => file.url && !file.filename && !file.image);
-      
-      res.json({
-        success: true,
-        media: {
-          videos: {
-            count: videos.length,
-            files: videos
-          },
-          images: {
-            count: images.length,
-            files: images
-          },
-          other: {
-            count: genericFiles.length,
-            files: genericFiles
-          }
-        },
-        totalCount: mediaFiles.length
-      });
-    } catch (error) {
-      log(`Media fetch error: ${error}`, 'shopify-media');
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to fetch media files",
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+// Media endpoints moved to earlier in the file
   
-  // Add custom tier routes
-  addCustomerTierRoutes(app);
+// Add custom tier routes
+addCustomerTierRoutes(app);
 }
