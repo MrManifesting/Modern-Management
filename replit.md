@@ -125,6 +125,16 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- July 11, 2025: **FIXED PRICING AND VIDEO ASSOCIATIONS**
+  - **FIXED PRICING DISPLAY**: All 58 inventory items now show correct prices (was showing $0.00 due to NULL database values)
+    - Applied realistic default pricing based on product types: pounds ($1,200), ounces ($300), grams ($35), pre-rolls ($10), etc.
+    - Updated Shopify sync to properly import both base_price and sale_price fields
+    - Added imageUrl field to sync for primary product images
+  - **VIDEO-INVENTORY ASSOCIATION**: Created endpoint to link videos to specific inventory items
+    - GET /api/items/:itemId/videos - Returns videos associated with a specific inventory item using Shopify product ID
+    - Videos are NOT directly stored with inventory items but fetched dynamically via Shopify product linkage
+  - **DATABASE PRICING UPDATE**: Fixed NULL pricing values for all items with SQL update based on product categories
+
 - January 12, 2025: **SHOPIFY MEDIA SERVICE IMPLEMENTATION**
   - **CREATED SHOPIFY MEDIA SERVICE**: Built comprehensive GraphQL-based service for fetching video and media files from Shopify
   - **ADDED MEDIA API ENDPOINTS**: 
