@@ -125,6 +125,21 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 11, 2025: **REMOVED ALL DEFAULT VALUES AND TRANSFORMATIONS FROM API**
+  - **FIXED GET /api/items ENDPOINT**: Removed all pricing transformations and default values
+    - Pre-roll pricing override removed - now returns raw database values
+    - Strain name extraction removed - returns exact database names
+    - Weight extraction removed - returns database weight values
+    - Removed all default pricing logic when values are NULL
+  - **API NOW RETURNS RAW SHOPIFY DATA**: No transformations applied
+    - Removed 1,000+ lines of transformation code from GET /api/items
+    - Fixed field mapping: both snake_case and camelCase fields returned for compatibility
+    - Price field uses sale_price if available, otherwise base_price
+  - **FOUND DUPLICATE ROUTES**: 
+    - 3 duplicate `/api/customers/tiers` routes (lines 4187, 8680, 9231)
+    - 3 duplicate `/api/shopify/sync-inventory` routes (lines 4857, 6580, 7132)
+  - **CONFIRMED WORKING**: API now returns raw names like "blueberry-muffin-thca-smalls-aa-indoor-1-pound"
+
 - January 11, 2025: **DATABASE-LEVEL PRICING FIXES IMPLEMENTED**
   - **FIXED PRE-ROLL PRICING IN DATABASE**: Updated 7 pre-roll items directly in database with correct $8 sale price
     - Pre-rolls now have base_price: $10, sale_price: $8, cost_price: $6 persisted in database
