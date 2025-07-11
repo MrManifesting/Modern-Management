@@ -169,8 +169,10 @@ async function startServer() {
     try {
       if (app.get("env") === "development") {
         // Create server first for Vite
-        server = app.listen(port, "0.0.0.0", () => {
+        server = app.listen(port, () => {
           log(`serving on port ${port}`, 'startup');
+          // Force process to stay alive for Replit detection
+          process.send?.('ready');
         });
         
         // Handle server startup errors
@@ -190,8 +192,10 @@ async function startServer() {
         log('Static file serving setup complete', 'startup');
         
         // Start server after static setup
-        server = app.listen(port, "0.0.0.0", () => {
+        server = app.listen(port, () => {
           log(`serving on port ${port}`, 'startup');
+          // Force process to stay alive for Replit detection
+          process.send?.('ready');
         });
         
         // Handle server startup errors
