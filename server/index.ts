@@ -131,25 +131,24 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
 });
 
 // Optimized startup function for Replit
-async function startServer() {
+function startServer() {
   const port = parseInt(process.env.PORT || '5000', 10);
   
   log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`, 'startup');
   log('Using existing database connection', 'startup');
 
-  // Initialize GraphQL server BEFORE creating HTTP server
-  try {
-    const graphqlServer = await createGraphQLServer();
+  // Initialize GraphQL server
+  createGraphQLServer().then(graphqlServer => {
     app.use('/graphql', cors({
       origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
       credentials: true
     }), getGraphQLMiddleware(graphqlServer));
     log('GraphQL server initialized at /graphql', 'startup');
-  } catch (graphqlError) {
+  }).catch(graphqlError => {
     log(`GraphQL setup failed: ${graphqlError}`, 'startup');
-  }
+  });
 
-  // Register routes BEFORE creating HTTP server
+  // Register routes
   try {
     registerRoutes(app, storage);
     log('Routes registered successfully', 'startup');
@@ -170,93 +169,82 @@ async function startServer() {
     res.status(404).json({ error: 'API endpoint not found' });
   });
 
-  // Setup Vite in development mode BEFORE creating HTTP server
+  // Create server
+  const server = http.createServer(app);
+
+  // Configure server
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
+
+  // Set up error handling
+  server.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      log(`Port ${port} is already in use`, 'startup-error');
+    } else {
+      log(`Server startup error: ${error.message}`, 'startup-error');
+    }
+    process.exit(1);
+  });
+
+  // Graceful shutdown handlers
+  const cleanup = () => {
+    log("Server shutting down...", "server-shutdown");
+    server.close(() => {
+      log("Server closed successfully", "server-shutdown");
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+  process.on('uncaughtException', (error) => {
+    log(`Uncaught exception: ${error.message}`, 'startup-error');
+    console.error('Full error:', error);
+    cleanup();
+  });
+  process.on('unhandledRejection', (reason, promise) => {
+    log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
+    console.error('Full rejection:', reason);
+  });
+
+  // Setup Vite in development mode
   if (process.env.NODE_ENV === 'development') {
     log('Setting up Vite development server...', 'startup');
-    // Create server for Vite
-    const server = http.createServer(app);
-    
-    try {
-      await setupVite(app, server);
+    setupVite(app, server).then(() => {
       log('Vite development server setup complete', 'startup');
-    } catch (viteError) {
+    }).catch(viteError => {
       log(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup');
-    }
-    
-    // Configure server
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
-    
-    // Set up error handling
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${port} is already in use`, 'startup-error');
-      } else {
-        log(`Server startup error: ${error.message}`, 'startup-error');
-      }
-      process.exit(1);
     });
-    
-    // Start server with everything initialized
-    server.listen(port, '0.0.0.0', () => {
-      log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
-      if (process.send) {
-        process.send('ready');
-      }
-    });
-    
-    // Graceful shutdown
-    const cleanup = () => {
-      log("Server shutting down...", "server-shutdown");
-      server.close(() => {
-        log("Server closed successfully", "server-shutdown");
-        process.exit(0);
-      });
-    };
-    
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
-    process.on('uncaughtException', (error) => {
-      log(`Uncaught exception: ${error.message}`, 'startup-error');
-      console.error('Full error:', error);
-      cleanup();
-    });
-    process.on('unhandledRejection', (reason, promise) => {
-      log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
-      console.error('Full rejection:', reason);
-    });
-    
   } else {
     serveStatic(app);
     log('Static file serving setup complete', 'startup');
-    
-    // Create server for production
-    const server = http.createServer(app);
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
-    
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${port} is already in use`, 'startup-error');
-      } else {
-        log(`Server startup error: ${error.message}`, 'startup-error');
-      }
-      process.exit(1);
-    });
-    
-    server.listen(port, '0.0.0.0', () => {
-      log(`serving on 0.0.0.0:${port}`, 'startup');
-      if (process.send) {
-        process.send('ready');
-      }
-    });
   }
 
-  log('Server startup completed successfully', 'startup');
+  // Start server and keep it alive
+  server.listen(port, '0.0.0.0', () => {
+    log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
+    log('Server startup completed successfully', 'startup');
+    if (process.send) {
+      process.send('ready');
+    }
+  });
 }
 
 // Start the server
-startServer().catch((error) => {
+try {
+  startServer();
+} catch (error) {
   console.error('Failed to start server:', error);
   process.exit(1);
+}
+
+// Keep process alive
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  process.exit(0);
 });
