@@ -1,0 +1,227 @@
+
+
+
+22
+
+Gold Standard
+Home
+Orders
+New
+219
+Products
+Customers
+Content
+Finance
+Analytics
+Marketing
+Discounts
+
+Sales channels
+
+Online Store
+
+Apps
+
+Add
+Settings
+Sessions
+99K
+
+76%
+Total sales
+$1M
+
+0.3%
+Orders
+3K
+
+79%
+Conversion rate
+2.58%
+
+10%
+Jun 10
+Jun 15
+Jun 20
+Jun 25
+Jun 30
+Jul 5
+0
+2K
+4K
+6K
+Jun 10
+Jun 11
+Jun 12
+Jun 13
+Jun 14
+Jun 15
+Jun 16
+Jun 17
+Jun 18
+Jun 19
+Jun 20
+Jun 21
+Jun 22
+Jun 23
+Jun 24
+Jun 25
+Jun 26
+Jun 27
+Jun 28
+Jun 29
+Jun 30
+Jul 1
+Jul 2
+Jul 3
+Jul 4
+Jul 5
+Jul 6
+Jul 7
+Jul 8
+Jul 9
+Jun 10–Jul 9, 2025
+2.6K
+2.7K
+2.4K
+3K
+2.6K
+2.4K
+2.8K
+2.9K
+3.2K
+3K
+3.3K
+2.8K
+3.1K
+4K
+4.1K
+3.6K
+3.6K
+3.6K
+3.2K
+3.3K
+3.9K
+3.7K
+3.8K
+4.1K
+3.2K
+3.2K
+3.6K
+4.2K
+3.8K
+3.7K
+May 11–Jun 9, 2025
+1.4K
+1.7K
+1.5K
+1.7K
+1.6K
+1.6K
+1.6K
+1.4K
+1.7K
+1.9K
+1.8K
+1.9K
+2K
+1.5K
+1.6K
+1.7K
+2.2K
+1.9K
+2.1K
+2.1K
+2.2K
+2.7K
+2K
+2.2K
+2K
+2.2K
+2K
+1.8K
+2K
+2.4K
+
+Jun 10–Jul 9, 2025
+
+May 11–Jun 9, 2025
+Boost your buyer conversions
+Maximize your sales with the customized checkout options of Shopify Plus, designed to enhance your customer's experience.
+
+Start a 2-month trial of Plus for $399 USD/month
+Get access to Plus-exclusive features like B2B, advanced checkout customizations, 24/7 priority support, and Shopify Audiences for just $399 USD/month.
+
+
+
+Your abandoned cart rate went up in June
+Abandoned cart rate in June
+70.5%
+8%
+Set up an abandoned cart email
+Automated abandoned cart emails can improve conversion by 3-14%. Add an abandoned cart automation to remind visitors to check out.
+Meet Horizon, the new theme foundation
+Create your storefront vision with more design freedom, built-in buyer optimizations, and AI-powered customization tools.
+
+
+Grow your email list with Shopify Forms
+Expand your list of contacts and convert new leads with Shopify’s customizable forms tool. Set up pop up, overlay, and in-line forms, for free.
+
+
+Measure your return on ad spend
+Get unbiased insights into your ad performance data right from Shopify. Sync data from important channels, like Google and Instagram, to more easily compare metrics and decide how to improve.
+
+
+Upgrade your Thank you and Order status pages by August 26, 2026
+Follow the upgrade guide to set up the new pages based on your existing apps and customizations. Upgrade now for a faster, more secure post-purchase experience.
+
+
+Put your marketing on autopilot
+Send the right message at the right time with marketing automations. Get started in minutes with templates for welcome series and abandoned cart emails.
+
+
+Track all marketing in one place with Campaigns
+Manage and measure your marketing across channels with Campaigns, create QR codes and sharable links, and set up UTM parameters – all within Shopify
+
+
+Get help growing your business with Shopify Partners
+Connect with a network of skilled professionals offering a wide range of services to help you grow faster.
+
+Connect with customers quickly using Shopify Email
+Create branded emails in minutes with a drag-and-drop editor and templates that showcase products, checkout links, and discounts. Send your first 10,000 emails free every month.
+
+
+Simplify wholesale buying with Faire’s new Shopify app
+Stock your store with unique, high-quality products from independent brands around the world and seamlessly sync them to Shopify. No subscription required.
+
+
+Customize order status and thank you pages with apps
+All plans can now use apps to add functionality to the order status and thank you pages in a way that's secure and upgrade-safe, from the checkout and accounts editor.
+
+
+Buy labels faster by setting preferred carrier services
+Save time when buying shipping labels by customizing your preferred list of carrier services and turning off the ones you don't use.
+
+
+Boost confidence with split shipping in checkout
+Give your customers more clarity at checkout by showing them when an order will be delivered in multiple shipments.
+
+
+All caught up
+Discover more of Shopify
+Browse features, apps, and sales channels to grow your business
+Browse features, apps, and sales channels to grow your business
+
+Drive traffic
+Use marketing tools to attract more potential customers.
+
+Improve conversion
+Convert more customers faster with built-in tools.
+
+Increase order value
+Boost sales by expanding to new channels, offering bundles, and more.
+
+GraphQL Query For Active Inventory Items
+
+
+Please provide a graph QL query that will return all active inventory items with available quantities and their associated product and var
