@@ -3129,6 +3129,17 @@ export function registerRoutes(app: any, storage: any) {
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       const imported = [];
+      const skipped = [];
+      const updated = [];
+      
+      // Get existing items for duplicate detection
+      const existingItems = await storage.getItems();
+      const existingSkus = new Set(existingItems.map(item => item.sku?.toLowerCase()).filter(Boolean));
+      const existingNames = new Set(existingItems.map(item => item.name?.toLowerCase()).filter(Boolean));
+      
+      // Track items being imported in this batch
+      const importedSkusThisBatch = new Set<string>();
+      const importedNamesThisBatch = new Set<string>();
       
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
@@ -3140,26 +3151,86 @@ export function registerRoutes(app: any, storage: any) {
               itemData.name = values[index];
             } else if (header.toLowerCase().includes('price')) {
               itemData.base_price = parseFloat(values[index]) || 0;
+              itemData.sale_price = itemData.base_price; // Set sale_price same as base_price
             } else if (header.toLowerCase().includes('quantity')) {
               itemData.quantity = parseInt(values[index]) || 0;
             } else if (header.toLowerCase().includes('sku')) {
               itemData.sku = values[index];
+            } else if (header.toLowerCase().includes('barcode')) {
+              itemData.barcode = values[index];
+            } else if (header.toLowerCase().includes('category')) {
+              itemData.category = values[index];
+            } else if (header.toLowerCase().includes('weight')) {
+              itemData.weight = values[index];
             }
           }
         });
 
         if (itemData.name) {
-          itemData.status = 'draft'; // Import as drafts
-          itemData.description = `Imported from CSV - ${itemData.name}`;
-          const newItem = await storage.createItem(itemData);
-          imported.push(newItem);
+          const nameLower = itemData.name.toLowerCase();
+          const skuLower = itemData.sku?.toLowerCase();
+          
+          // Check for duplicates
+          const existingItem = existingItems.find(item => {
+            // SKU match (case-insensitive)
+            if (skuLower && item.sku?.toLowerCase() === skuLower) {
+              return true;
+            }
+            // Name match (case-insensitive)
+            if (item.name?.toLowerCase() === nameLower) {
+              return true;
+            }
+            return false;
+          });
+          
+          // Check for duplicates within this batch
+          const isDuplicateInBatch = (skuLower && importedSkusThisBatch.has(skuLower)) || 
+                                     importedNamesThisBatch.has(nameLower);
+          
+          if (existingItem) {
+            // Update existing item instead of creating duplicate
+            await storage.updateItem(existingItem.id, {
+              ...itemData,
+              updatedAt: new Date()
+            });
+            updated.push({
+              name: itemData.name,
+              id: existingItem.id,
+              reason: 'Updated existing item'
+            });
+          } else if (isDuplicateInBatch) {
+            skipped.push({
+              name: itemData.name,
+              reason: 'Duplicate within this import batch'
+            });
+          } else {
+            // Create new item
+            itemData.status = 'draft'; // Import as drafts
+            itemData.description = itemData.description || `Imported from CSV - ${itemData.name}`;
+            const newItem = await storage.createItem(itemData);
+            imported.push(newItem);
+            
+            // Track to prevent batch duplicates
+            if (skuLower) importedSkusThisBatch.add(skuLower);
+            importedNamesThisBatch.add(nameLower);
+          }
         }
       }
 
       res.json({
         success: true,
-        message: `Successfully imported ${imported.length} items`,
-        imported: imported.length
+        message: `Import completed: ${imported.length} new, ${updated.length} updated, ${skipped.length} skipped`,
+        stats: {
+          imported: imported.length,
+          updated: updated.length,
+          skipped: skipped.length,
+          total: lines.length - 1 // Exclude header
+        },
+        details: {
+          imported: imported.slice(0, 5), // Show first 5
+          updated: updated.slice(0, 5),
+          skipped: skipped.slice(0, 5)
+        }
       });
     } catch (error) {
       log(`CSV import error: ${error}`, 'csv-import');
@@ -4642,8 +4713,21 @@ export function registerRoutes(app: any, storage: any) {
 
       // Get all existing items once for efficient lookup
       const existingItems = await storage.getItems();
-      const existingSkus = new Set(existingItems.map(item => item.sku).filter(Boolean));
-      const existingShopifyIds = new Set(existingItems.map(item => item.shopifyVariantId).filter(Boolean));
+      
+      // Create comprehensive duplicate detection sets (case-insensitive where appropriate)
+      const existingSkus = new Set(existingItems.map(item => item.sku?.toLowerCase()).filter(Boolean));
+      const existingShopifyVariantIds = new Set(existingItems.map(item => item.shopifyVariantId?.toString()).filter(Boolean));
+      const existingShopifyProductIds = new Set(existingItems.map(item => item.shopifyId?.toString()).filter(Boolean));
+      const existingBarcodes = new Set(existingItems.map(item => item.barcode?.toLowerCase()).filter(Boolean));
+      const existingNameWeightCombos = new Set(
+        existingItems.map(item => `${item.name?.toLowerCase()}_${item.weight?.toLowerCase()}`).filter(Boolean)
+      );
+      
+      // Also track items being imported in this batch to prevent duplicates within the same import
+      const importedSkusThisBatch = new Set<string>();
+      const importedVariantIdsThisBatch = new Set<string>();
+      const importedBarcodesThisBatch = new Set<string>();
+      const importedNameWeightThisBatch = new Set<string>();
 
       // Process each Shopify product
       for (const product of allProducts) {
@@ -4652,30 +4736,80 @@ export function registerRoutes(app: any, storage: any) {
             try {
               // Generate SKU with fallback
               const generatedSku = variant.sku || `SHOPIFY-${product.id}-${variant.id}`;
+              const skuLower = generatedSku.toLowerCase();
+              const variantIdStr = variant.id.toString();
+              const barcodeLower = variant.barcode?.toLowerCase();
+              const itemName = variant.title || product.title;
+              const nameWeightCombo = `${itemName.toLowerCase()}_${variant.weight || 'no-weight'}`.toLowerCase();
               
-              // Check for duplicates by multiple criteria
-              const existingItem = existingItems.find(item => 
-                item.sku === variant.sku || 
-                item.sku === generatedSku ||
-                (item.shopifyVariantId && item.shopifyVariantId.toString() === variant.id.toString()) ||
-                (item.shopifyId && item.shopifyId.toString() === product.id.toString())
-              );
+              // Comprehensive duplicate check across multiple fields
+              const isDuplicateSku = existingSkus.has(skuLower) || 
+                                   (variant.sku && existingSkus.has(variant.sku.toLowerCase())) ||
+                                   importedSkusThisBatch.has(skuLower);
+              
+              const isDuplicateVariantId = existingShopifyVariantIds.has(variantIdStr) ||
+                                         importedVariantIdsThisBatch.has(variantIdStr);
+              
+              const isDuplicateBarcode = barcodeLower && (
+                                       existingBarcodes.has(barcodeLower) ||
+                                       importedBarcodesThisBatch.has(barcodeLower)
+                                     );
+              
+              const isDuplicateNameWeight = existingNameWeightCombos.has(nameWeightCombo) ||
+                                          importedNameWeightThisBatch.has(nameWeightCombo);
+              
+              // Find existing item with more comprehensive checks
+              const existingItem = existingItems.find(item => {
+                // SKU checks (case-insensitive)
+                if (item.sku?.toLowerCase() === skuLower || 
+                    (variant.sku && item.sku?.toLowerCase() === variant.sku.toLowerCase())) {
+                  return true;
+                }
+                
+                // Variant ID check
+                if (item.shopifyVariantId?.toString() === variantIdStr) {
+                  return true;
+                }
+                
+                // Product ID check for single-variant products
+                if (item.shopifyId?.toString() === product.id.toString() && 
+                    product.variants.length === 1) {
+                  return true;
+                }
+                
+                // Barcode check (case-insensitive)
+                if (barcodeLower && item.barcode?.toLowerCase() === barcodeLower) {
+                  return true;
+                }
+                
+                // Name + weight combination check (case-insensitive)
+                if (item.name?.toLowerCase() === itemName.toLowerCase() && 
+                    item.weight === variant.weight) {
+                  return true;
+                }
+                
+                return false;
+              });
 
-              // Skip if any form of duplicate exists
-              if (existingItem || existingSkus.has(generatedSku) || 
-                  (variant.sku && existingSkus.has(variant.sku)) ||
-                  existingShopifyIds.has(variant.id.toString())) {
+              // Skip if ANY duplicate indicator is found
+              if (existingItem || isDuplicateSku || isDuplicateVariantId || 
+                  isDuplicateBarcode || isDuplicateNameWeight) {
                 skippedCount++;
-                log(`Skipped duplicate: ${generatedSku} (existing item: ${existingItem?.id || 'N/A'})`, 'shopify-import');
+                const reason = existingItem ? `existing item ID: ${existingItem.id}` :
+                             isDuplicateSku ? 'duplicate SKU' :
+                             isDuplicateVariantId ? 'duplicate variant ID' :
+                             isDuplicateBarcode ? 'duplicate barcode' :
+                             'duplicate name/weight combination';
+                log(`Skipped duplicate: ${itemName} - ${generatedSku} (${reason})`, 'shopify-import');
                 continue;
               }
 
               // Skip items with bad data patterns
-              const itemName = variant.title || product.title;
-              const nameLower = itemName.toLowerCase();
+              // itemName already declared above
+              const itemNameLower = itemName.toLowerCase();
               
               // Skip weight-only names
-              if (nameLower.match(/^\d+(\.\d+)?\s*(gram|grams|g|oz|ounce|pound|lb)s?$/)) {
+              if (itemNameLower.match(/^\d+(\.\d+)?\s*(gram|grams|g|oz|ounce|pound|lb)s?$/)) {
                 skippedCount++;
                 log(`Skipped weight-only variant: ${itemName}`, 'shopify-import');
                 continue;
@@ -4697,7 +4831,7 @@ export function registerRoutes(app: any, storage: any) {
               
               // Skip suspicious $30 pricing for non-bulk items
               const price = parseFloat(variant.price) || 0;
-              if (price === 30 && !nameLower.includes('pound') && !nameLower.includes('bulk')) {
+              if (price === 30 && !itemNameLower.includes('pound') && !itemNameLower.includes('bulk')) {
                 skippedCount++;
                 log(`Skipped suspicious $30 item: ${itemName}`, 'shopify-import');
                 continue;
@@ -4706,6 +4840,7 @@ export function registerRoutes(app: any, storage: any) {
               const itemData = {
                 name: itemName,
                 sku: generatedSku,
+                barcode: variant.barcode || null,
                 quantity: variant.inventory_quantity || 0,
                 base_price: price,
                 sale_price: price, // Set sale_price same as base_price initially
@@ -4728,12 +4863,22 @@ export function registerRoutes(app: any, storage: any) {
                 updatedCount++;
                 log(`Updated item: ${itemData.name}`, 'shopify-import');
               } else {
-                // Create new item and track the SKU
+                // Create new item and track ALL identifiers to prevent batch duplicates
                 await storage.createItem(itemData);
-                existingSkus.add(generatedSku);
-                existingShopifyIds.add(variant.id.toString());
+                
+                // Update all tracking sets to prevent duplicates within this import batch
+                importedSkusThisBatch.add(skuLower);
+                if (variant.sku) {
+                  importedSkusThisBatch.add(variant.sku.toLowerCase());
+                }
+                importedVariantIdsThisBatch.add(variantIdStr);
+                if (barcodeLower) {
+                  importedBarcodesThisBatch.add(barcodeLower);
+                }
+                importedNameWeightThisBatch.add(nameWeightCombo);
+                
                 importedCount++;
-                log(`Imported new item: ${itemData.name}`, 'shopify-import');
+                log(`Imported new item: ${itemData.name} (SKU: ${generatedSku}, Variant: ${variantIdStr})`, 'shopify-import');
               }
             } catch (error) {
               skippedCount++;
