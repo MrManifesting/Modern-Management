@@ -50,6 +50,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add health check endpoint for Replit port detection
+app.get("/", (req: Request, res: Response) => {
+  res.send("Server is running");
+});
+
+app.get("/health", (req: Request, res: Response) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Add webhook endpoints before authentication middleware
 app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
   try {
@@ -169,10 +178,14 @@ async function startServer() {
     try {
       if (app.get("env") === "development") {
         // Create server first for Vite
-        server = app.listen(port, () => {
-          log(`serving on port ${port}`, 'startup');
-          // Force process to stay alive for Replit detection
-          process.send?.('ready');
+        server = app.listen(port, '0.0.0.0', () => {
+          log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
+          // Add a small delay to ensure server is fully ready
+          setTimeout(() => {
+            log(`Server confirmed running on port ${port}`, 'startup');
+            // Force process to stay alive for Replit detection
+            process.send?.('ready');
+          }, 100);
         });
         
         // Handle server startup errors
@@ -192,7 +205,7 @@ async function startServer() {
         log('Static file serving setup complete', 'startup');
         
         // Start server after static setup
-        server = app.listen(port, () => {
+        server = app.listen(port, '0.0.0.0', () => {
           log(`serving on port ${port}`, 'startup');
           // Force process to stay alive for Replit detection
           process.send?.('ready');
