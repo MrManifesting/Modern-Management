@@ -163,31 +163,46 @@ async function startServer() {
 
     // Server configuration
     const port = parseInt(requiredEnvVars.PORT, 10);
-    const server = app.listen({
-      port,
-      host: "0.0.0.0",
-    }, () => {
-      log(`serving on port ${port}`, 'startup');
-    });
-
-    // Handle server startup errors
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${port} is already in use`, 'startup-error');
-      } else {
-        log(`Server startup error: ${error.message}`, 'startup-error');
-      }
-      process.exit(1);
-    });
-
-    // Setup Vite or static serving with error handling
+    let server: any;
+    
+    // Setup Vite or static serving BEFORE starting server to avoid timing issues
     try {
       if (app.get("env") === "development") {
+        // Create server first for Vite
+        server = app.listen(port, "0.0.0.0", () => {
+          log(`serving on port ${port}`, 'startup');
+        });
+        
+        // Handle server startup errors
+        server.on('error', (error: any) => {
+          if (error.code === 'EADDRINUSE') {
+            log(`Port ${port} is already in use`, 'startup-error');
+          } else {
+            log(`Server startup error: ${error.message}`, 'startup-error');
+          }
+          process.exit(1);
+        });
+        
         await setupVite(app, server);
         log('Vite development server setup complete', 'startup');
       } else {
         serveStatic(app);
         log('Static file serving setup complete', 'startup');
+        
+        // Start server after static setup
+        server = app.listen(port, "0.0.0.0", () => {
+          log(`serving on port ${port}`, 'startup');
+        });
+        
+        // Handle server startup errors
+        server.on('error', (error: any) => {
+          if (error.code === 'EADDRINUSE') {
+            log(`Port ${port} is already in use`, 'startup-error');
+          } else {
+            log(`Server startup error: ${error.message}`, 'startup-error');
+          }
+          process.exit(1);
+        });
       }
     } catch (viteError) {
       log(`Vite/Static setup error: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup-error');
@@ -197,10 +212,14 @@ async function startServer() {
     // Setup cleanup handler for graceful shutdown
     const cleanup = () => {
       log("Server shutting down, cleaning up resources...", "server-shutdown");
-      server.close(() => {
-        log("Server closed successfully", "server-shutdown");
+      if (server) {
+        server.close(() => {
+          log("Server closed successfully", "server-shutdown");
+          process.exit(0);
+        });
+      } else {
         process.exit(0);
-      });
+      }
     };
     
     // Handle graceful shutdown
