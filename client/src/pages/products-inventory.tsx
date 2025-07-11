@@ -1306,7 +1306,7 @@ const ProductsInventoryPage: React.FC = () => {
               )}
             </div>
             <div className="flex-1">
-              <CardTitle className="text-lg">{extractStrainName(product.name)}</CardTitle>
+              <CardTitle className="text-lg">{product.name}</CardTitle>
               <div className="flex flex-wrap gap-2 mt-1">
                 <Badge variant="outline">{product.category}</Badge>
                 <Badge variant={product.status?.includes("Low") ? "destructive" : "default"}>
@@ -2267,7 +2267,7 @@ const ProductsInventoryPage: React.FC = () => {
                                       />
                                     </div>
                                     <div className="mt-1 px-1 text-xs font-medium text-center text-ellipsis overflow-hidden whitespace-nowrap max-w-full">
-                                      {extractStrainName(product.name)}
+                                      {product.name}
                                     </div>
                                     {/* Triangle pointer */}
                                     <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-border"></div>
@@ -2279,7 +2279,7 @@ const ProductsInventoryPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium">{extractStrainName(product.name)}</div>
+                              <div className="font-medium">{product.name}</div>
                               <div className="text-sm text-muted-foreground">{product.subcategory}</div>
                             </td>
                             <td className="py-3 px-4">
