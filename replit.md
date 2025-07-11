@@ -125,6 +125,18 @@ This is a comprehensive inventory management system built with Node.js, React, a
 
 ## Recent Changes
 
+- January 11, 2025: **DATABASE-LEVEL PRICING FIXES IMPLEMENTED**
+  - **FIXED PRE-ROLL PRICING IN DATABASE**: Updated 7 pre-roll items directly in database with correct $8 sale price
+    - Pre-rolls now have base_price: $10, sale_price: $8, cost_price: $6 persisted in database
+    - Previous issue: pricing was only applied at API response level, not persisted
+    - Confirmed: items like "white-gushers--thca---1g---bulk-prerolls" now correctly show $8 in database
+  - **IDENTIFIED PRICING CONFUSION**: THCa products (non-prerolls) are correctly priced at $30
+    - THCa flower products like "Gumbo Micros Thca" and "Candy Gas Thca" should be $30
+    - Only THCa pre-rolls should be $8 - this distinction is now properly enforced
+  - **DISCOVERED NULL PRICE ISSUE**: Found 1048 items with NULL base_price or sale_price values
+    - Created comprehensive pricing fix endpoints for batch updates
+    - Default pricing logic based on product category implemented
+
 - January 12, 2025: **COMPLETE FIX: STRAIN NAME EXTRACTION AND PRE-ROLL PRICING ISSUES RESOLVED**
   - **FIXED "CANNABIS PRODUCT" DISPLAY FOR SHOPIFY IMPORTS**: Shopify Import items with weight-only names now show proper strain names
     - Enhanced extraction to parse strain names from image filenames for variants
