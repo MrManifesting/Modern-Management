@@ -2427,6 +2427,42 @@ export function registerRoutes(app: any, storage: any) {
   });
 
   // Shopify Media API endpoints
+  // Get videos associated with a specific inventory item
+  app.get("/api/items/:itemId/videos", async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      
+      // Get the item to find its Shopify product ID
+      const item = await storage.getItem(parseInt(itemId));
+      if (!item || !item.shopifyId) {
+        return res.json({ 
+          success: true, 
+          videos: [],
+          images: [],
+          message: 'No Shopify product linked to this item' 
+        });
+      }
+      
+      // Get media for this specific product
+      const mediaService = await import('./services/shopify-media-service');
+      const result = await mediaService.shopifyMediaService.getProductMedia(item.shopifyId);
+      
+      res.json({
+        success: true,
+        videos: result.videos || [],
+        images: result.images || [],
+        itemName: item.name,
+        shopifyProductId: item.shopifyId
+      });
+    } catch (error) {
+      log(`Error fetching item videos: ${error}`, 'shopify-media');
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch item videos' 
+      });
+    }
+  });
+
   app.get("/api/shopify/media/videos", async (req: Request, res: Response) => {
     try {
       const { shopifyMediaService } = await import('./services/shopify-media-service');
@@ -4595,7 +4631,8 @@ export function registerRoutes(app: any, storage: any) {
               sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
               quantity: variant.inventory_quantity || 0,
               base_price: parseFloat(variant.price) || 0,
-              cost_price: parseFloat(variant.compare_at_price) || 0,
+              sale_price: parseFloat(variant.price) || 0, // Set sale_price same as base_price
+              cost_price: parseFloat(variant.compare_at_price) || parseFloat(variant.price) * 0.6 || 0, // If no compare price, use 60% of price
               category: product.product_type || 'Shopify Import',
               brand: product.vendor || 'Gold Standard',
               status: product.status === 'active' && variant.inventory_quantity > 0 ? 'active' : 'draft',
@@ -4603,6 +4640,7 @@ export function registerRoutes(app: any, storage: any) {
               shopifyVariantId: variant.id,
               weight: variant.weight || null,
               images: product.images?.map((img: any) => img.src) || [],
+              imageUrl: product.images?.[0]?.src || null, // Add primary image URL
               thca_percentage: extractTHCaPercentage(product.title),
               description: product.body_html || '',
               tags: product.tags || ''
