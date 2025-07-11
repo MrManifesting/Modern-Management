@@ -15,7 +15,8 @@ import {
   Menu,
   FileSpreadsheet,
   CreditCard,
-  Crown
+  Crown,
+  Film
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -98,6 +99,11 @@ export default function Sidebar({ expanded }: SidebarProps) {
       title: "Menu Generator",
       icon: <Menu className="h-5 w-5" />,
       path: "/menu-generator",
+    },
+    {
+      title: "Media Gallery",
+      icon: <Film className="h-5 w-5" />,
+      path: "/media-gallery",
     },
     {
       title: "AI Assistant",
