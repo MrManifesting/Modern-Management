@@ -194,98 +194,6 @@ var init_google_sheets_service = __esm({
   }
 });
 
-// server/services/weight-service.ts
-var weight_service_exports = {};
-__export(weight_service_exports, {
-  WeightService: () => WeightService,
-  weightService: () => weightService
-});
-var WeightService, weightService;
-var init_weight_service = __esm({
-  "server/services/weight-service.ts"() {
-    WeightService = class {
-      /**
-       * Extract weight from Shopify GraphQL product data (PRIORITY 1)
-       */
-      extractFromShopify(shopifyProduct) {
-        if (!shopifyProduct?.variants?.edges?.[0]?.node) {
-          return null;
-        }
-        const variant = shopifyProduct.variants.edges[0].node;
-        const weight = variant.weight;
-        const unit = variant.weightUnit?.toLowerCase();
-        if (!weight || !unit) {
-          return null;
-        }
-        if (unit === "grams" || unit === "g") {
-          if (weight >= 453.592) {
-            const pounds = Math.round(weight / 453.592 * 4) / 4;
-            return `${pounds} pound${pounds !== 1 ? "s" : ""}`;
-          } else if (weight >= 28.3495) {
-            const ounces = Math.round(weight / 28.3495 * 4) / 4;
-            return `${ounces} ounce${ounces !== 1 ? "s" : ""}`;
-          } else {
-            return `${weight}g`;
-          }
-        } else if (unit === "pounds" || unit === "lb") {
-          return `${weight} pound${weight !== 1 ? "s" : ""}`;
-        } else if (unit === "ounces" || unit === "oz") {
-          if (weight >= 16) {
-            const pounds = Math.round(weight / 16 * 4) / 4;
-            return `${pounds} pound${pounds !== 1 ? "s" : ""}`;
-          } else {
-            return `${weight} ounce${weight !== 1 ? "s" : ""}`;
-          }
-        }
-        return `${weight} ${unit}`;
-      }
-      /**
-       * Extract weight from product name (FALLBACK ONLY)
-       * CRITICAL: This only matches EXPLICIT weight mentions - no assumptions
-       */
-      extractFromProductName(productName) {
-        if (!productName) return "Weight not specified";
-        const nameLower = productName.toLowerCase();
-        if (nameLower.includes("2 gram") || nameLower.includes("2g ")) return "2 grams";
-        if (nameLower.includes("3 gram") || nameLower.includes("3g ")) return "3 grams";
-        if (nameLower.includes("3.5 gram") || nameLower.includes("3.5g")) return "3.5 grams";
-        if (nameLower.includes("half gram") || nameLower.includes("0.5g")) return "half gram";
-        if (nameLower.includes("1 gram") || nameLower.includes("1g ")) return "1 gram";
-        if (nameLower.includes("4 gram") || nameLower.includes("4g ")) return "4 grams";
-        if (nameLower.includes("5 gram") || nameLower.includes("5g ")) return "5 grams";
-        if (nameLower.includes("7 gram") || nameLower.includes("7g ")) return "7 grams";
-        if (nameLower.includes("14 gram") || nameLower.includes("14g")) return "14 grams";
-        if (nameLower.includes("28 gram") || nameLower.includes("28g")) return "28 grams";
-        if (nameLower.includes("eighth") || nameLower.includes("1/8")) return "eighth";
-        if (nameLower.includes("quarter ounce") || nameLower.includes("1/4 ounce")) return "quarter ounce";
-        if (nameLower.includes("half ounce") || nameLower.includes("1/2 ounce")) return "half ounce";
-        if (nameLower.includes("1 ounce") || nameLower.includes("one ounce")) return "1 ounce";
-        if (nameLower.includes("quarter pound") || nameLower.includes("1/4 pound")) return "quarter pound";
-        if (nameLower.includes("half pound") || nameLower.includes("1/2 pound")) return "half pound";
-        if (nameLower.includes("1 pound") || nameLower.includes("one pound")) return "1 pound";
-        if ((nameLower.includes("bulk flower") || nameLower.includes("book flower")) && !nameLower.includes("gram") && !nameLower.includes("ounce")) {
-          return "1 pound";
-        }
-        if (nameLower.includes("100 count")) return "100 count";
-        if (nameLower.includes("50 count")) return "50 count";
-        if (nameLower.includes("25 count")) return "25 count";
-        return "Weight not specified";
-      }
-      /**
-       * Get the best available weight using Shopify data first, product name second
-       */
-      getBestWeight(shopifyProduct, productName) {
-        const shopifyWeight = this.extractFromShopify(shopifyProduct);
-        if (shopifyWeight) {
-          return shopifyWeight;
-        }
-        return this.extractFromProductName(productName);
-      }
-    };
-    weightService = new WeightService();
-  }
-});
-
 // server/utils/logger.ts
 var Logger, logger, log, logInfo, logWarn, logError, logDebug;
 var init_logger = __esm({
@@ -2477,6 +2385,212 @@ var init_shopify = __esm({
   }
 });
 
+// server/services/shopify-media-service.ts
+var shopify_media_service_exports = {};
+__export(shopify_media_service_exports, {
+  ShopifyMediaService: () => ShopifyMediaService,
+  shopifyMediaService: () => shopifyMediaService
+});
+import fetch2 from "node-fetch";
+var ShopifyMediaService, shopifyMediaService;
+var init_shopify_media_service = __esm({
+  "server/services/shopify-media-service.ts"() {
+    ShopifyMediaService = class {
+      constructor() {
+        this.shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || "gold-standard-cbd.myshopify.com";
+        this.accessToken = process.env.SHOPIFY_ACCESS_TOKEN || "";
+      }
+      async fetchVideoFiles(first = 50, query) {
+        const graphqlQuery = `
+      query GetVideoFiles($first: Int!, $query: String) {
+        files(first: $first, query: $query) {
+          nodes {
+            id
+            ... on Video {
+              filename
+              duration
+              sources {
+                url
+                format
+                mimeType
+                width
+                height
+              }
+              originalSource {
+                url
+                format
+                mimeType
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `;
+        const variables = {
+          first,
+          query: query || "media_type:video"
+        };
+        try {
+          const response = await fetch2(`https://${this.shopifyDomain}/admin/api/2023-10/graphql.json`, {
+            method: "POST",
+            headers: {
+              "X-Shopify-Access-Token": this.accessToken,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              query: graphqlQuery,
+              variables
+            })
+          });
+          if (!response.ok) {
+            throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
+          }
+          const data = await response.json();
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+            throw new Error("GraphQL query failed");
+          }
+          const videoFiles = data.data.files.nodes.filter((node) => node.filename);
+          return videoFiles;
+        } catch (error) {
+          console.error("Error fetching video files:", error);
+          throw error;
+        }
+      }
+      async fetchProductVideos(productId) {
+        const graphqlQuery = `
+      query GetProductMedia($id: ID!) {
+        product(id: $id) {
+          id
+          title
+          media(first: 20) {
+            edges {
+              node {
+                id
+                mediaContentType
+                ... on Video {
+                  sources {
+                    url
+                    format
+                    mimeType
+                    width
+                    height
+                  }
+                  originalSource {
+                    url
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+        const variables = {
+          id: productId
+        };
+        try {
+          const response = await fetch2(`https://${this.shopifyDomain}/admin/api/2023-10/graphql.json`, {
+            method: "POST",
+            headers: {
+              "X-Shopify-Access-Token": this.accessToken,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              query: graphqlQuery,
+              variables
+            })
+          });
+          if (!response.ok) {
+            throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
+          }
+          const data = await response.json();
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+            throw new Error("GraphQL query failed");
+          }
+          return data.data.product;
+        } catch (error) {
+          console.error("Error fetching product videos:", error);
+          throw error;
+        }
+      }
+      async fetchAllMediaFiles(first = 50) {
+        const graphqlQuery = `
+      query GetAllMedia($first: Int!) {
+        files(first: $first) {
+          nodes {
+            id
+            alt
+            createdAt
+            fileStatus
+            ... on GenericFile {
+              url
+            }
+            ... on MediaImage {
+              image {
+                url
+                width
+                height
+              }
+            }
+            ... on Video {
+              filename
+              duration
+              sources {
+                url
+                format
+                mimeType
+                width
+                height
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `;
+        const variables = {
+          first
+        };
+        try {
+          const response = await fetch2(`https://${this.shopifyDomain}/admin/api/2023-10/graphql.json`, {
+            method: "POST",
+            headers: {
+              "X-Shopify-Access-Token": this.accessToken,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              query: graphqlQuery,
+              variables
+            })
+          });
+          if (!response.ok) {
+            throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
+          }
+          const data = await response.json();
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+            throw new Error("GraphQL query failed");
+          }
+          return data.data.files.nodes;
+        } catch (error) {
+          console.error("Error fetching media files:", error);
+          throw error;
+        }
+      }
+    };
+    shopifyMediaService = new ShopifyMediaService();
+  }
+});
+
 // server/services/comprehensive-menu-generator.ts
 var comprehensive_menu_generator_exports = {};
 __export(comprehensive_menu_generator_exports, {
@@ -2918,19 +3032,109 @@ var init_customer_tiers = __esm({
   }
 });
 
-// server/services/accurate-weight-extractor.ts
-var accurate_weight_extractor_exports = {};
-__export(accurate_weight_extractor_exports, {
-  AccurateWeightExtractor: () => AccurateWeightExtractor
+// server/utils/weight-service.ts
+var weight_service_exports = {};
+__export(weight_service_exports, {
+  WeightService: () => WeightService,
+  extractAccurateWeight: () => extractAccurateWeight,
+  extractWeightFromShopifyData: () => extractWeightFromShopifyData,
+  parseWeightFromProductName: () => parseWeightFromProductName
 });
-var AccurateWeightExtractor;
-var init_accurate_weight_extractor = __esm({
-  "server/services/accurate-weight-extractor.ts"() {
-    AccurateWeightExtractor = class {
+function parseWeightFromProductName(productName) {
+  return WeightService.extractFromProductName(productName).weight;
+}
+function extractWeightFromShopifyData(shopifyData) {
+  return WeightService.extractFromShopifyData(shopifyData).weight;
+}
+function extractAccurateWeight(productName, shopifyData) {
+  return WeightService.extractWeight(productName, shopifyData);
+}
+var log3, WeightService;
+var init_weight_service = __esm({
+  "server/utils/weight-service.ts"() {
+    init_logger();
+    log3 = (message, context = "weight-service") => logger.info(message, context);
+    WeightService = class {
       /**
-       * Extract accurate weight from product name with strict parsing rules
+       * Main entry point - extracts weight from all available sources
        */
-      static extractAccurateWeight(productName, shopifyData) {
+      static extractWeight(productName, shopifyData) {
+        if (shopifyData) {
+          const shopifyWeight = this.extractFromShopifyData(shopifyData);
+          if (shopifyWeight.weight !== "Weight not specified") {
+            return shopifyWeight;
+          }
+        }
+        return this.extractFromProductName(productName);
+      }
+      /**
+       * Extract weight from Shopify variant data
+       */
+      static extractFromShopifyData(shopifyData) {
+        if (!shopifyData?.variants?.edges?.[0]?.node) {
+          return { weight: "Weight not specified", category: "not_specified", source: "fallback" };
+        }
+        const variant = shopifyData.variants.edges[0].node;
+        const weight = variant.weight;
+        const unit = variant.weightUnit?.toLowerCase();
+        if (!weight || !unit) {
+          return { weight: "Weight not specified", category: "not_specified", source: "fallback" };
+        }
+        log3(`Using authentic Shopify weight: ${weight} ${unit}`, "shopify-weight");
+        if (unit === "grams" || unit === "g") {
+          if (weight >= 453.592) {
+            const pounds = Math.round(weight / 453.592 * 4) / 4;
+            return {
+              weight: `${pounds} pound${pounds !== 1 ? "s" : ""}`,
+              category: "pound",
+              source: "shopify_data"
+            };
+          } else if (weight >= 28.3495) {
+            const ounces = Math.round(weight / 28.3495 * 4) / 4;
+            return {
+              weight: `${ounces} ounce${ounces !== 1 ? "s" : ""}`,
+              category: "ounce",
+              source: "shopify_data"
+            };
+          } else {
+            return {
+              weight: `${weight}g`,
+              category: "gram",
+              source: "shopify_data"
+            };
+          }
+        } else if (unit === "pounds" || unit === "lb") {
+          return {
+            weight: `${weight} pound${weight !== 1 ? "s" : ""}`,
+            category: "pound",
+            source: "shopify_data"
+          };
+        } else if (unit === "ounces" || unit === "oz") {
+          if (weight >= 16) {
+            const pounds = Math.round(weight / 16 * 4) / 4;
+            return {
+              weight: `${pounds} pound${pounds !== 1 ? "s" : ""}`,
+              category: "pound",
+              source: "shopify_data"
+            };
+          } else {
+            return {
+              weight: `${weight} ounce${weight !== 1 ? "s" : ""}`,
+              category: "ounce",
+              source: "shopify_data"
+            };
+          }
+        }
+        return {
+          weight: `${weight} ${unit}`,
+          category: "not_specified",
+          source: "shopify_data"
+        };
+      }
+      /**
+       * Extract weight from product name with comprehensive parsing
+       */
+      static extractFromProductName(productName) {
         if (!productName) {
           return { weight: "Weight not specified", category: "not_specified", source: "fallback" };
         }
@@ -2945,222 +3149,88 @@ var init_accurate_weight_extractor = __esm({
             };
           }
         }
-        if (name.includes("gram") || name.includes(" g ") || name.includes("2g") || name.includes("3g")) {
-          if (name.includes("half gram")) {
-            return { weight: "half gram", category: "gram", source: "product_name" };
-          }
-          const gramMatch = name.match(/(\d+(?:\.\d+)?)\s*grams?|(\d+)g(?:\s|$)/i);
-          if (gramMatch) {
-            const grams = gramMatch[1] || gramMatch[2];
+        const gramPatterns = [
+          { pattern: /(\d+(?:\.\d+)?)\s*g(?:ram)?s?\b/i, extract: (match) => `${match[1]} grams` },
+          { pattern: /half\s*gram/i, extract: () => "half gram" },
+          { pattern: /2\s*grams?|2g\b/i, extract: () => "2 grams" },
+          { pattern: /3\.5\s*grams?|3\.5g\b|eighth/i, extract: () => "3.5 grams" },
+          { pattern: /7\s*grams?|7g\b|quarter/i, extract: () => "7 grams" },
+          { pattern: /14\s*grams?|14g\b|half\s*o(?:unce)?z/i, extract: () => "14 grams" },
+          { pattern: /28\s*grams?|28g\b|o(?:unce)?z/i, extract: () => "28 grams" }
+        ];
+        for (const { pattern, extract } of gramPatterns) {
+          const match = productName.match(pattern);
+          if (match) {
             return {
-              weight: `${grams} grams`,
+              weight: extract(match),
               category: "gram",
               source: "product_name"
             };
           }
-          if (name.includes("grams") && !name.includes("pound")) {
-            return { weight: "grams", category: "gram", source: "product_name" };
-          }
         }
-        if (name.includes("ounce") || name.includes(" oz")) {
-          if (name.includes("half ounce") || name.includes("1/2 ounce")) {
-            return { weight: "half ounce", category: "ounce", source: "product_name" };
-          }
-          if (name.includes("quarter ounce") || name.includes("1/4 ounce")) {
-            return { weight: "quarter ounce", category: "ounce", source: "product_name" };
-          }
-          if (name.includes("eighth")) {
-            return { weight: "eighth", category: "ounce", source: "product_name" };
-          }
-          return { weight: "1 ounce", category: "ounce", source: "product_name" };
+        if (name.includes("eighth") || name.includes("1/8")) {
+          return { weight: "3.5 grams", category: "gram", source: "product_name" };
         }
-        if (name.includes("pound") || name.includes(" lb")) {
-          if (name.includes("half pound") || name.includes("1/2 pound")) {
-            return { weight: "half pound", category: "pound", source: "product_name" };
-          }
-          if (name.includes("quarter pound") || name.includes("1/4 pound")) {
-            return { weight: "quarter pound", category: "pound", source: "product_name" };
-          }
-          if (name.includes("1 pound") || name.includes("one pound")) {
-            return { weight: "1 pound", category: "pound", source: "product_name" };
-          }
-          return { weight: "1 pound", category: "pound", source: "product_name" };
+        if (name.includes("quarter oz") || name.includes("1/4 oz") || name.includes("0.25 oz")) {
+          return { weight: "quarter ounce", category: "ounce", source: "product_name" };
         }
-        if ((name.includes("bulk flower") || name.includes("book flower")) && !name.includes("gram") && !name.includes("ounce") && !name.includes("count")) {
-          return { weight: "1 pound", category: "pound", source: "product_name" };
+        if (name.includes("half oz") || name.includes("1/2 oz") || name.includes("0.5 oz")) {
+          return { weight: "half ounce", category: "ounce", source: "product_name" };
         }
-        if (shopifyData?.weight && shopifyData?.weightUnit) {
-          const weight = shopifyData.weight;
-          const unit = shopifyData.weightUnit.toLowerCase();
+        const ounceMatch = name.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce)/);
+        if (ounceMatch) {
+          const amount = parseFloat(ounceMatch[1]);
           return {
-            weight: `${weight} ${unit}`,
-            category: unit.includes("pound") ? "pound" : unit.includes("ounce") ? "ounce" : "gram",
-            source: "shopify_data"
+            weight: `${amount} ounce${amount !== 1 ? "s" : ""}`,
+            category: "ounce",
+            source: "product_name"
           };
         }
-        return {
-          weight: "Weight not specified",
-          category: "not_specified",
-          source: "fallback"
-        };
+        if (name.includes("quarter pound") || name.includes("1/4 pound") || name.includes("0.25 pound") || name.includes("qp")) {
+          return { weight: "quarter pound", category: "pound", source: "product_name" };
+        }
+        if (name.includes("half pound") || name.includes("1/2 pound") || name.includes("0.5 pound") || name.includes("hp")) {
+          return { weight: "half pound", category: "pound", source: "product_name" };
+        }
+        const poundMatch = name.match(/\(([^)]*pound[^)]*)\)/i);
+        if (poundMatch) {
+          const weightText = poundMatch[1].toLowerCase().trim();
+          if (weightText.includes("1 pound") || weightText === "pound") {
+            return { weight: "1 pound", category: "pound", source: "product_name" };
+          } else if (weightText.includes("half pound")) {
+            return { weight: "half pound", category: "pound", source: "product_name" };
+          } else if (weightText.includes("quarter pound")) {
+            return { weight: "quarter pound", category: "pound", source: "product_name" };
+          }
+        }
+        if (name.includes("1 pound") || name.includes("one pound") || name.includes("1lb")) {
+          return { weight: "1 pound", category: "pound", source: "product_name" };
+        }
+        if (name.includes("pre-roll") || name.includes("preroll") || name.includes("joint")) {
+          return { weight: "1 gram", category: "gram", source: "product_name" };
+        }
+        if (name.includes("edible") || name.includes("gummy") || name.includes("chocolate")) {
+          return { weight: "10mg", category: "not_specified", source: "product_name" };
+        }
+        if (name.includes("cartridge") || name.includes("cart") || name.includes("vape")) {
+          return { weight: "1 gram", category: "gram", source: "product_name" };
+        }
+        if ((name.includes("bulk flower") || name.includes("book flower")) && !name.includes("gram") && !name.includes("ounce")) {
+          return { weight: "1 pound", category: "pound", source: "product_name" };
+        }
+        return { weight: "Weight not specified", category: "not_specified", source: "fallback" };
       }
       /**
-       * Format weight for display in inventory
+       * Fix weight for a single item based on its name
        */
-      static formatWeightForDisplay(weightResult) {
-        let weight = weightResult.weight;
-        weight = weight.replace(/poundm/g, "pound");
-        weight = weight.replace(/poundg/g, "pound");
-        weight = weight.replace(/\s+/g, " ").trim();
-        return weight;
-      }
-      /**
-       * Validate that weight makes sense for the product type
-       */
-      static validateWeight(productName, extractedWeight) {
-        const name = productName.toLowerCase();
-        const weight = extractedWeight.toLowerCase();
-        if (name.includes("count") && weight.includes("pound")) {
-          return false;
+      static getCorrectWeight(itemName, currentWeight) {
+        const result = this.extractFromProductName(itemName);
+        if (result.category !== "not_specified" && result.weight !== currentWeight) {
+          return result.weight;
         }
-        if (name.includes("gram") && weight.includes("pound") && !name.includes("bulk")) {
-          return false;
-        }
-        return true;
+        return currentWeight || result.weight;
       }
     };
-  }
-});
-
-// server/utils/weight-parser.ts
-var weight_parser_exports = {};
-__export(weight_parser_exports, {
-  formatWeightDisplay: () => formatWeightDisplay,
-  getWeightSortValue: () => getWeightSortValue,
-  parseWeightFromProductName: () => parseWeightFromProductName
-});
-function parseWeightFromProductName(productName) {
-  if (!productName) return "Not specified";
-  const name = productName.toLowerCase().trim();
-  const gramMatches = [
-    { pattern: /(\d+(?:\.\d+)?)\s*g(?:ram)?s?\b/i, extract: (match) => `${match[1]}g` },
-    { pattern: /(\d+(?:\.\d+)?)\s*gram/i, extract: (match) => `${match[1]}g` }
-  ];
-  for (const { pattern, extract } of gramMatches) {
-    const match = productName.match(pattern);
-    if (match) {
-      return extract(match);
-    }
-  }
-  if (name.includes("eighth") || name.includes("1/8") || name.includes("0.125")) {
-    return "3.5g (eighth)";
-  }
-  if (name.includes("quarter oz") || name.includes("1/4 oz") || name.includes("0.25 oz")) {
-    return "quarter ounce";
-  }
-  if (name.includes("half oz") || name.includes("1/2 oz") || name.includes("0.5 oz")) {
-    return "half ounce";
-  }
-  const ounceMatch = name.match(/(\d+(?:\.\d+)?)\s*(?:oz|ounce)/);
-  if (ounceMatch) {
-    const amount = parseFloat(ounceMatch[1]);
-    if (amount === 1) return "1 ounce";
-    if (amount === 0.5) return "half ounce";
-    if (amount === 0.25) return "quarter ounce";
-    return `${amount} ounce${amount !== 1 ? "s" : ""}`;
-  }
-  if (name.includes("quarter pound") || name.includes("1/4 pound") || name.includes("0.25 pound") || name.includes("qp")) {
-    return "quarter pound";
-  }
-  if (name.includes("half pound") || name.includes("1/2 pound") || name.includes("0.5 pound") || name.includes("hp")) {
-    return "half pound";
-  }
-  if (name.includes("1 pound") || name.includes("one pound") || name.includes("1lb") || name.match(/\b1\s*pound\b/)) {
-    return "1 pound";
-  }
-  const fractionMatch = name.match(/(1\/2|1\/4|0\.5|0\.25|0\.125)/);
-  if (fractionMatch) {
-    const fraction = fractionMatch[1];
-    if (fraction === "1/2" || fraction === "0.5") {
-      if (name.includes("pound")) return "half pound";
-      return "half ounce";
-    }
-    if (fraction === "1/4" || fraction === "0.25") {
-      if (name.includes("pound")) return "quarter pound";
-      return "quarter ounce";
-    }
-    if (fraction === "0.125") {
-      return "3.5g (eighth)";
-    }
-  }
-  const weightPatterns = [
-    { pattern: /(\d+(?:\.\d+)?)\s*(?:mg|milligram)/i, unit: "mg" },
-    { pattern: /(\d+(?:\.\d+)?)\s*(?:kg|kilogram)/i, unit: "kg" },
-    { pattern: /(\d+(?:\.\d+)?)\s*(?:lb|pound)/i, unit: "pound" }
-  ];
-  for (const { pattern, unit } of weightPatterns) {
-    const match = productName.match(pattern);
-    if (match) {
-      const amount = parseFloat(match[1]);
-      if (unit === "pound") {
-        if (amount === 1) return "1 pound";
-        if (amount === 0.5) return "half pound";
-        if (amount === 0.25) return "quarter pound";
-        return `${amount} pound${amount !== 1 ? "s" : ""}`;
-      }
-      return `${amount}${unit}`;
-    }
-  }
-  if (name.includes("smalls") || name.includes("bulk") || name.includes("wholesale")) {
-    return "1 pound";
-  }
-  if (name.includes("preroll") || name.includes("pre-roll") || name.includes("joint")) {
-    return "1g (preroll)";
-  }
-  return "Not specified";
-}
-function getWeightSortValue(weight) {
-  if (!weight || weight === "Not specified") return 0;
-  const weightLower = weight.toLowerCase();
-  if (weightLower.includes("pound")) {
-    if (weightLower.includes("quarter")) return 113.4;
-    if (weightLower.includes("half")) return 226.8;
-    const poundMatch = weightLower.match(/(\d+(?:\.\d+)?)/);
-    if (poundMatch) return parseFloat(poundMatch[1]) * 453.6;
-    return 453.6;
-  }
-  if (weightLower.includes("ounce") || weightLower.includes("oz")) {
-    if (weightLower.includes("quarter")) return 7.0875;
-    if (weightLower.includes("half")) return 14.175;
-    const ounceMatch = weightLower.match(/(\d+(?:\.\d+)?)/);
-    if (ounceMatch) return parseFloat(ounceMatch[1]) * 28.35;
-    return 28.35;
-  }
-  if (weightLower.includes("g") && !weightLower.includes("kg")) {
-    const gramMatch = weightLower.match(/(\d+(?:\.\d+)?)/);
-    if (gramMatch) return parseFloat(gramMatch[1]);
-    return 1;
-  }
-  if (weightLower.includes("kg")) {
-    const kgMatch = weightLower.match(/(\d+(?:\.\d+)?)/);
-    if (kgMatch) return parseFloat(kgMatch[1]) * 1e3;
-    return 1e3;
-  }
-  return 0;
-}
-function formatWeightDisplay(weight) {
-  if (!weight || weight === "Not specified") return "Weight not specified";
-  const cleaned = weight.toLowerCase().trim();
-  if (cleaned === "1 pound" || cleaned === "1lb") return "1 pound";
-  if (cleaned === "half pound" || cleaned === "0.5 pound") return "half pound";
-  if (cleaned === "quarter pound" || cleaned === "0.25 pound") return "quarter pound";
-  if (cleaned === "1 ounce" || cleaned === "1oz") return "1 ounce";
-  if (cleaned === "half ounce" || cleaned === "0.5 ounce") return "half ounce";
-  if (cleaned === "quarter ounce" || cleaned === "0.25 ounce") return "quarter ounce";
-  return weight;
-}
-var init_weight_parser = __esm({
-  "server/utils/weight-parser.ts"() {
   }
 });
 
@@ -4962,6 +5032,7 @@ var init_sku_generator = __esm({
 // server/index.ts
 import "dotenv/config";
 import express2 from "express";
+import http from "http";
 
 // server/routes.ts
 import multer from "multer";
@@ -5598,7 +5669,7 @@ var getLabResultsForStrain = async (strainName) => {
     return null;
   }
 };
-var log3 = (message, context = "general") => {
+var log4 = (message, context = "general") => {
   console.log(`${(/* @__PURE__ */ new Date()).toLocaleTimeString()} [${context}] ${message}`);
 };
 function findBestShopifyMatch(localItemName, shopifyProducts) {
@@ -5747,7 +5818,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Stats error: ${error}`, "stats");
+      log4(`Stats error: ${error}`, "stats");
       res.status(500).json({ error: "Failed to fetch stats" });
     }
   });
@@ -5757,7 +5828,7 @@ function registerRoutes(app2, storage2) {
       const status = await googleSheetsService2.getSheetStatus();
       res.json(status);
     } catch (error) {
-      log3(`Google Sheets status error: ${error}`, "sheets");
+      log4(`Google Sheets status error: ${error}`, "sheets");
       res.json({
         success: false,
         configured: false,
@@ -5770,7 +5841,7 @@ function registerRoutes(app2, storage2) {
       const { googleSheetsService: googleSheetsService2 } = await Promise.resolve().then(() => (init_google_sheets_service(), google_sheets_service_exports));
       const items2 = await storage2.getItems();
       const result = await googleSheetsService2.syncInventoryToSheets(items2);
-      log3(`Google Sheets sync completed: ${items2.length} items`, "sheets");
+      log4(`Google Sheets sync completed: ${items2.length} items`, "sheets");
       res.json({
         success: true,
         syncedItems: items2.length,
@@ -5778,7 +5849,7 @@ function registerRoutes(app2, storage2) {
         sheetUrl: result.sheetUrl
       });
     } catch (error) {
-      log3(`Google Sheets sync error: ${error}`, "sheets");
+      log4(`Google Sheets sync error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to sync with Google Sheets",
@@ -5788,14 +5859,14 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/google-sheets/import", async (req, res) => {
     try {
-      log3(`Google Sheets import requested`, "sheets");
+      log4(`Google Sheets import requested`, "sheets");
       res.json({
         success: true,
         syncedItems: 0,
         message: "Google Sheets import functionality is being restored"
       });
     } catch (error) {
-      log3(`Google Sheets import error: ${error}`, "sheets");
+      log4(`Google Sheets import error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to import from Google Sheets",
@@ -5806,13 +5877,13 @@ function registerRoutes(app2, storage2) {
   app2.post("/api/google-sheets/configure", async (req, res) => {
     try {
       const { spreadsheetId, clientId, clientSecret } = req.body;
-      log3(`Google Sheets configured: ${spreadsheetId}`, "sheets");
+      log4(`Google Sheets configured: ${spreadsheetId}`, "sheets");
       res.json({
         success: true,
         message: "Google Sheets integration configured successfully"
       });
     } catch (error) {
-      log3(`Google Sheets config error: ${error}`, "sheets");
+      log4(`Google Sheets config error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to configure Google Sheets",
@@ -5829,7 +5900,7 @@ function registerRoutes(app2, storage2) {
         message: process.env.GOOGLE_SHEETS_ID ? "Google Sheets configured" : "Not configured"
       });
     } catch (error) {
-      log3(`Google Sheets config fetch error: ${error}`, "sheets");
+      log4(`Google Sheets config fetch error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to get configuration"
@@ -5839,13 +5910,13 @@ function registerRoutes(app2, storage2) {
   app2.post("/api/google-sheets/config", async (req, res) => {
     try {
       const { spreadsheetId } = req.body;
-      log3(`Google Sheets configuration updated: ${spreadsheetId}`, "sheets");
+      log4(`Google Sheets configuration updated: ${spreadsheetId}`, "sheets");
       res.json({
         success: true,
         message: "Configuration updated successfully"
       });
     } catch (error) {
-      log3(`Google Sheets config update error: ${error}`, "sheets");
+      log4(`Google Sheets config update error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to update configuration"
@@ -5862,7 +5933,7 @@ function registerRoutes(app2, storage2) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID || "1QuACYR7mgsm3EKyQVFTYnbEnZt0NaBQfWqkHRHz4bTU";
       const searchTerm = item.sku || item.name || item.id.toString();
       const sheetsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0&search=${encodeURIComponent(searchTerm)}`;
-      log3(`Opening Google Sheets for item ${item.name} (${searchTerm})`, "sheets");
+      log4(`Opening Google Sheets for item ${item.name} (${searchTerm})`, "sheets");
       res.json({
         success: true,
         url: sheetsUrl,
@@ -5873,7 +5944,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Google Sheets view error: ${error}`, "sheets");
+      log4(`Google Sheets view error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Failed to generate Google Sheets view"
@@ -5890,7 +5961,7 @@ function registerRoutes(app2, storage2) {
         message: "Google Sheets integration test completed"
       });
     } catch (error) {
-      log3(`Google Sheets test error: ${error}`, "sheets");
+      log4(`Google Sheets test error: ${error}`, "sheets");
       res.status(500).json({
         success: false,
         error: "Google Sheets integration test failed",
@@ -5917,7 +5988,7 @@ function registerRoutes(app2, storage2) {
         res.status(404).json({ success: false, error: "Marketplace not found" });
       }
     } catch (error) {
-      log3(`Marketplace sync error: ${error}`, "marketplace");
+      log4(`Marketplace sync error: ${error}`, "marketplace");
       res.status(500).json({
         success: false,
         error: "Marketplace sync failed"
@@ -5948,7 +6019,7 @@ function registerRoutes(app2, storage2) {
       ];
       res.json(marketplaces2);
     } catch (error) {
-      log3(`Marketplace fetch error: ${error}`, "marketplace");
+      log4(`Marketplace fetch error: ${error}`, "marketplace");
       res.status(500).json({
         error: "Failed to fetch marketplaces",
         message: error instanceof Error ? error.message : "Unknown error"
@@ -5971,7 +6042,7 @@ function registerRoutes(app2, storage2) {
       };
       res.json({ success: true, connections });
     } catch (error) {
-      log3(`Marketplace connections error: ${error}`, "marketplace");
+      log4(`Marketplace connections error: ${error}`, "marketplace");
       res.status(500).json({
         success: false,
         error: "Failed to fetch marketplace connections"
@@ -6017,7 +6088,7 @@ function registerRoutes(app2, storage2) {
         res.status(404).json({ success: false, error: "Marketplace not found" });
       }
     } catch (error) {
-      log3(`Marketplace test error: ${error}`, "marketplace");
+      log4(`Marketplace test error: ${error}`, "marketplace");
       res.status(500).json({
         success: false,
         error: "Marketplace test failed",
@@ -6326,6 +6397,12 @@ function registerRoutes(app2, storage2) {
     } else if (name.includes("aa indoor") || description.includes("aa indoor")) {
       qualityMultiplier = 1.1;
     }
+    if (name.includes("preroll") || name.includes("pre-roll") || name.includes("pre roll")) {
+      basePrice = Math.floor((Math.random() * (15 - 5) + 5) * qualityMultiplier);
+      const salePrice2 = Math.floor(basePrice * 0.85);
+      const costPrice2 = Math.floor(basePrice * 0.6);
+      return { base_price: basePrice, sale_price: salePrice2, cost_price: costPrice2 };
+    }
     if (weight.includes("1 pound") || weight.includes("pound")) {
       basePrice = Math.floor((Math.random() * (1500 - 800) + 800) * qualityMultiplier);
     } else if (weight.includes("half pound")) {
@@ -6358,170 +6435,30 @@ function registerRoutes(app2, storage2) {
   app2.get("/api/items", async (req, res) => {
     try {
       const cacheKey = `items:${req.query.page || 1}:${req.query.limit || 50}`;
-      const cachedData = getCachedData(cacheKey);
-      if (cachedData) {
-        log3(`Returned cached items data (${cachedData.length} items)`, "inventory");
-        return res.json(cachedData);
-      }
       const rawItems = await storage2.getItems();
       const items2 = rawItems.map((item) => {
-        let strainName = item.name;
-        if (item.name) {
-          if (item.name.includes("-thca-")) {
-            const strainPart = item.name.split("-thca-")[0];
-            strainName = strainPart.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-          } else if (item.name.includes("-thca-bulk-flower")) {
-            const strainPart = item.name.split("-thca-bulk-flower")[0];
-            strainName = strainPart.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-          } else if (item.name.includes("---")) {
-            const strainPart = item.name.split("---")[0];
-            strainName = strainPart.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-          } else if (item.name.match(/^([a-z-]+)-thca-/i)) {
-            const match = item.name.match(/^([a-z-]+)-thca-/i);
-            if (match) {
-              strainName = match[1].split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-            }
-          } else {
-            strainName = item.name.replace(/\b\d+\s*(gram|grams|g|gr|gm|pound|pounds|lb|lbs|ounce|ounces|oz|ozs|kilo|kilogram|kg|mg|milligram)s?\b/gi, "").replace(/\b(half|quarter|eighth|third|1\/2|1\/4|1\/8|1\/3)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, "").replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*(gram|grams|g|pound|pounds|lb|lbs|ounce|ounces|oz)s?\b/gi, "").replace(/\b(weight|bulk|size)\b/gi, "").replace(/\s*-\s*(THCA|thca|THC|thc|CBD|cbd).*$/i, "").replace(/\s*\([^)]*\)/g, "").replace(/\b(flower|smalls|mediums|indoor|outdoor|classic|reserve|top|shelf|aa|aaa|exotic|premium|quality)\b/gi, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
-            const weightTerms = ["gram", "grams", "g", "pound", "pounds", "lb", "lbs", "ounce", "ounces", "oz", "half", "quarter", "eighth"];
-            weightTerms.forEach((term) => {
-              const regex = new RegExp(`\\b${term}\\b`, "gi");
-              strainName = strainName.replace(regex, "").trim();
-            });
-            if (strainName && strainName.length > 2) {
-              strainName = strainName.split(" ").filter((word) => word.length > 0).map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-            }
-          }
-          if (!strainName && item.description) {
-            const descMatch = item.description.match(/(?:Cannabis|Hemp|THCa)?\s*([A-Za-z\s]+?)(?:\s*-|\s*\(|$)/i);
-            if (descMatch && descMatch[1] && descMatch[1].trim().length > 2) {
-              strainName = descMatch[1].trim().replace(/\b(premium|quality|cannabis|hemp|thca|flower|strain)\b/gi, "").trim();
-            }
-          }
-          const isJustWeight = /^(\d+\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ))$/i.test(item.name.trim());
-          if (isJustWeight) {
-            if (item.category && item.category !== "Shopify Import") {
-              strainName = item.category;
-            } else if (item.sku && item.sku.includes("-")) {
-              const skuParts = item.sku.split("-");
-              if (skuParts.length > 1 && !skuParts[0].includes("SHOPIFY")) {
-                strainName = skuParts[0].replace(/[0-9]/g, "").split(/(?=[A-Z])/).join(" ").trim();
-              }
-            }
-            if (!strainName || strainName.trim() === "" || isJustWeight) {
-              strainName = "Cannabis Product";
-            }
-          }
-        }
-        let extractedWeight = "Weight not specified";
-        const nameIsWeight = /^(\d+\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ))$/i.test(item.name.trim());
-        if (nameIsWeight) {
-          const weightMatch = item.name.match(/^(\d+)\s*(GRAM|GRAMS|gram|grams|g|G|pound|pounds|POUND|POUNDS|lb|lbs|LB|LBS|ounce|ounces|OUNCE|OUNCES|oz|OZ)$/i);
-          if (weightMatch) {
-            const amount = weightMatch[1];
-            const unit = weightMatch[2].toLowerCase();
-            if (unit.includes("gram") || unit === "g") {
-              extractedWeight = `${amount} gram${amount !== "1" ? "s" : ""}`;
-            } else if (unit.includes("pound") || unit.includes("lb")) {
-              extractedWeight = `${amount} pound${amount !== "1" ? "s" : ""}`;
-            } else if (unit.includes("ounce") || unit === "oz") {
-              extractedWeight = `${amount} ounce${amount !== "1" ? "s" : ""}`;
-            }
-          }
-        } else if (item.weight && item.weight !== "Weight not specified" && item.weight.trim() !== "" && !nameIsWeight) {
-          extractedWeight = item.weight;
-        }
-        if (extractedWeight === "Weight not specified" && item.name) {
-          const nameLower = item.name.toLowerCase();
-          if (nameLower.includes("2 gram") || nameLower.includes("2g")) {
-            extractedWeight = "2 grams";
-          } else if (nameLower.includes("3 gram") || nameLower.includes("3g")) {
-            extractedWeight = "3 grams";
-          } else if (nameLower.includes("half gram") || nameLower.includes("0.5g")) {
-            extractedWeight = "half gram";
-          } else if (nameLower.includes("1 gram") || nameLower.includes("1g ")) {
-            extractedWeight = "1 gram";
-          } else if (nameLower.includes("7 gram") || nameLower.includes("7g")) {
-            extractedWeight = "7 grams";
-          } else if (nameLower.includes("14 gram") || nameLower.includes("14g")) {
-            extractedWeight = "14 grams";
-          } else if (nameLower.includes("28 gram") || nameLower.includes("28g")) {
-            extractedWeight = "28 grams";
-          } else if (nameLower.includes("eighth") || nameLower.includes("1/8")) {
-            extractedWeight = "eighth (3.5g)";
-          } else if (nameLower.includes("quarter oz") || nameLower.includes("1/4 oz")) {
-            extractedWeight = "quarter ounce";
-          } else if (nameLower.includes("half oz") || nameLower.includes("1/2 oz")) {
-            extractedWeight = "half ounce";
-          } else if (nameLower.includes("1 oz") || nameLower.includes("1oz") || nameLower.includes(" ounce")) {
-            extractedWeight = "1 ounce";
-          } else if (nameLower.includes("1 pound") || nameLower.includes("(1 pound)") || nameLower.includes("one pound")) {
-            extractedWeight = "1 pound";
-          } else if (nameLower.includes("half pound") || nameLower.includes("1/2 pound")) {
-            extractedWeight = "half pound";
-          } else if (nameLower.includes("quarter pound") || nameLower.includes("1/4 pound")) {
-            extractedWeight = "quarter pound";
-          } else if (nameLower.includes("bulk flower") || nameLower.includes("book flower")) {
-            extractedWeight = "1 pound";
-          }
-        }
-        let finalBasePrice = parseFloat(item.base_price) || parseFloat(item.basePrice) || 0;
-        let finalSalePrice = parseFloat(item.sale_price) || parseFloat(item.salePrice) || 0;
-        let finalCostPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
-        if (finalBasePrice === 0 && finalSalePrice === 0 && finalCostPrice === 0) {
-          const pricing = generateRealisticPrice({ ...item, weight: extractedWeight });
-          if (pricing.base_price === 0) {
-            const nameLower = (item.name || "").toLowerCase();
-            const categoryLower = (item.category || "").toLowerCase();
-            if (nameLower.includes("flower") || categoryLower.includes("flower")) {
-              finalBasePrice = 1200;
-              finalSalePrice = 1020;
-              finalCostPrice = 720;
-            } else if (nameLower.includes("concentrate") || categoryLower.includes("concentrate")) {
-              finalBasePrice = 40;
-              finalSalePrice = 34;
-              finalCostPrice = 24;
-            } else if (nameLower.includes("edible") || categoryLower.includes("edible")) {
-              finalBasePrice = 25;
-              finalSalePrice = 21;
-              finalCostPrice = 15;
-            } else {
-              finalBasePrice = 35;
-              finalSalePrice = 30;
-              finalCostPrice = 21;
-            }
-          } else {
-            finalBasePrice = pricing.base_price;
-            finalSalePrice = pricing.sale_price;
-            finalCostPrice = pricing.cost_price;
-          }
-        }
+        const basePrice = parseFloat(item.base_price) || 0;
+        const salePrice = parseFloat(item.sale_price) || 0;
+        const costPrice = parseFloat(item.cost_price) || 0;
         return {
           ...item,
-          // Use strain name if extracted, otherwise fall back to original name
-          name: strainName || item.name,
-          // Keep original name for reference
-          original_name: item.name,
-          // Display name for UI
-          display_name: strainName || item.name,
-          base_price: finalBasePrice,
-          sale_price: finalSalePrice,
-          cost_price: finalCostPrice,
-          basePrice: finalBasePrice,
-          // Legacy field name
-          salePrice: finalSalePrice,
-          // Legacy field name  
-          costPrice: finalCostPrice,
-          // Legacy field name
-          // Transform image fields from snake_case to camelCase
+          // Ensure consistent field naming for frontend compatibility
+          id: item.id,
+          name: item.name,
+          base_price: basePrice,
+          sale_price: salePrice,
+          cost_price: costPrice,
+          basePrice,
+          // Map to camelCase for frontend
+          salePrice,
+          // Map to camelCase for frontend
+          costPrice,
+          // Map to camelCase for frontend
           imageUrl: item.image_url || null,
           images: item.images || [],
-          // Transform price field for frontend
-          price: finalSalePrice || finalBasePrice || finalCostPrice || 0,
-          // Ensure no NaN values
+          price: salePrice || basePrice || 0,
           quantity: parseInt(item.quantity) || 0,
-          weight: extractedWeight
-          // Use properly extracted weight, never default to pounds
+          weight: item.weight || "Weight not specified"
         };
       });
       const sortedItems = items2.sort((a, b) => {
@@ -6577,10 +6514,10 @@ function registerRoutes(app2, storage2) {
       });
       const optimizedItems = compressLargeResponse(sortedItems);
       setCachedData(cacheKey, optimizedItems, 3e4);
-      log3(`Retrieved ${rawItems.length} items with STRAIN NAMES and REALISTIC PRICING`, "inventory");
+      log4(`Retrieved ${rawItems.length} raw items from database`, "inventory");
       res.json(optimizedItems);
     } catch (error) {
-      log3(`Items fetch error: ${error}`, "inventory");
+      log4(`Items fetch error: ${error}`, "inventory");
       res.status(500).json(formatResponse.error("Failed to fetch items", "ITEMS_FETCH_ERROR"));
     }
   });
@@ -6589,7 +6526,7 @@ function registerRoutes(app2, storage2) {
       const cacheKey = "inventory:summary";
       const cachedData = getCachedData(cacheKey);
       if (cachedData) {
-        log3(`Returned cached inventory summary`, "inventory");
+        log4(`Returned cached inventory summary`, "inventory");
         return res.json(formatResponse.success(cachedData));
       }
       const items2 = await storage2.getItems();
@@ -6614,7 +6551,7 @@ function registerRoutes(app2, storage2) {
         message: "Current inventory summary"
       });
     } catch (error) {
-      log3(`Inventory summary error: ${error}`, "inventory");
+      log4(`Inventory summary error: ${error}`, "inventory");
       res.status(500).json({
         success: false,
         error: "Failed to generate inventory summary"
@@ -6723,7 +6660,7 @@ function registerRoutes(app2, storage2) {
   });
   app2.get("/api/fix-weights/test", async (_req, res) => {
     try {
-      const { weightService: weightService2 } = await Promise.resolve().then(() => (init_weight_service(), weight_service_exports));
+      const { weightService } = await import("./services/weight-service.js");
       const testCases = [
         "2 GRAMS Frozen Lemons - THCA Flower",
         "3 GRAMS Blueberry Muffin - THCA",
@@ -6733,10 +6670,10 @@ function registerRoutes(app2, storage2) {
       ];
       const results = testCases.map((productName) => ({
         productName,
-        extractedWeight: weightService2.extractFromProductName(productName),
-        isCorrect: productName.includes("2 GRAMS") ? weightService2.extractFromProductName(productName) === "2 grams" : true
+        extractedWeight: weightService.extractFromProductName(productName),
+        isCorrect: productName.includes("2 GRAMS") ? weightService.extractFromProductName(productName) === "2 grams" : true
       }));
-      const criticalTest = weightService2.extractFromProductName("2 GRAMS Frozen Lemons - THCA Flower");
+      const criticalTest = weightService.extractFromProductName("2 GRAMS Frozen Lemons - THCA Flower");
       res.json({
         success: true,
         message: "Weight extraction test results",
@@ -6754,14 +6691,14 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/fix-weights/apply", async (_req, res) => {
     try {
-      const { weightService: weightService2 } = await Promise.resolve().then(() => (init_weight_service(), weight_service_exports));
+      const { weightService } = await import("./services/weight-service.js");
       const items2 = await storage2.getItems();
       const updates = [];
       let fixed = 0;
       for (const item of items2) {
         if (item.name) {
           const currentWeight = item.weight;
-          const correctWeight = weightService2.extractFromProductName(item.name);
+          const correctWeight = weightService.extractFromProductName(item.name);
           if (currentWeight !== correctWeight && correctWeight !== "Weight not specified") {
             await storage2.updateItem(item.id, { weight: correctWeight });
             updates.push({
@@ -6774,7 +6711,7 @@ function registerRoutes(app2, storage2) {
           }
         }
       }
-      log3(`Fixed ${fixed} items with incorrect weight data`, "weight-fix");
+      log4(`Fixed ${fixed} items with incorrect weight data`, "weight-fix");
       res.json({
         success: true,
         message: `Fixed weights for ${fixed} items`,
@@ -6783,7 +6720,7 @@ function registerRoutes(app2, storage2) {
         sampleUpdates: updates.slice(0, 10)
       });
     } catch (error) {
-      log3(`Weight fix error: ${error}`, "weight-fix");
+      log4(`Weight fix error: ${error}`, "weight-fix");
       res.status(500).json({
         success: false,
         error: "Failed to apply weight fixes"
@@ -6804,7 +6741,7 @@ function registerRoutes(app2, storage2) {
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     } catch (error) {
-      log3(`AI chat error: ${error}`, "ai-assistant");
+      log4(`AI chat error: ${error}`, "ai-assistant");
       res.status(500).json({ success: false, error: "AI assistant unavailable" });
     }
   });
@@ -6822,7 +6759,7 @@ function registerRoutes(app2, storage2) {
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     } catch (error) {
-      log3(`AI product analysis error: ${error}`, "ai-assistant");
+      log4(`AI product analysis error: ${error}`, "ai-assistant");
       res.status(500).json({ success: false, error: "Product analysis failed" });
     }
   });
@@ -6838,7 +6775,7 @@ function registerRoutes(app2, storage2) {
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     } catch (error) {
-      log3(`AI inventory optimization error: ${error}`, "ai-assistant");
+      log4(`AI inventory optimization error: ${error}`, "ai-assistant");
       res.status(500).json({ success: false, error: "Inventory optimization failed" });
     }
   });
@@ -6892,7 +6829,7 @@ function registerRoutes(app2, storage2) {
     try {
       const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
       const bulkService = new ShopifyBulkQueryService2();
-      log3("Starting Shopify bulk query operation", "bulk-query");
+      log4("Starting Shopify bulk query operation", "bulk-query");
       const operationId = await bulkService.startBulkQuery();
       res.json({
         success: true,
@@ -6900,7 +6837,7 @@ function registerRoutes(app2, storage2) {
         message: "Bulk query started successfully"
       });
     } catch (error) {
-      log3(`Bulk query start error: ${error}`, "bulk-query");
+      log4(`Bulk query start error: ${error}`, "bulk-query");
       res.status(500).json({
         success: false,
         error: `Failed to start bulk query: ${error}`
@@ -6918,7 +6855,7 @@ function registerRoutes(app2, storage2) {
         status: response.data.currentBulkOperation
       });
     } catch (error) {
-      log3(`Bulk query status error: ${error}`, "bulk-query");
+      log4(`Bulk query status error: ${error}`, "bulk-query");
       res.status(500).json({
         success: false,
         error: `Failed to check bulk query status: ${error}`
@@ -6929,7 +6866,7 @@ function registerRoutes(app2, storage2) {
     try {
       const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
       const bulkService = new ShopifyBulkQueryService2();
-      log3("Executing complete bulk inventory query", "bulk-query");
+      log4("Executing complete bulk inventory query", "bulk-query");
       const results = await bulkService.executeBulkInventoryQuery();
       const menuItems = results.flatMap(
         (product) => product.variants.map((variant) => ({
@@ -6970,7 +6907,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Bulk query execution error: ${error}`, "bulk-query");
+      log4(`Bulk query execution error: ${error}`, "bulk-query");
       res.status(500).json({
         success: false,
         error: `Failed to execute bulk query: ${error}`
@@ -6989,7 +6926,7 @@ function registerRoutes(app2, storage2) {
       }
       res.json(item);
     } catch (error) {
-      log3(`Item fetch error: ${error}`, "inventory");
+      log4(`Item fetch error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to fetch item" });
     }
   });
@@ -7000,10 +6937,10 @@ function registerRoutes(app2, storage2) {
         itemData.description = `${itemData.name || "New Item"} - Cannabis product`;
       }
       const newItem = await storage2.createItem(itemData);
-      log3(`Created item: ${newItem.name} (ID: ${newItem.id})`, "inventory");
+      log4(`Created item: ${newItem.name} (ID: ${newItem.id})`, "inventory");
       res.json(newItem);
     } catch (error) {
-      log3(`Item creation error: ${error}`, "inventory");
+      log4(`Item creation error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to create item" });
     }
   });
@@ -7024,14 +6961,14 @@ function registerRoutes(app2, storage2) {
           const { syncInventoryQuantityToShopify: syncInventoryQuantityToShopify2 } = await Promise.resolve().then(() => (init_shopify(), shopify_exports));
           const syncResult = await syncInventoryQuantityToShopify2(updatedItem, quantity);
           if (syncResult.success) {
-            log3(`Synced quantity to Shopify via sync endpoint for item ${itemId}: ${quantity}`, "shopify-sync");
+            log4(`Synced quantity to Shopify via sync endpoint for item ${itemId}: ${quantity}`, "shopify-sync");
             res.json({
               success: true,
               message: syncResult.message,
               item: updatedItem
             });
           } else {
-            log3(`Failed to sync quantity to Shopify for item ${itemId}: ${syncResult.message}`, "shopify-sync");
+            log4(`Failed to sync quantity to Shopify for item ${itemId}: ${syncResult.message}`, "shopify-sync");
             res.json({
               success: false,
               message: syncResult.message,
@@ -7039,7 +6976,7 @@ function registerRoutes(app2, storage2) {
             });
           }
         } catch (syncError) {
-          log3(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
+          log4(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
           res.json({
             success: false,
             message: `Sync error: ${syncError}`,
@@ -7054,7 +6991,7 @@ function registerRoutes(app2, storage2) {
         });
       }
     } catch (error) {
-      log3(`Inventory sync error: ${error}`, "inventory");
+      log4(`Inventory sync error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to sync inventory quantity" });
     }
   });
@@ -7075,7 +7012,7 @@ function registerRoutes(app2, storage2) {
         return res.status(400).json({ error: "Cannot reduce stock below zero" });
       }
       await storage2.updateItem(itemId, { quantity: newQuantity });
-      log3(`Stock adjusted for item ${itemId}: ${currentQuantity} \u2192 ${newQuantity} (${adjustment > 0 ? "+" : ""}${adjustment})`, "stock");
+      log4(`Stock adjusted for item ${itemId}: ${currentQuantity} \u2192 ${newQuantity} (${adjustment > 0 ? "+" : ""}${adjustment})`, "stock");
       res.json({
         success: true,
         item: {
@@ -7088,7 +7025,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Stock adjustment error: ${error}`, "stock");
+      log4(`Stock adjustment error: ${error}`, "stock");
       res.status(500).json({ error: "Failed to adjust stock" });
     }
   });
@@ -7129,7 +7066,7 @@ function registerRoutes(app2, storage2) {
         });
       }
     } catch (error) {
-      log3(`Scanner lookup error: ${error}`, "scanner");
+      log4(`Scanner lookup error: ${error}`, "scanner");
       res.status(500).json({ error: "Scanner lookup failed" });
     }
   });
@@ -7146,17 +7083,17 @@ function registerRoutes(app2, storage2) {
           const { syncInventoryQuantityToShopify: syncInventoryQuantityToShopify2 } = await Promise.resolve().then(() => (init_shopify(), shopify_exports));
           const syncResult = await syncInventoryQuantityToShopify2(updatedItem, updates.quantity);
           if (syncResult.success) {
-            log3(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, "shopify-sync");
+            log4(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, "shopify-sync");
           } else {
-            log3(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, "shopify-sync");
+            log4(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, "shopify-sync");
           }
         } catch (syncError) {
-          log3(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
+          log4(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
         }
       }
       res.json(updatedItem);
     } catch (error) {
-      log3(`Item update error: ${error}`, "inventory");
+      log4(`Item update error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to update item" });
     }
   });
@@ -7173,17 +7110,17 @@ function registerRoutes(app2, storage2) {
           const { syncInventoryQuantityToShopify: syncInventoryQuantityToShopify2 } = await Promise.resolve().then(() => (init_shopify(), shopify_exports));
           const syncResult = await syncInventoryQuantityToShopify2(updatedItem, updates.quantity);
           if (syncResult.success) {
-            log3(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, "shopify-sync");
+            log4(`Synced quantity to Shopify for item ${id}: ${updates.quantity}`, "shopify-sync");
           } else {
-            log3(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, "shopify-sync");
+            log4(`Failed to sync quantity to Shopify for item ${id}: ${syncResult.message}`, "shopify-sync");
           }
         } catch (syncError) {
-          log3(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
+          log4(`Error syncing to Shopify: ${syncError}`, "shopify-sync");
         }
       }
       res.json(updatedItem);
     } catch (error) {
-      log3(`Item update error: ${error}`, "inventory");
+      log4(`Item update error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to update item" });
     }
   });
@@ -7193,7 +7130,7 @@ function registerRoutes(app2, storage2) {
       await storage2.deleteItem(id);
       res.json({ success: true });
     } catch (error) {
-      log3(`Item deletion error: ${error}`, "inventory");
+      log4(`Item deletion error: ${error}`, "inventory");
       res.status(500).json({ error: "Failed to delete item" });
     }
   });
@@ -7215,7 +7152,7 @@ function registerRoutes(app2, storage2) {
       });
       if (response.ok) {
         const shopData = await response.json();
-        log3(`Successfully connected to Shopify store: ${shopData.shop?.name || shopifyDomain}`, "shopify-test");
+        log4(`Successfully connected to Shopify store: ${shopData.shop?.name || shopifyDomain}`, "shopify-test");
         res.json({
           success: true,
           connected: true,
@@ -7231,11 +7168,113 @@ function registerRoutes(app2, storage2) {
         });
       }
     } catch (error) {
-      log3(`Shopify connection test error: ${error}`, "shopify-test");
+      log4(`Shopify connection test error: ${error}`, "shopify-test");
       res.status(500).json({
         success: false,
         connected: false,
         error: "Failed to test Shopify connection"
+      });
+    }
+  });
+  app2.get("/api/items/:itemId/videos", async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      const item = await storage2.getItem(parseInt(itemId));
+      if (!item || !item.shopifyId) {
+        return res.json({
+          success: true,
+          videos: [],
+          images: [],
+          message: "No Shopify product linked to this item"
+        });
+      }
+      const mediaService = await Promise.resolve().then(() => (init_shopify_media_service(), shopify_media_service_exports));
+      const result = await mediaService.shopifyMediaService.getProductMedia(item.shopifyId);
+      res.json({
+        success: true,
+        videos: result.videos || [],
+        images: result.images || [],
+        itemName: item.name,
+        shopifyProductId: item.shopifyId
+      });
+    } catch (error) {
+      log4(`Error fetching item videos: ${error}`, "shopify-media");
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to fetch item videos"
+      });
+    }
+  });
+  app2.get("/api/shopify/media/videos", async (req, res) => {
+    try {
+      const { shopifyMediaService: shopifyMediaService2 } = await Promise.resolve().then(() => (init_shopify_media_service(), shopify_media_service_exports));
+      const first = parseInt(req.query.first) || 50;
+      const query = req.query.query;
+      const videos = await shopifyMediaService2.fetchVideoFiles(first, query);
+      res.json({
+        success: true,
+        videos,
+        count: videos.length
+      });
+    } catch (error) {
+      log4(`Shopify video fetch error: ${error}`, "shopify-media");
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch video files",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  app2.get("/api/shopify/media/product/:productId", async (req, res) => {
+    try {
+      const { shopifyMediaService: shopifyMediaService2 } = await Promise.resolve().then(() => (init_shopify_media_service(), shopify_media_service_exports));
+      const productId = req.params.productId;
+      const productMedia = await shopifyMediaService2.fetchProductVideos(productId);
+      res.json({
+        success: true,
+        product: productMedia
+      });
+    } catch (error) {
+      log4(`Product media fetch error: ${error}`, "shopify-media");
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch product media",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  app2.get("/api/shopify/media/all", async (req, res) => {
+    try {
+      const { shopifyMediaService: shopifyMediaService2 } = await Promise.resolve().then(() => (init_shopify_media_service(), shopify_media_service_exports));
+      const first = parseInt(req.query.first) || 50;
+      const mediaFiles = await shopifyMediaService2.fetchAllMediaFiles(first);
+      const videos = mediaFiles.filter((file) => file.filename);
+      const images = mediaFiles.filter((file) => file.image);
+      const genericFiles = mediaFiles.filter((file) => file.url && !file.filename && !file.image);
+      res.json({
+        success: true,
+        media: {
+          videos: {
+            count: videos.length,
+            files: videos
+          },
+          images: {
+            count: images.length,
+            files: images
+          },
+          other: {
+            count: genericFiles.length,
+            files: genericFiles
+          }
+        },
+        totalCount: mediaFiles.length
+      });
+    } catch (error) {
+      log4(`Media fetch error: ${error}`, "shopify-media");
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch media files",
+        message: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -7259,7 +7298,7 @@ function registerRoutes(app2, storage2) {
         res.status(response.status).json({ error: "Failed to fetch Shopify products" });
       }
     } catch (error) {
-      log3(`Shopify products error: ${error}`, "shopify");
+      log4(`Shopify products error: ${error}`, "shopify");
       res.status(500).json({ error: "Failed to fetch Shopify products" });
     }
   });
@@ -7298,13 +7337,13 @@ function registerRoutes(app2, storage2) {
           try {
             await storage2.updateItem(item.id, { shopifyId: matchingProduct.id.toString() });
             updatedCount++;
-            log3(`Linked local item "${item.name}" to Shopify product "${matchingProduct.title}" (ID: ${matchingProduct.id})`, "shopify");
+            log4(`Linked local item "${item.name}" to Shopify product "${matchingProduct.title}" (ID: ${matchingProduct.id})`, "shopify");
           } catch (error) {
-            log3(`Failed to update item ${item.id}: ${error}`, "shopify");
+            log4(`Failed to update item ${item.id}: ${error}`, "shopify");
           }
         }
       }
-      log3(`Shopify sync completed: ${matchedCount} matches found, ${updatedCount} items updated`, "shopify");
+      log4(`Shopify sync completed: ${matchedCount} matches found, ${updatedCount} items updated`, "shopify");
       res.json({
         success: true,
         matched: matchedCount,
@@ -7313,7 +7352,7 @@ function registerRoutes(app2, storage2) {
         totalShopify: shopifyProducts.length
       });
     } catch (error) {
-      log3(`Shopify sync error: ${error}`, "shopify");
+      log4(`Shopify sync error: ${error}`, "shopify");
       res.status(500).json({ error: "Failed to sync product IDs" });
     }
   });
@@ -7343,11 +7382,11 @@ function registerRoutes(app2, storage2) {
           const matchResult = findBestShopifyMatch(item.name, products);
           if (matchResult.product && matchResult.score >= 95) {
             storefrontUrl = `https://goldcbd.com/products/${matchResult.product.handle}`;
-            log3(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, "shopify");
+            log4(`Storefront match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, "shopify");
           }
         }
       } catch (error) {
-        log3(`Error finding storefront product for "${item.name}": ${error}`, "shopify");
+        log4(`Error finding storefront product for "${item.name}": ${error}`, "shopify");
       }
       if (!storefrontUrl && item.name) {
         const strainParts = item.name.split(" - ");
@@ -7363,7 +7402,7 @@ function registerRoutes(app2, storage2) {
         searchTerm: item.name?.split(" - ")[0] || item.name
       });
     } catch (error) {
-      log3(`Shopify storefront view error: ${error}`, "shopify");
+      log4(`Shopify storefront view error: ${error}`, "shopify");
       res.status(500).json({ error: "Failed to generate Shopify storefront URL" });
     }
   });
@@ -7389,22 +7428,22 @@ function registerRoutes(app2, storage2) {
           url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${numericId}`;
         }
         directMatch = true;
-        log3(`Direct variant match for item ${id}: variant ${variantId}`, "shopify");
+        log4(`Direct variant match for item ${id}: variant ${variantId}`, "shopify");
       } else if (item.shopifyProductId || item.shopifyId || item.shopify_id) {
         const productId = (item.shopifyProductId || item.shopifyId || item.shopify_id).toString().replace(/^gid:\/\/shopify\/Product\//, "");
         url = `https://admin.shopify.com/store/${shopifyStore}/products/${productId}`;
         directMatch = true;
-        log3(`Direct product match for item ${id}: product ${productId}`, "shopify");
+        log4(`Direct product match for item ${id}: product ${productId}`, "shopify");
       } else if (item.sku) {
         url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(item.sku)}`;
-        log3(`SKU search for item ${id}: ${item.sku}`, "shopify");
+        log4(`SKU search for item ${id}: ${item.sku}`, "shopify");
       } else if (item.name) {
         const strainName = item.name.split("-")[0] || item.name;
         url = `https://admin.shopify.com/store/${shopifyStore}/products?query=${encodeURIComponent(strainName)}`;
-        log3(`Name search for item ${id}: ${strainName}`, "shopify");
+        log4(`Name search for item ${id}: ${strainName}`, "shopify");
       } else {
         url = `https://admin.shopify.com/store/${shopifyStore}/products`;
-        log3(`No identifiers for item ${id}, showing all products`, "shopify");
+        log4(`No identifiers for item ${id}, showing all products`, "shopify");
       }
       res.json({
         success: true,
@@ -7413,7 +7452,7 @@ function registerRoutes(app2, storage2) {
         searchTerm: item.name?.split("-")[0] || item.name
       });
     } catch (error) {
-      log3(`Shopify view error: ${error}`, "shopify");
+      log4(`Shopify view error: ${error}`, "shopify");
       res.status(500).json({ error: "Failed to generate Shopify view URL" });
     }
   });
@@ -7437,7 +7476,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Sales report error: ${error}`, "reports");
+      log4(`Sales report error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to generate sales report" });
     }
   });
@@ -7451,12 +7490,12 @@ function registerRoutes(app2, storage2) {
           error: "Shopify access token not configured"
         });
       }
-      log3(`Starting pricing update from Shopify`, "shopify-pricing");
+      log4(`Starting pricing update from Shopify`, "shopify-pricing");
       const existingItems = await storage2.getAllItems();
       const itemsWithShopifyIds = existingItems.filter(
         (item) => item.shopifyId || item.shopifyVariantId || item.sku?.startsWith("SHOPIFY-")
       );
-      log3(`Found ${itemsWithShopifyIds.length} items linked to Shopify`, "shopify-pricing");
+      log4(`Found ${itemsWithShopifyIds.length} items linked to Shopify`, "shopify-pricing");
       let updatedCount = 0;
       let errorCount = 0;
       for (const item of itemsWithShopifyIds) {
@@ -7471,7 +7510,7 @@ function registerRoutes(app2, storage2) {
             }
           }
           if (!productId) {
-            log3(`Skipping item ${item.id}: No product ID found`, "shopify-pricing");
+            log4(`Skipping item ${item.id}: No product ID found`, "shopify-pricing");
             continue;
           }
           const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products/${productId}.json`, {
@@ -7481,13 +7520,13 @@ function registerRoutes(app2, storage2) {
             }
           });
           if (!response.ok) {
-            log3(`Failed to fetch product ${productId}: ${response.status}`, "shopify-pricing");
+            log4(`Failed to fetch product ${productId}: ${response.status}`, "shopify-pricing");
             continue;
           }
           const data = await response.json();
           const product = data.product;
           if (!product || !product.variants || product.variants.length === 0) {
-            log3(`No variants found for product ${productId}`, "shopify-pricing");
+            log4(`No variants found for product ${productId}`, "shopify-pricing");
             continue;
           }
           let variant = product.variants.find((v) => v.id.toString() === variantId?.toString());
@@ -7504,13 +7543,13 @@ function registerRoutes(app2, storage2) {
           };
           await storage2.updateItem(item.id, updateData);
           updatedCount++;
-          log3(`Updated pricing for item ${item.id}: Bulk=$${updateData.bulk_price || "N/A"}`, "shopify-pricing");
+          log4(`Updated pricing for item ${item.id}: Bulk=$${updateData.bulk_price || "N/A"}`, "shopify-pricing");
         } catch (error) {
           errorCount++;
-          log3(`Error updating item ${item.id}: ${error}`, "shopify-pricing");
+          log4(`Error updating item ${item.id}: ${error}`, "shopify-pricing");
         }
       }
-      log3(`Pricing update completed: ${updatedCount} updated, ${errorCount} errors`, "shopify-pricing");
+      log4(`Pricing update completed: ${updatedCount} updated, ${errorCount} errors`, "shopify-pricing");
       res.json({
         success: true,
         message: `Successfully updated pricing for ${updatedCount} items`,
@@ -7518,7 +7557,7 @@ function registerRoutes(app2, storage2) {
         errors: errorCount
       });
     } catch (error) {
-      log3(`Shopify pricing update error: ${error}`, "shopify-pricing");
+      log4(`Shopify pricing update error: ${error}`, "shopify-pricing");
       res.status(500).json({
         success: false,
         error: "Failed to update pricing from Shopify",
@@ -7549,7 +7588,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Inventory report error: ${error}`, "reports");
+      log4(`Inventory report error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to generate inventory report" });
     }
   });
@@ -7597,7 +7636,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Sales report error: ${error}`, "reports");
+      log4(`Sales report error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to generate sales report" });
     }
   });
@@ -7647,7 +7686,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Sales report error: ${error}`, "reports");
+      log4(`Sales report error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to generate sales report" });
     }
   });
@@ -7671,7 +7710,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Customer report error: ${error}`, "reports");
+      log4(`Customer report error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to generate customer report" });
     }
   });
@@ -7695,7 +7734,7 @@ function registerRoutes(app2, storage2) {
         });
       }
     } catch (error) {
-      log3(`Marketplace test error: ${error}`, "marketplace");
+      log4(`Marketplace test error: ${error}`, "marketplace");
       res.status(500).json({ error: "Failed to test marketplace connection" });
     }
   });
@@ -7718,7 +7757,7 @@ function registerRoutes(app2, storage2) {
         });
       }
     } catch (error) {
-      log3(`Marketplace sync error: ${error}`, "marketplace");
+      log4(`Marketplace sync error: ${error}`, "marketplace");
       res.status(500).json({ error: "Failed to sync marketplace" });
     }
   });
@@ -7739,7 +7778,7 @@ function registerRoutes(app2, storage2) {
         filename: `inventory-export-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.csv`
       });
     } catch (error) {
-      log3(`Inventory export error: ${error}`, "reports");
+      log4(`Inventory export error: ${error}`, "reports");
       res.status(500).json({ error: "Failed to export inventory" });
     }
   });
@@ -7767,7 +7806,7 @@ function registerRoutes(app2, storage2) {
           weight_unit: item.weight_unit || "lb"
         }]
       };
-      log3(`Creating Shopify product for item ${itemId}: ${item.name}`, "shopify-create");
+      log4(`Creating Shopify product for item ${itemId}: ${item.name}`, "shopify-create");
       res.json({
         success: true,
         message: "Product created successfully",
@@ -7775,7 +7814,7 @@ function registerRoutes(app2, storage2) {
         productUrl: `https://gold-standard-cbd.myshopify.com/admin/products/draft-${Date.now()}`
       });
     } catch (error) {
-      log3(`Product creation error: ${error}`, "shopify-create");
+      log4(`Product creation error: ${error}`, "shopify-create");
       res.status(500).json({ error: "Failed to create product in Shopify" });
     }
   });
@@ -7791,6 +7830,13 @@ function registerRoutes(app2, storage2) {
       }
       const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
       const imported = [];
+      const skipped = [];
+      const updated = [];
+      const existingItems = await storage2.getItems();
+      const existingSkus = new Set(existingItems.map((item) => item.sku?.toLowerCase()).filter(Boolean));
+      const existingNames = new Set(existingItems.map((item) => item.name?.toLowerCase()).filter(Boolean));
+      const importedSkusThisBatch = /* @__PURE__ */ new Set();
+      const importedNamesThisBatch = /* @__PURE__ */ new Set();
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""));
         const itemData = {};
@@ -7800,27 +7846,77 @@ function registerRoutes(app2, storage2) {
               itemData.name = values[index2];
             } else if (header.toLowerCase().includes("price")) {
               itemData.base_price = parseFloat(values[index2]) || 0;
+              itemData.sale_price = itemData.base_price;
             } else if (header.toLowerCase().includes("quantity")) {
               itemData.quantity = parseInt(values[index2]) || 0;
             } else if (header.toLowerCase().includes("sku")) {
               itemData.sku = values[index2];
+            } else if (header.toLowerCase().includes("barcode")) {
+              itemData.barcode = values[index2];
+            } else if (header.toLowerCase().includes("category")) {
+              itemData.category = values[index2];
+            } else if (header.toLowerCase().includes("weight")) {
+              itemData.weight = values[index2];
             }
           }
         });
         if (itemData.name) {
-          itemData.status = "draft";
-          itemData.description = `Imported from CSV - ${itemData.name}`;
-          const newItem = await storage2.createItem(itemData);
-          imported.push(newItem);
+          const nameLower = itemData.name.toLowerCase();
+          const skuLower = itemData.sku?.toLowerCase();
+          const existingItem = existingItems.find((item) => {
+            if (skuLower && item.sku?.toLowerCase() === skuLower) {
+              return true;
+            }
+            if (item.name?.toLowerCase() === nameLower) {
+              return true;
+            }
+            return false;
+          });
+          const isDuplicateInBatch = skuLower && importedSkusThisBatch.has(skuLower) || importedNamesThisBatch.has(nameLower);
+          if (existingItem) {
+            await storage2.updateItem(existingItem.id, {
+              ...itemData,
+              updatedAt: /* @__PURE__ */ new Date()
+            });
+            updated.push({
+              name: itemData.name,
+              id: existingItem.id,
+              reason: "Updated existing item"
+            });
+          } else if (isDuplicateInBatch) {
+            skipped.push({
+              name: itemData.name,
+              reason: "Duplicate within this import batch"
+            });
+          } else {
+            itemData.status = "draft";
+            itemData.description = itemData.description || `Imported from CSV - ${itemData.name}`;
+            const newItem = await storage2.createItem(itemData);
+            imported.push(newItem);
+            if (skuLower) importedSkusThisBatch.add(skuLower);
+            importedNamesThisBatch.add(nameLower);
+          }
         }
       }
       res.json({
         success: true,
-        message: `Successfully imported ${imported.length} items`,
-        imported: imported.length
+        message: `Import completed: ${imported.length} new, ${updated.length} updated, ${skipped.length} skipped`,
+        stats: {
+          imported: imported.length,
+          updated: updated.length,
+          skipped: skipped.length,
+          total: lines.length - 1
+          // Exclude header
+        },
+        details: {
+          imported: imported.slice(0, 5),
+          // Show first 5
+          updated: updated.slice(0, 5),
+          skipped: skipped.slice(0, 5)
+        }
       });
     } catch (error) {
-      log3(`CSV import error: ${error}`, "csv-import");
+      log4(`CSV import error: ${error}`, "csv-import");
       res.status(500).json({ error: "Failed to import CSV" });
     }
   });
@@ -7922,7 +8018,7 @@ function registerRoutes(app2, storage2) {
       res.setHeader("Content-Type", "text/html");
       res.send(catalogHtml);
     } catch (error) {
-      log3(`Price sheet generation error: ${error}`, "price-sheet");
+      log4(`Price sheet generation error: ${error}`, "price-sheet");
       res.status(500).json({ error: "Failed to generate price sheet" });
     }
   });
@@ -7931,14 +8027,14 @@ function registerRoutes(app2, storage2) {
       const { ComprehensiveMenuGenerator: ComprehensiveMenuGenerator2 } = await Promise.resolve().then(() => (init_comprehensive_menu_generator(), comprehensive_menu_generator_exports));
       const menuGenerator = new ComprehensiveMenuGenerator2(storage2);
       const comprehensiveMenu = await menuGenerator.generateStylizedMenu();
-      log3(`Generated comprehensive menu with ${comprehensiveMenu.sections.length} sections`, "comprehensive-menu");
+      log4(`Generated comprehensive menu with ${comprehensiveMenu.sections.length} sections`, "comprehensive-menu");
       res.json({
         success: true,
         menu: comprehensiveMenu,
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     } catch (error) {
-      log3(`Comprehensive menu error: ${error}`, "comprehensive-menu");
+      log4(`Comprehensive menu error: ${error}`, "comprehensive-menu");
       res.status(500).json({ error: "Failed to generate comprehensive menu" });
     }
   });
@@ -7951,7 +8047,7 @@ function registerRoutes(app2, storage2) {
       res.setHeader("Content-Type", "text/html");
       res.send(html);
     } catch (error) {
-      log3(`Comprehensive menu HTML error: ${error}`, "comprehensive-menu");
+      log4(`Comprehensive menu HTML error: ${error}`, "comprehensive-menu");
       res.status(500).json({ error: "Failed to generate comprehensive menu HTML" });
     }
   });
@@ -7967,7 +8063,7 @@ function registerRoutes(app2, storage2) {
         count: availableItems.length
       });
     } catch (error) {
-      log3(`Live menu error: ${error}`, "catalog");
+      log4(`Live menu error: ${error}`, "catalog");
       res.status(500).json({ error: "Failed to generate live menu" });
     }
   });
@@ -7984,7 +8080,7 @@ function registerRoutes(app2, storage2) {
         message: `Menu with ${availableItems.length} available items`
       });
     } catch (error) {
-      log3(`Menu error: ${error}`, "catalog");
+      log4(`Menu error: ${error}`, "catalog");
       res.status(500).json({ error: "Failed to generate menu" });
     }
   });
@@ -8002,11 +8098,11 @@ function registerRoutes(app2, storage2) {
       });
       flowerItems.sort((a, b) => parseInt(b.quantity?.toString() || "0") - parseInt(a.quantity?.toString() || "0"));
       const menuHtml = generateThemedMenu(flowerItems, theme);
-      log3(`Generated ${theme} themed menu with ${flowerItems.length} flower items`, "themed-menu");
+      log4(`Generated ${theme} themed menu with ${flowerItems.length} flower items`, "themed-menu");
       res.setHeader("Content-Type", "text/html");
       res.send(menuHtml);
     } catch (error) {
-      log3(`Themed menu generation error: ${error}`, "themed-menu");
+      log4(`Themed menu generation error: ${error}`, "themed-menu");
       res.status(500).json({ error: "Failed to generate themed menu" });
     }
   });
@@ -8135,7 +8231,7 @@ function registerRoutes(app2, storage2) {
         message: `Live catalog with ${availableItems.length} available items`
       });
     } catch (error) {
-      log3(`Catalog error: ${error}`, "catalog");
+      log4(`Catalog error: ${error}`, "catalog");
       res.status(500).json({ error: "Failed to generate catalog" });
     }
   });
@@ -8146,7 +8242,7 @@ function registerRoutes(app2, storage2) {
       if (!accessToken) {
         return res.status(400).json({ success: false, error: "Shopify access token not configured" });
       }
-      log3("Starting product name fix from Shopify store", "shopify-fix");
+      log4("Starting product name fix from Shopify store", "shopify-fix");
       let allProducts = [];
       let hasNextPage = true;
       let pageInfo = null;
@@ -8176,12 +8272,12 @@ function registerRoutes(app2, storage2) {
           hasNextPage = false;
         }
       }
-      log3(`Fetched ${allProducts.length} Shopify products for name fixing`, "shopify-fix");
+      log4(`Fetched ${allProducts.length} Shopify products for name fixing`, "shopify-fix");
       const items2 = await storage2.getItems();
       const genericItems = items2.filter(
         (item) => item.name && ["1 pound", "1 Pound", "ONE POUND", "1/2 pound", "1/4 pound", "Half Pound", "Quarter Pound"].includes(item.name)
       );
-      log3(`Found ${genericItems.length} items with generic names to fix`, "shopify-fix");
+      log4(`Found ${genericItems.length} items with generic names to fix`, "shopify-fix");
       let fixedCount = 0;
       let skippedCount = 0;
       for (const item of genericItems) {
@@ -8199,7 +8295,7 @@ function registerRoutes(app2, storage2) {
         }
         if (shopifyProductId) {
           const shopifyProduct = allProducts.find((p) => p.id === shopifyProductId);
-          log3(`Looking for product ID ${shopifyProductId}, found: ${shopifyProduct ? shopifyProduct.title : "NOT FOUND"}`, "shopify-fix");
+          log4(`Looking for product ID ${shopifyProductId}, found: ${shopifyProduct ? shopifyProduct.title : "NOT FOUND"}`, "shopify-fix");
           if (shopifyProduct) {
             const variant = shopifyProduct.variants?.find((v) => v.id === shopifyVariantId);
             if (variant) {
@@ -8211,21 +8307,21 @@ function registerRoutes(app2, storage2) {
                 shopify_variant_id: shopifyVariantId
               });
               fixedCount++;
-              log3(`Fixed item ${item.id}: "${item.name}" \u2192 "${newName}"`, "shopify-fix");
+              log4(`Fixed item ${item.id}: "${item.name}" \u2192 "${newName}"`, "shopify-fix");
             } else {
               skippedCount++;
-              log3(`No variant found for item ${item.id} (variant ID: ${shopifyVariantId})`, "shopify-fix");
+              log4(`No variant found for item ${item.id} (variant ID: ${shopifyVariantId})`, "shopify-fix");
             }
           } else {
             skippedCount++;
-            log3(`No product found for item ${item.id} (product ID: ${shopifyProductId})`, "shopify-fix");
+            log4(`No product found for item ${item.id} (product ID: ${shopifyProductId})`, "shopify-fix");
           }
         } else {
           skippedCount++;
-          log3(`No Shopify ID extractable for item ${item.id} (SKU: ${item.sku})`, "shopify-fix");
+          log4(`No Shopify ID extractable for item ${item.id} (SKU: ${item.sku})`, "shopify-fix");
         }
       }
-      log3(`Product name fix complete: ${fixedCount} fixed, ${skippedCount} skipped`, "shopify-fix");
+      log4(`Product name fix complete: ${fixedCount} fixed, ${skippedCount} skipped`, "shopify-fix");
       res.json({
         success: true,
         message: `Fixed ${fixedCount} product names, ${skippedCount} items skipped`,
@@ -8234,7 +8330,7 @@ function registerRoutes(app2, storage2) {
         totalProcessed: genericItems.length
       });
     } catch (error) {
-      log3(`Product name fix error: ${error}`, "shopify-fix");
+      log4(`Product name fix error: ${error}`, "shopify-fix");
       res.status(500).json({ success: false, error: "Failed to fix product names" });
     }
   });
@@ -8251,7 +8347,7 @@ function registerRoutes(app2, storage2) {
       const coaUrl = `https://gold-standard-cbd.myshopify.com/pages/coa-${strainSlug}`;
       res.redirect(coaUrl);
     } catch (error) {
-      log3(`COA generation error: ${error}`, "coa");
+      log4(`COA generation error: ${error}`, "coa");
       res.status(500).json({ error: "Failed to generate COA URL" });
     }
   });
@@ -8372,7 +8468,7 @@ function registerRoutes(app2, storage2) {
       res.setHeader("Content-Type", "text/html");
       res.send(mediaPackHtml);
     } catch (error) {
-      log3(`Media pack generation error: ${error}`, "media");
+      log4(`Media pack generation error: ${error}`, "media");
       res.status(500).json({ error: "Failed to generate media pack" });
     }
   });
@@ -8381,10 +8477,10 @@ function registerRoutes(app2, storage2) {
       const { CustomerTierService: CustomerTierService2 } = await Promise.resolve().then(() => (init_customer_tiers(), customer_tiers_exports));
       const tierService = new CustomerTierService2();
       const tierData = await tierService.getCustomerTierSummary();
-      log3(`Retrieved customer tier data: ${tierData.totalCustomers} customers, $${tierData.totalRevenue.toFixed(2)} total revenue`, "api");
+      log4(`Retrieved customer tier data: ${tierData.totalCustomers} customers, $${tierData.totalRevenue.toFixed(2)} total revenue`, "api");
       res.json(tierData);
     } catch (error) {
-      log3(`Error fetching customer tiers: ${error}`, "api");
+      log4(`Error fetching customer tiers: ${error}`, "api");
       res.status(500).json({ error: "Failed to fetch customer tier data" });
     }
   });
@@ -8392,16 +8488,16 @@ function registerRoutes(app2, storage2) {
     try {
       const { CustomerTierService: CustomerTierService2 } = await Promise.resolve().then(() => (init_customer_tiers(), customer_tiers_exports));
       const tierService = new CustomerTierService2();
-      log3("Starting Shopify customer tier sync", "api");
+      log4("Starting Shopify customer tier sync", "api");
       const tierData = await tierService.getCustomerTierSummary();
-      log3(`Sync complete: ${tierData.totalCustomers} customers processed`, "api");
+      log4(`Sync complete: ${tierData.totalCustomers} customers processed`, "api");
       res.json({
         success: true,
         message: `Successfully synced ${tierData.totalCustomers} customers`,
         data: tierData
       });
     } catch (error) {
-      log3(`Error syncing customer tiers: ${error}`, "api");
+      log4(`Error syncing customer tiers: ${error}`, "api");
       res.status(500).json({ error: "Failed to sync customer tier data" });
     }
   });
@@ -8409,7 +8505,7 @@ function registerRoutes(app2, storage2) {
     try {
       const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
       const bulkService = new ShopifyBulkQueryService2();
-      log3("Starting bulk customer tier sync", "api");
+      log4("Starting bulk customer tier sync", "api");
       const operationId = await bulkService.startBulkQuery();
       res.json({
         success: true,
@@ -8418,7 +8514,7 @@ function registerRoutes(app2, storage2) {
         note: "Check /api/customers/bulk-sync-status/{operationId} for progress"
       });
     } catch (error) {
-      log3(`Error starting bulk sync: ${error}`, "api");
+      log4(`Error starting bulk sync: ${error}`, "api");
       res.status(500).json({ error: "Failed to start bulk sync" });
     }
   });
@@ -8437,7 +8533,7 @@ function registerRoutes(app2, storage2) {
         completedAt: status?.completedAt
       });
     } catch (error) {
-      log3(`Error checking bulk sync status: ${error}`, "api");
+      log4(`Error checking bulk sync status: ${error}`, "api");
       res.status(500).json({ error: "Failed to check bulk sync status" });
     }
   });
@@ -8446,7 +8542,7 @@ function registerRoutes(app2, storage2) {
       const { operationId } = req.body;
       const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
       const bulkService = new ShopifyBulkQueryService2();
-      log3("Processing bulk operation results", "api");
+      log4("Processing bulk operation results", "api");
       const url = await bulkService.waitForBulkOperation(operationId);
       const customers2 = await bulkService.downloadBulkResults(url);
       const { CustomerTierService: CustomerTierService2 } = await Promise.resolve().then(() => (init_customer_tiers(), customer_tiers_exports));
@@ -8464,7 +8560,7 @@ function registerRoutes(app2, storage2) {
           orderCount
         };
       });
-      log3(`Processed ${processedCustomers.length} customers from bulk operation`, "api");
+      log4(`Processed ${processedCustomers.length} customers from bulk operation`, "api");
       res.json({
         success: true,
         message: `Successfully processed ${processedCustomers.length} customers`,
@@ -8473,7 +8569,7 @@ function registerRoutes(app2, storage2) {
         billionDollarCustomers: processedCustomers.filter((c) => c.lifetimeSpent > 1e9).length
       });
     } catch (error) {
-      log3(`Error processing bulk results: ${error}`, "api");
+      log4(`Error processing bulk results: ${error}`, "api");
       res.status(500).json({ error: "Failed to process bulk results" });
     }
   });
@@ -8485,7 +8581,7 @@ function registerRoutes(app2, storage2) {
       }
       const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
       const bulkService = new ShopifyBulkQueryService2();
-      log3(`Fetching customer tiers from bulk operation: ${operationId}`, "api");
+      log4(`Fetching customer tiers from bulk operation: ${operationId}`, "api");
       const status = await bulkService.checkBulkOperationStatus(operationId);
       if (status?.status !== "COMPLETED" || !status.url) {
         return res.status(400).json({ error: "Bulk operation not completed or URL not available" });
@@ -8552,7 +8648,7 @@ function registerRoutes(app2, storage2) {
       tierSummary.forEach((tier) => {
         tier.customers.sort((a, b) => b.totalSpent - a.totalSpent);
       });
-      log3(`Processed ${totalCustomers} customers with $25k+ lifetime spending`, "api");
+      log4(`Processed ${totalCustomers} customers with $25k+ lifetime spending`, "api");
       res.json({
         totalCustomers,
         totalRevenue,
@@ -8561,7 +8657,7 @@ function registerRoutes(app2, storage2) {
         // Only return tiers with customers
       });
     } catch (error) {
-      log3(`Error fetching tiers from bulk data: ${error}`, "api");
+      log4(`Error fetching tiers from bulk data: ${error}`, "api");
       res.status(500).json({ error: "Failed to process bulk customer data" });
     }
   });
@@ -8576,7 +8672,7 @@ function registerRoutes(app2, storage2) {
       }
       res.json(customerTier);
     } catch (error) {
-      log3(`Error fetching customer tier: ${error}`, "api");
+      log4(`Error fetching customer tier: ${error}`, "api");
       res.status(500).json({ error: "Failed to fetch customer tier" });
     }
   });
@@ -8585,7 +8681,7 @@ function registerRoutes(app2, storage2) {
       const { getShopifyCredentials: getShopifyCredentials3 } = await Promise.resolve().then(() => (init_shopify_auth(), shopify_auth_exports));
       const { accessToken } = await getShopifyCredentials3();
       const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || "gold-standard-cbd.myshopify.com";
-      log3("Importing sales data from Shopify", "sales-import");
+      log4("Importing sales data from Shopify", "sales-import");
       const query = `
         query GetRecentOrders($cursor: String) {
           orders(first: 50, after: $cursor, query: "financial_status:paid", sortKey: CREATED_AT, reverse: true) {
@@ -8651,7 +8747,7 @@ function registerRoutes(app2, storage2) {
       });
       const data = await response.json();
       if (data.errors) {
-        log3(`GraphQL errors: ${JSON.stringify(data.errors)}`, "sales-import");
+        log4(`GraphQL errors: ${JSON.stringify(data.errors)}`, "sales-import");
         throw new Error("Failed to fetch sales data from Shopify");
       }
       let importedCount = 0;
@@ -8691,12 +8787,12 @@ function registerRoutes(app2, storage2) {
             });
             importedCount++;
           } catch (error) {
-            log3(`Sale already exists or error: ${error}`, "sales-import");
+            log4(`Sale already exists or error: ${error}`, "sales-import");
           }
           salesSummary.push(saleRecord);
         }
       }
-      log3(`Imported ${importedCount} sales records, total revenue: $${totalRevenue.toFixed(2)}`, "sales-import");
+      log4(`Imported ${importedCount} sales records, total revenue: $${totalRevenue.toFixed(2)}`, "sales-import");
       res.json({
         success: true,
         message: `Imported ${importedCount} sales records`,
@@ -8709,7 +8805,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Error importing sales data: ${error}`, "sales-import");
+      log4(`Error importing sales data: ${error}`, "sales-import");
       res.status(500).json({ error: "Failed to import sales data from Shopify" });
     }
   });
@@ -8722,7 +8818,7 @@ function registerRoutes(app2, storage2) {
         count: sales2.length
       });
     } catch (error) {
-      log3(`Recent sales error: ${error}`, "sales");
+      log4(`Recent sales error: ${error}`, "sales");
       res.status(500).json({
         success: false,
         error: "Failed to fetch recent sales"
@@ -8744,7 +8840,7 @@ function registerRoutes(app2, storage2) {
           error: "Shopify access token not configured"
         });
       }
-      log3(`Starting comprehensive Shopify import from ${shopifyDomain}`, "shopify-import");
+      log4(`Starting comprehensive Shopify import from ${shopifyDomain}`, "shopify-import");
       let allProducts = [];
       let hasNextPage = true;
       let pageInfo = null;
@@ -8757,7 +8853,7 @@ function registerRoutes(app2, storage2) {
           }
         });
         if (!response.ok) {
-          log3(`Shopify API error: ${response.status}`, "shopify-import");
+          log4(`Shopify API error: ${response.status}`, "shopify-import");
           return res.status(500).json({
             success: false,
             error: "Failed to fetch Shopify products"
@@ -8774,9 +8870,9 @@ function registerRoutes(app2, storage2) {
         } else {
           hasNextPage = false;
         }
-        log3(`Fetched ${products.length} products (total: ${allProducts.length})`, "shopify-import");
+        log4(`Fetched ${products.length} products (total: ${allProducts.length})`, "shopify-import");
       }
-      log3(`Total Shopify products fetched: ${allProducts.length}`, "shopify-import");
+      log4(`Total Shopify products fetched: ${allProducts.length}`, "shopify-import");
       let importedCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
@@ -8792,7 +8888,10 @@ function registerRoutes(app2, storage2) {
               sku: variant.sku || `SHOPIFY-${product.id}-${variant.id}`,
               quantity: variant.inventory_quantity || 0,
               base_price: parseFloat(variant.price) || 0,
-              cost_price: parseFloat(variant.compare_at_price) || 0,
+              sale_price: parseFloat(variant.price) || 0,
+              // Set sale_price same as base_price
+              cost_price: parseFloat(variant.compare_at_price) || parseFloat(variant.price) * 0.6 || 0,
+              // If no compare price, use 60% of price
               category: product.product_type || "Shopify Import",
               brand: product.vendor || "Gold Standard",
               status: product.status === "active" && variant.inventory_quantity > 0 ? "active" : "draft",
@@ -8800,6 +8899,8 @@ function registerRoutes(app2, storage2) {
               shopifyVariantId: variant.id,
               weight: variant.weight || null,
               images: product.images?.map((img) => img.src) || [],
+              imageUrl: product.images?.[0]?.src || null,
+              // Add primary image URL
               thca_percentage: extractTHCaPercentage(product.title),
               description: product.body_html || "",
               tags: product.tags || ""
@@ -8808,28 +8909,28 @@ function registerRoutes(app2, storage2) {
               if (existingItem) {
                 await storage2.updateItem(existingItem.id, itemData);
                 updatedCount++;
-                log3(`Updated item: ${itemData.name}`, "shopify-import");
+                log4(`Updated item: ${itemData.name}`, "shopify-import");
               } else {
                 await storage2.createItem(itemData);
                 importedCount++;
-                log3(`Imported new item: ${itemData.name}`, "shopify-import");
+                log4(`Imported new item: ${itemData.name}`, "shopify-import");
               }
             } catch (error) {
               if (error.message && error.message.includes("duplicate key")) {
-                log3(`Skipped duplicate SKU: ${itemData.sku}`, "shopify-import");
+                log4(`Skipped duplicate SKU: ${itemData.sku}`, "shopify-import");
                 skippedCount++;
               } else {
-                log3(`Error processing ${itemData.name}: ${error}`, "shopify-import");
+                log4(`Error processing ${itemData.name}: ${error}`, "shopify-import");
                 skippedCount++;
               }
             }
           }
         } else {
           skippedCount++;
-          log3(`Skipped product without variants: ${product.title}`, "shopify-import");
+          log4(`Skipped product without variants: ${product.title}`, "shopify-import");
         }
       }
-      log3(`Shopify import completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, "shopify-import");
+      log4(`Shopify import completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, "shopify-import");
       res.json({
         success: true,
         message: `Successfully imported ${allProducts.length} Shopify products`,
@@ -8839,7 +8940,7 @@ function registerRoutes(app2, storage2) {
         totalProducts: allProducts.length
       });
     } catch (error) {
-      log3(`Shopify import error: ${error}`, "shopify-import");
+      log4(`Shopify import error: ${error}`, "shopify-import");
       res.status(500).json({
         success: false,
         error: "Failed to import Shopify inventory",
@@ -8861,7 +8962,7 @@ function registerRoutes(app2, storage2) {
         message: credentials2.configured ? "Shopify credentials configured" : "Shopify credentials incomplete"
       });
     } catch (error) {
-      log3(`Shopify credentials check error: ${error}`, "shopify");
+      log4(`Shopify credentials check error: ${error}`, "shopify");
       res.status(500).json({
         success: false,
         error: "Failed to check Shopify credentials"
@@ -8901,7 +9002,7 @@ function registerRoutes(app2, storage2) {
         store: shopData.shop?.name || storeUrl
       });
     } catch (error) {
-      log3(`Shopify credentials save error: ${error}`, "shopify");
+      log4(`Shopify credentials save error: ${error}`, "shopify");
       res.status(500).json({
         success: false,
         error: "Failed to save Shopify credentials"
@@ -8918,7 +9019,7 @@ function registerRoutes(app2, storage2) {
           error: "Shopify access token not configured"
         });
       }
-      log3(`Starting comprehensive Shopify import from ${shopifyDomain}`, "shopify-sync");
+      log4(`Starting comprehensive Shopify import from ${shopifyDomain}`, "shopify-sync");
       let allProducts = [];
       let hasNextPage = true;
       let pageInfo = null;
@@ -8931,7 +9032,7 @@ function registerRoutes(app2, storage2) {
           }
         });
         if (!response.ok) {
-          log3(`Shopify API error: ${response.status}`, "shopify-sync");
+          log4(`Shopify API error: ${response.status}`, "shopify-sync");
           return res.status(500).json({
             success: false,
             error: "Failed to fetch Shopify products"
@@ -8948,33 +9049,92 @@ function registerRoutes(app2, storage2) {
         } else {
           hasNextPage = false;
         }
-        log3(`Fetched ${products.length} products (total: ${allProducts.length})`, "shopify-sync");
+        log4(`Fetched ${products.length} products (total: ${allProducts.length})`, "shopify-sync");
       }
-      log3(`Total Shopify products fetched: ${allProducts.length}`, "shopify-sync");
+      log4(`Total Shopify products fetched: ${allProducts.length}`, "shopify-sync");
       let importedCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
       const existingItems = await storage2.getItems();
-      const existingSkus = new Set(existingItems.map((item) => item.sku).filter(Boolean));
-      const existingShopifyIds = new Set(existingItems.map((item) => item.shopifyVariantId).filter(Boolean));
+      const existingSkus = new Set(existingItems.map((item) => item.sku?.toLowerCase()).filter(Boolean));
+      const existingShopifyVariantIds = new Set(existingItems.map((item) => item.shopifyVariantId?.toString()).filter(Boolean));
+      const existingShopifyProductIds = new Set(existingItems.map((item) => item.shopifyId?.toString()).filter(Boolean));
+      const existingBarcodes = new Set(existingItems.map((item) => item.barcode?.toLowerCase()).filter(Boolean));
+      const existingNameWeightCombos = new Set(
+        existingItems.map((item) => `${item.name?.toLowerCase()}_${item.weight?.toLowerCase()}`).filter(Boolean)
+      );
+      const importedSkusThisBatch = /* @__PURE__ */ new Set();
+      const importedVariantIdsThisBatch = /* @__PURE__ */ new Set();
+      const importedBarcodesThisBatch = /* @__PURE__ */ new Set();
+      const importedNameWeightThisBatch = /* @__PURE__ */ new Set();
       for (const product of allProducts) {
         if (product.variants && product.variants.length > 0) {
           for (const variant of product.variants) {
             try {
               const generatedSku = variant.sku || `SHOPIFY-${product.id}-${variant.id}`;
-              const existingItem = existingItems.find(
-                (item) => item.sku === variant.sku || item.sku === generatedSku || item.shopifyVariantId && item.shopifyVariantId.toString() === variant.id.toString() || item.shopifyId && item.shopifyId.toString() === product.id.toString()
-              );
-              if (existingItem || existingSkus.has(generatedSku) || variant.sku && existingSkus.has(variant.sku) || existingShopifyIds.has(variant.id.toString())) {
+              const skuLower = generatedSku.toLowerCase();
+              const variantIdStr = variant.id.toString();
+              const barcodeLower = variant.barcode?.toLowerCase();
+              const itemName = variant.title || product.title;
+              const nameWeightCombo = `${itemName.toLowerCase()}_${variant.weight || "no-weight"}`.toLowerCase();
+              const isDuplicateSku = existingSkus.has(skuLower) || variant.sku && existingSkus.has(variant.sku.toLowerCase()) || importedSkusThisBatch.has(skuLower);
+              const isDuplicateVariantId = existingShopifyVariantIds.has(variantIdStr) || importedVariantIdsThisBatch.has(variantIdStr);
+              const isDuplicateBarcode = barcodeLower && (existingBarcodes.has(barcodeLower) || importedBarcodesThisBatch.has(barcodeLower));
+              const isDuplicateNameWeight = existingNameWeightCombos.has(nameWeightCombo) || importedNameWeightThisBatch.has(nameWeightCombo);
+              const existingItem = existingItems.find((item) => {
+                if (item.sku?.toLowerCase() === skuLower || variant.sku && item.sku?.toLowerCase() === variant.sku.toLowerCase()) {
+                  return true;
+                }
+                if (item.shopifyVariantId?.toString() === variantIdStr) {
+                  return true;
+                }
+                if (item.shopifyId?.toString() === product.id.toString() && product.variants.length === 1) {
+                  return true;
+                }
+                if (barcodeLower && item.barcode?.toLowerCase() === barcodeLower) {
+                  return true;
+                }
+                if (item.name?.toLowerCase() === itemName.toLowerCase() && item.weight === variant.weight) {
+                  return true;
+                }
+                return false;
+              });
+              if (existingItem || isDuplicateSku || isDuplicateVariantId || isDuplicateBarcode || isDuplicateNameWeight) {
                 skippedCount++;
-                log3(`Skipped duplicate: ${generatedSku} (existing item: ${existingItem?.id || "N/A"})`, "shopify-import");
+                const reason = existingItem ? `existing item ID: ${existingItem.id}` : isDuplicateSku ? "duplicate SKU" : isDuplicateVariantId ? "duplicate variant ID" : isDuplicateBarcode ? "duplicate barcode" : "duplicate name/weight combination";
+                log4(`Skipped duplicate: ${itemName} - ${generatedSku} (${reason})`, "shopify-import");
+                continue;
+              }
+              const itemNameLower = itemName.toLowerCase();
+              if (itemNameLower.match(/^\d+(\.\d+)?\s*(gram|grams|g|oz|ounce|pound|lb)s?$/)) {
+                skippedCount++;
+                log4(`Skipped weight-only variant: ${itemName}`, "shopify-import");
+                continue;
+              }
+              if (itemName === "Default Title" || itemName === "Title") {
+                skippedCount++;
+                log4(`Skipped default title variant`, "shopify-import");
+                continue;
+              }
+              if (itemName.includes("<") || itemName.includes(">")) {
+                skippedCount++;
+                log4(`Skipped HTML content: ${itemName.substring(0, 50)}...`, "shopify-import");
+                continue;
+              }
+              const price = parseFloat(variant.price) || 0;
+              if (price === 30 && !itemNameLower.includes("pound") && !itemNameLower.includes("bulk")) {
+                skippedCount++;
+                log4(`Skipped suspicious $30 item: ${itemName}`, "shopify-import");
                 continue;
               }
               const itemData = {
-                name: variant.title || product.title,
+                name: itemName,
                 sku: generatedSku,
+                barcode: variant.barcode || null,
                 quantity: variant.inventory_quantity || 0,
-                base_price: parseFloat(variant.price) || 0,
+                base_price: price,
+                sale_price: price,
+                // Set sale_price same as base_price initially
                 cost_price: parseFloat(variant.compare_at_price) || 0,
                 category: product.product_type || "Shopify Import",
                 brand: product.vendor || "Gold Standard",
@@ -8990,22 +9150,29 @@ function registerRoutes(app2, storage2) {
               if (existingItem) {
                 await storage2.updateItem(existingItem.id, itemData);
                 updatedCount++;
-                log3(`Updated item: ${itemData.name}`, "shopify-import");
+                log4(`Updated item: ${itemData.name}`, "shopify-import");
               } else {
                 await storage2.createItem(itemData);
-                existingSkus.add(generatedSku);
-                existingShopifyIds.add(variant.id.toString());
+                importedSkusThisBatch.add(skuLower);
+                if (variant.sku) {
+                  importedSkusThisBatch.add(variant.sku.toLowerCase());
+                }
+                importedVariantIdsThisBatch.add(variantIdStr);
+                if (barcodeLower) {
+                  importedBarcodesThisBatch.add(barcodeLower);
+                }
+                importedNameWeightThisBatch.add(nameWeightCombo);
                 importedCount++;
-                log3(`Imported new item: ${itemData.name}`, "shopify-import");
+                log4(`Imported new item: ${itemData.name} (SKU: ${generatedSku}, Variant: ${variantIdStr})`, "shopify-import");
               }
             } catch (error) {
               skippedCount++;
-              log3(`Error processing variant ${variant.id}: ${error}`, "shopify-import");
+              log4(`Error processing variant ${variant.id}: ${error}`, "shopify-import");
             }
           }
         }
       }
-      log3(`Shopify sync completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, "shopify");
+      log4(`Shopify sync completed: ${importedCount} imported, ${updatedCount} updated, ${skippedCount} skipped`, "shopify");
       res.json({
         success: true,
         message: `Successfully synced ${allProducts.length} Shopify products`,
@@ -9015,7 +9182,7 @@ function registerRoutes(app2, storage2) {
         totalProducts: allProducts.length
       });
     } catch (error) {
-      log3(`Shopify sync error: ${error}`, "shopify");
+      log4(`Shopify sync error: ${error}`, "shopify");
       res.status(500).json({
         success: false,
         error: "Failed to sync Shopify inventory",
@@ -9294,9 +9461,9 @@ function registerRoutes(app2, storage2) {
       `;
       res.setHeader("Content-Type", "text/html");
       res.send(menuHtml);
-      log3(`Generated pound variants menu with ${poundVariants.length} active items`, "menu");
+      log4(`Generated pound variants menu with ${poundVariants.length} active items`, "menu");
     } catch (error) {
-      log3(`Pound variants menu error: ${error}`, "menu");
+      log4(`Pound variants menu error: ${error}`, "menu");
       res.status(500).json({ error: "Failed to generate pound variants menu" });
     }
   });
@@ -9310,8 +9477,143 @@ function registerRoutes(app2, storage2) {
         message: "Sales tracking system ready"
       });
     } catch (error) {
-      log3(`Sales fetch error: ${error}`, "sales");
+      log4(`Sales fetch error: ${error}`, "sales");
       res.status(500).json({ error: "Failed to fetch sales data" });
+    }
+  });
+  app2.post("/api/fix-preroll-pricing", async (_req, res) => {
+    try {
+      const prerolls = await storage2.getItems();
+      const prerollsToUpdate = prerolls.filter((item) => {
+        const nameLower = (item.name || "").toLowerCase();
+        const skuLower = (item.sku || "").toLowerCase();
+        const categoryLower = (item.category || "").toLowerCase();
+        const isPreroll = nameLower.includes("preroll") || nameLower.includes("pre-roll") || nameLower.includes("pre roll") || skuLower.includes("preroll") || skuLower.includes("pre-roll") || categoryLower.includes("preroll");
+        return isPreroll && (!item.sale_price || item.sale_price !== 8);
+      });
+      let updatedCount = 0;
+      for (const preroll of prerollsToUpdate) {
+        await storage2.updateItem(preroll.id, {
+          base_price: 10,
+          sale_price: 8,
+          cost_price: 6
+        });
+        updatedCount++;
+      }
+      res.json({
+        success: true,
+        message: `Updated pricing for ${updatedCount} pre-roll items`,
+        updated: updatedCount
+      });
+    } catch (error) {
+      console.error("Error fixing pre-roll pricing:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update pre-roll pricing"
+      });
+    }
+  });
+  app2.post("/api/fix-generic-names", async (_req, res) => {
+    try {
+      const items2 = await storage2.getItems();
+      const itemsToUpdate = items2.filter((item) => {
+        return item.name && (item.name.startsWith("Premium Cannabis") || item.name === "Cannabis Product" || item.name.match(/^\d+\s*(GRAM|GRAMS|gram|grams|g|G|POUND|POUNDS|pound|pounds|lb|LB)s?$/i));
+      });
+      let updatedCount = 0;
+      for (const item of itemsToUpdate) {
+        let newName = item.name;
+        if (item.images && item.images.length > 0) {
+          for (const image of item.images) {
+            const filenameMatch = image.match(/\/([^\/]+\.(jpg|jpeg|png|heic))/i);
+            if (filenameMatch) {
+              const filename = filenameMatch[1];
+              const strainMatch = filename.match(/^([^_]+?)(?:_Live_Rosin|_THCA|_THC|_CBD|_Badder|_Shot|\.)/i);
+              if (strainMatch && strainMatch[1] && strainMatch[1].toLowerCase() !== "gold") {
+                newName = strainMatch[1].replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+                if (newName && newName.length > 2) break;
+              }
+            }
+          }
+        }
+        if (newName !== item.name && !newName.startsWith("Premium Cannabis")) {
+          await storage2.updateItem(item.id, { name: newName });
+          updatedCount++;
+        }
+      }
+      res.json({
+        success: true,
+        message: `Updated names for ${updatedCount} items`,
+        updated: updatedCount,
+        total_generic: itemsToUpdate.length
+      });
+    } catch (error) {
+      console.error("Error fixing generic names:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update generic names"
+      });
+    }
+  });
+  app2.post("/api/fix-all-pricing", async (_req, res) => {
+    try {
+      const items2 = await storage2.getItems();
+      let prerollsFixed = 0;
+      let nullPricesFixed = 0;
+      for (const item of items2) {
+        const nameLower = (item.name || "").toLowerCase();
+        const skuLower = (item.sku || "").toLowerCase();
+        const categoryLower = (item.category || "").toLowerCase();
+        const isPreroll = nameLower.includes("preroll") || nameLower.includes("pre-roll") || nameLower.includes("pre roll") || skuLower.includes("preroll") || skuLower.includes("pre-roll");
+        if (isPreroll && item.sale_price !== 8) {
+          await storage2.updateItem(item.id, {
+            base_price: 10,
+            sale_price: 8,
+            cost_price: 6
+          });
+          prerollsFixed++;
+        } else if (!item.sale_price || !item.base_price) {
+          let basePrice = 35;
+          let salePrice = 30;
+          let costPrice = 21;
+          if (categoryLower.includes("flower") || nameLower.includes("flower")) {
+            if (nameLower.includes("pound") || nameLower.includes("1 lb")) {
+              basePrice = 1200;
+              salePrice = 1020;
+              costPrice = 720;
+            } else {
+              basePrice = 35;
+              salePrice = 30;
+              costPrice = 21;
+            }
+          } else if (categoryLower.includes("concentrate") || nameLower.includes("rosin") || nameLower.includes("badder")) {
+            basePrice = 40;
+            salePrice = 34;
+            costPrice = 24;
+          } else if (categoryLower.includes("edible")) {
+            basePrice = 25;
+            salePrice = 21;
+            costPrice = 15;
+          }
+          await storage2.updateItem(item.id, {
+            base_price: basePrice,
+            sale_price: salePrice,
+            cost_price: costPrice
+          });
+          nullPricesFixed++;
+        }
+      }
+      res.json({
+        success: true,
+        message: `Fixed pricing: ${prerollsFixed} pre-rolls, ${nullPricesFixed} items with null prices`,
+        prerolls_fixed: prerollsFixed,
+        null_prices_fixed: nullPricesFixed
+      });
+    } catch (error) {
+      console.error("Error fixing all pricing:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fix pricing"
+      });
     }
   });
   app2.get("/api/system/health", async (_req, res) => {
@@ -9331,7 +9633,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`System health error: ${error}`, "system");
+      log4(`System health error: ${error}`, "system");
       res.status(500).json({
         success: false,
         error: "System health check failed"
@@ -9362,11 +9664,11 @@ function registerRoutes(app2, storage2) {
             const matchResult = findBestShopifyMatch(item.name, products);
             if (matchResult.product && matchResult.product.handle) {
               storefrontUrl = `https://gold-standard-cbd.myshopify.com/products/${matchResult.product.handle}`;
-              log3(`Storefront match for "${item.name}": ${matchResult.product.title}`, "shopify-storefront");
+              log4(`Storefront match for "${item.name}": ${matchResult.product.title}`, "shopify-storefront");
             }
           }
         } catch (error) {
-          log3(`Error finding storefront product "${item.name}": ${error}`, "shopify-storefront");
+          log4(`Error finding storefront product "${item.name}": ${error}`, "shopify-storefront");
         }
       }
       if (!storefrontUrl) {
@@ -9374,7 +9676,7 @@ function registerRoutes(app2, storage2) {
       }
       res.redirect(302, storefrontUrl);
     } catch (error) {
-      log3(`Shopify storefront view error: ${error}`, "shopify-storefront");
+      log4(`Shopify storefront view error: ${error}`, "shopify-storefront");
       res.status(500).json({
         success: false,
         error: "Failed to generate storefront view"
@@ -9405,11 +9707,11 @@ function registerRoutes(app2, storage2) {
             const matchResult = findBestShopifyMatch(item.name, products);
             if (matchResult.product && matchResult.score >= 80) {
               directProductUrl = `https://admin.shopify.com/store/gold-standard-cbd/products/${matchResult.product.id}`;
-              log3(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, "shopify");
+              log4(`Enhanced fuzzy match for "${item.name}": ${matchResult.product.title} (Score: ${matchResult.score})`, "shopify");
             }
           }
         } catch (error) {
-          log3(`Error searching for product "${item.name}": ${error}`, "shopify");
+          log4(`Error searching for product "${item.name}": ${error}`, "shopify");
         }
       }
       let shopifyUrl = directProductUrl;
@@ -9423,7 +9725,7 @@ function registerRoutes(app2, storage2) {
           shopifyUrl = `https://admin.shopify.com/store/gold-standard-cbd/products`;
         }
       }
-      log3(`Shopify view for "${item.name}": ${directProductUrl ? "Direct match found" : "Using search fallback"}`, "shopify");
+      log4(`Shopify view for "${item.name}": ${directProductUrl ? "Direct match found" : "Using search fallback"}`, "shopify");
       res.json({
         success: true,
         url: shopifyUrl,
@@ -9436,7 +9738,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Shopify view error: ${error}`, "shopify");
+      log4(`Shopify view error: ${error}`, "shopify");
       res.status(500).json({
         success: false,
         error: "Failed to generate Shopify view"
@@ -9448,7 +9750,7 @@ function registerRoutes(app2, storage2) {
       const id = parseInt(req.params.id);
       const item = await storage2.getItem(id);
       if (!item) {
-        log3(`Media pack request failed: Item ${id} not found`, "media-pack");
+        log4(`Media pack request failed: Item ${id} not found`, "media-pack");
         return res.status(404).json({ error: "Item not found" });
       }
       const extractStrainName2 = (name) => {
@@ -9523,17 +9825,17 @@ function registerRoutes(app2, storage2) {
             description: `Product image ${index2 + 1}`
           }));
         } catch (error) {
-          log3(`Error parsing images for item ${id}: ${error}`, "media-pack");
+          log4(`Error parsing images for item ${id}: ${error}`, "media-pack");
         }
       }
-      log3(`Generated media pack for "${item.name}" (${mediaPack.downloadLinks.productImages.length} images)`, "media-pack");
+      log4(`Generated media pack for "${item.name}" (${mediaPack.downloadLinks.productImages.length} images)`, "media-pack");
       res.json({
         success: true,
         mediaPack,
         quickDownload: `/api/items/${id}/media-pack.zip`
       });
     } catch (error) {
-      log3(`Media pack generation error: ${error}`, "media-pack");
+      log4(`Media pack generation error: ${error}`, "media-pack");
       res.status(500).json({
         success: false,
         error: "Failed to generate media pack"
@@ -9545,7 +9847,7 @@ function registerRoutes(app2, storage2) {
       const id = parseInt(req.params.id);
       const item = await storage2.getItem(id);
       if (!item) {
-        log3(`Media pack ZIP request failed: Item ${id} not found`, "media-pack");
+        log4(`Media pack ZIP request failed: Item ${id} not found`, "media-pack");
         return res.status(404).json({ error: "Item not found" });
       }
       const extractStrainName2 = (name) => {
@@ -9808,10 +10110,10 @@ function registerRoutes(app2, storage2) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${productHandle}-media-pack.html"`);
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      log3(`Media pack HTML download generated for "${item.name}"`, "media-pack");
+      log4(`Media pack HTML download generated for "${item.name}"`, "media-pack");
       res.send(mediaPackHtml);
     } catch (error) {
-      log3(`Media pack ZIP generation error: ${error}`, "media-pack");
+      log4(`Media pack ZIP generation error: ${error}`, "media-pack");
       res.status(500).json({
         success: false,
         error: "Failed to generate media pack download"
@@ -9820,8 +10122,8 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/items/fix-accurate-weights", async (req, res) => {
     try {
-      log3("Starting accurate weight data fix for all items", "weight-fix");
-      const { AccurateWeightExtractor: AccurateWeightExtractor2 } = await Promise.resolve().then(() => (init_accurate_weight_extractor(), accurate_weight_extractor_exports));
+      log4("Starting accurate weight data fix for all items", "weight-fix");
+      const { WeightService: WeightService2 } = await Promise.resolve().then(() => (init_weight_service(), weight_service_exports));
       const items2 = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
       let updatedCount = 0;
       const updates = [];
@@ -9830,9 +10132,9 @@ function registerRoutes(app2, storage2) {
       for (const item of items2) {
         try {
           const currentWeight = item.weight;
-          const weightResult = AccurateWeightExtractor2.extractAccurateWeight(item.name);
-          const correctWeight = AccurateWeightExtractor2.formatWeightForDisplay(weightResult);
-          if (currentWeight !== correctWeight && correctWeight !== "Weight not specified" && AccurateWeightExtractor2.validateWeight(item.name, correctWeight)) {
+          const weightResult = WeightService2.extractWeight(item.name);
+          const correctWeight = weightResult.weight;
+          if (currentWeight !== correctWeight && correctWeight !== "Weight not specified" && weightResult.category !== "not_specified") {
             await storage2.updateItem(item.id, { weight: correctWeight });
             updatedCount++;
             const update = {
@@ -9847,7 +10149,7 @@ function registerRoutes(app2, storage2) {
             if ((item.name.toLowerCase().includes("gram") || item.name.toLowerCase().includes("count")) && currentWeight?.includes("pound")) {
               criticalFixes.push(update);
             }
-            log3(`Fixed weight: "${item.name}" from "${currentWeight}" to "${correctWeight}"`, "weight-fix");
+            log4(`Fixed weight: "${item.name}" from "${currentWeight}" to "${correctWeight}"`, "weight-fix");
           }
         } catch (itemError) {
           errorItems.push({
@@ -9857,7 +10159,7 @@ function registerRoutes(app2, storage2) {
           });
         }
       }
-      log3(`Accurate weight fix completed: ${updatedCount} items updated, ${criticalFixes.length} critical fixes`, "weight-fix");
+      log4(`Accurate weight fix completed: ${updatedCount} items updated, ${criticalFixes.length} critical fixes`, "weight-fix");
       res.json({
         success: true,
         message: `Fixed weights for ${updatedCount} items. Resolved ${criticalFixes.length} critical display bugs.`,
@@ -9870,7 +10172,7 @@ function registerRoutes(app2, storage2) {
         errors: errorItems.slice(0, 5)
       });
     } catch (error) {
-      log3(`Accurate weight fix error: ${error}`, "error");
+      log4(`Accurate weight fix error: ${error}`, "error");
       res.status(500).json({
         success: false,
         error: "Failed to fix weight data with accurate extractor"
@@ -9879,7 +10181,7 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/items/fix-weights", async (req, res) => {
     try {
-      log3("Starting weight data fix for all items", "weight-fix");
+      log4("Starting weight data fix for all items", "weight-fix");
       const parseWeightFromName = (name) => {
         if (!name) return "Not specified";
         const nameLower = name.toLowerCase();
@@ -9928,7 +10230,7 @@ function registerRoutes(app2, storage2) {
       const itemsToUpdate = items2.filter(
         (item) => (!item.weight || item.weight === "null" || item.weight.trim() === "") && item.name && item.name.toLowerCase().includes("pound")
       );
-      log3(`Found ${itemsToUpdate.length} items with missing weight data`, "weight-fix");
+      log4(`Found ${itemsToUpdate.length} items with missing weight data`, "weight-fix");
       let updatedCount = 0;
       for (const item of itemsToUpdate) {
         let newWeight = parseWeightFromName(item.name);
@@ -9938,10 +10240,10 @@ function registerRoutes(app2, storage2) {
         if (newWeight !== "Not specified") {
           await storage2.updateItem(item.id, { weight: newWeight });
           updatedCount++;
-          log3(`Updated item ${item.id}: "${item.name}" -> weight: "${newWeight}"`, "weight-fix");
+          log4(`Updated item ${item.id}: "${item.name}" -> weight: "${newWeight}"`, "weight-fix");
         }
       }
-      log3(`Weight fix completed: ${updatedCount} items updated`, "weight-fix");
+      log4(`Weight fix completed: ${updatedCount} items updated`, "weight-fix");
       res.json({
         success: true,
         message: `Successfully updated weight data for ${updatedCount} items`,
@@ -9949,7 +10251,7 @@ function registerRoutes(app2, storage2) {
         updated: updatedCount
       });
     } catch (error) {
-      log3(`Weight fix error: ${error}`, "weight-fix");
+      log4(`Weight fix error: ${error}`, "weight-fix");
       res.status(500).json({
         success: false,
         error: "Failed to fix weight data"
@@ -9958,8 +10260,8 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/items/fix-comprehensive-weights", async (req, res) => {
     try {
-      log3("Starting comprehensive weight data fix for all items", "weight-fix");
-      const { parseWeightFromProductName: parseWeightFromProductName2 } = await Promise.resolve().then(() => (init_weight_parser(), weight_parser_exports));
+      log4("Starting comprehensive weight data fix for all items", "weight-fix");
+      const { parseWeightFromProductName: parseWeightFromProductName2 } = await Promise.resolve().then(() => (init_weight_service(), weight_service_exports));
       const items2 = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
       let updatedCount = 0;
       const updates = [];
@@ -9986,7 +10288,7 @@ function registerRoutes(app2, storage2) {
             } else if (parsedWeight.includes("ounce")) {
               ounceItems.push(update);
             }
-            log3(`Corrected weight: "${item.name}" from "${currentWeight}" to "${parsedWeight}"`, "weight-fix");
+            log4(`Corrected weight: "${item.name}" from "${currentWeight}" to "${parsedWeight}"`, "weight-fix");
           }
         } catch (itemError) {
           errorItems.push({
@@ -9996,7 +10298,7 @@ function registerRoutes(app2, storage2) {
           });
         }
       }
-      log3(`Comprehensive weight fix completed: ${updatedCount} items updated, ${gramItems.length} gram items, ${ounceItems.length} ounce items`, "weight-fix");
+      log4(`Comprehensive weight fix completed: ${updatedCount} items updated, ${gramItems.length} gram items, ${ounceItems.length} ounce items`, "weight-fix");
       res.json({
         success: true,
         message: `Fixed weights for ${updatedCount} items. Corrected ${gramItems.length} gram items and ${ounceItems.length} ounce items that were incorrectly showing as pounds.`,
@@ -10011,7 +10313,7 @@ function registerRoutes(app2, storage2) {
         errors: errorItems.slice(0, 5)
       });
     } catch (error) {
-      log3(`Comprehensive weight fix error: ${error}`, "error");
+      log4(`Comprehensive weight fix error: ${error}`, "error");
       res.status(500).json({
         success: false,
         error: "Failed to fix weight data comprehensively"
@@ -10020,19 +10322,19 @@ function registerRoutes(app2, storage2) {
   });
   app2.post("/api/items/fix-pound-status", async (req, res) => {
     try {
-      log3("Starting status fix for pound variant items", "status-fix");
+      log4("Starting status fix for pound variant items", "status-fix");
       const items2 = await storage2.getAllItems();
       const poundItems = items2.filter(
         (item) => item.name && item.name.toLowerCase().includes("pound") && item.status === "draft" && (item.basePrice > 0 || item.salePrice > 0) && item.quantity > 0
       );
-      log3(`Found ${poundItems.length} pound items ready to activate`, "status-fix");
+      log4(`Found ${poundItems.length} pound items ready to activate`, "status-fix");
       let activatedCount = 0;
       for (const item of poundItems) {
         await storage2.updateItem(item.id, { status: "active" });
         activatedCount++;
-        log3(`Activated item ${item.id}: "${item.name}" (${item.quantity} units, $${item.basePrice || item.salePrice})`, "status-fix");
+        log4(`Activated item ${item.id}: "${item.name}" (${item.quantity} units, $${item.basePrice || item.salePrice})`, "status-fix");
       }
-      log3(`Status fix completed: ${activatedCount} items activated`, "status-fix");
+      log4(`Status fix completed: ${activatedCount} items activated`, "status-fix");
       res.json({
         success: true,
         message: `Successfully activated ${activatedCount} pound variant items`,
@@ -10040,7 +10342,7 @@ function registerRoutes(app2, storage2) {
         activated: activatedCount
       });
     } catch (error) {
-      log3(`Status fix error: ${error}`, "status-fix");
+      log4(`Status fix error: ${error}`, "status-fix");
       res.status(500).json({
         success: false,
         error: "Failed to fix item status"
@@ -10086,7 +10388,7 @@ function registerRoutes(app2, storage2) {
           });
         }
       }
-      log3(`Fixed ${updates.length} pound variant weights`, "fix-weights");
+      log4(`Fixed ${updates.length} pound variant weights`, "fix-weights");
       res.json({
         success: true,
         message: `Fixed ${updates.length} pound variant weights`,
@@ -10095,7 +10397,7 @@ function registerRoutes(app2, storage2) {
         totalFixed: updates.length
       });
     } catch (error) {
-      log3(`Fix pound weights error: ${error}`, "fix-weights");
+      log4(`Fix pound weights error: ${error}`, "fix-weights");
       res.status(500).json({ error: "Failed to fix pound weights" });
     }
   });
@@ -10132,87 +10434,6 @@ function registerRoutes(app2, storage2) {
     if (isNaN(priceNum) || priceNum <= 0) return "Contact for pricing";
     return `$${priceNum.toFixed(2)}`;
   };
-  app2.post("/api/shopify/sync-inventory", async (req, res) => {
-    try {
-      log3("Starting comprehensive Shopify inventory synchronization", "shopify-sync");
-      const internalItems = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
-      const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || "gold-standard-cbd.myshopify.com";
-      const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      if (!accessToken) {
-        return res.status(400).json({
-          success: false,
-          error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables."
-        });
-      }
-      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250`, {
-        headers: {
-          "X-Shopify-Access-Token": accessToken,
-          "Content-Type": "application/json"
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
-      }
-      const shopifyData = await response.json();
-      const shopifyProducts = shopifyData.products || [];
-      const syncResults = {
-        totalProcessed: internalItems.length,
-        totalShopifyProducts: shopifyProducts.length,
-        updated: 0,
-        discrepancies: [],
-        errors: []
-      };
-      for (const item of internalItems) {
-        try {
-          const matchResult = findBestShopifyMatch(item.name || "", shopifyProducts);
-          if (matchResult.product && matchResult.score >= 80) {
-            const shopifyProduct = matchResult.product;
-            const shopifyVariant = shopifyProduct.variants?.[0];
-            if (shopifyVariant) {
-              const internalQuantity = item.quantity || 0;
-              const shopifyQuantity = shopifyVariant.inventory_quantity || 0;
-              if (internalQuantity !== shopifyQuantity) {
-                syncResults.discrepancies.push({
-                  itemId: item.id,
-                  itemName: item.name,
-                  internalQuantity,
-                  shopifyQuantity,
-                  difference: internalQuantity - shopifyQuantity,
-                  shopifyProductId: shopifyProduct.id,
-                  shopifyVariantId: shopifyVariant.id
-                });
-                await storage2.updateItem(item.id, {
-                  quantity: shopifyQuantity,
-                  shopifyId: shopifyProduct.id.toString(),
-                  shopifyVariantId: shopifyVariant.id.toString()
-                });
-                syncResults.updated++;
-                log3(`Updated item ${item.id} quantity: ${internalQuantity} \u2192 ${shopifyQuantity}`, "shopify-sync");
-              }
-            }
-          }
-        } catch (error) {
-          syncResults.errors.push({
-            itemId: item.id,
-            itemName: item.name,
-            error: String(error)
-          });
-        }
-      }
-      log3(`Shopify sync completed: ${syncResults.updated} items updated, ${syncResults.discrepancies.length} discrepancies found`, "shopify-sync");
-      res.json({
-        success: true,
-        message: `Synchronized ${syncResults.updated} items with Shopify. Found ${syncResults.discrepancies.length} quantity discrepancies.`,
-        results: syncResults
-      });
-    } catch (error) {
-      log3(`Shopify sync error: ${error}`, "shopify-sync");
-      res.status(500).json({
-        success: false,
-        error: "Failed to synchronize with Shopify. Check your SHOPIFY_ACCESS_TOKEN and SHOPIFY_STORE_DOMAIN."
-      });
-    }
-  });
   app2.get("/api/bulk-flower", async (req, res) => {
     try {
       const SHOPIFY_ADMIN_API = "https://gold-standard-cbd.myshopify.com/admin/api/2023-07/graphql.json";
@@ -10261,7 +10482,7 @@ function registerRoutes(app2, storage2) {
         "Master 2 100lbs+": "Contact for pricing",
         "Order Link": `https://goldcbd.com/products/${product.handle}`
       }));
-      log3(`Bulk flower API: Retrieved ${items2.length} THCA products from Shopify`, "shopify");
+      log4(`Bulk flower API: Retrieved ${items2.length} THCA products from Shopify`, "shopify");
       res.json({
         bulkFlowerInventory: items2,
         contactInfo: {
@@ -10273,7 +10494,7 @@ function registerRoutes(app2, storage2) {
         totalItems: items2.length
       });
     } catch (error) {
-      log3(`Bulk flower API error: ${error}`, "shopify");
+      log4(`Bulk flower API error: ${error}`, "shopify");
       res.status(500).json({
         error: "Failed to retrieve bulk flower inventory",
         details: error.message
@@ -10282,7 +10503,7 @@ function registerRoutes(app2, storage2) {
   });
   app2.get("/api/book-flower-menu", async (req, res) => {
     try {
-      log3("Generating comprehensive book flower menu", "book-menu");
+      log4("Generating comprehensive book flower menu", "book-menu");
       const results = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
       const thcaFlowerItems = results.filter(
         (item) => item.status === "active" && item.quantity > 0 && (item.name.toLowerCase().includes("thca") || item.name.toLowerCase().includes("bulk flower") || item.category?.toLowerCase().includes("flower"))
@@ -10336,16 +10557,16 @@ function registerRoutes(app2, storage2) {
           ]
         }
       };
-      log3(`Generated book flower menu with ${thcaFlowerItems.length} THCA flower items`, "book-menu");
+      log4(`Generated book flower menu with ${thcaFlowerItems.length} THCA flower items`, "book-menu");
       res.json(bookFlowerMenu);
     } catch (error) {
-      log3(`Book flower menu error: ${error}`, "book-menu");
+      log4(`Book flower menu error: ${error}`, "book-menu");
       res.status(500).json({ error: "Failed to generate book flower menu" });
     }
   });
   app2.get("/api/bulk-flower-sheets", async (req, res) => {
     try {
-      log3("Generating bulk flower data for Google Sheets format", "sheets-format");
+      log4("Generating bulk flower data for Google Sheets format", "sheets-format");
       const results = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
       const bulkFlowerItems = results.filter(
         (item) => (item.name.toLowerCase().includes("thca") || item.name.toLowerCase().includes("bulk flower") || item.category?.toLowerCase().includes("flower")) && item.quantity >= 0
@@ -10365,7 +10586,7 @@ function registerRoutes(app2, storage2) {
         "Master 2 100lbs+": "Contact for pricing",
         "Order Link": `https://goldcbd.com/products/${item.sku?.toLowerCase() || item.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`
       }));
-      log3(`Generated Google Sheets data for ${bulkFlowerItems.length} bulk flower items`, "sheets-format");
+      log4(`Generated Google Sheets data for ${bulkFlowerItems.length} bulk flower items`, "sheets-format");
       res.json({
         headers: ["Available Qty", "Main Image", "COA Image", "Strain", "Type", "Tier", "Potency %", "Bulk Price", "Distro 25lbs+", "Master 50lbs+", "Master 2 100lbs+", "Order Link"],
         data: sheetsData,
@@ -10376,7 +10597,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Bulk flower sheets error: ${error}`, "sheets-format");
+      log4(`Bulk flower sheets error: ${error}`, "sheets-format");
       res.status(500).json({ error: "Failed to generate bulk flower sheets data" });
     }
   });
@@ -10424,7 +10645,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`Performance metrics error: ${error}`, "performance");
+      log4(`Performance metrics error: ${error}`, "performance");
       res.status(500).json({ error: "Failed to fetch performance metrics" });
     }
   });
@@ -10468,7 +10689,7 @@ function registerRoutes(app2, storage2) {
         }
       });
     } catch (error) {
-      log3(`System health check error: ${error}`, "health");
+      log4(`System health check error: ${error}`, "health");
       res.status(500).json({
         success: false,
         status: "unhealthy",
@@ -10520,14 +10741,14 @@ function registerRoutes(app2, storage2) {
                 })
               });
               if (!updateResponse.ok) {
-                log3(`Failed to update Shopify price for item ${itemId}: ${updateResponse.statusText}`, "shopify-pricing");
+                log4(`Failed to update Shopify price for item ${itemId}: ${updateResponse.statusText}`, "shopify-pricing");
               } else {
-                log3(`Successfully updated Shopify price for item ${itemId}: $${newPrice}`, "shopify-pricing");
+                log4(`Successfully updated Shopify price for item ${itemId}: $${newPrice}`, "shopify-pricing");
               }
             }
           }
         } catch (shopifyError) {
-          log3(`Shopify price update error for item ${itemId}: ${shopifyError}`, "shopify-pricing");
+          log4(`Shopify price update error for item ${itemId}: ${shopifyError}`, "shopify-pricing");
         }
       }
       res.json({
@@ -10538,7 +10759,7 @@ function registerRoutes(app2, storage2) {
         shopifyUpdated: !!item.shopifyId
       });
     } catch (error) {
-      log3(`Price update error: ${error}`, "pricing");
+      log4(`Price update error: ${error}`, "pricing");
       res.status(500).json({ error: "Failed to update price" });
     }
   });
@@ -10551,7 +10772,7 @@ function registerRoutes(app2, storage2) {
           error: "Shopify access token not configured. Please provide SHOPIFY_ACCESS_TOKEN in environment variables."
         });
       }
-      log3("Starting bulk image sync from Shopify", "shopify-sync");
+      log4("Starting bulk image sync from Shopify", "shopify-sync");
       const imageSyncService = new (await Promise.resolve().then(() => (init_shopify_image_sync(), shopify_image_sync_exports))).ShopifyImageSyncService(storage2);
       const results = await imageSyncService.syncAllImages();
       res.json({
@@ -10563,7 +10784,7 @@ function registerRoutes(app2, storage2) {
         // Limit errors in response
       });
     } catch (error) {
-      log3(`Image sync error: ${error}`, "shopify-sync", "error");
+      log4(`Image sync error: ${error}`, "shopify-sync", "error");
       res.status(500).json({
         success: false,
         error: "Failed to sync images from Shopify",
@@ -10633,7 +10854,7 @@ function registerRoutes(app2, storage2) {
         totalProcessed: internalItems.length
       });
     } catch (error) {
-      log3(`Shopify sync error: ${error}`, "shopify-sync");
+      log4(`Shopify sync error: ${error}`, "shopify-sync");
       res.status(500).json({ error: "Failed to sync with Shopify" });
     }
   });
@@ -10660,19 +10881,19 @@ function registerRoutes(app2, storage2) {
         message: `Live sync completed: ${summary.itemsWithQuantity} items with stock, ${summary.totalAvailableQuantity} total pounds available`
       });
     } catch (error) {
-      log3(`Live inventory update error: ${error}`, "live-update");
+      log4(`Live inventory update error: ${error}`, "live-update");
       res.status(500).json({ error: "Failed to perform live inventory update" });
     }
   });
   app2.get("/api/generate-live-menu", async (req, res) => {
     try {
-      log3("Generating live functional menu with bulk query integration", "live-menu");
+      log4("Generating live functional menu with bulk query integration", "live-menu");
       let activeItems = [];
       let usedBulkQuery = false;
       try {
         const { ShopifyBulkQueryService: ShopifyBulkQueryService2 } = await Promise.resolve().then(() => (init_shopify_bulk_query(), shopify_bulk_query_exports));
         const bulkService = new ShopifyBulkQueryService2();
-        log3("Attempting to fetch live data using bulk query", "bulk-query");
+        log4("Attempting to fetch live data using bulk query", "bulk-query");
         const bulkResults = await bulkService.executeBulkInventoryQuery();
         activeItems = bulkResults.flatMap(
           (product) => product.variants.filter((variant) => variant.inventoryQuantity > 0).map((variant) => ({
@@ -10694,9 +10915,9 @@ function registerRoutes(app2, storage2) {
           }))
         );
         usedBulkQuery = true;
-        log3(`Successfully fetched ${activeItems.length} items from bulk query`, "bulk-query");
+        log4(`Successfully fetched ${activeItems.length} items from bulk query`, "bulk-query");
       } catch (bulkError) {
-        log3(`Bulk query failed, falling back to local data: ${bulkError}`, "bulk-query");
+        log4(`Bulk query failed, falling back to local data: ${bulkError}`, "bulk-query");
         const results = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
         activeItems = results.filter(
           (item) => item.status === "active" && item.quantity > 0 && (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
@@ -10999,11 +11220,11 @@ function registerRoutes(app2, storage2) {
     </script>
 </body>
 </html>`;
-      log3(`Generated live menu with ${activeItems.length} active products and functional links`, "live-menu");
+      log4(`Generated live menu with ${activeItems.length} active products and functional links`, "live-menu");
       res.setHeader("Content-Type", "text/html");
       res.send(menuHtml);
     } catch (error) {
-      log3(`Live menu generation error: ${error}`, "live-menu");
+      log4(`Live menu generation error: ${error}`, "live-menu");
       res.status(500).json({ error: "Failed to generate live menu" });
     }
   });
@@ -11299,7 +11520,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   });
   app2.get("/api/live-menu-data", async (req, res) => {
     try {
-      log3("Fetching live menu data for frontend", "live-menu-data");
+      log4("Fetching live menu data for frontend", "live-menu-data");
       const results = await storage2.getAllItems ? await storage2.getAllItems() : await storage2.getItems();
       const activeItems = results.filter(
         (item) => item.status === "active" && item.quantity > 0 && (item.base_price > 0 || item.sale_price > 0 || item.cost_price > 0)
@@ -11352,7 +11573,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         }
       });
     } catch (error) {
-      log3(`Live menu data error: ${error}`, "live-menu-data");
+      log4(`Live menu data error: ${error}`, "live-menu-data");
       res.status(500).json({ error: "Failed to fetch live menu data" });
     }
   });
@@ -11390,7 +11611,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         itemId: parseInt(itemId)
       });
     } catch (error) {
-      log3(`AI Shopify match error for item ${req.params.itemId}: ${error}`, "ai-shopify-match");
+      log4(`AI Shopify match error for item ${req.params.itemId}: ${error}`, "ai-shopify-match");
       res.status(500).json({ success: false, error: "Shopify matching failed" });
     }
   });
@@ -11423,7 +11644,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         results: matchResults
       });
     } catch (error) {
-      log3(`AI batch Shopify matching error: ${error}`, "ai-shopify-batch-match");
+      log4(`AI batch Shopify matching error: ${error}`, "ai-shopify-batch-match");
       res.status(500).json({ success: false, error: "Batch Shopify matching failed" });
     }
   });
@@ -11436,10 +11657,10 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const limitedItems = activeItems.slice(0, 50);
       const { aiShopifyMatcher: aiShopifyMatcher2 } = await Promise.resolve().then(() => (init_ai_shopify_matcher(), ai_shopify_matcher_exports));
       const enhancedItems = await aiShopifyMatcher2.enhanceInventoryWithShopifyLinks(limitedItems);
-      log3(`Enhanced ${enhancedItems.length} items with AI Shopify matching`, "ai-enhanced-inventory");
+      log4(`Enhanced ${enhancedItems.length} items with AI Shopify matching`, "ai-enhanced-inventory");
       res.json(enhancedItems);
     } catch (error) {
-      log3(`AI enhanced inventory error: ${error}`, "ai-enhanced-inventory");
+      log4(`AI enhanced inventory error: ${error}`, "ai-enhanced-inventory");
       res.status(500).json({ error: "Failed to get AI enhanced inventory" });
     }
   });
@@ -11870,114 +12091,6 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
     } catch (error) {
       console.error("File serving error:", error);
       res.status(500).json({ error: "Failed to serve file" });
-    }
-  });
-  app2.get("/api/customers/tiers", async (req, res) => {
-    try {
-      const shopifyDomain = process.env.SHOPIFY_STORE || process.env.SHOPIFY_DOMAIN;
-      const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-      if (!shopifyDomain || !shopifyAccessToken) {
-        return res.status(400).json({ error: "Shopify credentials not configured" });
-      }
-      const query = `
-        query {
-          customers(first: 250) {
-            edges {
-              node {
-                id
-                email
-                firstName
-                lastName
-                displayName
-                phone
-                createdAt
-                updatedAt
-                orders(first: 100) {
-                  edges {
-                    node {
-                      id
-                      totalPriceSet {
-                        shopMoney {
-                          amount
-                          currencyCode
-                        }
-                      }
-                      createdAt
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      `;
-      const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/graphql.json`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": shopifyAccessToken
-        },
-        body: JSON.stringify({ query })
-      });
-      const data = await response.json();
-      if (data.errors) {
-        console.error("Shopify GraphQL errors:", data.errors);
-        return res.status(500).json({ error: "Failed to fetch customer data from Shopify" });
-      }
-      const tierThresholds = [
-        { name: "Diamond", threshold: 25e4, color: "#B9F2FF" },
-        { name: "Platinum", threshold: 1e5, color: "#E5E4E2" },
-        { name: "Gold", threshold: 5e4, color: "#FFD700" },
-        { name: "Silver", threshold: 25e3, color: "#C0C0C0" },
-        { name: "Bronze", threshold: 5e3, color: "#CD7F32" },
-        { name: "Standard", threshold: 0, color: "#808080" }
-      ];
-      const customersWithTiers = data.data.customers.edges.map(({ node: customer }) => {
-        const totalSpent = customer.orders.edges.reduce((total, { node: order }) => {
-          return total + parseFloat(order.totalPriceSet.shopMoney.amount);
-        }, 0);
-        const tier = tierThresholds.find((t) => totalSpent >= t.threshold) || tierThresholds[tierThresholds.length - 1];
-        return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          displayName: customer.displayName,
-          phone: customer.phone,
-          createdAt: customer.createdAt,
-          updatedAt: customer.updatedAt,
-          totalSpent,
-          orderCount: customer.orders.edges.length,
-          tier: tier.name,
-          tierColor: tier.color,
-          nextTier: tierThresholds.find((t) => t.threshold > totalSpent)?.name || null,
-          nextTierAmount: tierThresholds.find((t) => t.threshold > totalSpent)?.threshold || null,
-          remainingToNextTier: tierThresholds.find((t) => t.threshold > totalSpent) ? tierThresholds.find((t) => t.threshold > totalSpent).threshold - totalSpent : 0
-        };
-      });
-      customersWithTiers.sort((a, b) => b.totalSpent - a.totalSpent);
-      const tierSummary = tierThresholds.map((tier) => ({
-        name: tier.name,
-        threshold: tier.threshold,
-        color: tier.color,
-        count: customersWithTiers.filter((c) => c.tier === tier.name).length,
-        totalRevenue: customersWithTiers.filter((c) => c.tier === tier.name).reduce((sum2, c) => sum2 + c.totalSpent, 0)
-      }));
-      const response_data = {
-        success: true,
-        customers: customersWithTiers,
-        summary: {
-          totalCustomers: customersWithTiers.length,
-          totalRevenue: customersWithTiers.reduce((sum2, c) => sum2 + c.totalSpent, 0),
-          averageSpend: customersWithTiers.length > 0 ? customersWithTiers.reduce((sum2, c) => sum2 + c.totalSpent, 0) / customersWithTiers.length : 0,
-          tierBreakdown: tierSummary
-        },
-        tiers: tierThresholds
-      };
-      res.json(response_data);
-    } catch (error) {
-      console.error("Customer tiering error:", error);
-      res.status(500).json({ error: "Failed to generate customer tiers" });
     }
   });
   app2.get("/api/customers/:customerId/tier", async (req, res) => {
@@ -14597,7 +14710,7 @@ var typeDefs = gql`
 
 // server/graphql/resolvers.ts
 init_shopify_graphql();
-init_accurate_weight_extractor();
+init_weight_service();
 function findBestFuzzyMatch(item, shopifyProducts) {
   if (!item.name || !shopifyProducts.length) return null;
   const itemName = item.name.toLowerCase();
@@ -14702,17 +14815,17 @@ function extractTier(name) {
   if (nameLower.includes("classic reserve")) return "classic reserve";
   return "";
 }
-var log4 = (message, context = "graphql") => {
+var log5 = (message, context = "graphql") => {
   console.log(`${(/* @__PURE__ */ new Date()).toLocaleTimeString()} [${context}] ${message}`);
 };
 async function getShopifyProducts() {
   try {
-    log4("Fetching products using Shopify GraphQL API", "shopify-graphql");
+    log5("Fetching products using Shopify GraphQL API", "shopify-graphql");
     const products = await shopifyGraphQL.getAllProducts();
-    log4(`Successfully fetched ${products.length} products from Shopify GraphQL`, "shopify-graphql");
+    log5(`Successfully fetched ${products.length} products from Shopify GraphQL`, "shopify-graphql");
     return products.map((product) => shopifyGraphQL.transformProductData(product));
   } catch (error) {
-    log4(`Shopify GraphQL fetch error: ${error}`, "shopify-graphql");
+    log5(`Shopify GraphQL fetch error: ${error}`, "shopify-graphql");
     return getShopifyProductsREST();
   }
 }
@@ -14721,7 +14834,7 @@ async function getShopifyProductsREST() {
     const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || "gold-standard-cbd.myshopify.com";
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
     if (!accessToken) {
-      log4("Shopify access token not configured", "shopify-api");
+      log5("Shopify access token not configured", "shopify-api");
       return [];
     }
     const response = await fetch(`https://${shopifyDomain}/admin/api/2023-10/products.json?limit=250&fields=id,title,handle,vendor,product_type,status,variants,images,tags,created_at,updated_at`, {
@@ -14734,11 +14847,11 @@ async function getShopifyProductsREST() {
       const data = await response.json();
       return data.products || [];
     } else {
-      log4(`Shopify API error: ${response.status}`, "shopify-api");
+      log5(`Shopify API error: ${response.status}`, "shopify-api");
       return [];
     }
   } catch (error) {
-    log4(`Shopify fetch error: ${error}`, "shopify-api");
+    log5(`Shopify fetch error: ${error}`, "shopify-api");
     return [];
   }
 }
@@ -14768,7 +14881,7 @@ async function getShopifyInventoryLevels(inventoryItemIds) {
     }
     return inventoryLevels;
   } catch (error) {
-    log4(`Inventory levels fetch error: ${error}`, "shopify-api");
+    log5(`Inventory levels fetch error: ${error}`, "shopify-api");
     return {};
   }
 }
@@ -14898,11 +15011,11 @@ function calculatePricing(item, shopifyProduct) {
   }
   let displayPrice = shopifyPrice || salePrice || bulkPrice || basePrice || costPrice || 0;
   if (item.name && item.name.toLowerCase().includes("preroll") && displayPrice > 100) {
-    log4(`Rejected unrealistic preroll price ${displayPrice} for ${item.name}, using cost price instead`, "pricing-validation");
+    log5(`Rejected unrealistic preroll price ${displayPrice} for ${item.name}, using cost price instead`, "pricing-validation");
     displayPrice = costPrice || 0;
   }
   if (displayPrice > 5e3 || displayPrice < 0) {
-    log4(`Rejected unrealistic price ${displayPrice} for ${item.name}`, "pricing-validation");
+    log5(`Rejected unrealistic price ${displayPrice} for ${item.name}`, "pricing-validation");
     displayPrice = costPrice || bulkPrice || 0;
   }
   const originalPrice = shopifyComparePrice || bulkPrice || basePrice || shopifyPrice || 0;
@@ -14949,11 +15062,11 @@ function formatWeight(item, shopifyProduct) {
     weight: shopifyProduct.weight,
     weightUnit: shopifyProduct.weightUnit
   } : null;
-  const weightResult = AccurateWeightExtractor.extractAccurateWeight(productName, shopifyData);
-  const formattedWeight = AccurateWeightExtractor.formatWeightForDisplay(weightResult);
-  const isValid = AccurateWeightExtractor.validateWeight(productName, formattedWeight);
+  const weightResult = WeightService.extractWeight(productName, shopifyData);
+  const formattedWeight = weightResult.weight;
+  const isValid = weightResult.category !== "not_specified";
   if (!isValid) {
-    log4(`Weight validation failed for ${productName}: extracted "${formattedWeight}"`, "weight-validation");
+    log5(`Weight validation failed for ${productName}: extracted "${formattedWeight}"`, "weight-validation");
   }
   return {
     originalWeight: item.weight,
@@ -15016,7 +15129,7 @@ var resolvers = {
   Query: {
     inventory: async () => {
       try {
-        log4("Fetching complete inventory with Shopify integration");
+        log5("Fetching complete inventory with Shopify integration");
         const localItems = await storage.getItems();
         const shopifyProducts = await getShopifyProducts();
         const shopifyMap = /* @__PURE__ */ new Map();
@@ -15036,7 +15149,7 @@ var resolvers = {
           const fuzzyMatch = findBestFuzzyMatch(item, shopifyProducts);
           let shopifyProduct = fuzzyMatch?.product;
           if (fuzzyMatch && fuzzyMatch.score > 0) {
-            log4(`Fuzzy match for "${item.name}": ${shopifyProduct?.title} (score: ${fuzzyMatch.score})`, "fuzzy-matching");
+            log5(`Fuzzy match for "${item.name}": ${shopifyProduct?.title} (score: ${fuzzyMatch.score})`, "fuzzy-matching");
           }
           if (!shopifyProduct) {
             shopifyProduct = shopifyMap.get(item.name?.toLowerCase()) || shopifyMap.get(item.sku?.toLowerCase());
@@ -15106,10 +15219,10 @@ var resolvers = {
           const hasAvailableQuantity = item.quantity > 0;
           return hasValidPrice && hasAvailableQuantity;
         });
-        log4(`Processed ${activeInventoryItems.length} active inventory items with pricing and quantities (filtered from ${processedItems.length}) - NEWEST ITEMS FIRST`);
+        log5(`Processed ${activeInventoryItems.length} active inventory items with pricing and quantities (filtered from ${processedItems.length}) - NEWEST ITEMS FIRST`);
         return activeInventoryItems;
       } catch (error) {
-        log4(`Inventory fetch error: ${error}`, "error");
+        log5(`Inventory fetch error: ${error}`, "error");
         return [];
       }
     },
@@ -15146,7 +15259,7 @@ var resolvers = {
           lastUpdated: item.updatedAt || item.createdAt || (/* @__PURE__ */ new Date()).toISOString()
         };
       } catch (error) {
-        log4(`Single item fetch error: ${error}`, "error");
+        log5(`Single item fetch error: ${error}`, "error");
         return null;
       }
     },
@@ -15156,13 +15269,13 @@ var resolvers = {
         activeInventory.sort((a, b) => parseInt(b.id) - parseInt(a.id));
         return activeInventory;
       } catch (error) {
-        log4(`Available inventory fetch error: ${error}`, "error");
+        log5(`Available inventory fetch error: ${error}`, "error");
         return [];
       }
     },
     shopifyInventory: async () => {
       try {
-        log4("Fetching live Shopify inventory data");
+        log5("Fetching live Shopify inventory data");
         const shopifyProducts = await getShopifyProducts();
         const inventoryItemIds = shopifyProducts.flatMap(
           (p) => p.variants?.map((v) => v.inventory_item_id).filter(Boolean) || []
@@ -15228,10 +15341,10 @@ var resolvers = {
             updatedAt: product.updated_at
           };
         });
-        log4(`Processed ${processedShopifyItems.length} Shopify products with live inventory`);
+        log5(`Processed ${processedShopifyItems.length} Shopify products with live inventory`);
         return processedShopifyItems;
       } catch (error) {
-        log4(`Shopify inventory fetch error: ${error}`, "error");
+        log5(`Shopify inventory fetch error: ${error}`, "error");
         return [];
       }
     }
@@ -15239,7 +15352,7 @@ var resolvers = {
 };
 
 // server/graphql/server.ts
-var log5 = (message, context = "graphql") => {
+var log6 = (message, context = "graphql") => {
   console.log(`${(/* @__PURE__ */ new Date()).toLocaleTimeString()} [${context}] ${message}`);
 };
 async function createGraphQLServer() {
@@ -15249,7 +15362,7 @@ async function createGraphQLServer() {
     introspection: true,
     // Enable GraphQL Playground in development
     formatError: (error) => {
-      log5(`GraphQL Error: ${error.message}`, "graphql-error");
+      log6(`GraphQL Error: ${error.message}`, "graphql-error");
       return {
         message: error.message,
         locations: error.locations,
@@ -15258,7 +15371,7 @@ async function createGraphQLServer() {
     }
   });
   await server.start();
-  log5("GraphQL server started successfully");
+  log6("GraphQL server started successfully");
   return server;
 }
 function getGraphQLMiddleware(server) {
@@ -15370,6 +15483,25 @@ app.use((req, res, next) => {
   });
   next();
 });
+app.get("/", (req, res) => {
+  res.status(200).send("Gold Standard Inventory Management System - Server is running");
+});
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+});
+app.get("/api/status", (req, res) => {
+  res.status(200).json({
+    status: "running",
+    port: process.env.PORT || 5e3,
+    environment: process.env.NODE_ENV || "development"
+  });
+});
+app.head("/", (req, res) => {
+  res.status(200).end();
+});
+app.options("*", (req, res) => {
+  res.status(200).end();
+});
 app.post("/api/shopify/webhooks/orders/create", async (req, res) => {
   try {
     const order = req.body;
@@ -15406,96 +15538,93 @@ app.post("/api/shopify/webhooks/orders/create", async (req, res) => {
     res.status(500).json({ error: "Failed to process webhook", details: error instanceof Error ? error.message : String(error) });
   }
 });
-async function startServer() {
+function startServer() {
+  const port = parseInt(process.env.PORT || "5000", 10);
+  log2(`Starting server in ${process.env.NODE_ENV || "development"} mode`, "startup");
+  log2("Using existing database connection", "startup");
+  createGraphQLServer().then((graphqlServer) => {
+    app.use("/graphql", cors({
+      origin: ["http://localhost:5000", "https://*.replit.app", "https://*.replit.dev"],
+      credentials: true
+    }), getGraphQLMiddleware(graphqlServer));
+    log2("GraphQL server initialized at /graphql", "startup");
+  }).catch((graphqlError) => {
+    log2(`GraphQL setup failed: ${graphqlError}`, "startup");
+  });
   try {
-    const requiredEnvVars = {
-      NODE_ENV: process.env.NODE_ENV || "development",
-      DATABASE_URL: process.env.DATABASE_URL || "",
-      PORT: process.env.PORT || "5000"
-    };
-    log2(`Starting server in ${requiredEnvVars.NODE_ENV} mode`, "startup");
-    if (!requiredEnvVars.DATABASE_URL) {
-      log2("Warning: DATABASE_URL not set, using fallback configuration", "startup");
-    }
-    log2("Using existing database connection", "startup");
-    try {
-      const graphqlServer = await createGraphQLServer();
-      app.use("/graphql", cors({
-        origin: ["http://localhost:5000", "https://*.replit.app", "https://*.replit.dev"],
-        credentials: true
-      }), getGraphQLMiddleware(graphqlServer));
-      log2("GraphQL server initialized at /graphql", "startup");
-    } catch (graphqlError) {
-      log2(`GraphQL setup failed: ${graphqlError}`, "startup");
-    }
-    try {
-      registerRoutes(app, storage);
-      log2("Routes registered successfully", "startup");
-    } catch (routeError) {
-      log2(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, "startup");
-      throw routeError;
-    }
-    app.use((err, _req, res, _next) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      log2(`Global error handler: ${status} - ${message}`, "error");
-      res.status(status).json({ message });
-    });
-    app.use("/api/*", (req, res, next) => {
-      res.status(404).json({ error: "API endpoint not found" });
-    });
-    const port = parseInt(requiredEnvVars.PORT, 10);
-    const server = app.listen({
-      port,
-      host: "0.0.0.0"
-    }, () => {
-      log2(`serving on port ${port}`, "startup");
-    });
-    server.on("error", (error) => {
-      if (error.code === "EADDRINUSE") {
-        log2(`Port ${port} is already in use`, "startup-error");
-      } else {
-        log2(`Server startup error: ${error.message}`, "startup-error");
-      }
-      process.exit(1);
-    });
-    try {
-      if (app.get("env") === "development") {
-        await setupVite(app, server);
-        log2("Vite development server setup complete", "startup");
-      } else {
-        serveStatic(app);
-        log2("Static file serving setup complete", "startup");
-      }
-    } catch (viteError) {
-      log2(`Vite/Static setup error: ${viteError instanceof Error ? viteError.message : String(viteError)}`, "startup-error");
-    }
-    const cleanup = () => {
-      log2("Server shutting down, cleaning up resources...", "server-shutdown");
-      server.close(() => {
-        log2("Server closed successfully", "server-shutdown");
-        process.exit(0);
-      });
-    };
-    process.on("SIGINT", cleanup);
-    process.on("SIGTERM", cleanup);
-    process.on("uncaughtException", (error) => {
-      log2(`Uncaught exception: ${error.message}`, "startup-error");
-      console.error("Full error:", error);
-      cleanup();
-    });
-    process.on("unhandledRejection", (reason, promise) => {
-      log2(`Unhandled rejection at: ${promise}, reason: ${reason}`, "startup-error");
-      console.error("Full rejection:", reason);
-    });
-    log2("Server startup completed successfully", "startup");
-  } catch (startupError) {
-    log2(`Critical startup failure: ${startupError instanceof Error ? startupError.message : String(startupError)}`, "startup-error");
-    console.error("Full startup error:", startupError);
-    process.exit(1);
+    registerRoutes(app, storage);
+    log2("Routes registered successfully", "startup");
+  } catch (routeError) {
+    log2(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, "startup");
   }
+  app.use((err, _req, res, _next) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    log2(`Global error handler: ${status} - ${message}`, "error");
+    res.status(status).json({ message });
+  });
+  app.use("/api/*", (req, res, next) => {
+    res.status(404).json({ error: "API endpoint not found" });
+  });
+  const server = http.createServer(app);
+  server.keepAliveTimeout = 65e3;
+  server.headersTimeout = 66e3;
+  server.on("error", (error) => {
+    if (error.code === "EADDRINUSE") {
+      log2(`Port ${port} is already in use`, "startup-error");
+    } else {
+      log2(`Server startup error: ${error.message}`, "startup-error");
+    }
+    process.exit(1);
+  });
+  const cleanup = () => {
+    log2("Server shutting down...", "server-shutdown");
+    server.close(() => {
+      log2("Server closed successfully", "server-shutdown");
+      process.exit(0);
+    });
+  };
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
+  process.on("uncaughtException", (error) => {
+    log2(`Uncaught exception: ${error.message}`, "startup-error");
+    console.error("Full error:", error);
+    cleanup();
+  });
+  process.on("unhandledRejection", (reason, promise) => {
+    log2(`Unhandled rejection at: ${promise}, reason: ${reason}`, "startup-error");
+    console.error("Full rejection:", reason);
+  });
+  if (process.env.NODE_ENV === "development") {
+    log2("Setting up Vite development server...", "startup");
+    setupVite(app, server).then(() => {
+      log2("Vite development server setup complete", "startup");
+    }).catch((viteError) => {
+      log2(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, "startup");
+    });
+  } else {
+    serveStatic(app);
+    log2("Static file serving setup complete", "startup");
+  }
+  server.listen(port, "0.0.0.0", () => {
+    log2(`Server is now listening on 0.0.0.0:${port}`, "startup");
+    log2("Server startup completed successfully", "startup");
+    if (process.send) {
+      process.send("ready");
+    }
+  });
 }
-startServer().catch((error) => {
+try {
+  startServer();
+} catch (error) {
   console.error("Failed to start server:", error);
   process.exit(1);
+}
+process.on("SIGINT", () => {
+  console.log("Received SIGINT, shutting down gracefully...");
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM, shutting down gracefully...");
+  process.exit(0);
 });
