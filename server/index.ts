@@ -130,121 +130,96 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
   }
 });
 
-// Optimized startup function for Replit
-function startServer() {
-  const port = parseInt(process.env.PORT || '5000', 10);
-  
-  log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`, 'startup');
-  log('Using existing database connection', 'startup');
+// Synchronous startup function for Replit
+const port = parseInt(process.env.PORT || '5000', 10);
 
-  // Initialize GraphQL server
-  createGraphQLServer().then(graphqlServer => {
-    app.use('/graphql', cors({
-      origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
-      credentials: true
-    }), getGraphQLMiddleware(graphqlServer));
-    log('GraphQL server initialized at /graphql', 'startup');
-  }).catch(graphqlError => {
-    log(`GraphQL setup failed: ${graphqlError}`, 'startup');
-  });
+log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`, 'startup');
+log('Using existing database connection', 'startup');
 
-  // Register routes
-  try {
-    registerRoutes(app, storage);
-    log('Routes registered successfully', 'startup');
-  } catch (routeError) {
-    log(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, 'startup');
-  }
-
-  // Global error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    log(`Global error handler: ${status} - ${message}`, 'error');
-    res.status(status).json({ message });
-  });
-
-  // API 404 handler
-  app.use('/api/*', (req, res, next) => {
-    res.status(404).json({ error: 'API endpoint not found' });
-  });
-
-  // Create server
-  const server = http.createServer(app);
-
-  // Configure server
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
-
-  // Set up error handling
-  server.on('error', (error: any) => {
-    if (error.code === 'EADDRINUSE') {
-      log(`Port ${port} is already in use`, 'startup-error');
-    } else {
-      log(`Server startup error: ${error.message}`, 'startup-error');
-    }
-    process.exit(1);
-  });
-
-  // Graceful shutdown handlers
-  const cleanup = () => {
-    log("Server shutting down...", "server-shutdown");
-    server.close(() => {
-      log("Server closed successfully", "server-shutdown");
-      process.exit(0);
-    });
-  };
-
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-  process.on('uncaughtException', (error) => {
-    log(`Uncaught exception: ${error.message}`, 'startup-error');
-    console.error('Full error:', error);
-    cleanup();
-  });
-  process.on('unhandledRejection', (reason, promise) => {
-    log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
-    console.error('Full rejection:', reason);
-  });
-
-  // Setup Vite in development mode
-  if (process.env.NODE_ENV === 'development') {
-    log('Setting up Vite development server...', 'startup');
-    setupVite(app, server).then(() => {
-      log('Vite development server setup complete', 'startup');
-    }).catch(viteError => {
-      log(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup');
-    });
-  } else {
-    serveStatic(app);
-    log('Static file serving setup complete', 'startup');
-  }
-
-  // Start server and keep it alive
-  server.listen(port, '0.0.0.0', () => {
-    log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
-    log('Server startup completed successfully', 'startup');
-    if (process.send) {
-      process.send('ready');
-    }
-  });
-}
-
-// Start the server
+// Register routes synchronously
 try {
-  startServer();
-} catch (error) {
-  console.error('Failed to start server:', error);
-  process.exit(1);
+  registerRoutes(app, storage);
+  log('Routes registered successfully', 'startup');
+} catch (routeError) {
+  log(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, 'startup');
 }
 
-// Keep process alive
-process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully...');
-  process.exit(0);
+// Global error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  log(`Global error handler: ${status} - ${message}`, 'error');
+  res.status(status).json({ message });
 });
 
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
+// API 404 handler
+app.use('/api/*', (req, res, next) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
+
+// Create server
+const server = http.createServer(app);
+
+// Configure server timeouts
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
+// Set up error handling
+server.on('error', (error: any) => {
+  if (error.code === 'EADDRINUSE') {
+    log(`Port ${port} is already in use`, 'startup-error');
+  } else {
+    log(`Server startup error: ${error.message}`, 'startup-error');
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown handlers
+const cleanup = () => {
+  log("Server shutting down...", "server-shutdown");
+  server.close(() => {
+    log("Server closed successfully", "server-shutdown");
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+process.on('uncaughtException', (error) => {
+  log(`Uncaught exception: ${error.message}`, 'startup-error');
+  console.error('Full error:', error);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
+  console.error('Full rejection:', reason);
+});
+
+// Setup Vite/static in development mode
+if (process.env.NODE_ENV === 'development') {
+  log('Setting up Vite development server...', 'startup');
+  setupVite(app, server).then(() => {
+    log('Vite development server setup complete', 'startup');
+  }).catch(viteError => {
+    log(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup');
+  });
+} else {
+  serveStatic(app);
+  log('Static file serving setup complete', 'startup');
+}
+
+// Initialize GraphQL server asynchronously
+createGraphQLServer().then(graphqlServer => {
+  app.use('/graphql', cors({
+    origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
+    credentials: true
+  }), getGraphQLMiddleware(graphqlServer));
+  log('GraphQL server initialized at /graphql', 'startup');
+}).catch(graphqlError => {
+  log(`GraphQL setup failed: ${graphqlError}`, 'startup');
+});
+
+// Start server - this is synchronous and keeps process alive
+server.listen(port, '0.0.0.0', () => {
+  log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
+  log('Server startup completed successfully', 'startup');
 });
