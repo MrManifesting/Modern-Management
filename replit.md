@@ -20,7 +20,8 @@ This project is a comprehensive inventory management system designed for e-comme
 The frontend uses React with TypeScript, styled with Tailwind CSS and Shadcn/UI components, following a gold color scheme.
 
 **Technical Implementations:**
-- **Frontend**: React, TypeScript, Vite, React Hooks, Context API.
+- **Frontend (Web)**: React, TypeScript, Vite, React Hooks, Context API.
+- **Frontend (Mobile)**: React Native, Expo, Expo Router for iOS/Android apps in `mobile/` directory.
 - **Backend**: Node.js, Express.js, TypeScript (ES modules), Drizzle ORM for PostgreSQL.
 - **Authentication**: Multi-provider support (local, Google OAuth, Replit OAuth) with PostgreSQL-backed session management.
 - **File Handling**: Multer for file uploads, including CSV parsing.
