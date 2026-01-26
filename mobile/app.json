@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Gold Standard Inventory",
+    "slug": "gold-standard-inventory",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#B8860B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.goldstandard.inventory"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#B8860B"
+      },
+      "package": "com.goldstandard.inventory"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router"],
+    "scheme": "goldstandard",
+    "extra": {
+      "apiUrl": "https://gold-standard-management.replit.app",
+      "productionApiUrl": "https://gold-standard-management.replit.app",
+      "eas": {
+        "projectId": "gold-standard-inventory"
+      }
+    }
+  }
+}
