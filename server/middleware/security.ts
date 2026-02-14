@@ -42,30 +42,49 @@ export const securityMiddleware = {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     
-    // Content Security Policy
-    res.setHeader('Content-Security-Policy', 
-      "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: https:; " +
-      "font-src 'self' data:; " +
-      "connect-src 'self' ws: wss:;"
+    // Content Security Policy - stricter for production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const scriptSrc = isDevelopment
+      ? "'self' 'unsafe-inline' 'unsafe-eval'"  // Allow for Vite/HMR in dev
+      : "'self'";  // Strict in production
+
+    res.setHeader('Content-Security-Policy',
+      `default-src 'self'; ` +
+      `script-src ${scriptSrc}; ` +
+      `style-src 'self' 'unsafe-inline'; ` +  // Some inline styles needed for components
+      `img-src 'self' data: https:; ` +
+      `font-src 'self' data:; ` +
+      `connect-src 'self' ws: wss:;`
     );
     
     next();
   },
 
-  // Input sanitization
+  // Input sanitization with improved escaping
   sanitizeInput: (req: Request, res: Response, next: NextFunction) => {
+    // HTML escape function
+    const escapeHtml = (text: string): string => {
+      const map: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '/': '&#x2F;',
+      };
+      return text.replace(/[&<>"'/]/g, (char) => map[char]);
+    };
+
     // Recursively sanitize request body
     const sanitize = (obj: any): any => {
       if (typeof obj === 'string') {
-        // Remove potentially dangerous characters
+        // For API requests, we typically don't want to escape HTML as data may be JSON
+        // Instead, just remove dangerous protocol handlers
         return obj
-          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
           .replace(/javascript:/gi, '')
-          .replace(/data:/gi, '')
-          .replace(/vbscript:/gi, '');
+          .replace(/data:text\/html/gi, '')
+          .replace(/vbscript:/gi, '')
+          .replace(/on\w+\s*=/gi, ''); // Remove event handlers like onclick=
       }
       if (typeof obj === 'object' && obj !== null) {
         if (Array.isArray(obj)) {

@@ -4,7 +4,21 @@ import { performanceMonitor, compressLargeResponse, formatResponse, optimizeQuer
 
 const uploadMemory = multer({ storage: multer.memoryStorage() });
 
-// In-memory cache for frequently accessed data
+// HTML escape utility function
+const escapeHtml = (text: string): string => {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return String(text).replace(/[&<>"'/]/g, (char) => map[char]);
+};
+
+// In-memory cache with size limit to prevent memory leaks
+const MAX_CACHE_SIZE = 100;
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 const getCachedData = (key: string) => {
@@ -17,6 +31,11 @@ const getCachedData = (key: string) => {
 };
 
 const setCachedData = (key: string, data: any, ttl: number = 30000) => {
+  // Implement LRU-style cache eviction
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
   cache.set(key, { data, timestamp: Date.now(), ttl });
 };
 
@@ -24,41 +43,41 @@ const setCachedData = (key: string, data: any, ttl: number = 30000) => {
 const generateComprehensiveMenuHTML = (menu: any) => {
   const sectionsHTML = menu.sections.map((section: any) => {
     const itemsHTML = section.items.map((item: any) => `
-      <div class="product-card" data-product-id="${item.id}">
+      <div class="product-card" data-product-id="${escapeHtml(item.id)}">
         <div class="product-image">
-          ${item.image ? `<img src="${item.image}" alt="${item.name}" loading="lazy" />` : '<div class="no-image">🌿</div>'}
+          ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" />` : '<div class="no-image">🌿</div>'}
         </div>
         <div class="product-info">
-          <h3 class="product-name">${item.name}</h3>
+          <h3 class="product-name">${escapeHtml(item.name)}</h3>
           <div class="product-details">
-            ${item.weight !== 'Unknown' ? `<span class="detail-badge weight-badge">⚖️ ${item.weight}</span>` : ''}
-            ${item.tier ? `<span class="detail-badge tier-badge">⭐ ${item.tier}</span>` : ''}
-            ${item.thcaPercentage ? `<span class="detail-badge thca-badge">🧪 THCa ${item.thcaPercentage}</span>` : ''}
-            <span class="detail-badge sku-badge">📦 ${item.sku}</span>
+            ${item.weight !== 'Unknown' ? `<span class="detail-badge weight-badge">⚖️ ${escapeHtml(item.weight)}</span>` : ''}
+            ${item.tier ? `<span class="detail-badge tier-badge">⭐ ${escapeHtml(item.tier)}</span>` : ''}
+            ${item.thcaPercentage ? `<span class="detail-badge thca-badge">🧪 THCa ${escapeHtml(item.thcaPercentage)}</span>` : ''}
+            <span class="detail-badge sku-badge">📦 ${escapeHtml(item.sku)}</span>
           </div>
           <div class="pricing-section">
-            <div class="main-price">$${item.price.toFixed(2)}</div>
+            <div class="main-price">$${parseFloat(item.price).toFixed(2)}</div>
             ${item.price > 0 && item.weight.includes('pound') ? `<div class="price-note">Wholesale Price</div>` : ''}
           </div>
           <div class="stock-section">
             <div class="stock-indicator ${item.lowStock ? 'low-stock' : item.inStock ? 'in-stock' : 'out-stock'}">
               <span class="stock-icon">${item.inStock ? '✅' : '❌'}</span>
-              <span class="stock-text">${item.quantity} units available</span>
+              <span class="stock-text">${escapeHtml(item.quantity)} units available</span>
             </div>
             ${item.lowStock && item.inStock ? '<div class="low-stock-warning">⚠️ Low Stock Alert</div>' : ''}
           </div>
           <div class="action-buttons">
-            <a href="${item.orderLink}" target="_blank" class="btn primary-btn order-btn" onclick="trackClick('order', '${item.sku}')">
+            <a href="${escapeHtml(item.orderLink)}" target="_blank" class="btn primary-btn order-btn" onclick="trackClick('order', '${escapeHtml(item.sku)}')">
               🛒 Order Now
             </a>
             <div class="secondary-buttons">
-              <a href="${item.coaLink}" target="_blank" class="btn secondary-btn coa-btn" onclick="trackClick('coa', '${item.sku}')">
+              <a href="${escapeHtml(item.coaLink)}" target="_blank" class="btn secondary-btn coa-btn" onclick="trackClick('coa', '${escapeHtml(item.sku)}')">
                 📋 View COA
               </a>
-              <a href="${item.mediaLink}" target="_blank" class="btn secondary-btn media-btn" onclick="trackClick('media', '${item.sku}')">
+              <a href="${escapeHtml(item.mediaLink)}" target="_blank" class="btn secondary-btn media-btn" onclick="trackClick('media', '${escapeHtml(item.sku)}')">
                 📱 Media Pack
               </a>
-              <a href="tel:541-295-8811" class="btn secondary-btn call-btn" onclick="trackClick('call', '${item.sku}')">
+              <a href="tel:541-295-8811" class="btn secondary-btn call-btn" onclick="trackClick('call', '${escapeHtml(item.sku)}')">
                 📞 Call Now
               </a>
             </div>
@@ -70,8 +89,8 @@ const generateComprehensiveMenuHTML = (menu: any) => {
     return `
       <section class="menu-section">
         <div class="section-header">
-          <h2>${section.title}</h2>
-          <p class="section-description">${section.description}</p>
+          <h2>${escapeHtml(section.title)}</h2>
+          <p class="section-description">${escapeHtml(section.description)}</p>
           <div class="section-stats">
             <span>${section.items.length} items</span>
             <span>${section.totalQuantity} units</span>

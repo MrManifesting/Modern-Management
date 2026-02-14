@@ -6,13 +6,24 @@ import {
   testShopifyConnection as testShopifyAuth 
 } from './shopify-auth';
 
-// Safety functions consolidated into main shopify service
+// Safety functions - these should be properly implemented for production
 const logShopifyOperation = (operation: string, details: any) => {
-  console.log(`[shopify-operation] ${operation}:`, details);
+  // Use proper logging service in production
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[shopify-operation] ${operation}:`, details);
+  }
 };
 
-const isOperationAllowed = (operation: string) => true; // Always allow operations
-const isConfirmationValid = (confirmation: any) => true; // Always confirm operations
+// TODO: Implement proper operation validation and confirmation for production
+const isOperationAllowed = (operation: string) => {
+  // In production, this should validate based on user permissions and operation type
+  return true;
+};
+
+const isConfirmationValid = (confirmation: any) => {
+  // In production, this should validate confirmation tokens or user confirmations
+  return true;
+};
 
 interface ShopifyProduct {
   id?: number;
@@ -50,8 +61,7 @@ let pushToShopifyEnabled = false;
 function getShopifyStoreName() {
   // Get store URL from environment variable
   const storeUrl = process.env.SHOPIFY_STORE || '';
-  console.log("***DEBUG: Using SHOPIFY_STORE value:", storeUrl);
-  
+
   // If empty, return empty string
   if (!storeUrl) return '';
   

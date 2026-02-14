@@ -7,6 +7,12 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
+import {
+  AuthenticationError,
+  ValidationError,
+  logError
+} from "./utils/errors";
+import { validateBody, authSchemas } from "./middleware/validation";
 
 declare global {
   namespace Express {
@@ -30,14 +36,21 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Require session secret in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+    throw new Error('SESSION_SECRET environment variable is required in production');
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "inventory-secret-key-change-in-production",
+    secret: sessionSecret || "inventory-secret-key-dev-only",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: 'strict',  // Add CSRF protection
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   };
@@ -131,17 +144,13 @@ export function setupAuth(app: Express) {
   });
 
   // Auth routes
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", validateBody(authSchemas.register), async (req, res, next) => {
     try {
       const { email, password, firstName, lastName } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: "User already exists with this email" });
+        throw new ValidationError("User already exists with this email", { field: 'email' });
       }
 
       const hashedPassword = await hashPassword(password);
@@ -165,7 +174,10 @@ export function setupAuth(app: Express) {
         });
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      logError(error, 'registration');
+      if (error instanceof ValidationError) {
+        return res.status(error.statusCode).json(error.toJSON());
+      }
       res.status(500).json({ message: "Registration failed" });
     }
   });
@@ -220,7 +232,8 @@ export function setupAuth(app: Express) {
 
 export function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
+    const error = new AuthenticationError();
+    return res.status(error.statusCode).json(error.toJSON());
   }
   next();
 }
