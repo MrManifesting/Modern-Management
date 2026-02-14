@@ -4,11 +4,16 @@ import { promisify } from 'util';
 const scryptAsync = promisify(scrypt);
 const algorithm = 'aes-256-ctr';
 
-// Use a combination of environment variable and static salt for key derivation
-const ENCRYPTION_PASSWORD = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
+// Use environment variables for both encryption key and salt
+const ENCRYPTION_PASSWORD = process.env.ENCRYPTION_KEY;
+const ENCRYPTION_SALT = process.env.ENCRYPTION_SALT;
+
+if (!ENCRYPTION_PASSWORD || !ENCRYPTION_SALT) {
+  throw new Error('ENCRYPTION_KEY and ENCRYPTION_SALT environment variables are required for production use');
+}
 
 async function deriveKey(password: string): Promise<Buffer> {
-  const salt = Buffer.from('inventory-credentials-salt', 'utf8');
+  const salt = Buffer.from(ENCRYPTION_SALT, 'hex');
   return (await scryptAsync(password, salt, 32)) as Buffer;
 }
 

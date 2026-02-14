@@ -30,14 +30,21 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Require session secret in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+    throw new Error('SESSION_SECRET environment variable is required in production');
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "inventory-secret-key-change-in-production",
+    secret: sessionSecret || "inventory-secret-key-dev-only",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: 'strict',  // Add CSRF protection
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   };
