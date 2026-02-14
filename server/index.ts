@@ -7,6 +7,7 @@ import { storage } from "./storage.js";
 import { createGraphQLServer, getGraphQLMiddleware } from './graphql/server.js';
 import { securityMiddleware } from './middleware/security.js';
 import { isAppError, toAppError, logError } from './utils/errors.js';
+import { validateBody, shopifySchemas } from './middleware/validation.js';
 import cors from 'cors';
 
 const app = express();
@@ -81,52 +82,45 @@ app.options("*", (req: Request, res: Response) => {
 });
 
 // Add webhook endpoints before authentication middleware
-app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
+app.post("/api/shopify/webhooks/orders/create", validateBody(shopifySchemas.orderWebhook), async (req: Request, res: Response) => {
   try {
-    const order = req.body;
-    
-    // Validate order data
-    if (!order || typeof order !== 'object') {
-      log(`Invalid order data received in webhook`, 'webhook-direct');
-      return res.status(400).json({ error: 'Invalid order data' });
-    }
-    
+    const order = req.body; // Already validated by middleware
+
     // Handle test webhooks with minimal data
-    if (order.test === 'webhook' || !order.id) {
+    if (order.test === 'webhook' || order.test === true) {
       log(`Test webhook received successfully`, 'webhook-direct');
       return res.json({ success: true, message: 'Test webhook processed' });
     }
-    
+
     const orderId = order.id || order.order_id || 'unknown';
     const orderName = order.name || order.order_name || `#${orderId}`;
-    
+
     log(`Order webhook received: ${orderName} (ID: ${orderId})`, 'webhook-direct');
-    
+
     // Process each line item for inventory reduction
-    for (const lineItem of order.line_items || []) {
+    for (const lineItem of order.line_items) {
       if (!lineItem.sku) continue;
-      
+
       log(`Processing line item: ${lineItem.sku} (quantity: ${lineItem.quantity})`, 'webhook-direct');
     }
-    
+
     // Create sale record with correct schema
     try {
       await storage.createSale({
         orderId: String(orderId),
-        items: order.line_items || [],
-        subtotal: String(parseFloat(order.subtotal_price || order.total_price) || 0),
-        total: String(parseFloat(order.total_price) || 0)
+        items: order.line_items,
+        subtotal: String(parseFloat(String(order.subtotal_price || order.total_price || 0))),
+        total: String(parseFloat(String(order.total_price || 0)))
       });
     } catch (saleError) {
-      log(`Sale creation failed for order ${orderName}: ${saleError}`, 'webhook-direct');
+      logError(saleError, 'sale-creation');
       // Continue processing - don't fail webhook on sale creation error
     }
-    
+
     log(`Order ${orderName} processed successfully - inventory updated`, 'webhook-direct');
     res.json({ success: true, message: 'Order processed and inventory updated' });
   } catch (error) {
-    log(`Webhook processing error: ${error instanceof Error ? error.message : String(error)}`, 'webhook-direct');
-    console.error('Full webhook error:', error);
+    logError(error, 'webhook-processing');
     res.status(500).json({ error: 'Failed to process webhook', details: error instanceof Error ? error.message : String(error) });
   }
 });

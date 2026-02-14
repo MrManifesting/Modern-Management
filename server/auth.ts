@@ -12,6 +12,7 @@ import {
   ValidationError,
   logError
 } from "./utils/errors";
+import { validateBody, authSchemas } from "./middleware/validation";
 
 declare global {
   namespace Express {
@@ -143,13 +144,9 @@ export function setupAuth(app: Express) {
   });
 
   // Auth routes
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", validateBody(authSchemas.register), async (req, res, next) => {
     try {
       const { email, password, firstName, lastName } = req.body;
-
-      if (!email || !password) {
-        throw new ValidationError("Email and password are required");
-      }
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
