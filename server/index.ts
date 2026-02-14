@@ -6,6 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage.js";
 import { createGraphQLServer, getGraphQLMiddleware } from './graphql/server.js';
 import { securityMiddleware } from './middleware/security.js';
+import { isAppError, toAppError, logError } from './utils/errors.js';
 import cors from 'cors';
 
 const app = express();
@@ -146,10 +147,10 @@ try {
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  log(`Global error handler: ${status} - ${message}`, 'error');
-  res.status(status).json({ message });
+  const appError = toAppError(err);
+  logError(appError, 'global-error-handler');
+
+  res.status(appError.statusCode).json(appError.toJSON());
 });
 
 // API 404 handler
@@ -186,12 +187,13 @@ const cleanup = () => {
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 process.on('uncaughtException', (error) => {
-  log(`Uncaught exception: ${error.message}`, 'startup-error');
-  console.error('Full error:', error);
+  logError(error, 'uncaught-exception');
+  process.exit(1);
 });
+
 process.on('unhandledRejection', (reason, promise) => {
-  log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
-  console.error('Full rejection:', reason);
+  logError(reason, 'unhandled-rejection');
+  console.error('Promise:', promise);
 });
 
 // Setup Vite/static in development mode

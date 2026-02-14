@@ -7,6 +7,11 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
+import {
+  AuthenticationError,
+  ValidationError,
+  logError
+} from "./utils/errors";
 
 declare global {
   namespace Express {
@@ -141,14 +146,14 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       const { email, password, firstName, lastName } = req.body;
-      
+
       if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        throw new ValidationError("Email and password are required");
       }
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: "User already exists with this email" });
+        throw new ValidationError("User already exists with this email", { field: 'email' });
       }
 
       const hashedPassword = await hashPassword(password);
@@ -172,7 +177,10 @@ export function setupAuth(app: Express) {
         });
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      logError(error, 'registration');
+      if (error instanceof ValidationError) {
+        return res.status(error.statusCode).json(error.toJSON());
+      }
       res.status(500).json({ message: "Registration failed" });
     }
   });
@@ -227,7 +235,8 @@ export function setupAuth(app: Express) {
 
 export function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
+    const error = new AuthenticationError();
+    return res.status(error.statusCode).json(error.toJSON());
   }
   next();
 }
