@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { performanceMonitor, compressLargeResponse, formatResponse, optimizeQuery } from "./utils/performance-optimizer";
 
 const uploadMemory = multer({ storage: multer.memoryStorage() });
@@ -8508,9 +8510,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const menuHtml = generateCustomMenuHtml(products, theme, branding, customBackground, includeLinks);
       
       // Save menu to uploads directory
-      const fs = await import('fs');
-      const path = await import('path');
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      // Prevent path traversal by using path.basename
+      const menuPath = path.join('uploads', `${path.basename(menuId)}.html`);
       
       fs.writeFileSync(menuPath, menuHtml);
       
@@ -8534,15 +8535,14 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
     try {
       const { menuId } = req.params;
-      const fs = await import('fs');
-      const path = await import('path');
       
       // Validate menu ID format
       if (!menuId || !menuId.startsWith('menu-')) {
         return res.status(400).json({ error: 'Invalid menu ID' });
       }
       
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      // Prevent path traversal by using path.basename
+      const menuPath = path.join('uploads', `${path.basename(menuId)}.html`);
       
       // Check if menu file exists
       if (!fs.existsSync(menuPath)) {
@@ -8567,11 +8567,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         return res.status(400).json({ error: "No logo file provided" });
       }
       
-      const fs = await import('fs');
-      const path = await import('path');
-      
-      // Generate unique filename
-      const filename = `logo-${Date.now()}-${req.file.originalname}`;
+      // Sanitize original filename before prepending prefix to prevent traversal
+      const safeOriginalName = path.basename(req.file.originalname);
+      const filename = `logo-${Date.now()}-${safeOriginalName}`;
       const logoPath = path.join('uploads', filename);
       
       // Save logo file
@@ -8595,9 +8593,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   app.get("/api/uploads/:filename", async (req: Request, res: Response) => {
     try {
       const { filename } = req.params;
-      const fs = await import('fs');
-      const path = await import('path');
-      const filePath = path.join('uploads', filename);
+      // Prevent path traversal by using path.basename
+      const filePath = path.join('uploads', path.basename(filename));
       
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
