@@ -1,21 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Security middleware to mitigate various vulnerabilities
 export const securityMiddleware = {
-  // Strict request validation
   validateRequest: (req: Request, res: Response, next: NextFunction) => {
-    // Block potentially malicious XML content
     const contentType = req.get('Content-Type');
     if (contentType && contentType.includes('xml')) {
       return res.status(400).json({ error: 'XML content not allowed' });
     }
 
-    // Validate URL parameters for suspicious patterns
     const suspiciousPatterns = [
-      /\.\.\//, // Path traversal
-      /<script/i, // XSS attempts
-      /javascript:/i, // JavaScript protocol
-      /data:/i, // Data URLs
+      /\.\.\//,
+      /<script/i,
+      /javascript:/i,
     ];
 
     const url = req.url;
@@ -26,45 +21,33 @@ export const securityMiddleware = {
     next();
   },
 
-  // Security headers
   securityHeaders: (req: Request, res: Response, next: NextFunction) => {
-    // Prevent clickjacking
-    res.setHeader('X-Frame-Options', 'DENY');
-    
-    // Prevent MIME type sniffing
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    
-    // Enable XSS protection
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    
-    // Strict transport security (if HTTPS)
+
     if (req.secure) {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
-    
-    // Content Security Policy
-    res.setHeader('Content-Security-Policy', 
+
+    res.setHeader('Content-Security-Policy',
       "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "img-src 'self' data: https:; " +
-      "font-src 'self' data:; " +
-      "connect-src 'self' ws: wss:;"
+      "font-src 'self' data: https://fonts.gstatic.com; " +
+      "connect-src 'self' ws: wss: https:; " +
+      "frame-ancestors 'self' https://*.replit.dev https://*.replit.app;"
     );
-    
+
     next();
   },
 
-  // Input sanitization
   sanitizeInput: (req: Request, res: Response, next: NextFunction) => {
-    // Recursively sanitize request body
     const sanitize = (obj: any): any => {
       if (typeof obj === 'string') {
-        // Remove potentially dangerous characters
         return obj
           .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
           .replace(/javascript:/gi, '')
-          .replace(/data:/gi, '')
           .replace(/vbscript:/gi, '');
       }
       if (typeof obj === 'object' && obj !== null) {
