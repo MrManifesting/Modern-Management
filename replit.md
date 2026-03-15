@@ -32,6 +32,18 @@ The frontend uses React with TypeScript, styled with Tailwind CSS and Shadcn/UI 
 - **E-commerce Features**: Payment processing via PayPal and Stripe, an affiliate system with QR code generation and commission tracking, and robust order management with sales tracking.
 - **Reporting & Analytics**: Google Sheets integration for automated reports and CSV export capabilities.
 
+**Public Pages (No Authentication Required):**
+- `/marketing` — Marketing landing page with features overview and CTAs
+- `/privacy-policy` — Full privacy policy covering data collection, third-party services, and user rights
+- `/terms-of-service` — Complete terms of service covering usage, marketplace integrations, AI features, and liability
+- `/catalog`, `/menu`, `/live-menu` — Public live product catalog
+
+**Security Middleware:**
+- Request validation (path traversal, XSS protection)
+- Security headers (CSP, HSTS, X-Content-Type-Options)
+- Input sanitization (script injection removal)
+- Configured in `server/middleware/security.ts`
+
 **System Design Choices:**
 - Prioritizes raw database value display in API and UI.
 - Emphasizes duplicate prevention across all import methods.

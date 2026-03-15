@@ -35,7 +35,7 @@ import CustomerTiersPage from "@/pages/customer-tiers";
 
 import MediaManagerPage from "@/pages/media-manager";
 import CustomerAnalytics from "@/pages/CustomerAnalytics";
-import WebhookMonitoringPage from "@/pages/WebhookMonitoring";
+import WebhookMonitoringPage from "@/pages/webhook-monitoring";
 import VoiceSearchPage from "@/pages/voice-search";
 import PerformanceDashboard from "@/pages/performance-dashboard";
 
@@ -80,6 +80,9 @@ import AuthDirectPage from "@/pages/auth-direct";
 import ManualAuthPage from "@/pages/manual-auth";
 import ShopifyWebhooksPage from "@/pages/ShopifyWebhooksPage";
 
+import MarketingPage from "@/pages/marketing";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
+import TermsOfServicePage from "@/pages/terms-of-service";
 import NotFound from "@/pages/not-found";
 
 // Onboarding components
@@ -200,6 +203,9 @@ function Router() {
           return <AffiliateQrDemo />;
         }} />
         <Route path="/checkout" component={() => <CheckoutPage />} />
+        <Route path="/marketing" component={() => <MarketingPage />} />
+        <Route path="/privacy-policy" component={() => <PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" component={() => <TermsOfServicePage />} />
         <ProtectedRoute path="/credentials" component={() => <CredentialsManagement />} />
         <Route path="/demo-inventory" component={() => {
           const DemoInventoryPage = React.lazy(() => import('@/pages/demo-inventory'));

@@ -1,6 +1,5 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
-import http from "http";
 import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage.js";
@@ -10,7 +9,6 @@ import cors from 'cors';
 
 const app = express();
 
-// Apply security middleware first
 app.use(securityMiddleware.securityHeaders);
 app.use(securityMiddleware.validateRequest);
 app.use(securityMiddleware.sanitizeInput);
@@ -18,7 +16,6 @@ app.use(securityMiddleware.sanitizeInput);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));
 
 app.use((req, res, next) => {
@@ -51,46 +48,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add health check endpoint for Replit port detection
-app.get("/", (req: Request, res: Response) => {
-  res.status(200).send("Gold Standard Inventory Management System - Server is running");
-});
-
-app.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// Add more endpoints for better port detection
-app.get("/api/status", (req: Request, res: Response) => {
-  res.status(200).json({ 
-    status: "running", 
-    port: process.env.PORT || 5000,
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Add a HEAD request handler for root
-app.head("/", (req: Request, res: Response) => {
-  res.status(200).end();
-});
-
-// Add OPTIONS handler for CORS preflight
-app.options("*", (req: Request, res: Response) => {
-  res.status(200).end();
-});
-
-// Add webhook endpoints before authentication middleware
 app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Response) => {
   try {
     const order = req.body;
     
-    // Validate order data
     if (!order || typeof order !== 'object') {
       log(`Invalid order data received in webhook`, 'webhook-direct');
       return res.status(400).json({ error: 'Invalid order data' });
     }
     
-    // Handle test webhooks with minimal data
     if (order.test === 'webhook' || !order.id) {
       log(`Test webhook received successfully`, 'webhook-direct');
       return res.json({ success: true, message: 'Test webhook processed' });
@@ -101,14 +67,11 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
     
     log(`Order webhook received: ${orderName} (ID: ${orderId})`, 'webhook-direct');
     
-    // Process each line item for inventory reduction
     for (const lineItem of order.line_items || []) {
       if (!lineItem.sku) continue;
-      
       log(`Processing line item: ${lineItem.sku} (quantity: ${lineItem.quantity})`, 'webhook-direct');
     }
     
-    // Create sale record with correct schema
     try {
       await storage.createSale({
         orderId: String(orderId),
@@ -118,7 +81,6 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
       });
     } catch (saleError) {
       log(`Sale creation failed for order ${orderName}: ${saleError}`, 'webhook-direct');
-      // Continue processing - don't fail webhook on sale creation error
     }
     
     log(`Order ${orderName} processed successfully - inventory updated`, 'webhook-direct');
@@ -130,96 +92,111 @@ app.post("/api/shopify/webhooks/orders/create", async (req: Request, res: Respon
   }
 });
 
-// Synchronous startup function for Replit
-const port = parseInt(process.env.PORT || '5000', 10);
+async function startServer() {
+  try {
+    const requiredEnvVars = {
+      NODE_ENV: process.env.NODE_ENV || 'development',
+      DATABASE_URL: process.env.DATABASE_URL || '',
+      PORT: process.env.PORT || '5000'
+    };
 
-log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`, 'startup');
-log('Using existing database connection', 'startup');
+    log(`Starting server in ${requiredEnvVars.NODE_ENV} mode`, 'startup');
 
-// Register routes synchronously
-try {
-  registerRoutes(app, storage);
-  log('Routes registered successfully', 'startup');
-} catch (routeError) {
-  log(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, 'startup');
-}
+    if (!requiredEnvVars.DATABASE_URL) {
+      log('Warning: DATABASE_URL not set, using fallback configuration', 'startup');
+    }
 
-// Global error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  log(`Global error handler: ${status} - ${message}`, 'error');
-  res.status(status).json({ message });
-});
+    log('Using existing database connection', 'startup');
 
-// API 404 handler
-app.use('/api/*', (req, res, next) => {
-  res.status(404).json({ error: 'API endpoint not found' });
-});
+    try {
+      const graphqlServer = await createGraphQLServer();
+      app.use('/graphql', cors({
+        origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
+        credentials: true
+      }), getGraphQLMiddleware(graphqlServer));
+      log('GraphQL server initialized at /graphql', 'startup');
+    } catch (graphqlError) {
+      log(`GraphQL setup failed: ${graphqlError}`, 'startup');
+    }
 
-// Create server
-const server = http.createServer(app);
+    try {
+      registerRoutes(app, storage);
+      log('Routes registered successfully', 'startup');
+    } catch (routeError) {
+      log(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, 'startup');
+      throw routeError;
+    }
 
-// Configure server timeouts
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      log(`Global error handler: ${status} - ${message}`, 'error');
+      res.status(status).json({ message });
+    });
 
-// Set up error handling
-server.on('error', (error: any) => {
-  if (error.code === 'EADDRINUSE') {
-    log(`Port ${port} is already in use`, 'startup-error');
-  } else {
-    log(`Server startup error: ${error.message}`, 'startup-error');
+    app.use('/api/*', (_req: Request, res: Response) => {
+      res.status(404).json({ error: 'API endpoint not found' });
+    });
+
+    const port = parseInt(requiredEnvVars.PORT, 10);
+    const server = app.listen({
+      port,
+      host: "0.0.0.0",
+    }, () => {
+      log(`serving on port ${port}`, 'startup');
+    });
+
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${port} is already in use`, 'startup-error');
+      } else {
+        log(`Server startup error: ${error.message}`, 'startup-error');
+      }
+      process.exit(1);
+    });
+
+    try {
+      if (app.get("env") === "development") {
+        await setupVite(app, server);
+        log('Vite development server setup complete', 'startup');
+      } else {
+        serveStatic(app);
+        log('Static file serving setup complete', 'startup');
+      }
+    } catch (viteError) {
+      log(`Vite/Static setup error: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup-error');
+    }
+
+    const cleanup = () => {
+      log("Server shutting down, cleaning up resources...", "server-shutdown");
+      server.close(() => {
+        log("Server closed successfully", "server-shutdown");
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    process.on('uncaughtException', (error) => {
+      log(`Uncaught exception: ${error.message}`, 'startup-error');
+      console.error('Full error:', error);
+      cleanup();
+    });
+    process.on('unhandledRejection', (reason, promise) => {
+      log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
+      console.error('Full rejection:', reason);
+    });
+
+    log('Server startup completed successfully', 'startup');
+
+  } catch (startupError) {
+    log(`Critical startup failure: ${startupError instanceof Error ? startupError.message : String(startupError)}`, 'startup-error');
+    console.error('Full startup error:', startupError);
+    process.exit(1);
   }
-  process.exit(1);
-});
-
-// Graceful shutdown handlers
-const cleanup = () => {
-  log("Server shutting down...", "server-shutdown");
-  server.close(() => {
-    log("Server closed successfully", "server-shutdown");
-    process.exit(0);
-  });
-};
-
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
-process.on('uncaughtException', (error) => {
-  log(`Uncaught exception: ${error.message}`, 'startup-error');
-  console.error('Full error:', error);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  log(`Unhandled rejection at: ${promise}, reason: ${reason}`, 'startup-error');
-  console.error('Full rejection:', reason);
-});
-
-// Setup Vite/static in development mode
-if (process.env.NODE_ENV === 'development') {
-  log('Setting up Vite development server...', 'startup');
-  setupVite(app, server).then(() => {
-    log('Vite development server setup complete', 'startup');
-  }).catch(viteError => {
-    log(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, 'startup');
-  });
-} else {
-  serveStatic(app);
-  log('Static file serving setup complete', 'startup');
 }
 
-// Initialize GraphQL server asynchronously
-createGraphQLServer().then(graphqlServer => {
-  app.use('/graphql', cors({
-    origin: ['http://localhost:5000', 'https://*.replit.app', 'https://*.replit.dev'],
-    credentials: true
-  }), getGraphQLMiddleware(graphqlServer));
-  log('GraphQL server initialized at /graphql', 'startup');
-}).catch(graphqlError => {
-  log(`GraphQL setup failed: ${graphqlError}`, 'startup');
-});
-
-// Start server - this is synchronous and keeps process alive
-server.listen(port, '0.0.0.0', () => {
-  log(`Server is now listening on 0.0.0.0:${port}`, 'startup');
-  log('Server startup completed successfully', 'startup');
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
