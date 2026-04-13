@@ -215,6 +215,14 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+  getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalValue: number;
+  }>;
 }
 
 // Memory storage implementation
@@ -1782,6 +1790,39 @@ export class MemStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+
+  async getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalValue: number;
+  }> {
+    const items = Array.from(this.items.values());
+    const activeItems = items.filter(item => item.status === 'active').length;
+    const draftItems = items.filter(item => item.status === 'draft').length;
+    const availableItems = items.filter(item => item.quantity && item.quantity > 0).length;
+    const itemsWithPricing = items.filter(item =>
+      (item.basePrice && Number(item.basePrice) > 0) ||
+      (item.salePrice && Number(item.salePrice) > 0) ||
+      (item.costPrice && Number(item.costPrice) > 0)
+    ).length;
+    const totalValue = items.reduce((sum, item) => {
+      const price = Number(item.basePrice || item.salePrice || item.costPrice || 0);
+      const quantity = item.quantity || 0;
+      return sum + (price * quantity);
+    }, 0);
+
+    return {
+      totalItems: items.length,
+      activeItems,
+      draftItems,
+      availableItems,
+      itemsWithPricing,
+      totalValue
+    };
   }
 }
 
@@ -4464,6 +4505,46 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalValue: number;
+  }> {
+    try {
+      const [counts] = await db.select({
+        total: count(),
+        active: count(sql`CASE WHEN ${items.status} = 'active' THEN 1 END`),
+        draft: count(sql`CASE WHEN ${items.status} = 'draft' THEN 1 END`),
+        available: count(sql`CASE WHEN ${items.quantity} > 0 THEN 1 END`),
+        withPricing: count(sql`CASE WHEN ${items.base_price} > 0 OR ${items.sale_price} > 0 OR ${items.cost_price} > 0 THEN 1 END`),
+        totalValue: sum(sql`COALESCE(${items.base_price}, ${items.sale_price}, ${items.cost_price}, 0) * ${items.quantity}`)
+      }).from(items);
+
+      return {
+        totalItems: Number(counts.total) || 0,
+        activeItems: Number(counts.active) || 0,
+        draftItems: Number(counts.draft) || 0,
+        availableItems: Number(counts.available) || 0,
+        itemsWithPricing: Number(counts.withPricing) || 0,
+        totalValue: Number(counts.totalValue) || 0
+      };
+    } catch (error) {
+      console.error("Error fetching inventory summary:", error);
+      // Fallback for when aggregations fail
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        draftItems: 0,
+        availableItems: 0,
+        itemsWithPricing: 0,
+        totalValue: 0
+      };
+    }
   }
 }
 

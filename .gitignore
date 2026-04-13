@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.replit
+.apt7
+*.log
+pnpm-lock.yaml
