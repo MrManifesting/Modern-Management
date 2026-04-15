@@ -1650,25 +1650,11 @@ export function registerRoutes(app: any, storage: any) {
         return res.json(formatResponse.success(cachedData));
       }
 
-      const items = await storage.getItems();
+      // BOLT OPTIMIZATION: Use database aggregation instead of O(N) in-memory reduction
+      const summary = await storage.getInventorySummary();
       
-      const summary = {
-        totalItems: items.length,
-        activeItems: items.filter(item => item.status === 'active').length,
-        draftItems: items.filter(item => item.status === 'draft').length,
-        availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
-        itemsWithPricing: items.filter(item => 
-          (item.base_price && parseFloat(item.base_price) > 0) ||
-          (item.sale_price && parseFloat(item.sale_price) > 0) ||
-          (item.cost_price && parseFloat(item.cost_price) > 0)
-        ).length,
-        totalInventoryValue: items.reduce((sum, item) => {
-          const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
-          const quantity = parseFloat(item.quantity || '0');
-          return sum + (price * quantity);
-        }, 0),
-        lastUpdated: new Date().toISOString()
-      };
+      // Cache the optimized summary
+      setCachedData(cacheKey, summary, 60000); // Cache for 1 minute
       
       res.json({
         success: true,
