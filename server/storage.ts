@@ -29,6 +29,16 @@ import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'driz
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 
+export interface InventorySummary {
+  totalItems: number;
+  activeItems: number;
+  draftItems: number;
+  availableItems: number;
+  itemsWithPricing: number;
+  totalInventoryValue: number;
+  lastUpdated: string;
+}
+
 // Interface for storage methods
 export interface IStorage {
   // User authentication methods for flexible auth
@@ -56,6 +66,7 @@ export interface IStorage {
   bulkUpdateItems(ids: number[], updates: Partial<InsertItem>): Promise<Item[]>;
   getBreakdownItems(): Promise<Item[]>;
   getWaitingItems(): Promise<Item[]>;
+  getInventorySummary(): Promise<InventorySummary>;
   
   // External ID management for marketplace integrations
   getItemExternalIds(itemId: number): Promise<Record<string, string>>;
@@ -1553,6 +1564,27 @@ export class MemStorage implements IStorage {
     return Array.from(this.items.values()).filter(item => 
       item.itemType === ItemType.BUNDLE && item.processingStatus === ProcessingStatus.WAITING);
   }
+
+  async getInventorySummary(): Promise<InventorySummary> {
+    const itemsList = Array.from(this.items.values());
+    return {
+      totalItems: itemsList.length,
+      activeItems: itemsList.filter(item => item.status === 'active').length,
+      draftItems: itemsList.filter(item => item.status === 'draft').length,
+      availableItems: itemsList.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: itemsList.filter(item =>
+        (item.basePrice && item.basePrice > 0) ||
+        (item.salePrice && item.salePrice > 0) ||
+        (item.costPrice && item.costPrice > 0)
+      ).length,
+      totalInventoryValue: itemsList.reduce((sum, item) => {
+        const price = item.basePrice || item.salePrice || item.costPrice || 0;
+        const quantity = item.quantity || 0;
+        return sum + (price * quantity);
+      }, 0),
+      lastUpdated: new Date().toISOString()
+    };
+  }
   
   // Product Breakdown methods
   async getProductBreakdowns(): Promise<ProductBreakdown[]> {
@@ -2781,6 +2813,27 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(items)
       .where(eq(items.breakdownStatus, BreakdownStatus.WAITING));
+  }
+
+  async getInventorySummary(): Promise<InventorySummary> {
+    const [result] = await db.select({
+      totalItems: count(),
+      activeItems: count(sql`CASE WHEN ${items.status} = 'active' THEN 1 END`),
+      draftItems: count(sql`CASE WHEN ${items.status} = 'draft' THEN 1 END`),
+      availableItems: count(sql`CASE WHEN ${items.quantity} > 0 THEN 1 END`),
+      itemsWithPricing: count(sql`CASE WHEN (NULLIF(${items.base_price}, 0) IS NOT NULL OR NULLIF(${items.sale_price}, 0) IS NOT NULL OR NULLIF(${items.cost_price}, 0) IS NOT NULL) THEN 1 END`),
+      totalInventoryValue: sum(sql`COALESCE(NULLIF(${items.base_price}, 0), NULLIF(${items.sale_price}, 0), NULLIF(${items.cost_price}, 0), 0) * ${items.quantity}`)
+    }).from(items);
+
+    return {
+      totalItems: Number(result.totalItems),
+      activeItems: Number(result.activeItems),
+      draftItems: Number(result.draftItems),
+      availableItems: Number(result.availableItems),
+      itemsWithPricing: Number(result.itemsWithPricing),
+      totalInventoryValue: Number(result.totalInventoryValue || 0),
+      lastUpdated: new Date().toISOString()
+    };
   }
   
   // Marketplace methods (using stores table)
