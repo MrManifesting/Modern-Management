@@ -2145,8 +2145,8 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
       
-      // Use raw SQL to avoid Drizzle mapping issues completely
-      const result = await db.execute(`SELECT id, name, description, sku, quantity, base_price, category, status, weight FROM items WHERE id = ${id} LIMIT 1`);
+      // Use Drizzle's sql template tag to safely parameterize the query
+      const result = await db.execute(sql`SELECT id, name, description, sku, quantity, base_price, category, status, weight FROM items WHERE id = ${id} LIMIT 1`);
       
       console.log('Result type:', typeof result);
       console.log('Result is array:', Array.isArray(result));

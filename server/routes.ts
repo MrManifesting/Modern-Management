@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
 import { performanceMonitor, compressLargeResponse, formatResponse, optimizeQuery } from "./utils/performance-optimizer";
 
 const uploadMemory = multer({ storage: multer.memoryStorage() });
@@ -8533,12 +8535,10 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // View generated menu endpoint
   app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
     try {
-      const { menuId } = req.params;
-      const fs = await import('fs');
-      const path = await import('path');
+      const menuId = path.basename(req.params.menuId);
       
       // Validate menu ID format
-      if (!menuId || !menuId.startsWith('menu-')) {
+      if (!menuId || !menuId.startsWith('menu-') || menuId === '..' || menuId === '.') {
         return res.status(400).json({ error: 'Invalid menu ID' });
       }
       
@@ -8567,11 +8567,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         return res.status(400).json({ error: "No logo file provided" });
       }
       
-      const fs = await import('fs');
-      const path = await import('path');
-      
-      // Generate unique filename
-      const filename = `logo-${Date.now()}-${req.file.originalname}`;
+      // Generate unique filename and sanitize the original name
+      const sanitizedOriginalName = path.basename(req.file.originalname);
+      const filename = `logo-${Date.now()}-${sanitizedOriginalName}`;
       const logoPath = path.join('uploads', filename);
       
       // Save logo file
@@ -8594,9 +8592,13 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Serve uploaded files
   app.get("/api/uploads/:filename", async (req: Request, res: Response) => {
     try {
-      const { filename } = req.params;
-      const fs = await import('fs');
-      const path = await import('path');
+      const filename = path.basename(req.params.filename);
+
+      // Prevent path traversal with additional checks
+      if (filename === '..' || filename === '.') {
+        return res.status(400).json({ error: "Invalid filename" });
+      }
+
       const filePath = path.join('uploads', filename);
       
       if (!fs.existsSync(filePath)) {
