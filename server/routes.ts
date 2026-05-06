@@ -1,3 +1,4 @@
+import path from "path";
 import { Request, Response } from "express";
 import multer from "multer";
 import { performanceMonitor, compressLargeResponse, formatResponse, optimizeQuery } from "./utils/performance-optimizer";
@@ -8533,9 +8534,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // View generated menu endpoint
   app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
     try {
-      const { menuId } = req.params;
+      // Prevent path traversal by using path.basename
+      const menuId = path.basename(req.params.menuId);
       const fs = await import('fs');
-      const path = await import('path');
       
       // Validate menu ID format
       if (!menuId || !menuId.startsWith('menu-')) {
@@ -8594,9 +8595,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Serve uploaded files
   app.get("/api/uploads/:filename", async (req: Request, res: Response) => {
     try {
-      const { filename } = req.params;
+      // Prevent path traversal by using path.basename
+      const filename = path.basename(req.params.filename);
       const fs = await import('fs');
-      const path = await import('path');
       const filePath = path.join('uploads', filename);
       
       if (!fs.existsSync(filePath)) {
