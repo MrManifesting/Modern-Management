@@ -216,7 +216,8 @@ export const initializeTelegramBot = (token: string) => {
 };
 
 // Function to download a file from Telegram and save it to the media folder
-const downloadMediaFile = async (bot: TelegramBot, fileId: string, fileName: string): Promise<string> => {
+const downloadMediaFile = async (bot: TelegramBot, fileId: string, fileNameInput: string): Promise<string> => {
+  const fileName = path.basename(fileNameInput);
   return new Promise(async (resolve, reject) => {
     try {
       // Get file path from Telegram
@@ -331,8 +332,9 @@ export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0):
 };
 
 // Function to get a specific media file by name
-export const getMediaFile = (fileName: string): MediaFile | null => {
+export const getMediaFile = (fileNameInput: string): MediaFile | null => {
   try {
+    const fileName = path.basename(fileNameInput);
     const filePath = path.join(MEDIA_FOLDER, fileName);
     
     if (!fs.existsSync(filePath)) {
@@ -370,8 +372,9 @@ export const getMediaUrl = (fileName: string): string => {
 };
 
 // Function to delete a media file
-export const deleteMediaFile = (fileName: string): boolean => {
+export const deleteMediaFile = (fileNameInput: string): boolean => {
   try {
+    const fileName = path.basename(fileNameInput);
     const filePath = path.join(MEDIA_FOLDER, fileName);
     
     if (!fs.existsSync(filePath)) {
@@ -388,8 +391,10 @@ export const deleteMediaFile = (fileName: string): boolean => {
 };
 
 // Function to rename a media file
-export const renameMediaFile = (oldFileName: string, newFileName: string): boolean => {
+export const renameMediaFile = (oldFileNameInput: string, newFileNameInput: string): boolean => {
   try {
+    const oldFileName = path.basename(oldFileNameInput);
+    const newFileName = path.basename(newFileNameInput);
     const oldFilePath = path.join(MEDIA_FOLDER, oldFileName);
     const newFilePath = path.join(MEDIA_FOLDER, newFileName);
     
