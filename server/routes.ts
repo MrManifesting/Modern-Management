@@ -8542,7 +8542,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         return res.status(400).json({ error: 'Invalid menu ID' });
       }
       
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      const menuPath = path.join('uploads', `${path.basename(menuId)}.html`);
       
       // Check if menu file exists
       if (!fs.existsSync(menuPath)) {
@@ -8570,8 +8570,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const fs = await import('fs');
       const path = await import('path');
       
-      // Generate unique filename
-      const filename = `logo-${Date.now()}-${req.file.originalname}`;
+      // Generate unique filename - sanitize originalname to prevent path traversal
+      const filename = `logo-${Date.now()}-${path.basename(req.file.originalname)}`;
       const logoPath = path.join('uploads', filename);
       
       // Save logo file
@@ -8597,7 +8597,7 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const { filename } = req.params;
       const fs = await import('fs');
       const path = await import('path');
-      const filePath = path.join('uploads', filename);
+      const filePath = path.join('uploads', path.basename(filename));
       
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
