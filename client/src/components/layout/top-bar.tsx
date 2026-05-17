@@ -31,6 +31,20 @@ export default function TopBar({
   const { user, logoutMutation } = useAuth();
   const [itemNameFromVoice, setItemNameFromVoice] = useState<string | null>(null);
   const itemNameInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   // Listen for voice command events to open the Add Item modal
   useEffect(() => {
@@ -124,15 +138,23 @@ export default function TopBar({
 
           {/* Search - not shown on very small screens */}
           <div className="relative hidden sm:block">
+            <label htmlFor="topbar-search" className="sr-only">Search inventory</label>
             <input
+              id="topbar-search"
+              ref={searchInputRef}
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 sm:pr-4 text-sm bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="w-40 lg:w-64 rounded-md py-1.5 sm:py-2 pl-8 sm:pl-10 pr-2 lg:pr-10 text-sm bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
             <div className="absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 pointer-events-none">
               <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+            </div>
+            <div className="absolute inset-y-0 right-0 hidden lg:flex items-center pr-3 pointer-events-none">
+              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
             </div>
           </div>
           
@@ -197,6 +219,7 @@ export default function TopBar({
           <Button
             onClick={() => setShowAddItemModal(true)}
             className="flex items-center"
+            aria-label="Add new item"
           >
             <PlusCircle className="mr-1 h-4 w-4" />
             <span className={`${isMobile ? 'hidden' : 'inline'}`}>Add Item</span>
