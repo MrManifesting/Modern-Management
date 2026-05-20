@@ -8510,7 +8510,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       // Save menu to uploads directory
       const fs = await import('fs');
       const path = await import('path');
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      const safeMenuId = path.basename(menuId);
+      const menuPath = path.join('uploads', `${safeMenuId}.html`);
       
       fs.writeFileSync(menuPath, menuHtml);
       
@@ -8542,7 +8543,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
         return res.status(400).json({ error: 'Invalid menu ID' });
       }
       
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      const safeMenuId = path.basename(menuId);
+      const menuPath = path.join('uploads', `${safeMenuId}.html`);
       
       // Check if menu file exists
       if (!fs.existsSync(menuPath)) {
@@ -8597,7 +8599,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const { filename } = req.params;
       const fs = await import('fs');
       const path = await import('path');
-      const filePath = path.join('uploads', filename);
+      const safeFilename = path.basename(filename);
+      const filePath = path.join('uploads', safeFilename);
       
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
