@@ -171,7 +171,7 @@ export const initializeTelegramBot = (token: string) => {
       else if (msg.document) {
         try {
           const fileId = msg.document.file_id;
-          const originalName = msg.document.file_name || `file_${Date.now()}`;
+          const originalName = msg.document.file_name ? path.basename(msg.document.file_name) : `file_${Date.now()}`;
           const fileName = `doc_${Date.now()}_${originalName}`;
           
           const filePath = await downloadMediaFile(bot!, fileId, fileName);
@@ -296,7 +296,8 @@ export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0):
     
     // Get file details
     const mediaFiles = filteredFiles.map(fileName => {
-      const filePath = path.join(MEDIA_FOLDER, fileName);
+      const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
       const stats = fs.statSync(filePath);
       
       // Determine file type
@@ -333,7 +334,8 @@ export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0):
 // Function to get a specific media file by name
 export const getMediaFile = (fileName: string): MediaFile | null => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return null;
@@ -372,7 +374,8 @@ export const getMediaUrl = (fileName: string): string => {
 // Function to delete a media file
 export const deleteMediaFile = (fileName: string): boolean => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return false;
@@ -390,8 +393,10 @@ export const deleteMediaFile = (fileName: string): boolean => {
 // Function to rename a media file
 export const renameMediaFile = (oldFileName: string, newFileName: string): boolean => {
   try {
-    const oldFilePath = path.join(MEDIA_FOLDER, oldFileName);
-    const newFilePath = path.join(MEDIA_FOLDER, newFileName);
+    const safeOldFileName = path.basename(oldFileName);
+    const oldFilePath = path.join(MEDIA_FOLDER, safeOldFileName);
+    const safeNewFileName = path.basename(newFileName);
+    const newFilePath = path.join(MEDIA_FOLDER, safeNewFileName);
     
     if (!fs.existsSync(oldFilePath) || fs.existsSync(newFilePath)) {
       return false;

@@ -18,6 +18,7 @@ import { google } from "googleapis";
 var GOOGLE_SHEETS_CONFIG, GoogleSheetsService, googleSheetsService;
 var init_google_sheets_service = __esm({
   "server/services/google-sheets-service.ts"() {
+    "use strict";
     GOOGLE_SHEETS_CONFIG = {
       webAppUrl: "https://script.google.com/macros/s/AKfycbwkuyDk2hruKO0WRDOppaAJWD5TGvnt-Iky5LuTWtGBHMA4la3LapAexT9Wqw0ZQjZw/exec",
       apiExecutableUrl: "https://script.googleapis.com/v1/scripts/AKfycbwkuyDk2hruKO0WRDOppaAJWD5TGvnt-Iky5LuTWtGBHMA4la3LapAexT9Wqw0ZQjZw:run",
@@ -198,6 +199,7 @@ var init_google_sheets_service = __esm({
 var Logger, logger, log, logInfo, logWarn, logError, logDebug;
 var init_logger = __esm({
   "server/utils/logger.ts"() {
+    "use strict";
     Logger = class {
       getTimestamp() {
         return (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -278,6 +280,7 @@ import OpenAI from "openai";
 var openai, AIAssistant, aiAssistant;
 var init_ai_assistant = __esm({
   "server/services/ai-assistant.ts"() {
+    "use strict";
     init_logger();
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     AIAssistant = class {
@@ -419,6 +422,7 @@ __export(shopify_bulk_query_exports, {
 var ShopifyBulkQueryService;
 var init_shopify_bulk_query = __esm({
   "server/services/shopify-bulk-query.ts"() {
+    "use strict";
     init_logger();
     ShopifyBulkQueryService = class {
       constructor() {
@@ -683,6 +687,7 @@ import { z } from "zod";
 var sessions, users, priceSheet, orderTransactions, priceSheetRelations, orderTransactionRelations, userCredentials, thcaFlowerMapping, shopifyProductLookup, thcaSheetData, conversations, messages, insertConversationSchema, insertMessageSchema, customers, customerPurchaseAnalytics, customerTierThresholds, orderAnalytics, productPerformanceAnalytics, items, marketplaceTypes, webhookLogs, stores, marketplaces, sales, employees, inventoryActions, productBreakdowns, affiliates, qrCodes, affiliateTransactions, customerTiers, syncLogs, ItemType, ProcessingStatus, ItemCondition, BreakdownStatus2, insertItemSchema, insertMarketplaceSchema, insertSaleSchema, insertEmployeeSchema, insertInventoryActionSchema, insertBreakdownSchema, insertUserSchema, insertAffiliateSchema, insertQrCodeSchema, insertAffiliateTransactionSchema, insertCustomerSchema, insertCustomerTierSchema, breakdownTargetSchema, csvExportSchema, reportSchema, forecastRequestSchema, itemFormSchema, credentials, insertCredentialSchema, insertPriceSheetSchema, insertOrderTransactionSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
+    "use strict";
     sessions = pgTable(
       "sessions",
       {
@@ -1644,6 +1649,7 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default;
 var init_vite_config = __esm({
   "vite.config.ts"() {
+    "use strict";
     vite_config_default = defineConfig({
       plugins: [
         react(),
@@ -1697,10 +1703,10 @@ function log2(message, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
-async function setupVite(app2, server) {
+async function setupVite(app2, server2) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: { server: server2 },
     allowedHosts: true
   };
   const vite = await createViteServer({
@@ -1754,6 +1760,7 @@ function serveStatic(app2) {
 var viteLogger;
 var init_vite = __esm({
   "server/vite.ts"() {
+    "use strict";
     init_vite_config();
     viteLogger = createLogger();
   }
@@ -1893,6 +1900,7 @@ async function testShopifyConnection() {
 var cachedCredentials, CACHE_DURATION;
 var init_shopify_auth = __esm({
   "server/services/shopify-auth.ts"() {
+    "use strict";
     init_vite();
     cachedCredentials = null;
     CACHE_DURATION = 5 * 60 * 1e3;
@@ -1917,7 +1925,6 @@ __export(shopify_exports, {
 });
 function getShopifyStoreName2() {
   const storeUrl = process.env.SHOPIFY_STORE || "";
-  console.log("***DEBUG: Using SHOPIFY_STORE value:", storeUrl);
   if (!storeUrl) return "";
   let storeName = storeUrl.replace(/^https?:\/\//, "");
   if (storeName.includes("admin.shopify.com/store/")) {
@@ -2372,13 +2379,20 @@ async function syncProductsFromShopify(storage2) {
 var logShopifyOperation, isOperationAllowed, isConfirmationValid, pushToShopifyEnabled, pushEnabled;
 var init_shopify = __esm({
   "server/services/shopify.ts"() {
+    "use strict";
     init_schema();
     init_shopify_auth();
     logShopifyOperation = (operation, details) => {
-      console.log(`[shopify-operation] ${operation}:`, details);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[shopify-operation] ${operation}:`, details);
+      }
     };
-    isOperationAllowed = (operation) => true;
-    isConfirmationValid = (confirmation) => true;
+    isOperationAllowed = (operation) => {
+      return true;
+    };
+    isConfirmationValid = (confirmation) => {
+      return true;
+    };
     pushToShopifyEnabled = false;
     setTimeout(logShopifyCredentials, 1e3);
     pushEnabled = () => pushToShopifyEnabled;
@@ -2395,6 +2409,7 @@ import fetch2 from "node-fetch";
 var ShopifyMediaService, shopifyMediaService;
 var init_shopify_media_service = __esm({
   "server/services/shopify-media-service.ts"() {
+    "use strict";
     ShopifyMediaService = class {
       constructor() {
         this.shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || "gold-standard-cbd.myshopify.com";
@@ -2599,6 +2614,7 @@ __export(comprehensive_menu_generator_exports, {
 var ComprehensiveMenuGenerator;
 var init_comprehensive_menu_generator = __esm({
   "server/services/comprehensive-menu-generator.ts"() {
+    "use strict";
     ComprehensiveMenuGenerator = class {
       constructor(storage2) {
         this.storage = storage2;
@@ -2783,6 +2799,7 @@ __export(customer_tiers_exports, {
 var CustomerTierService;
 var init_customer_tiers = __esm({
   "server/services/customer-tiers.ts"() {
+    "use strict";
     init_shopify_auth();
     init_vite();
     CustomerTierService = class {
@@ -3052,6 +3069,7 @@ function extractAccurateWeight(productName, shopifyData) {
 var log3, WeightService;
 var init_weight_service = __esm({
   "server/utils/weight-service.ts"() {
+    "use strict";
     init_logger();
     log3 = (message, context = "weight-service") => logger.info(message, context);
     WeightService = class {
@@ -3244,6 +3262,7 @@ import "@shopify/shopify-api/adapters/node";
 var ShopifyImageSyncService;
 var init_shopify_image_sync = __esm({
   "server/services/shopify-image-sync.ts"() {
+    "use strict";
     init_logger();
     ShopifyImageSyncService = class {
       constructor(storage2) {
@@ -3500,6 +3519,7 @@ import path3 from "path";
 var CSVInventorySync;
 var init_csv_inventory_sync = __esm({
   "server/services/csv-inventory-sync.ts"() {
+    "use strict";
     CSVInventorySync = class {
       constructor() {
         this.flowerVariants = [];
@@ -4315,6 +4335,7 @@ var init_csv_inventory_sync = __esm({
 var ShopifyGraphQLService, shopifyGraphQL;
 var init_shopify_graphql = __esm({
   "server/services/shopify-graphql.ts"() {
+    "use strict";
     init_logger();
     ShopifyGraphQLService = class {
       constructor() {
@@ -4660,6 +4681,7 @@ import OpenAI2 from "openai";
 var openai2, AIShopifyMatcher, aiShopifyMatcher;
 var init_ai_shopify_matcher = __esm({
   "server/services/ai-shopify-matcher.ts"() {
+    "use strict";
     init_logger();
     init_shopify_graphql();
     openai2 = new OpenAI2({ apiKey: process.env.OPENAI_API_KEY });
@@ -4811,6 +4833,7 @@ function generateSKU2(item) {
 var SKUGenerator;
 var init_sku_generator = __esm({
   "server/services/sku-generator.ts"() {
+    "use strict";
     SKUGenerator = class {
       constructor(storage2) {
         this.storage = storage2;
@@ -5094,6 +5117,18 @@ var formatResponse = {
 
 // server/routes.ts
 var uploadMemory = multer({ storage: multer.memoryStorage() });
+var escapeHtml = (text3) => {
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#x27;",
+    "/": "&#x2F;"
+  };
+  return String(text3).replace(/[&<>"'/]/g, (char) => map[char]);
+};
+var MAX_CACHE_SIZE = 100;
 var cache = /* @__PURE__ */ new Map();
 var getCachedData = (key) => {
   const cached = cache.get(key);
@@ -5104,46 +5139,50 @@ var getCachedData = (key) => {
   return null;
 };
 var setCachedData = (key, data, ttl = 3e4) => {
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
   cache.set(key, { data, timestamp: Date.now(), ttl });
 };
 var generateComprehensiveMenuHTML = (menu) => {
   const sectionsHTML = menu.sections.map((section) => {
     const itemsHTML = section.items.map((item) => `
-      <div class="product-card" data-product-id="${item.id}">
+      <div class="product-card" data-product-id="${escapeHtml(item.id)}">
         <div class="product-image">
-          ${item.image ? `<img src="${item.image}" alt="${item.name}" loading="lazy" />` : '<div class="no-image">\u{1F33F}</div>'}
+          ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" />` : '<div class="no-image">\u{1F33F}</div>'}
         </div>
         <div class="product-info">
-          <h3 class="product-name">${item.name}</h3>
+          <h3 class="product-name">${escapeHtml(item.name)}</h3>
           <div class="product-details">
-            ${item.weight !== "Unknown" ? `<span class="detail-badge weight-badge">\u2696\uFE0F ${item.weight}</span>` : ""}
-            ${item.tier ? `<span class="detail-badge tier-badge">\u2B50 ${item.tier}</span>` : ""}
-            ${item.thcaPercentage ? `<span class="detail-badge thca-badge">\u{1F9EA} THCa ${item.thcaPercentage}</span>` : ""}
-            <span class="detail-badge sku-badge">\u{1F4E6} ${item.sku}</span>
+            ${item.weight !== "Unknown" ? `<span class="detail-badge weight-badge">\u2696\uFE0F ${escapeHtml(item.weight)}</span>` : ""}
+            ${item.tier ? `<span class="detail-badge tier-badge">\u2B50 ${escapeHtml(item.tier)}</span>` : ""}
+            ${item.thcaPercentage ? `<span class="detail-badge thca-badge">\u{1F9EA} THCa ${escapeHtml(item.thcaPercentage)}</span>` : ""}
+            <span class="detail-badge sku-badge">\u{1F4E6} ${escapeHtml(item.sku)}</span>
           </div>
           <div class="pricing-section">
-            <div class="main-price">$${item.price.toFixed(2)}</div>
+            <div class="main-price">$${parseFloat(item.price).toFixed(2)}</div>
             ${item.price > 0 && item.weight.includes("pound") ? `<div class="price-note">Wholesale Price</div>` : ""}
           </div>
           <div class="stock-section">
             <div class="stock-indicator ${item.lowStock ? "low-stock" : item.inStock ? "in-stock" : "out-stock"}">
               <span class="stock-icon">${item.inStock ? "\u2705" : "\u274C"}</span>
-              <span class="stock-text">${item.quantity} units available</span>
+              <span class="stock-text">${escapeHtml(item.quantity)} units available</span>
             </div>
             ${item.lowStock && item.inStock ? '<div class="low-stock-warning">\u26A0\uFE0F Low Stock Alert</div>' : ""}
           </div>
           <div class="action-buttons">
-            <a href="${item.orderLink}" target="_blank" class="btn primary-btn order-btn" onclick="trackClick('order', '${item.sku}')">
+            <a href="${escapeHtml(item.orderLink)}" target="_blank" class="btn primary-btn order-btn" onclick="trackClick('order', '${escapeHtml(item.sku)}')">
               \u{1F6D2} Order Now
             </a>
             <div class="secondary-buttons">
-              <a href="${item.coaLink}" target="_blank" class="btn secondary-btn coa-btn" onclick="trackClick('coa', '${item.sku}')">
+              <a href="${escapeHtml(item.coaLink)}" target="_blank" class="btn secondary-btn coa-btn" onclick="trackClick('coa', '${escapeHtml(item.sku)}')">
                 \u{1F4CB} View COA
               </a>
-              <a href="${item.mediaLink}" target="_blank" class="btn secondary-btn media-btn" onclick="trackClick('media', '${item.sku}')">
+              <a href="${escapeHtml(item.mediaLink)}" target="_blank" class="btn secondary-btn media-btn" onclick="trackClick('media', '${escapeHtml(item.sku)}')">
                 \u{1F4F1} Media Pack
               </a>
-              <a href="tel:541-295-8811" class="btn secondary-btn call-btn" onclick="trackClick('call', '${item.sku}')">
+              <a href="tel:541-295-8811" class="btn secondary-btn call-btn" onclick="trackClick('call', '${escapeHtml(item.sku)}')">
                 \u{1F4DE} Call Now
               </a>
             </div>
@@ -5154,8 +5193,8 @@ var generateComprehensiveMenuHTML = (menu) => {
     return `
       <section class="menu-section">
         <div class="section-header">
-          <h2>${section.title}</h2>
-          <p class="section-description">${section.description}</p>
+          <h2>${escapeHtml(section.title)}</h2>
+          <p class="section-description">${escapeHtml(section.description)}</p>
           <div class="section-stats">
             <span>${section.items.length} items</span>
             <span>${section.totalQuantity} units</span>
@@ -12010,7 +12049,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const menuHtml = generateCustomMenuHtml(products, theme, branding, customBackground, includeLinks);
       const fs3 = await import("fs");
       const path4 = await import("path");
-      const menuPath = path4.join("uploads", `${menuId}.html`);
+      const safeMenuId = path4.basename(menuId);
+      const menuPath = path4.join("uploads", `${safeMenuId}.html`);
       fs3.writeFileSync(menuPath, menuHtml);
       const menuUrl = `/api/view-menu/${menuId}`;
       res.json({
@@ -12033,7 +12073,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       if (!menuId || !menuId.startsWith("menu-")) {
         return res.status(400).json({ error: "Invalid menu ID" });
       }
-      const menuPath = path4.join("uploads", `${menuId}.html`);
+      const safeMenuId = path4.basename(menuId);
+      const menuPath = path4.join("uploads", `${safeMenuId}.html`);
       if (!fs3.existsSync(menuPath)) {
         return res.status(404).json({ error: "Menu not found" });
       }
@@ -12071,7 +12112,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const { filename } = req.params;
       const fs3 = await import("fs");
       const path4 = await import("path");
-      const filePath = path4.join("uploads", filename);
+      const safeFilename = path4.basename(filename);
+      const filePath = path4.join("uploads", safeFilename);
       if (!fs3.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
       }
@@ -12841,7 +12883,7 @@ var DatabaseStorage = class {
   async getItem(id) {
     try {
       console.log(`Trying to fetch item with ID: ${id}`);
-      const result = await db.execute(`SELECT id, name, description, sku, quantity, base_price, category, status, weight FROM items WHERE id = ${id} LIMIT 1`);
+      const result = await db.execute(sql`SELECT id, name, description, sku, quantity, base_price, category, status, weight FROM items WHERE id = ${id} LIMIT 1`);
       console.log("Result type:", typeof result);
       console.log("Result is array:", Array.isArray(result));
       console.log("Result keys:", Object.keys(result || {}));
@@ -15356,7 +15398,7 @@ var log6 = (message, context = "graphql") => {
   console.log(`${(/* @__PURE__ */ new Date()).toLocaleTimeString()} [${context}] ${message}`);
 };
 async function createGraphQLServer() {
-  const server = new ApolloServer({
+  const server2 = new ApolloServer({
     typeDefs,
     resolvers,
     introspection: true,
@@ -15370,12 +15412,12 @@ async function createGraphQLServer() {
       };
     }
   });
-  await server.start();
+  await server2.start();
   log6("GraphQL server started successfully");
-  return server;
+  return server2;
 }
-function getGraphQLMiddleware(server) {
-  return expressMiddleware(server, {
+function getGraphQLMiddleware(server2) {
+  return expressMiddleware(server2, {
     context: async ({ req }) => {
       const session2 = req.session;
       return {
@@ -15419,17 +15461,30 @@ var securityMiddleware = {
     if (req.secure) {
       res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
+    const isDevelopment = process.env.NODE_ENV === "development";
+    const scriptSrc = isDevelopment ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self'";
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+      `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;`
     );
     next();
   },
-  // Input sanitization
+  // Input sanitization with improved escaping
   sanitizeInput: (req, res, next) => {
+    const escapeHtml2 = (text3) => {
+      const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#x27;",
+        "/": "&#x2F;"
+      };
+      return text3.replace(/[&<>"'/]/g, (char) => map[char]);
+    };
     const sanitize = (obj) => {
       if (typeof obj === "string") {
-        return obj.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "").replace(/javascript:/gi, "").replace(/data:/gi, "").replace(/vbscript:/gi, "");
+        return obj.replace(/javascript:/gi, "").replace(/data:text\/html/gi, "").replace(/vbscript:/gi, "").replace(/on\w+\s*=/gi, "");
       }
       if (typeof obj === "object" && obj !== null) {
         if (Array.isArray(obj)) {
@@ -15448,6 +15503,199 @@ var securityMiddleware = {
     }
     next();
   }
+};
+
+// server/utils/errors.ts
+var AppError = class extends Error {
+  constructor(message, code = "INTERNAL_ERROR" /* INTERNAL_ERROR */, statusCode = 500, isOperational = true, details) {
+    super(message);
+    Object.setPrototypeOf(this, new.target.prototype);
+    this.name = this.constructor.name;
+    this.code = code;
+    this.statusCode = statusCode;
+    this.isOperational = isOperational;
+    this.details = details;
+    this.timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    Error.captureStackTrace(this, this.constructor);
+  }
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      statusCode: this.statusCode,
+      details: this.details,
+      timestamp: this.timestamp,
+      ...process.env.NODE_ENV === "development" && { stack: this.stack }
+    };
+  }
+};
+var ValidationError = class extends AppError {
+  constructor(message, details) {
+    super(message, "VALIDATION_ERROR" /* VALIDATION_ERROR */, 400, true, details);
+  }
+};
+function isAppError(error) {
+  return error instanceof AppError;
+}
+function toAppError(error) {
+  if (isAppError(error)) {
+    return error;
+  }
+  if (error instanceof Error) {
+    return new AppError(
+      error.message,
+      "INTERNAL_ERROR" /* INTERNAL_ERROR */,
+      500,
+      false
+    );
+  }
+  return new AppError(
+    "An unexpected error occurred",
+    "INTERNAL_ERROR" /* INTERNAL_ERROR */,
+    500,
+    false
+  );
+}
+function logError2(error, context) {
+  const appError = toAppError(error);
+  const logPrefix = context ? `[${context}]` : "";
+  if (process.env.NODE_ENV === "production") {
+    console.error(logPrefix, {
+      message: appError.message,
+      code: appError.code,
+      statusCode: appError.statusCode,
+      timestamp: appError.timestamp,
+      details: appError.details
+    });
+  } else {
+    console.error(logPrefix, appError);
+  }
+}
+
+// server/middleware/validation.ts
+import { z as z3, ZodError } from "zod";
+function validateBody(schema) {
+  return (req, res, next) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = new ValidationError(
+          "Validation failed",
+          {
+            errors: error.errors.map((err) => ({
+              field: err.path.join("."),
+              message: err.message,
+              code: err.code
+            }))
+          }
+        );
+        return res.status(validationError.statusCode).json(validationError.toJSON());
+      }
+      next(error);
+    }
+  };
+}
+var commonSchemas = {
+  // Pagination
+  pagination: z3.object({
+    page: z3.coerce.number().int().min(1).default(1),
+    limit: z3.coerce.number().int().min(1).max(100).default(20)
+  }),
+  // ID parameter
+  id: z3.object({
+    id: z3.coerce.number().int().positive()
+  }),
+  // Email
+  email: z3.string().email().toLowerCase().trim(),
+  // Password (minimum 8 characters, at least one letter and one number)
+  password: z3.string().min(8).regex(
+    /^(?=.*[A-Za-z])(?=.*\d)/,
+    "Password must contain at least one letter and one number"
+  ),
+  // URL
+  url: z3.string().url(),
+  // Date range
+  dateRange: z3.object({
+    startDate: z3.coerce.date().optional(),
+    endDate: z3.coerce.date().optional()
+  }).refine(
+    (data) => !data.startDate || !data.endDate || data.startDate <= data.endDate,
+    {
+      message: "Start date must be before or equal to end date",
+      path: ["startDate"]
+    }
+  ),
+  // Item status
+  itemStatus: z3.enum(["active", "inactive", "archived", "sold"]),
+  // Sort order
+  sortOrder: z3.enum(["asc", "desc"]).default("desc")
+};
+var itemSchemas = {
+  create: z3.object({
+    name: z3.string().min(1).max(255).trim(),
+    description: z3.string().max(5e3).optional(),
+    sku: z3.string().max(100).optional(),
+    price: z3.number().nonnegative(),
+    quantity: z3.number().int().nonnegative().default(0),
+    weight: z3.string().max(50).optional(),
+    tier: z3.string().max(50).optional(),
+    thcaPercentage: z3.string().max(20).optional(),
+    image: z3.string().url().optional().or(z3.literal("")),
+    barcode: z3.string().max(100).optional()
+  }),
+  update: z3.object({
+    name: z3.string().min(1).max(255).trim().optional(),
+    description: z3.string().max(5e3).optional(),
+    price: z3.number().nonnegative().optional(),
+    quantity: z3.number().int().nonnegative().optional(),
+    weight: z3.string().max(50).optional(),
+    tier: z3.string().max(50).optional(),
+    thcaPercentage: z3.string().max(20).optional(),
+    image: z3.string().url().optional().or(z3.literal("")),
+    status: commonSchemas.itemStatus.optional()
+  }),
+  bulkUpdate: z3.object({
+    ids: z3.array(z3.number().int().positive()).min(1),
+    updates: z3.object({
+      price: z3.number().nonnegative().optional(),
+      quantity: z3.number().int().nonnegative().optional(),
+      status: commonSchemas.itemStatus.optional(),
+      tier: z3.string().max(50).optional()
+    })
+  })
+};
+var authSchemas = {
+  register: z3.object({
+    email: commonSchemas.email,
+    password: commonSchemas.password,
+    firstName: z3.string().min(1).max(100).trim().optional(),
+    lastName: z3.string().min(1).max(100).trim().optional()
+  }),
+  login: z3.object({
+    email: commonSchemas.email,
+    password: z3.string().min(1)
+    // Don't validate password format on login
+  })
+};
+var shopifySchemas = {
+  orderWebhook: z3.object({
+    id: z3.union([z3.string(), z3.number()]),
+    name: z3.string().optional(),
+    order_id: z3.union([z3.string(), z3.number()]).optional(),
+    order_name: z3.string().optional(),
+    line_items: z3.array(z3.object({
+      sku: z3.string().optional(),
+      quantity: z3.number().int().positive(),
+      title: z3.string().optional(),
+      price: z3.string().optional()
+    })).default([]),
+    subtotal_price: z3.union([z3.string(), z3.number()]).optional(),
+    total_price: z3.union([z3.string(), z3.number()]).optional(),
+    test: z3.union([z3.boolean(), z3.string()]).optional()
+  })
 };
 
 // server/index.ts
@@ -15502,129 +15750,103 @@ app.head("/", (req, res) => {
 app.options("*", (req, res) => {
   res.status(200).end();
 });
-app.post("/api/shopify/webhooks/orders/create", async (req, res) => {
+app.post("/api/shopify/webhooks/orders/create", validateBody(shopifySchemas.orderWebhook), async (req, res) => {
   try {
     const order = req.body;
-    if (!order || typeof order !== "object") {
-      log2(`Invalid order data received in webhook`, "webhook-direct");
-      return res.status(400).json({ error: "Invalid order data" });
-    }
-    if (order.test === "webhook" || !order.id) {
+    if (order.test === "webhook" || order.test === true) {
       log2(`Test webhook received successfully`, "webhook-direct");
       return res.json({ success: true, message: "Test webhook processed" });
     }
     const orderId = order.id || order.order_id || "unknown";
     const orderName = order.name || order.order_name || `#${orderId}`;
     log2(`Order webhook received: ${orderName} (ID: ${orderId})`, "webhook-direct");
-    for (const lineItem of order.line_items || []) {
+    for (const lineItem of order.line_items) {
       if (!lineItem.sku) continue;
       log2(`Processing line item: ${lineItem.sku} (quantity: ${lineItem.quantity})`, "webhook-direct");
     }
     try {
       await storage.createSale({
         orderId: String(orderId),
-        items: order.line_items || [],
-        subtotal: String(parseFloat(order.subtotal_price || order.total_price) || 0),
-        total: String(parseFloat(order.total_price) || 0)
+        items: order.line_items,
+        subtotal: String(parseFloat(String(order.subtotal_price || order.total_price || 0))),
+        total: String(parseFloat(String(order.total_price || 0)))
       });
     } catch (saleError) {
-      log2(`Sale creation failed for order ${orderName}: ${saleError}`, "webhook-direct");
+      logError2(saleError, "sale-creation");
     }
     log2(`Order ${orderName} processed successfully - inventory updated`, "webhook-direct");
     res.json({ success: true, message: "Order processed and inventory updated" });
   } catch (error) {
-    log2(`Webhook processing error: ${error instanceof Error ? error.message : String(error)}`, "webhook-direct");
-    console.error("Full webhook error:", error);
+    logError2(error, "webhook-processing");
     res.status(500).json({ error: "Failed to process webhook", details: error instanceof Error ? error.message : String(error) });
   }
 });
-function startServer() {
-  const port = parseInt(process.env.PORT || "5000", 10);
-  log2(`Starting server in ${process.env.NODE_ENV || "development"} mode`, "startup");
-  log2("Using existing database connection", "startup");
-  createGraphQLServer().then((graphqlServer) => {
-    app.use("/graphql", cors({
-      origin: ["http://localhost:5000", "https://*.replit.app", "https://*.replit.dev"],
-      credentials: true
-    }), getGraphQLMiddleware(graphqlServer));
-    log2("GraphQL server initialized at /graphql", "startup");
-  }).catch((graphqlError) => {
-    log2(`GraphQL setup failed: ${graphqlError}`, "startup");
-  });
-  try {
-    registerRoutes(app, storage);
-    log2("Routes registered successfully", "startup");
-  } catch (routeError) {
-    log2(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, "startup");
-  }
-  app.use((err, _req, res, _next) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    log2(`Global error handler: ${status} - ${message}`, "error");
-    res.status(status).json({ message });
-  });
-  app.use("/api/*", (req, res, next) => {
-    res.status(404).json({ error: "API endpoint not found" });
-  });
-  const server = http.createServer(app);
-  server.keepAliveTimeout = 65e3;
-  server.headersTimeout = 66e3;
-  server.on("error", (error) => {
-    if (error.code === "EADDRINUSE") {
-      log2(`Port ${port} is already in use`, "startup-error");
-    } else {
-      log2(`Server startup error: ${error.message}`, "startup-error");
-    }
-    process.exit(1);
-  });
-  const cleanup = () => {
-    log2("Server shutting down...", "server-shutdown");
-    server.close(() => {
-      log2("Server closed successfully", "server-shutdown");
-      process.exit(0);
-    });
-  };
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
-  process.on("uncaughtException", (error) => {
-    log2(`Uncaught exception: ${error.message}`, "startup-error");
-    console.error("Full error:", error);
-    cleanup();
-  });
-  process.on("unhandledRejection", (reason, promise) => {
-    log2(`Unhandled rejection at: ${promise}, reason: ${reason}`, "startup-error");
-    console.error("Full rejection:", reason);
-  });
-  if (process.env.NODE_ENV === "development") {
-    log2("Setting up Vite development server...", "startup");
-    setupVite(app, server).then(() => {
-      log2("Vite development server setup complete", "startup");
-    }).catch((viteError) => {
-      log2(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, "startup");
-    });
-  } else {
-    serveStatic(app);
-    log2("Static file serving setup complete", "startup");
-  }
-  server.listen(port, "0.0.0.0", () => {
-    log2(`Server is now listening on 0.0.0.0:${port}`, "startup");
-    log2("Server startup completed successfully", "startup");
-    if (process.send) {
-      process.send("ready");
-    }
-  });
-}
+var port = parseInt(process.env.PORT || "5000", 10);
+log2(`Starting server in ${process.env.NODE_ENV || "development"} mode`, "startup");
+log2("Using existing database connection", "startup");
 try {
-  startServer();
-} catch (error) {
-  console.error("Failed to start server:", error);
-  process.exit(1);
+  registerRoutes(app, storage);
+  log2("Routes registered successfully", "startup");
+} catch (routeError) {
+  log2(`Route registration failed: ${routeError instanceof Error ? routeError.message : String(routeError)}`, "startup");
 }
-process.on("SIGINT", () => {
-  console.log("Received SIGINT, shutting down gracefully...");
-  process.exit(0);
+app.use((err, _req, res, _next) => {
+  const appError = toAppError(err);
+  logError2(appError, "global-error-handler");
+  res.status(appError.statusCode).json(appError.toJSON());
 });
-process.on("SIGTERM", () => {
-  console.log("Received SIGTERM, shutting down gracefully...");
-  process.exit(0);
+app.use("/api/*", (req, res, next) => {
+  res.status(404).json({ error: "API endpoint not found" });
+});
+var server = http.createServer(app);
+server.keepAliveTimeout = 65e3;
+server.headersTimeout = 66e3;
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    log2(`Port ${port} is already in use`, "startup-error");
+  } else {
+    log2(`Server startup error: ${error.message}`, "startup-error");
+  }
+  process.exit(1);
+});
+var cleanup = () => {
+  log2("Server shutting down...", "server-shutdown");
+  server.close(() => {
+    log2("Server closed successfully", "server-shutdown");
+    process.exit(0);
+  });
+};
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
+process.on("uncaughtException", (error) => {
+  logError2(error, "uncaught-exception");
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  logError2(reason, "unhandled-rejection");
+  console.error("Promise:", promise);
+});
+if (process.env.NODE_ENV === "development") {
+  log2("Setting up Vite development server...", "startup");
+  setupVite(app, server).then(() => {
+    log2("Vite development server setup complete", "startup");
+  }).catch((viteError) => {
+    log2(`Vite setup warning: ${viteError instanceof Error ? viteError.message : String(viteError)}`, "startup");
+  });
+} else {
+  serveStatic(app);
+  log2("Static file serving setup complete", "startup");
+}
+createGraphQLServer().then((graphqlServer) => {
+  app.use("/graphql", cors({
+    origin: ["http://localhost:5000", "https://*.replit.app", "https://*.replit.dev"],
+    credentials: true
+  }), getGraphQLMiddleware(graphqlServer));
+  log2("GraphQL server initialized at /graphql", "startup");
+}).catch((graphqlError) => {
+  log2(`GraphQL setup failed: ${graphqlError}`, "startup");
+});
+server.listen(port, "0.0.0.0", () => {
+  log2(`Server is now listening on 0.0.0.0:${port}`, "startup");
+  log2("Server startup completed successfully", "startup");
 });
