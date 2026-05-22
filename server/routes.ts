@@ -799,21 +799,12 @@ export function registerRoutes(app: any, storage: any) {
   // Stats endpoint
   app.get("/api/stats", async (_req: Request, res: Response) => {
     try {
-      const items = await storage.getItems();
-      const activeItems = items.filter((item: any) => 
-        item.status === 'active' || item.status === 'available'
-      ).length;
-      const totalValue = items.reduce((sum: number, item: any) => 
-        sum + (parseFloat(item.base_price || '0') * (item.quantity || 0)), 0
-      );
+      // Optimized: Using database-level aggregation instead of fetching and processing all items in memory
+      const summary = await storage.getInventorySummary();
 
       res.json({
         success: true,
-        data: {
-          totalItems: items.length,
-          activeItems,
-          totalValue: totalValue.toFixed(2)
-        }
+        data: summary
       });
     } catch (error) {
       log(`Stats error: ${error}`, 'stats');
