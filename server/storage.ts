@@ -25,7 +25,7 @@ import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
 import memoryStoreModule from 'memorystore';
 import { db } from './db';
-import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
+import { eq, and, or, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 
@@ -215,6 +215,7 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+  getInventorySummary(): Promise<{ totalItems: number, activeItems: number, totalValue: string }>;
 }
 
 // Memory storage implementation
@@ -1062,7 +1063,7 @@ export class MemStorage implements IStorage {
     const totalProfit = filteredSales.reduce((sum, sale) => {
       const item = this.items.get(sale.itemId);
       if (item) {
-        const itemCost = item.basePrice; // Assuming basePrice is our cost
+        const itemCost = item.base_price; // Assuming base_price is our cost
         const profit = (sale.salePrice - itemCost) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         return sum + profit;
       }
@@ -1175,7 +1176,7 @@ export class MemStorage implements IStorage {
         // Calculate profit for this item
         const itemSalesList = filteredSales.filter(sale => sale.itemId === item.id);
         const profit = itemSalesList.reduce((total, sale) => {
-          const profitPerUnit = sale.salePrice - itemEntity.basePrice;
+          const profitPerUnit = sale.salePrice - itemEntity.base_price;
           return total + (profitPerUnit * sale.quantity) - (sale.fees || 0) - (sale.shippingCost || 0);
         }, 0);
         
@@ -1223,7 +1224,7 @@ export class MemStorage implements IStorage {
         
         const item = this.items.get(sale.itemId);
         if (item) {
-          const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          const profit = (sale.salePrice - item.base_price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
           existing.profit += profit;
         }
         
@@ -1254,7 +1255,7 @@ export class MemStorage implements IStorage {
         const revenue = sale.salePrice * sale.quantity;
         existing.revenue += revenue;
         
-        const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+        const profit = (sale.salePrice - item.base_price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         existing.profit += profit;
         
         categoryData.set(category, existing);
@@ -1303,7 +1304,7 @@ export class MemStorage implements IStorage {
         
         const item = this.items.get(sale.itemId);
         if (item) {
-          const profit = (sale.salePrice - item.basePrice) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
+          const profit = (sale.salePrice - item.base_price) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
           existing.profit += profit;
         }
         
@@ -1783,6 +1784,23 @@ export class MemStorage implements IStorage {
     
     return createdProducts;
   }
+
+  async getInventorySummary(): Promise<{ totalItems: number, activeItems: number, totalValue: string }> {
+    const itemsList = Array.from(this.items.values());
+    const totalItems = itemsList.length;
+    const activeItems = itemsList.filter(item =>
+      item.status === 'active' || item.status === 'available'
+    ).length;
+    const totalValue = itemsList.reduce((sum, item) =>
+      sum + (Number(item.base_price || 0) * (item.quantity || 0)), 0
+    );
+
+    return {
+      totalItems,
+      activeItems,
+      totalValue: totalValue.toFixed(2)
+    };
+  }
 }
 
 // Database-backed storage implementation
@@ -2027,7 +2045,7 @@ export class DatabaseStorage implements IStorage {
           imageUrl: row.image_url || null,
           // Ensure all price fields are properly mapped
           price: row.price || row.base_price || row.sale_price || 0,
-          basePrice: row.base_price || row.basePrice || 0,
+          base_price: row.base_price || row.base_price || 0,
           base_price: row.base_price || 0,
           salePrice: row.sale_price || row.salePrice || 0,
           sale_price: row.sale_price || 0,
@@ -2048,7 +2066,7 @@ export class DatabaseStorage implements IStorage {
         name: "Purple Punch - Premium Indoor",
         description: "High-quality indoor grown Purple Punch strain with excellent potency and flavor profile",
         sku: "PP-TOP-001",
-        basePrice: 140.00,
+        base_price: 140.00,
         quantity: 25,
         category: "Flower",
         status: "active",
@@ -2066,7 +2084,7 @@ export class DatabaseStorage implements IStorage {
         name: "Gelato 47 - Exotic",
         description: "Premium exotic Gelato 47 strain with exceptional terpene profile",
         sku: "GEL47-EX-002",
-        basePrice: 165.00,
+        base_price: 165.00,
         quantity: 18,
         category: "Flower",
         status: "active",
@@ -2084,7 +2102,7 @@ export class DatabaseStorage implements IStorage {
         name: "Wedding Cake - AA Indoor",
         description: "Popular Wedding Cake hybrid strain, AA grade indoor cultivation",
         sku: "WC-AA-003",
-        basePrice: 120.00,
+        base_price: 120.00,
         quantity: 32,
         category: "Flower",
         status: "active",
@@ -2102,7 +2120,7 @@ export class DatabaseStorage implements IStorage {
         name: "Blue Dream - Top Shelf",
         description: "Classic Blue Dream sativa-dominant hybrid, top shelf quality",
         sku: "BD-TS-004",
-        basePrice: 135.00,
+        base_price: 135.00,
         quantity: 28,
         category: "Flower",
         status: "active",
@@ -2120,7 +2138,7 @@ export class DatabaseStorage implements IStorage {
         name: "OG Kush - Classic Reserve",
         description: "Original OG Kush strain, classic reserve quality",
         sku: "OGK-CR-005",
-        basePrice: 110.00,
+        base_price: 110.00,
         quantity: 15,
         category: "Flower",
         status: "active",
@@ -2186,7 +2204,7 @@ export class DatabaseStorage implements IStorage {
         brand: '',
         condition: 'new',
         quantity: row.quantity || 0,
-        basePrice: Number(row.base_price) || 0,
+        base_price: Number(row.base_price) || 0,
         salePrice: null,
         costPrice: null,
         wholesalePrice: null,
@@ -2272,7 +2290,7 @@ export class DatabaseStorage implements IStorage {
         tags: row.tags,
         images: row.images,
         videos: row.videos,
-        basePrice: row.base_price,
+        base_price: row.base_price,
         salePrice: row.sale_price,
         costPrice: row.cost_price,
         wholesalePrice: row.wholesale_price,
@@ -2343,7 +2361,7 @@ export class DatabaseStorage implements IStorage {
         tags: row.tags,
         images: row.images,
         videos: row.videos,
-        basePrice: row.base_price,
+        base_price: row.base_price,
         salePrice: row.sale_price,
         costPrice: row.cost_price,
         wholesalePrice: row.wholesale_price,
@@ -2406,7 +2424,7 @@ export class DatabaseStorage implements IStorage {
         tags: row.tags,
         images: row.images,
         videos: row.videos,
-        basePrice: row.base_price,
+        base_price: row.base_price,
         salePrice: row.sale_price,
         costPrice: row.cost_price,
         wholesalePrice: row.wholesale_price,
@@ -2457,7 +2475,7 @@ export class DatabaseStorage implements IStorage {
       const mappedUpdates: Record<string, any> = {};
       
       const columnMappings: Record<string, string> = {
-        'basePrice': 'base_price',
+        'base_price': 'base_price',
         'salePrice': 'sale_price',
         'costPrice': 'cost_price',
         'wholesalePrice': 'wholesale_price',
@@ -2510,7 +2528,7 @@ export class DatabaseStorage implements IStorage {
         tags: row.tags,
         images: row.images,
         videos: row.videos,
-        basePrice: row.base_price,
+        base_price: row.base_price,
         salePrice: row.sale_price,
         costPrice: row.cost_price,
         wholesalePrice: row.wholesale_price,
@@ -2565,7 +2583,7 @@ export class DatabaseStorage implements IStorage {
       
       // Handle special case mappings
       const columnMappings: Record<string, string> = {
-        'basePrice': 'base_price',
+        'base_price': 'base_price',
         'salePrice': 'sale_price',
         'costPrice': 'cost_price',
         'wholesalePrice': 'wholesale_price',
@@ -2657,7 +2675,7 @@ export class DatabaseStorage implements IStorage {
         images: item.images || [],
         weight: item.weight,
         // Direct price field mapping
-        base_price: item.basePrice ? Number(item.basePrice) : null,
+        base_price: item.base_price ? Number(item.base_price) : null,
         sale_price: item.salePrice ? Number(item.salePrice) : null,
         cost_price: item.costPrice ? Number(item.costPrice) : 0,
         wholesale_price: item.wholesalePrice ? Number(item.wholesalePrice) : null,
@@ -2704,7 +2722,7 @@ export class DatabaseStorage implements IStorage {
         ...row,
         id: Number(row.id),
         quantity: row.quantity !== null ? Number(row.quantity) : 0,
-        basePrice: row.base_price !== null ? Number(row.base_price) : null,
+        base_price: row.base_price !== null ? Number(row.base_price) : null,
         salePrice: row.sale_price !== null ? Number(row.sale_price) : null,
         costPrice: row.cost_price !== null ? Number(row.cost_price) : null,
         wholesalePrice: row.wholesale_price !== null ? Number(row.wholesale_price) : null,
@@ -3051,7 +3069,7 @@ export class DatabaseStorage implements IStorage {
     for (const sale of filteredSales) {
       const item = await this.getItem(sale.itemId);
       if (item) {
-        const itemCost = item.basePrice; // Assuming basePrice is our cost
+        const itemCost = item.base_price; // Assuming base_price is our cost
         const profit = (sale.salePrice - itemCost) * sale.quantity - (sale.fees || 0) - (sale.shippingCost || 0);
         totalProfit += profit;
       }
@@ -4026,7 +4044,7 @@ export class DatabaseStorage implements IStorage {
           sku: row.sku,
           brand: row.brand,
           costPrice: row.cost_price,
-          basePrice: row.base_price,
+          base_price: row.base_price,
           salePrice: row.sale_price,
           wholesalePrice: row.wholesale_price,
           category: row.category,
@@ -4367,7 +4385,7 @@ export class DatabaseStorage implements IStorage {
       shopifyProductId: shopifyData.id?.toString(),
       shopifyVariantId: shopifyData.variants?.[0]?.id?.toString(),
       cost: parseFloat(shopifyData.variants?.[0]?.cost || '0'),
-      basePrice: parseFloat(shopifyData.variants?.[0]?.price || '0'),
+      base_price: parseFloat(shopifyData.variants?.[0]?.price || '0'),
       compareAtPrice: parseFloat(shopifyData.variants?.[0]?.compare_at_price || '0'),
       currentStock: parseInt(shopifyData.variants?.[0]?.inventory_quantity || '0'),
       reservedStock: 0,
@@ -4464,6 +4482,41 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getInventorySummary(): Promise<{ totalItems: number, activeItems: number, totalValue: string }> {
+    try {
+      // Get counts and sum in a single query for efficiency
+      const [result] = await db
+        .select({
+          totalItems: count(),
+          activeItems: sql<number>`count(*) filter (where ${items.status} = 'active' or ${items.status} = 'available')`,
+          totalValue: sum(sql`CAST(${items.base_price} AS NUMERIC) * ${items.quantity}`)
+        })
+        .from(items);
+
+      return {
+        totalItems: Number(result.totalItems),
+        activeItems: Number(result.activeItems),
+        totalValue: (Number(result.totalValue) || 0).toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error in getInventorySummary:", error);
+      // Fallback if aggregation fails
+      const allItems = await this.getItems();
+      const activeItems = allItems.filter((item: any) =>
+        item.status === 'active' || item.status === 'available'
+      ).length;
+      const totalValue = allItems.reduce((sum, item) =>
+        sum + (Number(item.base_price || 0) * (item.quantity || 0)), 0
+      );
+
+      return {
+        totalItems: allItems.length,
+        activeItems,
+        totalValue: totalValue.toFixed(2)
+      };
+    }
   }
 }
 
