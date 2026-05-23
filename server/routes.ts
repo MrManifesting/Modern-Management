@@ -799,20 +799,15 @@ export function registerRoutes(app: any, storage: any) {
   // Stats endpoint
   app.get("/api/stats", async (_req: Request, res: Response) => {
     try {
-      const items = await storage.getItems();
-      const activeItems = items.filter((item: any) => 
-        item.status === 'active' || item.status === 'available'
-      ).length;
-      const totalValue = items.reduce((sum: number, item: any) => 
-        sum + (parseFloat(item.base_price || '0') * (item.quantity || 0)), 0
-      );
+      // Use optimized storage method to get summary stats
+      const summary = await storage.getInventorySummary();
 
       res.json({
         success: true,
         data: {
-          totalItems: items.length,
-          activeItems,
-          totalValue: totalValue.toFixed(2)
+          totalItems: summary.totalItems,
+          activeItems: summary.activeItems,
+          totalValue: summary.totalValue.toFixed(2)
         }
       });
     } catch (error) {
