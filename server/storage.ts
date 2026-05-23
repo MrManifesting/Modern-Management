@@ -215,6 +215,9 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+
+  // Performance optimization: Summary statistics
+  getInventorySummary(): Promise<{ totalItems: number; activeItems: number; totalValue: number }>;
 }
 
 // Memory storage implementation
@@ -1782,6 +1785,22 @@ export class MemStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+
+  async getInventorySummary(): Promise<{ totalItems: number; activeItems: number; totalValue: number }> {
+    const items = Array.from(this.items.values());
+    const activeItems = items.filter(item =>
+      item.status === 'active' || item.status === 'available'
+    ).length;
+    const totalValue = items.reduce((sum, item) =>
+      sum + (Number(item.base_price || 0) * (item.quantity || 0)), 0
+    );
+
+    return {
+      totalItems: items.length,
+      activeItems,
+      totalValue
+    };
   }
 }
 
@@ -4464,6 +4483,41 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getInventorySummary(): Promise<{ totalItems: number; activeItems: number; totalValue: number }> {
+    try {
+      // Use database-level aggregations for better performance
+      const [counts] = await db
+        .select({
+          totalItems: count(),
+          activeItems: count(sql`CASE WHEN ${items.status} IN ('active', 'available') THEN 1 END`),
+          totalValue: sum(sql`${items.base_price} * ${items.quantity}`)
+        })
+        .from(items);
+
+      return {
+        totalItems: Number(counts.totalItems || 0),
+        activeItems: Number(counts.activeItems || 0),
+        totalValue: Number(counts.totalValue || 0)
+      };
+    } catch (error) {
+      console.error("Error fetching inventory summary:", error);
+      // Fallback if aggregation fails
+      const allItems = await this.getItems();
+      const activeItems = allItems.filter(item =>
+        item.status === 'active' || item.status === 'available'
+      ).length;
+      const totalValue = allItems.reduce((sum, item) =>
+        sum + (Number(item.base_price || 0) * (item.quantity || 0)), 0
+      );
+
+      return {
+        totalItems: allItems.length,
+        activeItems,
+        totalValue
+      };
+    }
   }
 }
 
