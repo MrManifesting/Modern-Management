@@ -799,20 +799,15 @@ export function registerRoutes(app: any, storage: any) {
   // Stats endpoint
   app.get("/api/stats", async (_req: Request, res: Response) => {
     try {
-      const items = await storage.getItems();
-      const activeItems = items.filter((item: any) => 
-        item.status === 'active' || item.status === 'available'
-      ).length;
-      const totalValue = items.reduce((sum: number, item: any) => 
-        sum + (parseFloat(item.base_price || '0') * (item.quantity || 0)), 0
-      );
+      // Use efficient database aggregation instead of fetching all items
+      const summary = await storage.getInventorySummary();
 
       res.json({
         success: true,
         data: {
-          totalItems: items.length,
-          activeItems,
-          totalValue: totalValue.toFixed(2)
+          totalItems: summary.totalItems,
+          activeItems: summary.activeOrAvailableItems,
+          totalValue: summary.totalValue.toFixed(2)
         }
       });
     } catch (error) {
@@ -1650,26 +1645,22 @@ export function registerRoutes(app: any, storage: any) {
         return res.json(formatResponse.success(cachedData));
       }
 
-      const items = await storage.getItems();
+      // Use efficient database aggregation instead of fetching all items
+      const dbSummary = await storage.getInventorySummary();
       
       const summary = {
-        totalItems: items.length,
-        activeItems: items.filter(item => item.status === 'active').length,
-        draftItems: items.filter(item => item.status === 'draft').length,
-        availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
-        itemsWithPricing: items.filter(item => 
-          (item.base_price && parseFloat(item.base_price) > 0) ||
-          (item.sale_price && parseFloat(item.sale_price) > 0) ||
-          (item.cost_price && parseFloat(item.cost_price) > 0)
-        ).length,
-        totalInventoryValue: items.reduce((sum, item) => {
-          const price = parseFloat(item.base_price || item.sale_price || item.cost_price || '0');
-          const quantity = parseFloat(item.quantity || '0');
-          return sum + (price * quantity);
-        }, 0),
+        totalItems: dbSummary.totalItems,
+        activeItems: dbSummary.activeItems,
+        draftItems: dbSummary.draftItems,
+        availableItems: dbSummary.availableItems,
+        itemsWithPricing: dbSummary.itemsWithPricing,
+        totalInventoryValue: dbSummary.totalValue,
         lastUpdated: new Date().toISOString()
       };
       
+      // Cache the result
+      setCachedData(cacheKey, summary, 60000); // Cache for 1 minute
+
       res.json({
         success: true,
         summary,

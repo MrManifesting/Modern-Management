@@ -215,6 +215,15 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+  getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    activeOrAvailableItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalValue: number;
+  }>;
 }
 
 // Memory storage implementation
@@ -1782,6 +1791,27 @@ export class MemStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+
+  async getInventorySummary() {
+    const items = Array.from(this.items.values());
+    return {
+      totalItems: items.length,
+      activeItems: items.filter(item => item.status === 'active').length,
+      activeOrAvailableItems: items.filter(item => item.status === 'active' || item.status === 'available').length,
+      draftItems: items.filter(item => item.status === 'draft').length,
+      availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: items.filter(item =>
+        (parseFloat(String(item.base_price || 0)) > 0) ||
+        (parseFloat(String(item.sale_price || 0)) > 0) ||
+        (parseFloat(String(item.cost_price || 0)) > 0)
+      ).length,
+      totalValue: items.reduce((sum, item) => {
+        const price = parseFloat(String(item.base_price || item.sale_price || item.cost_price || '0'));
+        const quantity = item.quantity || 0;
+        return sum + (price * quantity);
+      }, 0)
+    };
   }
 }
 
@@ -4464,6 +4494,28 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getInventorySummary() {
+    const [stats] = await db.select({
+      totalItems: count(),
+      activeItems: count(sql`CASE WHEN ${items.status} = 'active' THEN 1 END`),
+      activeOrAvailableItems: count(sql`CASE WHEN ${items.status} IN ('active', 'available') THEN 1 END`),
+      draftItems: count(sql`CASE WHEN ${items.status} = 'draft' THEN 1 END`),
+      availableItems: count(sql`CASE WHEN ${items.quantity} > 0 THEN 1 END`),
+      itemsWithPricing: count(sql`CASE WHEN COALESCE(${items.base_price}, 0) > 0 OR COALESCE(${items.sale_price}, 0) > 0 OR COALESCE(${items.cost_price}, 0) > 0 THEN 1 END`),
+      totalValue: sum(sql`COALESCE(NULLIF(${items.base_price}, 0), NULLIF(${items.sale_price}, 0), NULLIF(${items.cost_price}, 0), 0) * COALESCE(${items.quantity}, 0)`)
+    }).from(items);
+
+    return {
+      totalItems: Number(stats.totalItems || 0),
+      activeItems: Number(stats.activeItems || 0),
+      activeOrAvailableItems: Number(stats.activeOrAvailableItems || 0),
+      draftItems: Number(stats.draftItems || 0),
+      availableItems: Number(stats.availableItems || 0),
+      itemsWithPricing: Number(stats.itemsWithPricing || 0),
+      totalValue: Number(stats.totalValue || 0)
+    };
   }
 }
 
