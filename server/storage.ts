@@ -25,7 +25,7 @@ import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
 import memoryStoreModule from 'memorystore';
 import { db } from './db';
-import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg, gt, or } from 'drizzle-orm';
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 
@@ -56,6 +56,14 @@ export interface IStorage {
   bulkUpdateItems(ids: number[], updates: Partial<InsertItem>): Promise<Item[]>;
   getBreakdownItems(): Promise<Item[]>;
   getWaitingItems(): Promise<Item[]>;
+  getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalInventoryValue: number;
+  }>;
   
   // External ID management for marketplace integrations
   getItemExternalIds(itemId: number): Promise<Record<string, string>>;
@@ -1553,6 +1561,33 @@ export class MemStorage implements IStorage {
     return Array.from(this.items.values()).filter(item => 
       item.itemType === ItemType.BUNDLE && item.processingStatus === ProcessingStatus.WAITING);
   }
+
+  async getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalInventoryValue: number;
+  }> {
+    const items = Array.from(this.items.values());
+    return {
+      totalItems: items.length,
+      activeItems: items.filter(item => item.status === 'active' || item.status === 'available').length,
+      draftItems: items.filter(item => item.status === 'draft').length,
+      availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: items.filter(item =>
+        (item.basePrice && item.basePrice > 0) ||
+        (item.salePrice && item.salePrice > 0) ||
+        (item.costPrice && item.costPrice > 0)
+      ).length,
+      totalInventoryValue: items.reduce((sum, item) => {
+        const price = item.basePrice || item.salePrice || item.costPrice || 0;
+        const quantity = item.quantity || 0;
+        return sum + (price * quantity);
+      }, 0)
+    };
+  }
   
   // Product Breakdown methods
   async getProductBreakdowns(): Promise<ProductBreakdown[]> {
@@ -2781,6 +2816,33 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(items)
       .where(eq(items.breakdownStatus, BreakdownStatus.WAITING));
+  }
+
+  async getInventorySummary(): Promise<{
+    totalItems: number;
+    activeItems: number;
+    draftItems: number;
+    availableItems: number;
+    itemsWithPricing: number;
+    totalInventoryValue: number;
+  }> {
+    const [counts] = await db.select({
+      total: count(),
+      active: sql<number>`count(*) filter (where status = 'active' or status = 'available')`,
+      draft: sql<number>`count(*) filter (where status = 'draft')`,
+      available: sql<number>`count(*) filter (where quantity > 0)`,
+      withPricing: sql<number>`count(*) filter (where base_price > 0 or sale_price > 0 or cost_price > 0)`,
+      totalValue: sql<number>`sum(coalesce(base_price, sale_price, cost_price, 0) * coalesce(quantity, 0))`
+    }).from(items);
+
+    return {
+      totalItems: Number(counts.total),
+      activeItems: Number(counts.active),
+      draftItems: Number(counts.draft),
+      availableItems: Number(counts.available),
+      itemsWithPricing: Number(counts.withPricing),
+      totalInventoryValue: Number(counts.totalValue || 0)
+    };
   }
   
   // Marketplace methods (using stores table)
