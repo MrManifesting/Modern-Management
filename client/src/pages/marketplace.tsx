@@ -17,14 +17,14 @@ import {
   Settings,
   ChevronRight
 } from 'lucide-react';
-import { SiShopify, SiEtsy, SiWoocommerce, SiAmazon, SiEbay } from 'react-icons/si';
+import { SiShopify, SiEtsy, SiWoocommerce, SiEbay } from 'react-icons/si';
 
 // Marketplace icons by type
 const MARKETPLACE_ICONS = {
   shopify: { icon: SiShopify, color: '#96bf48' },
   etsy: { icon: SiEtsy, color: '#f45800' },
   woocommerce: { icon: SiWoocommerce, color: '#7f54b3' },
-  amazon: { icon: SiAmazon, color: '#ff9900' },
+  amazon: { icon: ShoppingBag, color: '#ff9900' },
   ebay: { icon: SiEbay, color: '#e53238' }
 };
 

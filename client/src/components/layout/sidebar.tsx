@@ -144,6 +144,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
         <h2 className="text-lg font-semibold">Gold-Standard</h2>
         <button
           className="lg:hidden p-1 hover:bg-accent rounded-md"
+          aria-label="Close sidebar"
           onClick={() => {
             const closeEvent = new CustomEvent('closeSidebar');
             window.dispatchEvent(closeEvent);
