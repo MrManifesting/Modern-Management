@@ -164,6 +164,7 @@ export default function NotificationsDropdown(): React.JSX.Element {
                         deleteNotification(notification.id);
                       }}
                       className="absolute top-2 right-2 opacity-60 hover:opacity-100 text-muted-foreground hover:text-foreground"
+                      aria-label="Delete notification"
                     >
                       <X className="h-3 w-3" />
                     </button>
