@@ -8533,9 +8533,10 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // View generated menu endpoint
   app.get("/api/view-menu/:menuId", async (req: Request, res: Response) => {
     try {
-      const { menuId } = req.params;
+      const { menuId: rawMenuId } = req.params;
       const fs = await import('fs');
       const path = await import('path');
+      const menuId = path.basename(rawMenuId);
       
       // Validate menu ID format
       if (!menuId || !menuId.startsWith('menu-')) {
@@ -8570,8 +8571,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const fs = await import('fs');
       const path = await import('path');
       
-      // Generate unique filename
-      const filename = `logo-${Date.now()}-${req.file.originalname}`;
+      // Generate unique filename - sanitize original name to prevent traversal
+      const filename = `logo-${Date.now()}-${path.basename(req.file.originalname)}`;
       const logoPath = path.join('uploads', filename);
       
       // Save logo file
@@ -8594,9 +8595,10 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
   // Serve uploaded files
   app.get("/api/uploads/:filename", async (req: Request, res: Response) => {
     try {
-      const { filename } = req.params;
+      const { filename: rawFilename } = req.params;
       const fs = await import('fs');
       const path = await import('path');
+      const filename = path.basename(rawFilename);
       const filePath = path.join('uploads', filename);
       
       if (!fs.existsSync(filePath)) {
