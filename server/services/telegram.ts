@@ -333,7 +333,8 @@ export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0):
 // Function to get a specific media file by name
 export const getMediaFile = (fileName: string): MediaFile | null => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return null;
@@ -343,20 +344,20 @@ export const getMediaFile = (fileName: string): MediaFile | null => {
     
     // Determine file type
     let fileType: MediaType = 'document';
-    if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName)) {
+    if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(safeFileName)) {
       fileType = 'image';
-    } else if (/\.(mp4|mov|avi|webm|mkv)$/i.test(fileName)) {
+    } else if (/\.(mp4|mov|avi|webm|mkv)$/i.test(safeFileName)) {
       fileType = 'video';
     }
     
     return {
-      name: fileName,
+      name: safeFileName,
       path: filePath,
-      url: `/media/${fileName}`,
+      url: `/media/${safeFileName}`,
       type: fileType,
       size: stats.size,
       createdAt: stats.birthtime || stats.ctime,
-      isOptimized: fileName.includes('_optimized'),
+      isOptimized: safeFileName.includes('_optimized'),
     };
   } catch (error) {
     console.error(`Error getting media file ${fileName}:`, error);
@@ -372,14 +373,15 @@ export const getMediaUrl = (fileName: string): string => {
 // Function to delete a media file
 export const deleteMediaFile = (fileName: string): boolean => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return false;
     }
     
     fs.unlinkSync(filePath);
-    log(`Deleted media file: ${fileName}`, 'telegram');
+    log(`Deleted media file: ${safeFileName}`, 'telegram');
     return true;
   } catch (error) {
     console.error(`Error deleting media file ${fileName}:`, error);
@@ -390,15 +392,17 @@ export const deleteMediaFile = (fileName: string): boolean => {
 // Function to rename a media file
 export const renameMediaFile = (oldFileName: string, newFileName: string): boolean => {
   try {
-    const oldFilePath = path.join(MEDIA_FOLDER, oldFileName);
-    const newFilePath = path.join(MEDIA_FOLDER, newFileName);
+    const safeOldFileName = path.basename(oldFileName);
+    const safeNewFileName = path.basename(newFileName);
+    const oldFilePath = path.join(MEDIA_FOLDER, safeOldFileName);
+    const newFilePath = path.join(MEDIA_FOLDER, safeNewFileName);
     
     if (!fs.existsSync(oldFilePath) || fs.existsSync(newFilePath)) {
       return false;
     }
     
     fs.renameSync(oldFilePath, newFilePath);
-    log(`Renamed media file: ${oldFileName} to ${newFileName}`, 'telegram');
+    log(`Renamed media file: ${safeOldFileName} to ${safeNewFileName}`, 'telegram');
     return true;
   } catch (error) {
     console.error(`Error renaming media file ${oldFileName}:`, error);
