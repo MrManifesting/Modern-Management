@@ -8597,7 +8597,8 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const { filename } = req.params;
       const fs = await import('fs');
       const path = await import('path');
-      const filePath = path.join('uploads', filename);
+      // Sanitize filename to prevent path traversal
+      const filePath = path.join('uploads', path.basename(filename));
       
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
