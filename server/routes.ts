@@ -8537,12 +8537,13 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const fs = await import('fs');
       const path = await import('path');
       
-      // Validate menu ID format
+      // Validate menu ID format and prevent path traversal
       if (!menuId || !menuId.startsWith('menu-')) {
         return res.status(400).json({ error: 'Invalid menu ID' });
       }
       
-      const menuPath = path.join('uploads', `${menuId}.html`);
+      const sanitizedMenuId = path.basename(menuId);
+      const menuPath = path.join('uploads', `${sanitizedMenuId}.html`);
       
       // Check if menu file exists
       if (!fs.existsSync(menuPath)) {
@@ -8597,7 +8598,9 @@ Contact: kaya@goldcbd.com | 541-295-8811 ext #1`)}" class="download-btn" downloa
       const { filename } = req.params;
       const fs = await import('fs');
       const path = await import('path');
-      const filePath = path.join('uploads', filename);
+      // Sanitize filename to prevent path traversal
+      const sanitizedFilename = path.basename(filename);
+      const filePath = path.join('uploads', sanitizedFilename);
       
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
