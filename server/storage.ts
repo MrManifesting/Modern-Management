@@ -56,6 +56,7 @@ export interface IStorage {
   bulkUpdateItems(ids: number[], updates: Partial<InsertItem>): Promise<Item[]>;
   getBreakdownItems(): Promise<Item[]>;
   getWaitingItems(): Promise<Item[]>;
+  getInventorySummary(): Promise<any>;
   
   // External ID management for marketplace integrations
   getItemExternalIds(itemId: number): Promise<Record<string, string>>;
@@ -1553,6 +1554,28 @@ export class MemStorage implements IStorage {
     return Array.from(this.items.values()).filter(item => 
       item.itemType === ItemType.BUNDLE && item.processingStatus === ProcessingStatus.WAITING);
   }
+
+  async getInventorySummary(): Promise<any> {
+    const items = Array.from(this.items.values());
+    const summary = {
+      totalItems: items.length,
+      activeItems: items.filter(item => item.status === 'active').length,
+      draftItems: items.filter(item => item.status === 'draft').length,
+      availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: items.filter(item =>
+        (item.base_price && parseFloat(item.base_price.toString()) > 0) ||
+        (item.sale_price && parseFloat(item.sale_price.toString()) > 0) ||
+        (item.cost_price && parseFloat(item.cost_price.toString()) > 0)
+      ).length,
+      totalInventoryValue: items.reduce((sum, item) => {
+        const price = parseFloat((item.base_price || item.sale_price || item.cost_price || '0').toString());
+        const quantity = parseFloat((item.quantity || '0').toString());
+        return sum + (price * quantity);
+      }, 0),
+      lastUpdated: new Date().toISOString()
+    };
+    return summary;
+  }
   
   // Product Breakdown methods
   async getProductBreakdowns(): Promise<ProductBreakdown[]> {
@@ -2781,6 +2804,33 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(items)
       .where(eq(items.breakdownStatus, BreakdownStatus.WAITING));
+  }
+
+  async getInventorySummary(): Promise<any> {
+    try {
+      const [result] = await db.select({
+        totalItems: count(),
+        activeItems: sql<number>`count(*) filter (where ${items.status} = 'active')`,
+        draftItems: sql<number>`count(*) filter (where ${items.status} = 'draft')`,
+        availableItems: sql<number>`count(*) filter (where ${items.quantity} > 0)`,
+        itemsWithPricing: sql<number>`count(*) filter (where ${items.base_price} > 0 or ${items.sale_price} > 0 or ${items.cost_price} > 0)`,
+        totalInventoryValue: sql<number>`COALESCE(SUM(COALESCE(NULLIF(${items.base_price}, 0), NULLIF(${items.sale_price}, 0), NULLIF(${items.cost_price}, 0), 0) * ${items.quantity}), 0)`
+      }).from(items);
+
+      return {
+        ...result,
+        totalItems: Number(result.totalItems),
+        activeItems: Number(result.activeItems),
+        draftItems: Number(result.draftItems),
+        availableItems: Number(result.availableItems),
+        itemsWithPricing: Number(result.itemsWithPricing),
+        totalInventoryValue: Number(result.totalInventoryValue),
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Error fetching inventory summary from DB:", error);
+      throw error;
+    }
   }
   
   // Marketplace methods (using stores table)
