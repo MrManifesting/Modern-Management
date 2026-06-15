@@ -17,6 +17,15 @@ import {
   priceSheet, orderTransactions
 } from "@shared/schema";
 
+export interface InventorySummary {
+  totalItems: number;
+  activeItems: number;
+  draftItems: number;
+  availableItems: number;
+  itemsWithPricing: number;
+  totalInventoryValue: number;
+}
+
 // Import Telegram photo schema
 import {
   TelegramPhoto, InsertTelegramPhoto, telegramPhotos
@@ -25,7 +34,7 @@ import session from 'express-session';
 // We need to import createMemoryStore this way because it has a non-standard export
 import memoryStoreModule from 'memorystore';
 import { db } from './db';
-import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
+import { eq, and, or, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'drizzle-orm';
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 
@@ -215,6 +224,9 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+
+  // Optimized summary methods
+  getInventorySummary(): Promise<InventorySummary>;
 }
 
 // Memory storage implementation
@@ -1782,6 +1794,26 @@ export class MemStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+
+  async getInventorySummary(): Promise<InventorySummary> {
+    const items = Array.from(this.items.values());
+    return {
+      totalItems: items.length,
+      activeItems: items.filter(item => item.status === 'active' || item.status === 'available').length,
+      draftItems: items.filter(item => item.status === 'draft').length,
+      availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: items.filter(item =>
+        (Number(item.basePrice || item.base_price) > 0) ||
+        (Number(item.salePrice || item.sale_price) > 0) ||
+        (Number(item.costPrice || item.cost_price) > 0)
+      ).length,
+      totalInventoryValue: items.reduce((sum, item) => {
+        const price = Number(item.basePrice || item.base_price || item.salePrice || item.sale_price || item.costPrice || item.cost_price || 0);
+        const quantity = Number(item.quantity || 0);
+        return sum + (price * quantity);
+      }, 0)
+    };
   }
 }
 
@@ -4464,6 +4496,39 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  async getInventorySummary(): Promise<InventorySummary> {
+    try {
+      const [result] = await db.select({
+        totalItems: count(),
+        activeItems: count(sql`CASE WHEN status IN ('active', 'available') THEN 1 END`),
+        draftItems: count(sql`CASE WHEN status = 'draft' THEN 1 END`),
+        availableItems: count(sql`CASE WHEN quantity > 0 THEN 1 END`),
+        itemsWithPricing: count(sql`CASE WHEN COALESCE(base_price, 0) > 0 OR COALESCE(sale_price, 0) > 0 OR COALESCE(cost_price, 0) > 0 THEN 1 END`),
+        totalInventoryValue: sum(sql`COALESCE(NULLIF(base_price, 0), NULLIF(sale_price, 0), NULLIF(cost_price, 0), 0) * quantity`)
+      }).from(items);
+
+      return {
+        totalItems: Number(result.totalItems || 0),
+        activeItems: Number(result.activeItems || 0),
+        draftItems: Number(result.draftItems || 0),
+        availableItems: Number(result.availableItems || 0),
+        itemsWithPricing: Number(result.itemsWithPricing || 0),
+        totalInventoryValue: Number(result.totalInventoryValue || 0)
+      };
+    } catch (error) {
+      console.error("Error fetching inventory summary from DB:", error);
+      // Fallback for unexpected errors
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        draftItems: 0,
+        availableItems: 0,
+        itemsWithPricing: 0,
+        totalInventoryValue: 0
+      };
+    }
   }
 }
 
