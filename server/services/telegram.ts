@@ -171,7 +171,7 @@ export const initializeTelegramBot = (token: string) => {
       else if (msg.document) {
         try {
           const fileId = msg.document.file_id;
-          const originalName = msg.document.file_name || `file_${Date.now()}`;
+          const originalName = path.basename(msg.document.file_name || `file_${Date.now()}`);
           const fileName = `doc_${Date.now()}_${originalName}`;
           
           const filePath = await downloadMediaFile(bot!, fileId, fileName);
@@ -217,6 +217,7 @@ export const initializeTelegramBot = (token: string) => {
 
 // Function to download a file from Telegram and save it to the media folder
 const downloadMediaFile = async (bot: TelegramBot, fileId: string, fileName: string): Promise<string> => {
+  const safeFileName = path.basename(fileName);
   return new Promise(async (resolve, reject) => {
     try {
       // Get file path from Telegram
@@ -233,7 +234,7 @@ const downloadMediaFile = async (bot: TelegramBot, fileId: string, fileName: str
       const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
       
       // Create a write stream for saving the file
-      const localFilePath = path.join(MEDIA_FOLDER, fileName);
+      const localFilePath = path.join(MEDIA_FOLDER, safeFileName);
       const fileStream = fs.createWriteStream(localFilePath);
       
       // Download the file
@@ -333,7 +334,8 @@ export const getMediaFiles = (type: MediaType = 'all', limit = 100, offset = 0):
 // Function to get a specific media file by name
 export const getMediaFile = (fileName: string): MediaFile | null => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return null;
@@ -350,9 +352,9 @@ export const getMediaFile = (fileName: string): MediaFile | null => {
     }
     
     return {
-      name: fileName,
+      name: safeFileName,
       path: filePath,
-      url: `/media/${fileName}`,
+      url: `/media/${safeFileName}`,
       type: fileType,
       size: stats.size,
       createdAt: stats.birthtime || stats.ctime,
@@ -372,14 +374,15 @@ export const getMediaUrl = (fileName: string): string => {
 // Function to delete a media file
 export const deleteMediaFile = (fileName: string): boolean => {
   try {
-    const filePath = path.join(MEDIA_FOLDER, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(MEDIA_FOLDER, safeFileName);
     
     if (!fs.existsSync(filePath)) {
       return false;
     }
     
     fs.unlinkSync(filePath);
-    log(`Deleted media file: ${fileName}`, 'telegram');
+    log(`Deleted media file: ${safeFileName}`, 'telegram');
     return true;
   } catch (error) {
     console.error(`Error deleting media file ${fileName}:`, error);
@@ -390,15 +393,17 @@ export const deleteMediaFile = (fileName: string): boolean => {
 // Function to rename a media file
 export const renameMediaFile = (oldFileName: string, newFileName: string): boolean => {
   try {
-    const oldFilePath = path.join(MEDIA_FOLDER, oldFileName);
-    const newFilePath = path.join(MEDIA_FOLDER, newFileName);
+    const safeOldFileName = path.basename(oldFileName);
+    const safeNewFileName = path.basename(newFileName);
+    const oldFilePath = path.join(MEDIA_FOLDER, safeOldFileName);
+    const newFilePath = path.join(MEDIA_FOLDER, safeNewFileName);
     
     if (!fs.existsSync(oldFilePath) || fs.existsSync(newFilePath)) {
       return false;
     }
     
     fs.renameSync(oldFilePath, newFilePath);
-    log(`Renamed media file: ${oldFileName} to ${newFileName}`, 'telegram');
+    log(`Renamed media file: ${safeOldFileName} to ${safeNewFileName}`, 'telegram');
     return true;
   } catch (error) {
     console.error(`Error renaming media file ${oldFileName}:`, error);
