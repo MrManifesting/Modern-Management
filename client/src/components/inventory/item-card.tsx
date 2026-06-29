@@ -188,12 +188,21 @@ export default function ItemCard({
     <>
       <Card 
         ref={cardRef}
-        className={`group overflow-hidden transition-all ${
+        className={`group overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 outline-none ${
           item.quantity <= 0 ? 'border-red-200 bg-red-50/30' : ''
         } ${isSelected ? 'selectable-item selected' : 'selectable-item'}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleCardClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.currentTarget === e.target && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            handleCardClick(e as unknown as any);
+          }
+        }}
+        aria-label={`View details for ${item.name}`}
       >
         <div className="relative h-48 bg-gray-200">
           {/* Item image carousel with enhanced thumbnail support */}
@@ -289,18 +298,22 @@ export default function ItemCard({
             </span>
           </div>
 
-          {/* Action buttons that appear on hover */}
-          <div className={`absolute inset-0 bg-black transition-opacity flex items-center justify-center ${isHovered ? 'bg-opacity-30 opacity-100' : 'bg-opacity-0 opacity-0'}`}>
+          {/* Action buttons that appear on hover or focus */}
+          <div className={`absolute inset-0 bg-black transition-opacity flex items-center justify-center group-focus-within:bg-opacity-30 group-focus-within:opacity-100 ${isHovered ? 'bg-opacity-30 opacity-100' : 'bg-opacity-0 opacity-0'}`}>
             <div className="flex space-x-2">
               <button 
-                className="rounded-full bg-white p-2 text-gray-700 hover:bg-primary-500 hover:text-white transition-colors"
+                className="rounded-full bg-white p-2 text-gray-700 hover:bg-primary-500 hover:text-white transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none"
                 onClick={() => onEdit(item)}
+                aria-label="Edit item"
               >
                 <Edit className="h-5 w-5" />
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="rounded-full bg-white p-2 text-gray-700 hover:bg-primary-500 hover:text-white transition-colors">
+                  <button
+                    className="rounded-full bg-white p-2 text-gray-700 hover:bg-primary-500 hover:text-white transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    aria-label="More options"
+                  >
                     <MoreHorizontal className="h-5 w-5" />
                   </button>
                 </DropdownMenuTrigger>
