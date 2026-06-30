@@ -1687,6 +1687,13 @@ export function registerRoutes(app: any, storage: any) {
   // Enhanced inventory endpoint for menu generator
   app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
     try {
+      // Check cache first - expensive transformations and sorting
+      const cacheKey = 'inventory:enhanced';
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        return res.json(cachedData);
+      }
+
       const rawItems = await storage.getItems();
       
       // Transform items with proper strain name extraction and pricing
@@ -1820,7 +1827,9 @@ export function registerRoutes(app: any, storage: any) {
         return b.quantity - a.quantity;
       });
       
-      res.json({ items: sortedItems });
+      const responseData = { items: sortedItems };
+      setCachedData(cacheKey, responseData, 30000);
+      res.json(responseData);
     } catch (error) {
       console.error('Error getting enhanced inventory:', error);
       res.status(500).json({ error: 'Failed to get enhanced inventory' });
