@@ -1517,6 +1517,11 @@ export function registerRoutes(app: any, storage: any) {
     try {
       // Check cache first for performance
       const cacheKey = `items:${req.query.page || 1}:${req.query.limit || 50}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        log(`Returned cached items list`, 'inventory');
+        return res.json(cachedData);
+      }
       
       // Get raw items from database - NO TRANSFORMATIONS
       const rawItems = await storage.getItems();
@@ -1687,6 +1692,14 @@ export function registerRoutes(app: any, storage: any) {
   // Enhanced inventory endpoint for menu generator
   app.get("/api/inventory/enhanced", async (_req: Request, res: Response) => {
     try {
+      // Check cache first for performance as this is an expensive transformation
+      const cacheKey = 'inventory:enhanced';
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        log(`Returned cached enhanced inventory`, 'inventory');
+        return res.json(cachedData);
+      }
+
       const rawItems = await storage.getItems();
       
       // Transform items with proper strain name extraction and pricing
@@ -1820,7 +1833,12 @@ export function registerRoutes(app: any, storage: any) {
         return b.quantity - a.quantity;
       });
       
-      res.json({ items: sortedItems });
+      const result = { items: sortedItems };
+
+      // Cache the result for 30 seconds
+      setCachedData(cacheKey, result, 30000);
+
+      res.json(result);
     } catch (error) {
       console.error('Error getting enhanced inventory:', error);
       res.status(500).json({ error: 'Failed to get enhanced inventory' });
