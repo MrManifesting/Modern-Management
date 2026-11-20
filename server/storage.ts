@@ -29,6 +29,16 @@ import { eq, and, gte, lte, desc, asc, isNull, sql, count, sum, avg } from 'driz
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 
+export type InventorySummary = {
+  totalItems: number;
+  activeItems: number;
+  draftItems: number;
+  availableItems: number;
+  itemsWithPricing: number;
+  totalInventoryValue: number;
+  lastUpdated: string;
+};
+
 // Interface for storage methods
 export interface IStorage {
   // User authentication methods for flexible auth
@@ -215,6 +225,7 @@ export interface IStorage {
   createOrderTransaction(transaction: InsertOrderTransaction): Promise<OrderTransaction>;
   getTransactionsByPriceSheet(priceSheetId: number): Promise<OrderTransaction[]>;
   getTransactionsByItem(itemId: number): Promise<OrderTransaction[]>;
+  getInventorySummary(): Promise<InventorySummary>;
 }
 
 // Memory storage implementation
@@ -1782,6 +1793,27 @@ export class MemStorage implements IStorage {
     );
     
     return createdProducts;
+  }
+
+  async getInventorySummary(): Promise<InventorySummary> {
+    const items = Array.from(this.items.values());
+    return {
+      totalItems: items.length,
+      activeItems: items.filter(item => item.status === 'active').length,
+      draftItems: items.filter(item => item.status === 'draft').length,
+      availableItems: items.filter(item => item.quantity && item.quantity > 0).length,
+      itemsWithPricing: items.filter(item =>
+        (item.base_price && parseFloat(String(item.base_price)) > 0) ||
+        (item.sale_price && parseFloat(String(item.sale_price)) > 0) ||
+        (item.cost_price && parseFloat(String(item.cost_price)) > 0)
+      ).length,
+      totalInventoryValue: items.reduce((sum, item) => {
+        const price = parseFloat(String(item.base_price || item.sale_price || item.cost_price || '0'));
+        const quantity = parseFloat(String(item.quantity || '0'));
+        return sum + (price * quantity);
+      }, 0),
+      lastUpdated: new Date().toISOString()
+    };
   }
 }
 
@@ -4464,6 +4496,31 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orderTransactions)
       .where(eq(orderTransactions.itemId, itemId))
       .orderBy(desc(orderTransactions.createdAt));
+  }
+
+  /**
+   * Optimized inventory summary calculation using database-level aggregations.
+   * This replaces the O(N) in-memory calculation which was a performance bottleneck.
+   */
+  async getInventorySummary(): Promise<InventorySummary> {
+    const [counts] = await db.select({
+      total: count(),
+      active: count(sql`CASE WHEN ${items.status} = 'active' THEN 1 END`),
+      draft: count(sql`CASE WHEN ${items.status} = 'draft' THEN 1 END`),
+      available: count(sql`CASE WHEN ${items.quantity} > 0 THEN 1 END`),
+      withPricing: count(sql`CASE WHEN COALESCE(${items.base_price}, 0) > 0 OR COALESCE(${items.sale_price}, 0) > 0 OR COALESCE(${items.cost_price}, 0) > 0 THEN 1 END`),
+      totalValue: sum(sql`COALESCE(NULLIF(${items.base_price}, 0), NULLIF(${items.sale_price}, 0), NULLIF(${items.cost_price}, 0), 0) * ${items.quantity}`)
+    }).from(items);
+
+    return {
+      totalItems: Number(counts.total),
+      activeItems: Number(counts.active),
+      draftItems: Number(counts.draft),
+      availableItems: Number(counts.available),
+      itemsWithPricing: Number(counts.withPricing),
+      totalInventoryValue: Number(counts.totalValue || 0),
+      lastUpdated: new Date().toISOString()
+    };
   }
 }
 
